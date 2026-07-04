@@ -405,6 +405,26 @@ export function useSendEmailCampaign() {
   })
 }
 
+export function useCancelEmailCampaign() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => adminApi.cancelEmailCampaign(id),
+    onSuccess: (_res, id) => {
+      void qc.invalidateQueries({ queryKey: adminKeys.emailCampaigns })
+      void qc.invalidateQueries({ queryKey: adminKeys.emailCampaign(id) })
+    },
+  })
+}
+
+export function useCampaignRecipients(id: number, params: { status?: string; page?: number }) {
+  return useQuery({
+    queryKey: ['admin-campaign-recipients', id, params],
+    queryFn: () => adminApi.campaignRecipients(id, params),
+    enabled: id > 0,
+    placeholderData: (prev) => prev,
+  })
+}
+
 // ── Email: contact lists ──
 export function useContactLists() {
   return useQuery({ queryKey: adminKeys.contactLists, queryFn: adminApi.contactLists })
@@ -443,6 +463,27 @@ export function useDeleteContact() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ listId, contactId }: { listId: number; contactId: number }) => adminApi.deleteContact(listId, contactId),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin-contact-list'] }),
+  })
+}
+
+export function useAddContact() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ listId, input }: { listId: number; input: { email: string; name?: string } }) =>
+      adminApi.addContact(listId, input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin-contact-list'] })
+      void qc.invalidateQueries({ queryKey: adminKeys.contactLists })
+    },
+  })
+}
+
+export function useUpdateContact() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ listId, contactId, input }: { listId: number; contactId: number; input: { name?: string; status?: string } }) =>
+      adminApi.updateContact(listId, contactId, input),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin-contact-list'] }),
   })
 }

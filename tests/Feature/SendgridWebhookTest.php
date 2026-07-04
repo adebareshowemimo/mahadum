@@ -46,6 +46,34 @@ class SendgridWebhookTest extends TestCase
         $this->assertSame(1, EmailSuppression::where('email', 'x@example.test')->count());
     }
 
+    public function test_valid_ecdsa_signature_is_accepted_and_bad_one_rejected(): void
+    {
+        // Generate a P-256 keypair; configure the base64-DER public key.
+        $res = openssl_pkey_new(['private_key_type' => OPENSSL_KEYTYPE_EC, 'curve_name' => 'prime256v1']);
+        if ($res === false) {
+            $this->markTestSkipped('openssl EC key generation unavailable in this environment.');
+        }
+        $pubPem = openssl_pkey_get_details($res)['key'];
+        config()->set('services.sendgrid.webhook_public_key', preg_replace('/-----[^-]+-----|\s/', '', $pubPem));
+
+        $body = json_encode([['email' => 'signed@example.test', 'event' => 'bounce']]);
+        $timestamp = '1700000000';
+        openssl_sign($timestamp.$body, $sig, $res, OPENSSL_ALGO_SHA256);
+
+        $headers = fn (string $signature) => [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_X-Twilio-Email-Event-Webhook-Signature' => $signature,
+            'HTTP_X-Twilio-Email-Event-Webhook-Timestamp' => $timestamp,
+        ];
+
+        // Valid signature → processed.
+        $this->call('POST', '/api/v1/webhooks/sendgrid/anytoken', [], [], [], $headers(base64_encode($sig)), $body)->assertOk();
+        $this->assertDatabaseHas('email_suppressions', ['email' => 'signed@example.test']);
+
+        // Tampered signature → rejected.
+        $this->call('POST', '/api/v1/webhooks/sendgrid/anytoken', [], [], [], $headers(base64_encode('nope')), $body)->assertStatus(403);
+    }
+
     public function test_wrong_token_is_rejected(): void
     {
         $this->postJson('/api/v1/webhooks/sendgrid/wrong', [

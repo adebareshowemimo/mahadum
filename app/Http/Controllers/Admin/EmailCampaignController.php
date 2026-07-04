@@ -87,6 +87,44 @@ class EmailCampaignController extends Controller
         return response()->json(['data' => $this->row($emailCampaign->fresh())]);
     }
 
+    /** Cancel a scheduled campaign before it fires (scheduled → draft). */
+    public function cancel(EmailCampaign $emailCampaign): JsonResponse
+    {
+        if ($emailCampaign->status !== 'scheduled') {
+            return response()->json(['error' => ['code' => 'not_scheduled', 'message' => 'Only a scheduled campaign can be cancelled.']], 409);
+        }
+
+        $emailCampaign->update(['status' => 'draft', 'scheduled_at' => null]);
+        $this->audit->record('email_campaign.cancelled', $emailCampaign, [], ['status' => 'draft']);
+
+        return response()->json(['data' => $this->row($emailCampaign->fresh())]);
+    }
+
+    /** Paginated per-recipient delivery rows, optionally filtered by status. */
+    public function recipients(Request $request, EmailCampaign $emailCampaign): JsonResponse
+    {
+        $query = $emailCampaign->recipients()->latest();
+        if ($status = $request->query('status')) {
+            $query->where('status', $status);
+        }
+
+        $page = $query->paginate(50);
+
+        return response()->json([
+            'data' => collect($page->items())->map(fn ($r) => [
+                'id' => $r->id,
+                'email' => $r->email,
+                'status' => $r->status,
+            ]),
+            'meta' => [
+                'current_page' => $page->currentPage(),
+                'last_page' => $page->lastPage(),
+                'per_page' => $page->perPage(),
+                'total' => $page->total(),
+            ],
+        ]);
+    }
+
     /**
      * @return array<string, mixed>
      */

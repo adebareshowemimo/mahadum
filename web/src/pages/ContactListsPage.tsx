@@ -2,7 +2,15 @@ import { useRef, useState, type FormEvent } from 'react'
 import { AdminPageHeader, DataTable, type Column } from '@/components/admin'
 import { Alert, Badge, Button, Card, CardBody, Input, Modal, Skeleton } from '@/components/ui'
 import { ApiError, adminApi, type ContactRow, type ImportPreview } from '@/lib/api'
-import { useContactList, useContactLists, useCreateContactList, useDeleteContact, useImportContacts } from '@/lib/admin/queries'
+import {
+  useAddContact,
+  useContactList,
+  useContactLists,
+  useCreateContactList,
+  useDeleteContact,
+  useImportContacts,
+  useUpdateContact,
+} from '@/lib/admin/queries'
 
 export function ContactListsPage() {
   const { data: lists, isLoading } = useContactLists()
@@ -81,6 +89,7 @@ function ListDetail({ listId }: { listId: number }) {
   const [page, setPage] = useState(1)
   const { data, isLoading, isFetching } = useContactList(listId, page)
   const remove = useDeleteContact()
+  const update = useUpdateContact()
 
   const columns: Column<ContactRow>[] = [
     { key: 'email', header: 'Email', render: (c) => <span className="text-foreground">{c.email}</span> },
@@ -95,9 +104,20 @@ function ListDetail({ listId }: { listId: number }) {
       key: 'actions',
       header: '',
       render: (c) => (
-        <Button size="sm" variant="ghost" onClick={() => remove.mutate({ listId, contactId: c.id })} aria-label={`Remove ${c.email}`}>
-          Remove
-        </Button>
+        <div className="flex justify-end gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() =>
+              update.mutate({ listId, contactId: c.id, input: { status: c.status === 'subscribed' ? 'unsubscribed' : 'subscribed' } })
+            }
+          >
+            {c.status === 'subscribed' ? 'Unsubscribe' : 'Resubscribe'}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => remove.mutate({ listId, contactId: c.id })} aria-label={`Remove ${c.email}`}>
+            Remove
+          </Button>
+        </div>
       ),
     },
   ]
@@ -107,6 +127,7 @@ function ListDetail({ listId }: { listId: number }) {
   return (
     <div className="flex flex-col gap-4">
       <UploadPanel listId={listId} />
+      <AddContactForm listId={listId} />
 
       <section className="flex flex-col gap-2">
         <h2 className="font-display text-lg font-bold text-foreground">
@@ -124,6 +145,44 @@ function ListDetail({ listId }: { listId: number }) {
         )}
       </section>
     </div>
+  )
+}
+
+function AddContactForm({ listId }: { listId: number }) {
+  const add = useAddContact()
+  const [email, setEmail] = useState('')
+  const [name, setName] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault()
+    setError(null)
+    try {
+      await add.mutateAsync({ listId, input: { email: email.trim(), name: name.trim() || undefined } })
+      setEmail('')
+      setName('')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not add the contact.')
+    }
+  }
+
+  return (
+    <Card>
+      <CardBody>
+        <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3">
+          <div className="min-w-[16rem] flex-1">
+            <Input label="Add a contact" type="email" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+          <div className="min-w-[10rem]">
+            <Input label="Name (optional)" value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <Button type="submit" variant="secondary" loading={add.isPending} disabled={!email.trim()}>
+            Add
+          </Button>
+        </form>
+        {error && <p className="mt-2 text-sm text-danger">{error}</p>}
+      </CardBody>
+    </Card>
   )
 }
 

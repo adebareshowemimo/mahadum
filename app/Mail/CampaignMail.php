@@ -3,7 +3,6 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -15,9 +14,10 @@ use Illuminate\Support\Str;
  * A campaign blast to one recipient. Renders the admin-authored markdown body in
  * the one brand template, tags itself as marketing from campaign:{id} (so the
  * email log + suppression treat it correctly), and carries a per-recipient
- * unsubscribe link. Queued so a large blast doesn't block the request.
+ * unsubscribe link. Sent synchronously by the SendCampaignEmail batch job (which
+ * owns the queueing), so it is intentionally not ShouldQueue.
  */
-class CampaignMail extends Mailable implements ShouldQueue
+class CampaignMail extends Mailable
 {
     use Queueable, SerializesModels;
 

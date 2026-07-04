@@ -169,6 +169,53 @@ class ContactListController extends Controller
         return response()->json(['data' => ['imported' => $imported, 'skipped' => $skipped]]);
     }
 
+    /** Add a single contact manually (validated + deduped + suppression-checked). */
+    public function storeContact(Request $request, ContactList $contactList): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+            'name' => ['nullable', 'string', 'max:160'],
+        ]);
+        $email = mb_strtolower(trim($data['email']));
+
+        if ($contactList->contacts()->where('email', $email)->exists()) {
+            return response()->json(['error' => ['code' => 'duplicate', 'message' => 'That address is already on this list.']], 422);
+        }
+        if (EmailSuppression::suppresses($email)) {
+            return response()->json(['error' => ['code' => 'suppressed', 'message' => 'That address is suppressed (unsubscribed or bounced).']], 422);
+        }
+
+        $contact = Contact::create([
+            'contact_list_id' => $contactList->id,
+            'email' => $email,
+            'name' => $data['name'] ?? null,
+            'status' => 'subscribed',
+            'source' => 'manual',
+            'consent_at' => now(),
+        ]);
+
+        return response()->json(['data' => ['id' => $contact->id, 'email' => $contact->email]], 201);
+    }
+
+    /** Edit a contact's name or subscription status. */
+    public function updateContact(Request $request, ContactList $contactList, Contact $contact): JsonResponse
+    {
+        abort_unless($contact->contact_list_id === $contactList->id, 404);
+
+        $data = $request->validate([
+            'name' => ['sometimes', 'nullable', 'string', 'max:160'],
+            'status' => ['sometimes', 'in:subscribed,unsubscribed'],
+        ]);
+
+        if (array_key_exists('status', $data)) {
+            $data['unsubscribed_at'] = $data['status'] === 'unsubscribed' ? now() : null;
+        }
+
+        $contact->update($data);
+
+        return response()->json(['data' => ['id' => $contact->id, 'status' => $contact->status]]);
+    }
+
     public function destroyContact(ContactList $contactList, Contact $contact): JsonResponse
     {
         abort_unless($contact->contact_list_id === $contactList->id, 404);

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AdminPageHeader, AdminToolbar, DataTable, FilterSelect, type Column } from '@/components/admin'
-import { Alert, Badge, Button } from '@/components/ui'
+import { Alert, Badge, Button, Modal } from '@/components/ui'
 import type { EmailLogQuery, EmailLogRow } from '@/lib/api'
 import { useEmailLog } from '@/lib/admin/queries'
 
@@ -28,6 +28,7 @@ export function EmailLogPage() {
   const [status, setStatus] = useState('')
   const [source, setSource] = useState('')
   const [page, setPage] = useState(1)
+  const [selected, setSelected] = useState<EmailLogRow | null>(null)
 
   const q = useDebounced(search)
   const params: EmailLogQuery = useMemo(
@@ -65,6 +66,7 @@ export function EmailLogPage() {
         rows={data?.data ?? []}
         getRowId={(l) => l.id}
         isLoading={isLoading}
+        onRowClick={setSelected}
         empty="No emails match your filters."
         toolbar={
           <AdminToolbar search={search} onSearch={(v) => { setSearch(v); setPage(1) }} searchPlaceholder="Search recipient…">
@@ -86,6 +88,27 @@ export function EmailLogPage() {
             <Button size="sm" variant="ghost" disabled={meta.current_page >= meta.last_page || isFetching} onClick={() => setPage((p) => p + 1)}>Next</Button>
           </div>
         </div>
+      )}
+
+      {selected && (
+        <Modal open onClose={() => setSelected(null)} title={selected.subject ?? 'Email'} description={selected.to_email}>
+          <dl className="grid grid-cols-[7rem_1fr] gap-x-4 gap-y-2 text-sm">
+            {[
+              ['Recipient', selected.to_email],
+              ['Subject', selected.subject ?? '—'],
+              ['Type', selected.type],
+              ['Source', selected.source ?? '—'],
+              ['Status', selected.status],
+              ['Sent', selected.sent_at ? new Date(selected.sent_at).toLocaleString() : '—'],
+              ['Recorded', selected.created_at ? new Date(selected.created_at).toLocaleString() : '—'],
+            ].map(([label, value]) => (
+              <div key={label} className="contents">
+                <dt className="text-muted">{label}</dt>
+                <dd className="break-all text-foreground">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </Modal>
       )}
     </div>
   )

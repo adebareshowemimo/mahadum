@@ -24,3 +24,6 @@ Schedule::command('webhooks:prune')->dailyAt('03:30');
 
 // Send scheduled email campaigns whose time has arrived.
 Schedule::command('emails:dispatch-scheduled')->everyFiveMinutes();
+
+// Prune email-log rows past the retention window.
+Schedule::command('emails:prune-log')->dailyAt('04:00');

@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\Wallet;
 use App\Models\WalletFundingTransaction;
 use App\Notifications\NewDeviceAlert;
+use App\Notifications\PaymentFailed;
 use App\Notifications\PromoRedeemed;
 use App\Notifications\WelcomeEmail;
 use App\Services\Billing\PaymentService;
@@ -193,6 +194,21 @@ class EmailSystemTest extends TestCase
 
         Notification::assertSentTo($user, PromoRedeemed::class);
         $this->assertDatabaseHas('promo_redemptions', ['promo_code_id' => $promo->id, 'user_id' => $user->id]);
+    }
+
+    public function test_failed_charge_emails_the_payer(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create();
+        $plan = Plan::create(['code' => 'fam', 'name' => 'Family', 'price_minor' => 500000, 'interval' => 'month']);
+        $sub = new Subscription(['plan_id' => $plan->id, 'status' => 'active', 'method' => 'card']);
+        $sub->subscriber()->associate($user);
+        $sub->save();
+
+        $outcome = app(PaymentService::class)->process('paystack', 'evt_fail_1', "sub_{$sub->id}", 'failed', null, []);
+
+        $this->assertSame('failed_notified', $outcome);
+        Notification::assertSentTo($user, PaymentFailed::class);
     }
 
     public function test_mail_preview_command_writes_branded_html(): void

@@ -32,6 +32,7 @@ class PaymentWebhookController extends Controller
         $kind = match (true) {
             $event === 'charge.success' && ($data['status'] ?? null) === 'success' => 'success',
             $event === 'refund.processed' => 'refund',
+            $event === 'charge.failed' => 'failed',
             default => 'ignored',
         };
 
@@ -63,6 +64,7 @@ class PaymentWebhookController extends Controller
         $kind = match (true) {
             ($data['status'] ?? null) === 'successful' => 'success',
             $event === 'charge.refund' || ($data['status'] ?? null) === 'REFUNDED' => 'refund',
+            ($data['status'] ?? null) === 'failed' => 'failed',
             default => 'ignored',
         };
 

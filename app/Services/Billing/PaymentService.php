@@ -8,6 +8,7 @@ use App\Models\Subscription;
 use App\Models\User;
 use App\Models\WalletFundingTransaction;
 use App\Models\WebhookEvent;
+use App\Notifications\PaymentFailed;
 use App\Notifications\SubscriptionActivated;
 use App\Notifications\WalletFunded;
 use App\Services\AuditLogger;
@@ -51,9 +52,11 @@ class PaymentService
             return 'ignored';
         }
 
-        $outcome = $kind === 'refund'
-            ? $this->reverse($reference, $amountMinor)
-            : $this->settle($reference, $amountMinor);
+        $outcome = match ($kind) {
+            'refund' => $this->reverse($reference, $amountMinor),
+            'failed' => $this->fail($reference),
+            default => $this->settle($reference, $amountMinor),
+        };
 
         $event->update(['status' => $outcome === 'unmatched' ? 'unmatched' : 'processed', 'processed_at' => now()]);
 
@@ -99,6 +102,28 @@ class PaymentService
             $this->cancelSubscription($subscription);
 
             return 'reversed';
+        }
+
+        return 'unmatched';
+    }
+
+    /**
+     * Failed-charge path (dunning): don't touch money — just alert the payer so
+     * they can retry before access lapses.
+     */
+    private function fail(?string $reference): string
+    {
+        if (! $reference) {
+            return 'unmatched';
+        }
+
+        if ($subscription = $this->findSubscription($reference)) {
+            $subscriber = $subscription->subscriber;
+            if ($subscriber instanceof User) {
+                $subscriber->notify(new PaymentFailed($subscription));
+            }
+
+            return 'failed_notified';
         }
 
         return 'unmatched';

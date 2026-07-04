@@ -33,8 +33,7 @@ class SendgridWebhookController extends Controller
 
     public function handle(Request $request, string $token): JsonResponse
     {
-        $expected = (string) config('services.sendgrid.webhook_token');
-        abort_if($expected === '' || ! hash_equals($expected, $token), 403);
+        abort_unless($this->verified($request, $token), 403);
 
         /** @var array<int, array<string, mixed>> $events */
         $events = $request->json()->all();
@@ -56,5 +55,41 @@ class SendgridWebhookController extends Controller
         }
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Prefer SendGrid's ECDSA Signed Event Webhook when a public key is
+     * configured; otherwise fall back to the shared-secret URL token.
+     */
+    private function verified(Request $request, string $token): bool
+    {
+        $publicKey = (string) config('services.sendgrid.webhook_public_key');
+        if ($publicKey !== '') {
+            return $this->verifySignature($request, $publicKey);
+        }
+
+        $expected = (string) config('services.sendgrid.webhook_token');
+
+        return $expected !== '' && hash_equals($expected, $token);
+    }
+
+    private function verifySignature(Request $request, string $base64PublicKey): bool
+    {
+        $signature = $request->header('X-Twilio-Email-Event-Webhook-Signature');
+        $timestamp = $request->header('X-Twilio-Email-Event-Webhook-Timestamp');
+        if (! $signature || ! $timestamp) {
+            return false;
+        }
+
+        $pem = "-----BEGIN PUBLIC KEY-----\n".chunk_split($base64PublicKey, 64, "\n").'-----END PUBLIC KEY-----';
+        $key = openssl_pkey_get_public($pem);
+        if ($key === false) {
+            return false;
+        }
+
+        // SendGrid signs (timestamp + raw request body).
+        $ok = openssl_verify($timestamp.$request->getContent(), base64_decode($signature), $key, OPENSSL_ALGO_SHA256);
+
+        return $ok === 1;
     }
 }

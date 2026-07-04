@@ -59,5 +59,18 @@ return [
                 ],
             ],
         ],
+        'email' => [
+            'label' => 'Email',
+            'settings' => [
+                'email.log_retention_days' => [
+                    'label' => 'Email-log retention (days)',
+                    'help' => 'Delete email-log rows older than this. Keeps only what compliance needs; 0 disables pruning.',
+                    'type' => 'int',
+                    'min' => 0,
+                    'max' => 3650,
+                    'default' => (int) env('EMAIL_LOG_RETENTION_DAYS', 365),
+                ],
+            ],
+        ],
     ],
 ];

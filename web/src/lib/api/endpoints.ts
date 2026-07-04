@@ -54,6 +54,7 @@ import type {
   UpdatePlanInput,
   AdminUsersQuery,
   AssignRoleInput,
+  CampaignRecipientRow,
   ContactListDetail,
   ContactListRow,
   CreateCampaignInput,
@@ -718,6 +719,14 @@ export const adminApi = {
     const { data } = await api.post(`/admin/email-campaigns/${id}/send`, scheduledAt ? { scheduled_at: scheduledAt } : {})
     return data.data
   },
+  async cancelEmailCampaign(id: number): Promise<EmailCampaignRow> {
+    const { data } = await api.post(`/admin/email-campaigns/${id}/cancel`)
+    return data.data
+  },
+  async campaignRecipients(id: number, params: { status?: string; page?: number } = {}): Promise<Paginated<CampaignRecipientRow>> {
+    const { data } = await api.get(`/admin/email-campaigns/${id}/recipients`, { params })
+    return data
+  },
 
   // ── Email: contact lists + upload ──
   async contactLists(): Promise<ContactListRow[]> {
@@ -741,6 +750,14 @@ export const adminApi = {
   },
   async importContacts(id: number, contacts: { email: string; name: string | null }[]): Promise<{ imported: number; skipped: number }> {
     const { data } = await api.post(`/admin/contact-lists/${id}/import`, { contacts })
+    return data.data
+  },
+  async addContact(listId: number, input: { email: string; name?: string }): Promise<{ id: number; email: string }> {
+    const { data } = await api.post(`/admin/contact-lists/${listId}/contacts`, input)
+    return data.data
+  },
+  async updateContact(listId: number, contactId: number, input: { name?: string; status?: string }): Promise<{ id: number; status: string }> {
+    const { data } = await api.patch(`/admin/contact-lists/${listId}/contacts/${contactId}`, input)
     return data.data
   },
   async deleteContact(listId: number, contactId: number): Promise<void> {

@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SendCampaignEmail;
 use App\Mail\CampaignMail;
 use App\Models\Contact;
 use App\Models\ContactList;
 use App\Models\EmailCampaign;
+use App\Models\EmailCampaignRecipient;
 use App\Models\EmailLog;
 use App\Models\EmailSuppression;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -112,8 +114,50 @@ class EmailCampaignTest extends TestCase
         $this->postJson("/api/v1/admin/email-campaigns/{$campaign->id}/test")
             ->assertOk()->assertJsonPath('data.sent_to', $admin->email);
 
-        // CampaignMail is ShouldQueue, so a faked mailer records it as queued.
-        Mail::assertQueued(CampaignMail::class);
+        Mail::assertSent(CampaignMail::class);
+    }
+
+    public function test_send_job_skips_an_already_sent_recipient(): void
+    {
+        Mail::fake();
+        $list = ContactList::create(['name' => 'L']);
+        $campaign = $this->draft(['audience_type' => 'contact_list', 'audience' => ['contact_list_id' => $list->id], 'status' => 'sending']);
+        $recipient = EmailCampaignRecipient::create([
+            'email_campaign_id' => $campaign->id, 'email' => 'done@example.test', 'status' => 'sent',
+        ]);
+
+        (new SendCampaignEmail($recipient->id))->handle();
+
+        Mail::assertNothingSent();
+        $this->assertSame('sent', $recipient->fresh()->status); // untouched — resumable
+    }
+
+    public function test_cancel_reverts_a_scheduled_campaign_to_draft(): void
+    {
+        $this->seedRbac();
+        $campaign = $this->draft(['status' => 'scheduled', 'scheduled_at' => now()->addDay(), 'audience' => ['contact_list_id' => null]]);
+        $this->actingAsUser($this->userWithRole('super_admin'));
+
+        $this->postJson("/api/v1/admin/email-campaigns/{$campaign->id}/cancel")
+            ->assertOk()->assertJsonPath('data.status', 'draft');
+
+        // A non-scheduled campaign can't be cancelled.
+        $sent = $this->draft(['status' => 'sent', 'audience' => ['contact_list_id' => null]]);
+        $this->postJson("/api/v1/admin/email-campaigns/{$sent->id}/cancel")->assertStatus(409);
+    }
+
+    public function test_recipients_endpoint_lists_and_filters(): void
+    {
+        $this->seedRbac();
+        $campaign = $this->draft(['status' => 'sent', 'audience' => ['contact_list_id' => null]]);
+        EmailCampaignRecipient::create(['email_campaign_id' => $campaign->id, 'email' => 's@t.test', 'status' => 'sent']);
+        EmailCampaignRecipient::create(['email_campaign_id' => $campaign->id, 'email' => 'x@t.test', 'status' => 'suppressed']);
+        $this->actingAsUser($this->userWithRole('super_admin'));
+
+        $this->getJson("/api/v1/admin/email-campaigns/{$campaign->id}/recipients?status=suppressed")
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.email', 'x@t.test');
     }
 
     public function test_campaigns_are_super_admin_only(): void

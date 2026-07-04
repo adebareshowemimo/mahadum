@@ -104,6 +104,9 @@ return [
     // SendGrid dashboard's Event Webhook URL.
     'sendgrid' => [
         'webhook_token' => env('SENDGRID_WEBHOOK_TOKEN'),
+        // Base64 DER public key from SendGrid's Signed Event Webhook. When set, the
+        // ECDSA signature is verified and the URL token is only a fallback.
+        'webhook_public_key' => env('SENDGRID_WEBHOOK_PUBLIC_KEY'),
     ],
 
 ];

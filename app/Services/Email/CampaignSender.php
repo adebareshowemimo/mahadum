@@ -2,20 +2,21 @@
 
 namespace App\Services\Email;
 
-use App\Mail\CampaignMail;
+use App\Jobs\SendCampaignEmail;
 use App\Models\Contact;
 use App\Models\EmailCampaign;
 use App\Models\EmailCampaignRecipient;
 use App\Models\EmailSuppression;
 use App\Models\User;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\URL;
+use Illuminate\Bus\Batch;
+use Illuminate\Support\Facades\Bus;
 
 /**
- * Resolves a campaign's audience and dispatches the branded, queued send —
+ * Resolves a campaign's audience and dispatches a batched, branded send —
  * skipping globally-suppressed addresses (campaigns are always marketing) and
- * recording one recipient row per address. Reused by the admin "Send" action and
- * the scheduled-dispatch command, so a campaign sends the same way either path.
+ * recording one recipient row per address. Each email is a queued batch job that
+ * records its real outcome, so counts are exact and a mid-send crash is resumable.
+ * Reused by the admin "Send" action and the scheduled-dispatch command.
  */
 class CampaignSender
 {
@@ -29,29 +30,54 @@ class CampaignSender
         $campaign->update(['status' => 'sending']);
 
         $recipients = $this->resolve($campaign);
-        $sent = 0;
-        $suppressed = 0;
+        $queuedIds = [];
 
         foreach ($recipients as $r) {
-            if (EmailSuppression::suppresses($r['email'])) {
-                $this->record($campaign, $r, 'suppressed');
-                $suppressed++;
-
-                continue;
+            $status = EmailSuppression::suppresses($r['email']) ? 'suppressed' : 'queued';
+            $row = EmailCampaignRecipient::create([
+                'email_campaign_id' => $campaign->id,
+                'email' => $r['email'],
+                'user_id' => $r['user_id'],
+                'contact_id' => $r['contact_id'],
+                'status' => $status,
+            ]);
+            if ($status === 'queued') {
+                $queuedIds[] = $row->id;
             }
+        }
 
-            $this->record($campaign, $r, 'sent');
-            $url = URL::signedRoute('email.unsubscribe', ['email' => $r['email']]);
-            Mail::to($r['email'])->send(new CampaignMail($campaign->subject, $campaign->body, $url, $campaign->id));
-            $sent++;
+        $campaign->update(['recipients_count' => count($recipients)]);
+
+        // Nothing to send (all suppressed / empty audience) → finalise now.
+        if ($queuedIds === []) {
+            $this->finalise($campaign->id);
+
+            return;
+        }
+
+        $campaignId = $campaign->id;
+        Bus::batch(array_map(fn (int $id) => new SendCampaignEmail($id), $queuedIds))
+            ->name("email-campaign:{$campaignId}")
+            ->finally(fn (Batch $batch) => (new self)->finalise($campaignId))
+            ->dispatch();
+    }
+
+    /**
+     * Recompute counts from the recorded per-recipient outcomes and mark the
+     * campaign sent. Public so the batch's `finally` closure can call it.
+     */
+    public function finalise(int $campaignId): void
+    {
+        $campaign = EmailCampaign::find($campaignId);
+        if (! $campaign) {
+            return;
         }
 
         $campaign->update([
             'status' => 'sent',
             'sent_at' => now(),
-            'recipients_count' => count($recipients),
-            'sent_count' => $sent,
-            'failed_count' => 0,
+            'sent_count' => $campaign->recipients()->where('status', 'sent')->count(),
+            'failed_count' => $campaign->recipients()->where('status', 'failed')->count(),
         ]);
     }
 
@@ -88,19 +114,5 @@ class CampaignSender
         return $query->get(['id', 'email'])
             ->map(fn (User $u) => ['email' => $u->email, 'user_id' => $u->id, 'contact_id' => null])
             ->all();
-    }
-
-    /**
-     * @param  array{email: string, user_id: int|null, contact_id: int|null}  $r
-     */
-    private function record(EmailCampaign $campaign, array $r, string $status): void
-    {
-        EmailCampaignRecipient::create([
-            'email_campaign_id' => $campaign->id,
-            'email' => $r['email'],
-            'user_id' => $r['user_id'],
-            'contact_id' => $r['contact_id'],
-            'status' => $status,
-        ]);
     }
 }

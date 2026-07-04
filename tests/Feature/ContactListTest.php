@@ -93,6 +93,35 @@ class ContactListTest extends TestCase
             ->assertJsonStructure(['list' => ['id', 'name'], 'data', 'meta']);
     }
 
+    public function test_manual_add_and_edit_a_contact(): void
+    {
+        $this->seedRbac();
+        $list = $this->list();
+        $this->actingAsUser($this->userWithRole('super_admin'));
+
+        $id = $this->postJson("/api/v1/admin/contact-lists/{$list->id}/contacts", ['email' => 'Solo@Example.test', 'name' => 'Solo'])
+            ->assertCreated()->json('data.id');
+        $this->assertDatabaseHas('contacts', ['email' => 'solo@example.test', 'source' => 'manual', 'status' => 'subscribed']);
+
+        // Duplicate is rejected.
+        $this->postJson("/api/v1/admin/contact-lists/{$list->id}/contacts", ['email' => 'solo@example.test'])->assertStatus(422);
+
+        // Edit to unsubscribed.
+        $this->patchJson("/api/v1/admin/contact-lists/{$list->id}/contacts/{$id}", ['status' => 'unsubscribed'])
+            ->assertOk()->assertJsonPath('data.status', 'unsubscribed');
+        $this->assertDatabaseHas('contacts', ['id' => $id, 'status' => 'unsubscribed']);
+    }
+
+    public function test_manual_add_rejects_a_suppressed_address(): void
+    {
+        $this->seedRbac();
+        $list = $this->list();
+        EmailSuppression::create(['email' => 'blocked@example.test', 'reason' => 'bounce']);
+        $this->actingAsUser($this->userWithRole('super_admin'));
+
+        $this->postJson("/api/v1/admin/contact-lists/{$list->id}/contacts", ['email' => 'blocked@example.test'])->assertStatus(422);
+    }
+
     public function test_contacts_management_is_super_admin_only(): void
     {
         $this->seedRbac();

@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { AdminPageHeader } from '@/components/admin'
-import { Alert, Badge, Card, CardBody, Skeleton } from '@/components/ui'
-import { useEmailCampaign } from '@/lib/admin/queries'
+import { AdminPageHeader, DataTable, FilterSelect, type Column } from '@/components/admin'
+import { Alert, Badge, Button, Card, CardBody, Skeleton } from '@/components/ui'
+import type { CampaignRecipientRow } from '@/lib/api'
+import { useCampaignRecipients, useCancelEmailCampaign, useEmailCampaign } from '@/lib/admin/queries'
 
 const STATUS_TONE: Record<string, 'success' | 'gold' | 'info' | 'neutral' | 'danger'> = {
   draft: 'neutral',
@@ -33,6 +35,7 @@ export function CampaignDetailPage() {
   const { campaignId } = useParams()
   const id = Number(campaignId)
   const { data, isLoading, isError } = useEmailCampaign(id)
+  const cancel = useCancelEmailCampaign()
 
   if (isLoading) return <Skeleton className="h-96" />
   if (isError || !data) return <Alert variant="danger">Couldn’t load this campaign.</Alert>
@@ -49,7 +52,16 @@ export function CampaignDetailPage() {
         description={audienceLabel}
         backTo="/admin/emails"
         backLabel="Campaigns"
-        actions={<Badge variant={STATUS_TONE[data.status] ?? 'neutral'}>{data.status}</Badge>}
+        actions={
+          <div className="flex items-center gap-2">
+            <Badge variant={STATUS_TONE[data.status] ?? 'neutral'}>{data.status}</Badge>
+            {data.status === 'scheduled' && (
+              <Button size="sm" variant="ghost" loading={cancel.isPending} onClick={() => cancel.mutate(id)}>
+                Cancel schedule
+              </Button>
+            )}
+          </div>
+        }
       />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -93,6 +105,62 @@ export function CampaignDetailPage() {
           </CardBody>
         </Card>
       </section>
+
+      {data.recipients_count > 0 && <RecipientsTable campaignId={id} />}
     </div>
+  )
+}
+
+const RECIPIENT_STATUS_TONE: Record<string, 'success' | 'gold' | 'danger' | 'neutral'> = {
+  sent: 'success',
+  queued: 'gold',
+  suppressed: 'neutral',
+  failed: 'danger',
+}
+
+function RecipientsTable({ campaignId }: { campaignId: number }) {
+  const [status, setStatus] = useState('')
+  const [page, setPage] = useState(1)
+  const { data, isLoading, isFetching } = useCampaignRecipients(campaignId, { status: status || undefined, page })
+
+  const columns: Column<CampaignRecipientRow>[] = [
+    { key: 'email', header: 'Recipient', render: (r) => <span className="text-foreground">{r.email}</span> },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (r) => <Badge variant={RECIPIENT_STATUS_TONE[r.status] ?? 'neutral'}>{r.status}</Badge>,
+    },
+  ]
+
+  const meta = data?.meta
+
+  return (
+    <section className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-lg font-bold text-foreground">Recipients</h2>
+        <FilterSelect
+          label="Status"
+          value={status}
+          onChange={(v) => { setStatus(v); setPage(1) }}
+          allLabel="All"
+          options={[
+            { label: 'Sent', value: 'sent' },
+            { label: 'Suppressed', value: 'suppressed' },
+            { label: 'Failed', value: 'failed' },
+            { label: 'Queued', value: 'queued' },
+          ]}
+        />
+      </div>
+      <DataTable columns={columns} rows={data?.data ?? []} getRowId={(r) => r.id} isLoading={isLoading} empty="No recipients match." />
+      {meta && meta.total > 0 && (
+        <div className="flex items-center justify-between text-sm text-muted">
+          <span>Page {meta.current_page} of {meta.last_page} · {meta.total} recipients</span>
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" disabled={meta.current_page <= 1 || isFetching} onClick={() => setPage((p) => p - 1)}>Previous</Button>
+            <Button size="sm" variant="ghost" disabled={meta.current_page >= meta.last_page || isFetching} onClick={() => setPage((p) => p + 1)}>Next</Button>
+          </div>
+        </div>
+      )}
+    </section>
   )
 }

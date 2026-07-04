@@ -356,6 +356,8 @@ Route::prefix('v1')->group(function () {
             Route::get('email-campaigns/{emailCampaign}', [EmailCampaignController::class, 'show'])->middleware('can:emails.campaigns.manage');
             Route::post('email-campaigns/{emailCampaign}/test', [EmailCampaignController::class, 'test'])->middleware('can:emails.campaigns.manage');
             Route::post('email-campaigns/{emailCampaign}/send', [EmailCampaignController::class, 'send'])->middleware('can:emails.campaigns.manage');
+            Route::post('email-campaigns/{emailCampaign}/cancel', [EmailCampaignController::class, 'cancel'])->middleware('can:emails.campaigns.manage');
+            Route::get('email-campaigns/{emailCampaign}/recipients', [EmailCampaignController::class, 'recipients'])->middleware('can:emails.campaigns.manage');
 
             // Email — log of every outbound message (§7)
             Route::get('email-log', [EmailLogController::class, 'index'])->middleware('can:emails.log.view');
@@ -366,6 +368,8 @@ Route::prefix('v1')->group(function () {
             Route::get('contact-lists/{contactList}', [ContactListController::class, 'show'])->middleware('can:emails.contacts.manage');
             Route::post('contact-lists/{contactList}/import/preview', [ContactListController::class, 'previewImport'])->middleware('can:emails.contacts.manage');
             Route::post('contact-lists/{contactList}/import', [ContactListController::class, 'import'])->middleware('can:emails.contacts.manage');
+            Route::post('contact-lists/{contactList}/contacts', [ContactListController::class, 'storeContact'])->middleware('can:emails.contacts.manage');
+            Route::match(['put', 'patch'], 'contact-lists/{contactList}/contacts/{contact}', [ContactListController::class, 'updateContact'])->middleware('can:emails.contacts.manage');
             Route::delete('contact-lists/{contactList}/contacts/{contact}', [ContactListController::class, 'destroyContact'])->middleware('can:emails.contacts.manage');
 
             // Payment gateway console (env-configured; secrets never leave the server)

@@ -1130,6 +1130,12 @@ export interface CreateCampaignInput {
   audience?: Record<string, unknown>
 }
 
+export interface CampaignRecipientRow {
+  id: number
+  email: string
+  status: string
+}
+
 export interface ContactListRow {
   id: number
   name: string
