@@ -12,6 +12,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/socialite": "^5.28",
         "laravel/tinker": "^3.0",
+        "openspout/openspout": "^5.3",
         "spatie/laravel-permission": "^8.0",
         "stancl/tenancy": "^3.10"
     },

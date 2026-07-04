@@ -6,6 +6,9 @@ use App\Models\Contact;
 use App\Models\ContactList;
 use App\Models\EmailSuppression;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Writer\XLSX\Writer;
 use Tests\TestCase;
 
 class ContactListTest extends TestCase
@@ -120,6 +123,52 @@ class ContactListTest extends TestCase
         $this->actingAsUser($this->userWithRole('super_admin'));
 
         $this->postJson("/api/v1/admin/contact-lists/{$list->id}/contacts", ['email' => 'blocked@example.test'])->assertStatus(422);
+    }
+
+    public function test_xlsx_upload_is_parsed_in_the_preview(): void
+    {
+        $this->seedRbac();
+        $list = $this->list();
+        $this->actingAsUser($this->userWithRole('super_admin'));
+
+        // Build a real .xlsx with openspout (header row + two contacts, one dup).
+        $path = tempnam(sys_get_temp_dir(), 'contacts').'.xlsx';
+        $writer = new Writer;
+        $writer->openToFile($path);
+        $writer->addRow(Row::fromValues(['email', 'name']));
+        $writer->addRow(Row::fromValues(['sheet1@example.test', 'Sheet One']));
+        $writer->addRow(Row::fromValues(['sheet2@example.test', '']));
+        $writer->addRow(Row::fromValues(['sheet1@example.test', 'dup']));
+        $writer->close();
+
+        $file = new UploadedFile($path, 'contacts.xlsx', null, null, true);
+
+        $this->post("/api/v1/admin/contact-lists/{$list->id}/import/preview", ['file' => $file])
+            ->assertOk()
+            ->assertJsonPath('data.counts.valid', 2)      // sheet1 + sheet2 (header skipped)
+            ->assertJsonPath('data.counts.duplicate', 1); // the repeated sheet1
+    }
+
+    public function test_upload_history_and_rollback(): void
+    {
+        $this->seedRbac();
+        $list = $this->list();
+        $this->actingAsUser($this->userWithRole('super_admin'));
+
+        $this->postJson("/api/v1/admin/contact-lists/{$list->id}/import", ['contacts' => [
+            ['email' => 'one@example.test'], ['email' => 'two@example.test'],
+        ]])->assertOk()->assertJsonPath('data.imported', 2);
+
+        $batchId = $this->getJson("/api/v1/admin/contact-lists/{$list->id}/uploads")
+            ->assertOk()->assertJsonPath('data.0.imported', 2)->json('data.0.id');
+
+        // Rollback removes the two contacts it added.
+        $this->postJson("/api/v1/admin/contact-lists/{$list->id}/uploads/{$batchId}/rollback")
+            ->assertOk()->assertJsonPath('data.removed', 2);
+        $this->assertSame(0, Contact::where('contact_list_id', $list->id)->count());
+
+        // A second rollback is a 409.
+        $this->postJson("/api/v1/admin/contact-lists/{$list->id}/uploads/{$batchId}/rollback")->assertStatus(409);
     }
 
     public function test_contacts_management_is_super_admin_only(): void

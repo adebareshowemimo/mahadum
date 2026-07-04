@@ -6,9 +6,11 @@ import {
   useAddContact,
   useContactList,
   useContactLists,
+  useContactUploads,
   useCreateContactList,
   useDeleteContact,
   useImportContacts,
+  useRollbackUpload,
   useUpdateContact,
 } from '@/lib/admin/queries'
 
@@ -128,6 +130,7 @@ function ListDetail({ listId }: { listId: number }) {
     <div className="flex flex-col gap-4">
       <UploadPanel listId={listId} />
       <AddContactForm listId={listId} />
+      <UploadHistory listId={listId} />
 
       <section className="flex flex-col gap-2">
         <h2 className="font-display text-lg font-bold text-foreground">
@@ -145,6 +148,45 @@ function ListDetail({ listId }: { listId: number }) {
         )}
       </section>
     </div>
+  )
+}
+
+function UploadHistory({ listId }: { listId: number }) {
+  const { data } = useContactUploads(listId)
+  const rollback = useRollbackUpload()
+
+  if (!data || data.length === 0) return null
+
+  return (
+    <Card>
+      <CardBody className="flex flex-col gap-2">
+        <p className="text-sm font-semibold text-foreground">Upload history</p>
+        <ul className="flex flex-col divide-y divide-border">
+          {data.map((b) => (
+            <li key={b.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+              <span className="text-muted">
+                {b.created_at ? new Date(b.created_at).toLocaleString() : '—'} ·{' '}
+                <span className="text-foreground">{b.imported} imported</span>
+                {b.skipped ? `, ${b.skipped} skipped` : ''}
+              </span>
+              <div className="flex items-center gap-2">
+                <Badge variant={b.status === 'active' ? 'neutral' : 'gold'}>{b.status.replace('_', ' ')}</Badge>
+                {b.status === 'active' && b.imported > 0 && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    loading={rollback.isPending && rollback.variables?.batchId === b.id}
+                    onClick={() => rollback.mutate({ listId, batchId: b.id })}
+                  >
+                    Roll back
+                  </Button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </CardBody>
+    </Card>
   )
 }
 
@@ -243,7 +285,7 @@ function UploadPanel({ listId }: { listId: number }) {
           <input
             ref={fileRef}
             type="file"
-            accept=".csv,text/csv,text/plain"
+            accept=".csv,.xlsx,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             onChange={(e) => { setFile(e.target.files?.[0] ?? null); setPreview(null) }}
             className="text-sm text-muted"
             aria-label="Upload a CSV file"

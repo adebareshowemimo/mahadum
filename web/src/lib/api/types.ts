@@ -1163,6 +1163,14 @@ export interface ImportPreview {
   valid: { email: string; name: string | null }[]
 }
 
+export interface UploadBatchRow {
+  id: number
+  imported: number
+  skipped: number
+  status: string
+  created_at: string | null
+}
+
 export interface EmailLogRow {
   id: number
   to_email: string

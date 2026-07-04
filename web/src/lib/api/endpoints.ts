@@ -64,6 +64,7 @@ import type {
   EmailLogPage,
   EmailLogQuery,
   ImportPreview,
+  UploadBatchRow,
   InviteOrgAdminInput,
   OrgStatus,
   Paginated,
@@ -750,6 +751,14 @@ export const adminApi = {
   },
   async importContacts(id: number, contacts: { email: string; name: string | null }[]): Promise<{ imported: number; skipped: number }> {
     const { data } = await api.post(`/admin/contact-lists/${id}/import`, { contacts })
+    return data.data
+  },
+  async contactUploads(id: number): Promise<UploadBatchRow[]> {
+    const { data } = await api.get(`/admin/contact-lists/${id}/uploads`)
+    return data.data
+  },
+  async rollbackUpload(listId: number, batchId: number): Promise<{ removed: number }> {
+    const { data } = await api.post(`/admin/contact-lists/${listId}/uploads/${batchId}/rollback`)
     return data.data
   },
   async addContact(listId: number, input: { email: string; name?: string }): Promise<{ id: number; email: string }> {

@@ -368,6 +368,8 @@ Route::prefix('v1')->group(function () {
             Route::get('contact-lists/{contactList}', [ContactListController::class, 'show'])->middleware('can:emails.contacts.manage');
             Route::post('contact-lists/{contactList}/import/preview', [ContactListController::class, 'previewImport'])->middleware('can:emails.contacts.manage');
             Route::post('contact-lists/{contactList}/import', [ContactListController::class, 'import'])->middleware('can:emails.contacts.manage');
+            Route::get('contact-lists/{contactList}/uploads', [ContactListController::class, 'uploads'])->middleware('can:emails.contacts.manage');
+            Route::post('contact-lists/{contactList}/uploads/{batch}/rollback', [ContactListController::class, 'rollbackUpload'])->middleware('can:emails.contacts.manage');
             Route::post('contact-lists/{contactList}/contacts', [ContactListController::class, 'storeContact'])->middleware('can:emails.contacts.manage');
             Route::match(['put', 'patch'], 'contact-lists/{contactList}/contacts/{contact}', [ContactListController::class, 'updateContact'])->middleware('can:emails.contacts.manage');
             Route::delete('contact-lists/{contactList}/contacts/{contact}', [ContactListController::class, 'destroyContact'])->middleware('can:emails.contacts.manage');

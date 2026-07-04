@@ -454,6 +454,7 @@ export function useImportContacts() {
       adminApi.importContacts(id, contacts),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['admin-contact-list'] })
+      void qc.invalidateQueries({ queryKey: ['admin-contact-uploads'] })
       void qc.invalidateQueries({ queryKey: adminKeys.contactLists })
     },
   })
@@ -464,6 +465,26 @@ export function useDeleteContact() {
   return useMutation({
     mutationFn: ({ listId, contactId }: { listId: number; contactId: number }) => adminApi.deleteContact(listId, contactId),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin-contact-list'] }),
+  })
+}
+
+export function useContactUploads(listId: number) {
+  return useQuery({
+    queryKey: ['admin-contact-uploads', listId],
+    queryFn: () => adminApi.contactUploads(listId),
+    enabled: listId > 0,
+  })
+}
+
+export function useRollbackUpload() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ listId, batchId }: { listId: number; batchId: number }) => adminApi.rollbackUpload(listId, batchId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin-contact-uploads'] })
+      void qc.invalidateQueries({ queryKey: ['admin-contact-list'] })
+      void qc.invalidateQueries({ queryKey: adminKeys.contactLists })
+    },
   })
 }
 

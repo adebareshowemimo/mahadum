@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Contact;
 use App\Models\ContactList;
+use App\Models\ContactUploadBatch;
 use App\Models\EmailSuppression;
 use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use OpenSpout\Reader\XLSX\Reader;
 
 /**
  * Contact lists + the email-upload pipeline. An admin builds a mailing list by
@@ -89,7 +91,7 @@ class ContactListController extends Controller
     {
         $request->validate([
             'emails' => ['nullable', 'string'],
-            'file' => ['nullable', 'file', 'mimes:csv,txt', 'max:5120'],
+            'file' => ['nullable', 'file', 'extensions:csv,txt,xlsx', 'max:5120'],
         ]);
 
         $raw = $this->collectRows($request);
@@ -145,6 +147,11 @@ class ContactListController extends Controller
         $imported = 0;
         $seen = [];
 
+        $batch = ContactUploadBatch::create([
+            'contact_list_id' => $contactList->id,
+            'created_by' => $request->user()->id,
+        ]);
+
         foreach ($data['contacts'] as $row) {
             $email = mb_strtolower(trim($row['email']));
             if (isset($seen[$email]) || $existing->has($email) || EmailSuppression::suppresses($email)) {
@@ -158,15 +165,48 @@ class ContactListController extends Controller
                 'name' => $row['name'] ?? null,
                 'status' => 'subscribed',
                 'source' => 'upload',
+                'upload_batch_id' => $batch->id,
                 'consent_at' => $now,
             ]);
             $imported++;
         }
 
         $skipped = count($data['contacts']) - $imported;
+        $batch->update(['imported' => $imported, 'skipped' => $skipped]);
         $this->audit->record('contacts.uploaded', $contactList, [], ['imported' => $imported, 'skipped' => $skipped]);
 
         return response()->json(['data' => ['imported' => $imported, 'skipped' => $skipped]]);
+    }
+
+    /** Import history for a list (each upload batch + its counts). */
+    public function uploads(ContactList $contactList): JsonResponse
+    {
+        $batches = $contactList->uploadBatches()->latest()->get()->map(fn (ContactUploadBatch $b) => [
+            'id' => $b->id,
+            'imported' => $b->imported,
+            'skipped' => $b->skipped,
+            'status' => $b->status,
+            'created_at' => $b->created_at?->toIso8601String(),
+        ]);
+
+        return response()->json(['data' => $batches]);
+    }
+
+    /** Undo an import — delete the contacts it added and mark the batch rolled back. */
+    public function rollbackUpload(ContactList $contactList, ContactUploadBatch $batch): JsonResponse
+    {
+        abort_unless($batch->contact_list_id === $contactList->id, 404);
+
+        if ($batch->status === 'rolled_back') {
+            return response()->json(['error' => ['code' => 'already_rolled_back', 'message' => 'This import was already rolled back.']], 409);
+        }
+
+        $removed = $batch->contacts()->count();
+        $batch->contacts()->delete();
+        $batch->update(['status' => 'rolled_back']);
+        $this->audit->record('contacts.upload_rolled_back', $contactList, [], ['batch_id' => $batch->id, 'removed' => $removed]);
+
+        return response()->json(['data' => ['removed' => $removed]]);
     }
 
     /** Add a single contact manually (validated + deduped + suppression-checked). */
@@ -225,9 +265,10 @@ class ContactListController extends Controller
     }
 
     /**
-     * Gather [email, name] rows from a pasted block and/or an uploaded CSV.
+     * Gather [email, name] rows from a pasted block and/or an uploaded CSV/XLSX.
      * Pasted text: one address per line (or comma/semicolon separated), names
-     * ignored. CSV: first column email, optional second column name.
+     * ignored. File: first column email, optional second column name; a header
+     * row (first cell "email") is skipped.
      *
      * @return array<int, array{0: string, 1: string}>
      */
@@ -244,20 +285,51 @@ class ContactListController extends Controller
             }
         }
 
-        if ($request->hasFile('file')) {
-            $handle = fopen($request->file('file')->getRealPath(), 'r');
-            if ($handle !== false) {
-                while (($line = fgetcsv($handle)) !== false && count($rows) < self::MAX_UPLOAD_ROWS) {
-                    $email = trim((string) ($line[0] ?? ''));
-                    if ($email === '' || mb_strtolower($email) === 'email') {
-                        continue; // skip blanks + a header row
-                    }
-                    $rows[] = [$email, trim((string) ($line[1] ?? ''))];
+        if ($file = $request->file('file')) {
+            $isXlsx = mb_strtolower($file->getClientOriginalExtension()) === 'xlsx';
+            foreach ($isXlsx ? $this->readXlsx($file->getRealPath()) : $this->readCsv($file->getRealPath()) as $cells) {
+                if (count($rows) >= self::MAX_UPLOAD_ROWS) {
+                    break;
                 }
-                fclose($handle);
+                $email = trim((string) ($cells[0] ?? ''));
+                if ($email === '' || mb_strtolower($email) === 'email') {
+                    continue; // skip blanks + a header row
+                }
+                $rows[] = [$email, trim((string) ($cells[1] ?? ''))];
             }
         }
 
         return array_slice($rows, 0, self::MAX_UPLOAD_ROWS);
+    }
+
+    /**
+     * @return \Generator<int, array<int, string>>
+     */
+    private function readCsv(string $path): \Generator
+    {
+        $handle = fopen($path, 'r');
+        if ($handle === false) {
+            return;
+        }
+        while (($line = fgetcsv($handle)) !== false) {
+            yield array_map(fn ($v) => (string) $v, $line);
+        }
+        fclose($handle);
+    }
+
+    /**
+     * @return \Generator<int, array<int, string>>
+     */
+    private function readXlsx(string $path): \Generator
+    {
+        $reader = new Reader;
+        $reader->open($path);
+        foreach ($reader->getSheetIterator() as $sheet) {
+            foreach ($sheet->getRowIterator() as $row) {
+                yield array_map(fn ($cell) => (string) $cell, $row->toArray());
+            }
+            break; // first sheet only
+        }
+        $reader->close();
     }
 }

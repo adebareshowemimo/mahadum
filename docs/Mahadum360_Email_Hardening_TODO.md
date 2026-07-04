@@ -108,14 +108,16 @@ mid-send crash is safely resumable.
   audited, 409 otherwise) + a "Cancel schedule" button on the detail page. *(Tested.)*
 - [x] ✅ **Campaign recipient drill-down** — `GET …/{c}/recipients` (paginated,
   status filter) + a recipients table on the detail page. *(Tested.)*
-- [x] 🟡 **Contact management** — per-contact **edit** (status subscribe/unsubscribe)
-  + a **manual add** form (validated, dedup + suppression), both wired in the UI.
-  *(Tested.)* *(Upload-history/rollback `UploadBatch` still ⬜.)*
+- [x] ✅ **Contact management** — per-contact **edit** (subscribe/unsubscribe) + a
+  **manual add** form (validated, dedup + suppression), plus **upload history +
+  rollback** (`ContactUploadBatch` per import; roll back deletes the contacts it
+  added, 409 on a repeat). All wired in the UI. *(Tested.)*
 - [x] ✅ **Email-log row detail** — click a log row → modal with the full record.
   *(Resend ⬜: we store metadata only, not the rendered body, so a true resend needs
-  body retention first.)*
-- [ ] **XLSX upload** ⬜ — needs a spreadsheet dependency (`openspout` /
-  `phpoffice/phpspreadsheet`); not installed. CSV + paste cover the common case.
+  body retention first — deliberately not stored, per the minimise-PII stance.)*
+- [x] ✅ **XLSX upload** — added `openspout`; `ContactListController` streams `.xlsx`
+  (first sheet, header row skipped) alongside CSV + paste. *(Tested with a real
+  generated workbook.)*
 - [ ] **In-app template preview** ⬜ — the `mail:preview` command covers iteration.
 
 **DoD:** an admin can cancel a scheduled blast, inspect who a campaign went to,

@@ -39,4 +39,12 @@ class ContactList extends Model
     {
         return $this->hasMany(Contact::class);
     }
+
+    /**
+     * @return HasMany<ContactUploadBatch, $this>
+     */
+    public function uploadBatches(): HasMany
+    {
+        return $this->hasMany(ContactUploadBatch::class);
+    }
 }
