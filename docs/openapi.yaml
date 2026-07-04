@@ -40,6 +40,7 @@ tags:
   - name: Referrals & Payouts
   - name: School
   - name: Admin
+  - name: Email
   - name: Webhooks
 
 security:
@@ -2413,6 +2414,546 @@ paths:
                   data: { type: object, properties: { id: { type: integer }, status: { type: string, example: active } } }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /admin/organizations/{organization}:
+    parameters:
+      - { name: organization, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Admin]
+      summary: Organization drill-down — profile, members, invoices, classes, referrals, audit (organizations.view)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: object } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Admin]
+      summary: Edit an organization profile (organizations.manage)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                contact_email: { type: string, format: email, nullable: true }
+                domain: { type: string, nullable: true }
+                cac_number: { type: string, nullable: true }
+                address: { type: string, nullable: true }
+      responses:
+        "200": { description: OK }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /admin/organizations/{organization}/status:
+    parameters:
+      - { name: organization, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Admin]
+      summary: Reversible lifecycle change (organizations.manage)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [active, suspended, inactive, pending] }
+      responses:
+        "200": { description: OK }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /admin/organizations/{organization}/invite-admin:
+    parameters:
+      - { name: organization, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Admin]
+      summary: Invite a school admin — creates the account + membership, emails a set-password link (organizations.manage)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [first_name, last_name, email]
+              properties:
+                first_name: { type: string }
+                last_name: { type: string }
+                email: { type: string, format: email, description: Must be a new address; existing users are handled via the users directory }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { type: object, properties: { data: { type: object, properties: { id: { type: integer }, name: { type: string }, email: { type: string } } } } } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  # --------------------------------------------------------------- Admin: users & access
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: Platform user directory — paginated + filterable (users.view)
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: Search name/email/phone/username }
+        - { name: role, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [active, suspended] } }
+        - { name: organization_id, in: query, schema: { type: integer } }
+        - { name: page, in: query, schema: { type: integer } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { type: object } }, meta: { type: object } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/users/{user}/roles:
+    parameters:
+      - { name: user, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Admin]
+      summary: Assign or revoke a role (roles.assign) — self-lockout guarded
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role, action]
+              properties:
+                role: { type: string }
+                action: { type: string, enum: [assign, revoke] }
+      responses:
+        "200": { description: OK }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /admin/users/{user}/status:
+    parameters:
+      - { name: user, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Admin]
+      summary: Suspend or reactivate a user (users.manage) — cannot suspend self
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [status], properties: { status: { type: string, enum: [active, suspended] } } }
+      responses:
+        "200": { description: OK }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /admin/roles:
+    get:
+      tags: [Admin]
+      summary: Roles, permissions grouped by aspect, and the grant matrix (roles.view)
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/audit-logs:
+    get:
+      tags: [Admin]
+      summary: Audit trail — paginated + filterable (audit.view)
+      parameters:
+        - { name: action, in: query, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+        - { name: page, in: query, schema: { type: integer } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  # --------------------------------------------------------------- Admin: languages
+  /admin/languages:
+    get:
+      tags: [Admin]
+      summary: All languages incl. inactive, with course counts + order (content.languages.manage)
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/languages/reorder:
+    post:
+      tags: [Admin]
+      summary: Persist a new display order (content.languages.manage)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [ids], properties: { ids: { type: array, items: { type: integer }, description: Language ids in the desired order } } }
+      responses:
+        "200": { description: OK }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /admin/languages/{language}:
+    parameters:
+      - { name: language, in: path, required: true, schema: { type: integer } }
+    patch:
+      tags: [Admin]
+      summary: Toggle a language active/hidden (content.languages.manage)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [is_active], properties: { is_active: { type: boolean } } }
+      responses:
+        "200": { description: OK }
+
+  # --------------------------------------------------------------- Admin: reports
+  /admin/reports/income:
+    get:
+      tags: [Admin]
+      summary: Revenue by channel × month, gross/refunds/net (analytics.platform.view)
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /admin/reports/growth:
+    get:
+      tags: [Admin]
+      summary: New users + organizations by month (analytics.platform.view)
+      responses: { "200": { description: OK } }
+  /admin/reports/subscriptions:
+    get:
+      tags: [Admin]
+      summary: New subscriptions by month, status mix, active count (analytics.platform.view)
+      responses: { "200": { description: OK } }
+  /admin/reports/referrals:
+    get:
+      tags: [Admin]
+      summary: Referrals by month + commission totals by status (analytics.platform.view)
+      responses: { "200": { description: OK } }
+  /admin/reports/org-activity:
+    get:
+      tags: [Admin]
+      summary: New orgs by month + class/student totals (analytics.platform.view)
+      responses: { "200": { description: OK } }
+  /admin/reports/renewals:
+    get:
+      tags: [Admin]
+      summary: Upcoming renewals by month, expected revenue, reminder coverage (analytics.platform.view)
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses: { "200": { description: OK } }
+
+  # --------------------------------------------------------------- Admin: finance
+  /admin/payouts:
+    get:
+      tags: [Admin]
+      summary: Payout queue with resolved beneficiary labels (payouts.view)
+      parameters:
+        - { name: status, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer } }
+      responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /admin/payouts/{payout}/reject:
+    parameters:
+      - { name: payout, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Admin]
+      summary: Reject a requested payout (payouts.approve) — 409 if not pending
+      responses: { "200": { description: OK }, "409": { description: Not a requested payout } }
+
+  /admin/plans:
+    get:
+      tags: [Admin]
+      summary: List subscription plans (billing.plans.manage)
+      responses: { "200": { description: OK } }
+    post:
+      tags: [Admin]
+      summary: Create a plan (billing.plans.manage)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name, price_minor, interval]
+              properties:
+                code: { type: string }
+                name: { type: string }
+                price_minor: { type: integer }
+                interval: { type: string, enum: [week, month, quarter, term, year] }
+                audience: { type: string, enum: [individual, family, teacher, school, any], nullable: true }
+                max_profiles: { type: integer, nullable: true }
+                features: { type: object, nullable: true }
+      responses: { "201": { description: Created }, "422": { $ref: "#/components/responses/ValidationError" } }
+  /admin/plans/{plan}:
+    parameters:
+      - { name: plan, in: path, required: true, schema: { type: integer } }
+    patch:
+      tags: [Admin]
+      summary: Edit price/interval/profile-cap/features (billing.plans.manage)
+      responses: { "200": { description: OK }, "422": { $ref: "#/components/responses/ValidationError" } }
+
+  /admin/payment-gateways:
+    get:
+      tags: [Admin]
+      summary: Per-provider gateway status + env-var checklist; secrets never returned (system.settings.manage)
+      responses: { "200": { description: OK } }
+  /admin/payment-gateways/{provider}/test:
+    parameters:
+      - { name: provider, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [Admin]
+      summary: Live credential ping — harmless authenticated read (system.settings.manage)
+      responses: { "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: object, properties: { ok: { type: boolean }, message: { type: string } } } } } } } } }
+
+  /admin/settings:
+    get:
+      tags: [Admin]
+      summary: DB-backed platform settings, grouped (system.settings.manage)
+      responses: { "200": { description: OK } }
+    patch:
+      tags: [Admin]
+      summary: Update whitelisted settings, per-key validated + audited (system.settings.manage)
+      responses: { "200": { description: OK }, "422": { $ref: "#/components/responses/ValidationError" } }
+
+  # --------------------------------------------------------------- Admin: fraud review
+  /admin/referrals/flagged:
+    get:
+      tags: [Admin]
+      summary: Flagged/frozen referral codes with velocity counts (referrals.fraud.review)
+      responses: { "200": { description: OK } }
+  /admin/referrals/{referralCode}/clear:
+    parameters:
+      - { name: referralCode, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Admin]
+      summary: Clear a flagged code back to active (referrals.fraud.review)
+      responses: { "200": { description: OK } }
+  /admin/referrals/{referralCode}/freeze:
+    parameters:
+      - { name: referralCode, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Admin]
+      summary: Freeze a code as confirmed fraud (referrals.fraud.review)
+      responses: { "200": { description: OK } }
+
+  # --------------------------------------------------------------- Admin: support triage
+  /admin/support-tickets:
+    get:
+      tags: [Admin]
+      summary: Support queue — paginated, status filter, open-count + assignees (support.handle)
+      parameters:
+        - { name: status, in: query, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string } }
+      responses: { "200": { description: OK } }
+  /admin/support-tickets/{ticket}:
+    parameters:
+      - { name: ticket, in: path, required: true, schema: { type: integer } }
+    patch:
+      tags: [Admin]
+      summary: Set status/priority/assignee/response (support.handle)
+      responses: { "200": { description: OK }, "422": { $ref: "#/components/responses/ValidationError" } }
+  /admin/support-tickets/{ticket}/messages:
+    parameters:
+      - { name: ticket, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Admin]
+      summary: Staff reply in the ticket thread; emails the requester (support.handle)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [body], properties: { body: { type: string, maxLength: 4000 } } }
+      responses: { "201": { description: Created } }
+
+  # --------------------------------------------------------------- Content: media orphans
+  /media/orphans:
+    get:
+      tags: [Content]
+      summary: Unreferenced media assets — paginated + filterable (content.media.upload)
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: type, in: query, schema: { type: string } }
+        - { name: per_page, in: query, schema: { type: integer } }
+      responses: { "200": { description: OK } }
+  /media/orphans/purge:
+    post:
+      tags: [Content]
+      summary: Bulk-delete orphaned assets — re-checked against live references (content.media.upload)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [ids], properties: { ids: { type: array, items: { type: integer } } } }
+      responses: { "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: object, properties: { deleted: { type: integer }, skipped: { type: integer } } } } } } } } }
+
+  # =============================================================== Email system
+  /admin/email-campaigns:
+    get:
+      tags: [Email]
+      summary: List email campaigns (emails.campaigns.manage)
+      responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Forbidden" } }
+    post:
+      tags: [Email]
+      summary: Create a draft campaign (emails.campaigns.manage)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, body, audience_type]
+              properties:
+                subject: { type: string, maxLength: 200 }
+                body: { type: string, description: Markdown, rendered in the brand template }
+                audience_type: { type: string, enum: [user_segment, contact_list] }
+                audience:
+                  type: object
+                  properties:
+                    contact_list_id: { type: integer }
+                    role: { type: string }
+                    status: { type: string }
+                    organization_id: { type: integer }
+      responses: { "201": { description: Created }, "422": { $ref: "#/components/responses/ValidationError" } }
+  /admin/email-campaigns/{emailCampaign}:
+    parameters:
+      - { name: emailCampaign, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Email]
+      summary: Campaign detail + recipient status breakdown (emails.campaigns.manage)
+      responses: { "200": { description: OK }, "404": { $ref: "#/components/responses/NotFound" } }
+  /admin/email-campaigns/{emailCampaign}/test:
+    parameters:
+      - { name: emailCampaign, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Email]
+      summary: Send a preview to the admin's own address (emails.campaigns.manage)
+      responses: { "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: object, properties: { sent_to: { type: string } } } } } } } } }
+  /admin/email-campaigns/{emailCampaign}/send:
+    parameters:
+      - { name: emailCampaign, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Email]
+      summary: Send now, or schedule if scheduled_at is future (emails.campaigns.manage) — 409 if already sent
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { scheduled_at: { type: string, format: date-time, nullable: true } } }
+      responses: { "200": { description: OK }, "409": { description: Already sent } }
+  /admin/email-campaigns/{emailCampaign}/cancel:
+    parameters:
+      - { name: emailCampaign, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Email]
+      summary: Cancel a scheduled campaign back to draft (emails.campaigns.manage) — 409 if not scheduled
+      responses: { "200": { description: OK }, "409": { description: Not scheduled } }
+  /admin/email-campaigns/{emailCampaign}/recipients:
+    parameters:
+      - { name: emailCampaign, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Email]
+      summary: Paginated per-recipient delivery rows, status filter (emails.campaigns.manage)
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [queued, sent, failed, suppressed] } }
+        - { name: page, in: query, schema: { type: integer } }
+      responses: { "200": { description: OK } }
+
+  /admin/email-log:
+    get:
+      tags: [Email]
+      summary: Log of every outbound email — paginated + filterable (emails.log.view)
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: Search recipient }
+        - { name: type, in: query, schema: { type: string, enum: [transactional, marketing] } }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: source, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+        - { name: page, in: query, schema: { type: integer } }
+      responses: { "200": { description: OK } }
+
+  /admin/contact-lists:
+    get:
+      tags: [Email]
+      summary: List contact lists with counts (emails.contacts.manage)
+      responses: { "200": { description: OK } }
+    post:
+      tags: [Email]
+      summary: Create a contact list (emails.contacts.manage)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [name], properties: { name: { type: string, maxLength: 160 }, description: { type: string, nullable: true } } }
+      responses: { "201": { description: Created }, "422": { $ref: "#/components/responses/ValidationError" } }
+  /admin/contact-lists/{contactList}:
+    parameters:
+      - { name: contactList, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Email]
+      summary: List detail + paginated contacts (emails.contacts.manage)
+      parameters:
+        - { name: page, in: query, schema: { type: integer } }
+      responses: { "200": { description: OK } }
+  /admin/contact-lists/{contactList}/import/preview:
+    parameters:
+      - { name: contactList, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Email]
+      summary: Stage an upload — classify valid/duplicate/invalid/suppressed without storing (emails.contacts.manage)
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                emails: { type: string, description: Pasted addresses (newline/comma/semicolon separated) }
+                file: { type: string, format: binary, description: CSV or XLSX (first col email, optional name) }
+      responses: { "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: object, properties: { counts: { type: object }, valid: { type: array, items: { type: object } } } } } } } } } }
+  /admin/contact-lists/{contactList}/import:
+    parameters:
+      - { name: contactList, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Email]
+      summary: Commit the reviewed set — inserts new subscribers, re-checked (emails.contacts.manage)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contacts]
+              properties:
+                contacts:
+                  type: array
+                  items: { type: object, required: [email], properties: { email: { type: string, format: email }, name: { type: string, nullable: true } } }
+      responses: { "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: object, properties: { imported: { type: integer }, skipped: { type: integer } } } } } } } } }
+  /admin/contact-lists/{contactList}/uploads:
+    parameters:
+      - { name: contactList, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Email]
+      summary: Import history for a list (emails.contacts.manage)
+      responses: { "200": { description: OK } }
+  /admin/contact-lists/{contactList}/uploads/{batch}/rollback:
+    parameters:
+      - { name: contactList, in: path, required: true, schema: { type: integer } }
+      - { name: batch, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Email]
+      summary: Undo an import — delete the contacts it added (emails.contacts.manage) — 409 if already rolled back
+      responses: { "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: object, properties: { removed: { type: integer } } } } } } } }, "409": { description: Already rolled back } }
+  /admin/contact-lists/{contactList}/contacts:
+    parameters:
+      - { name: contactList, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Email]
+      summary: Add one contact manually — deduped + suppression-checked (emails.contacts.manage)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [email], properties: { email: { type: string, format: email }, name: { type: string, nullable: true } } }
+      responses: { "201": { description: Created }, "422": { description: Duplicate or suppressed } }
+  /admin/contact-lists/{contactList}/contacts/{contact}:
+    parameters:
+      - { name: contactList, in: path, required: true, schema: { type: integer } }
+      - { name: contact, in: path, required: true, schema: { type: integer } }
+    patch:
+      tags: [Email]
+      summary: Edit a contact's name or subscription status (emails.contacts.manage)
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { name: { type: string, nullable: true }, status: { type: string, enum: [subscribed, unsubscribed] } } }
+      responses: { "200": { description: OK } }
+    delete:
+      tags: [Email]
+      summary: Remove a contact (emails.contacts.manage)
+      responses: { "204": { description: No Content } }
+
   # --------------------------------------------------------------- Webhooks
   /webhooks/paystack:
     post:
@@ -2503,6 +3044,101 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/MessageError" }
+
+  /webhooks/sendgrid/{token}:
+    parameters:
+      - { name: token, in: path, required: true, schema: { type: string }, description: Shared-secret token (fallback when ECDSA is not configured) }
+    post:
+      tags: [Webhooks]
+      summary: SendGrid Event Webhook — bounce/complaint → suppression
+      description: |
+        ECDSA Signed-Event verification when a public key is configured (headers
+        `X-Twilio-Email-Event-Webhook-Signature` + `-Timestamp`), else the URL token.
+        Bounce/dropped/spamreport events add the address to the suppression list and
+        update the recipient's latest email-log row. Idempotent.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  email: { type: string }
+                  event: { type: string, enum: [delivered, bounce, dropped, spamreport, open, click] }
+                additionalProperties: true
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { ok: { type: boolean } } } } } }
+        "403": { description: Bad signature or token }
+
+  # --------------------------------------------------------------- Support (consumer)
+  /support/tickets:
+    get:
+      tags: [Account]
+      summary: The signed-in user's support tickets, with the message thread
+      responses: { "200": { description: OK } }
+    post:
+      tags: [Account]
+      summary: Raise a support ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, message]
+              properties:
+                subject: { type: string, maxLength: 160 }
+                category: { type: string, enum: [billing, account, technical, content, other], nullable: true }
+                message: { type: string, maxLength: 4000 }
+      responses: { "201": { description: Created }, "422": { $ref: "#/components/responses/ValidationError" } }
+  /support/tickets/{ticket}/messages:
+    parameters:
+      - { name: ticket, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Account]
+      summary: Reply on your own ticket — reopens a resolved ticket; 403 on a foreign ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [body], properties: { body: { type: string, maxLength: 4000 } } }
+      responses: { "201": { description: Created }, "403": { $ref: "#/components/responses/Forbidden" } }
+
+  # --------------------------------------------------------------- Content (course publish)
+  /courses/{course}/publish:
+    parameters:
+      - { name: course, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Content]
+      summary: Publish a course — requires ≥1 published lesson (content.courses.publish)
+      responses: { "200": { description: OK }, "422": { description: No published lesson } }
+  /courses/{course}/unpublish:
+    parameters:
+      - { name: course, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Content]
+      summary: Unpublish a course (content.courses.publish)
+      responses: { "200": { description: OK } }
+
+  # --------------------------------------------------------------- Public (unsigned link)
+  /email/unsubscribe/{email}:
+    servers:
+      - { url: http://localhost, description: Web (not /api/v1) }
+    parameters:
+      - { name: email, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Email]
+      summary: One-click marketing unsubscribe (signed URL) — suppresses + unsubscribes matching contacts
+      security: []
+      parameters:
+        - { name: signature, in: query, required: true, schema: { type: string } }
+        - { name: expires, in: query, schema: { type: integer } }
+      responses:
+        "200": { description: HTML confirmation page }
+        "403": { description: Invalid/tampered signature }
 
 components:
   securitySchemes:
