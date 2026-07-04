@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AdminPageHeader, DataTable, type Column } from '@/components/admin'
 import { Alert, Badge, Button, Input, Modal } from '@/components/ui'
 import { ApiError, type CreateCampaignInput, type EmailCampaignRow } from '@/lib/api'
@@ -19,6 +20,7 @@ const STATUS_TONE: Record<string, 'success' | 'gold' | 'info' | 'neutral' | 'dan
 }
 
 export function EmailCampaignsPage() {
+  const navigate = useNavigate()
   const { data, isLoading, isError } = useEmailCampaigns()
   const test = useTestEmailCampaign()
   const [composing, setComposing] = useState(false)
@@ -58,7 +60,7 @@ export function EmailCampaignsPage() {
       header: '',
       render: (c) =>
         c.status === 'draft' || c.status === 'scheduled' ? (
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
             <Button size="sm" variant="ghost" loading={test.isPending && test.variables === c.id} onClick={() => onTest(c)}>Test</Button>
             <Button size="sm" variant="parent" onClick={() => setSending(c)}>Send</Button>
           </div>
@@ -78,7 +80,7 @@ export function EmailCampaignsPage() {
 
       {flash && <Alert variant="info">{flash}</Alert>}
 
-      <DataTable columns={columns} rows={data ?? []} getRowId={(c) => c.id} isLoading={isLoading} empty="No campaigns yet." />
+      <DataTable columns={columns} rows={data ?? []} getRowId={(c) => c.id} isLoading={isLoading} onRowClick={(c) => navigate(`/admin/emails/${c.id}`)} empty="No campaigns yet." />
 
       {composing && <ComposeModal onClose={() => setComposing(false)} />}
       {sending && <SendModal campaign={sending} onClose={() => setSending(null)} />}

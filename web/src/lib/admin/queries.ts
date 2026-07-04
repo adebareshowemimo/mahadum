@@ -385,6 +385,14 @@ export function useCreateEmailCampaign() {
   })
 }
 
+export function useEmailCampaign(id: number) {
+  return useQuery({
+    queryKey: adminKeys.emailCampaign(id),
+    queryFn: () => adminApi.emailCampaign(id),
+    enabled: id > 0,
+  })
+}
+
 export function useTestEmailCampaign() {
   return useMutation({ mutationFn: (id: number) => adminApi.testEmailCampaign(id) })
 }

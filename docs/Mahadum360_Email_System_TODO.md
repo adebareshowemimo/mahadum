@@ -84,8 +84,8 @@ login — send to the **parent**, never the child (`[COMPLIANCE]`).
 | **Other purchase receipts** (telco / school invoice) | transactional | ⬜ | wire at their settle points, same pattern |
 | **Subscription activated** | transactional | ✅ **branded + tagged** | `SubscriptionActivated` (`source=subscription_activated`) |
 | **Renewal reminder** | transactional | ✅ **branded + tagged** | `SubscriptionRenewalReminder` (`source=subscription_renewal_reminder`) |
-| **Payment failed / card expiring** | transactional | ⬜ | dunning: retry link before access lapses |
-| **Promo redeemed** | transactional | ⬜ | confirmation of discount applied |
+| **Payment failed / card expiring** | transactional | ⬜ | dunning — needs a failed-charge event (webhook flow only has success/refund today) |
+| **Promo redeemed** | transactional | ✅ **shipped** | `PromoRedeemed`, sent from `PromoService@redeem` at checkout |
 | **Payout approved** | transactional | ✅ **branded + tagged** | `PayoutApproved` (`source=payout_approved`) |
 | **School invite / seat assigned** | transactional | ⬜ | ties to the org invite-admin flow + seat allocation |
 | **Chore/assignment approved (coins released)** | lifecycle | ⬜ | parent-approval event; to the learner's parent |
@@ -207,8 +207,9 @@ Under `/admin/*`, `AdminRoute`-guarded, in a new **"Email"** sub-nav group.
 - [x] ✅ **Campaigns** (`/admin/emails`) — `DataTable` list + **Compose** modal
   (subject, Markdown body, audience picker = user-segment role *or* a contact list),
   per-row **Test** + **Send** (send-now or schedule via a datetime). *(Verified live.)*
-- [ ] **Campaign detail** — richer recipient stats + cancel-if-scheduled (the
-  `GET …/{c}` stats endpoint exists; the drill-down page is the remaining bit).
+- [x] ✅ **Campaign detail** (`/admin/emails/:id`) — stat cards (recipients / sent /
+  failed / sent-at), recipient status breakdown, body; row-click from the list.
+  *(Verified live.)* *(Cancel-if-scheduled is the remaining action.)*
 - [x] ✅ **Contacts** (`/admin/emails/contacts`) — lists, create, per-list contact
   table, and the **email upload** panel (paste box + CSV) with a **staged preview**
   (valid / duplicate / invalid / suppressed) before import. *(Verified live — screenshot;

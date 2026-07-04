@@ -7,6 +7,7 @@ use App\Models\PromoCode;
 use App\Models\PromoRedemption;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Notifications\PromoRedeemed;
 
 /**
  * Validates and applies promo codes at consumer checkout. Rules (FR / BRD):
@@ -74,5 +75,7 @@ class PromoService
         ]);
 
         $promo->increment('redeemed_count');
+
+        $user->notify(new PromoRedeemed($promo, $subscription));
     }
 }

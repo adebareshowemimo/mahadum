@@ -4,12 +4,17 @@ namespace Tests\Feature;
 
 use App\Models\Device;
 use App\Models\EmailLog;
+use App\Models\Plan;
+use App\Models\PromoCode;
+use App\Models\Subscription;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Models\WalletFundingTransaction;
 use App\Notifications\NewDeviceAlert;
+use App\Notifications\PromoRedeemed;
 use App\Notifications\WelcomeEmail;
 use App\Services\Billing\PaymentService;
+use App\Services\Billing\PromoService;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Mail\Markdown;
@@ -172,6 +177,22 @@ class EmailSystemTest extends TestCase
         )->assertOk();
 
         Notification::assertNotSentTo($user, NewDeviceAlert::class);
+    }
+
+    public function test_redeeming_a_promo_emails_the_user(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create();
+        $plan = Plan::create(['code' => 'fam', 'name' => 'Family', 'price_minor' => 500000, 'interval' => 'month']);
+        $promo = PromoCode::create(['code' => 'WELCOME20', 'discount_type' => 'percent', 'value' => 20]);
+        $sub = new Subscription(['plan_id' => $plan->id, 'status' => 'active', 'method' => 'card']);
+        $sub->subscriber()->associate($user);
+        $sub->save();
+
+        app(PromoService::class)->redeem($promo, $user, $sub);
+
+        Notification::assertSentTo($user, PromoRedeemed::class);
+        $this->assertDatabaseHas('promo_redemptions', ['promo_code_id' => $promo->id, 'user_id' => $user->id]);
     }
 
     public function test_mail_preview_command_writes_branded_html(): void

@@ -29,6 +29,7 @@ import { ReferralsReportPage } from '@/pages/ReferralsReportPage'
 import { OrgActivityReportPage } from '@/pages/OrgActivityReportPage'
 import { RenewalsReportPage } from '@/pages/RenewalsReportPage'
 import { EmailCampaignsPage } from '@/pages/EmailCampaignsPage'
+import { CampaignDetailPage } from '@/pages/CampaignDetailPage'
 import { ContactListsPage } from '@/pages/ContactListsPage'
 import { EmailLogPage } from '@/pages/EmailLogPage'
 import { AuditLogPage } from '@/pages/AuditLogPage'
@@ -203,6 +204,7 @@ export function App() {
             <Route path="/admin/emails" element={<EmailCampaignsPage />} />
             <Route path="/admin/emails/contacts" element={<ContactListsPage />} />
             <Route path="/admin/emails/log" element={<EmailLogPage />} />
+            <Route path="/admin/emails/:campaignId" element={<CampaignDetailPage />} />
             <Route path="/admin/settings/gateways" element={<GatewaysPage />} />
             <Route path="/admin/audit" element={<AuditLogPage />} />
             <Route path="/admin/settings" element={<SettingsPage />} />
