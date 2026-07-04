@@ -118,6 +118,7 @@ function ClassAnalyticsTab({ classId }: { classId: number | null }) {
             <th className="px-2 py-2 text-right font-semibold" title="Average lesson score">Avg</th>
             <th className="px-2 py-2 text-right font-semibold" title="Quiz accuracy">Quiz</th>
             <th className="px-2 py-2 text-right font-semibold" title="Speaking submissions">Speaking</th>
+            <th className="px-2 py-2 text-right font-semibold" title="Class assignments passed / submitted">Assignments</th>
           </tr>
         </thead>
         <tbody>
@@ -130,6 +131,9 @@ function ClassAnalyticsTab({ classId }: { classId: number | null }) {
                 {s.quiz_accuracy == null ? '—' : `${s.quiz_accuracy}%`}
               </td>
               <td className="px-2 py-2 text-right tabular-nums text-muted">{s.speaking_count}</td>
+              <td className="px-2 py-2 text-right tabular-nums text-muted">
+                {s.assignments_submitted === 0 ? '—' : `${s.assignments_passed}/${s.assignments_submitted}`}
+              </td>
             </tr>
           ))}
         </tbody>

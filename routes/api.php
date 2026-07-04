@@ -266,7 +266,9 @@ Route::prefix('v1')->group(function () {
         });
         Route::get('classes', [SchoolClassController::class, 'index'])->can('viewAny', SchoolClass::class);
         Route::get('classes/{class}', [SchoolClassController::class, 'show'])->can('view', 'class');
-        Route::get('classes/{class}/analytics', [SchoolClassController::class, 'analytics'])->can('view', 'class');
+        Route::get('classes/{class}/analytics', [SchoolClassController::class, 'analytics'])
+            ->can('view', 'class')
+            ->middleware('can:schools.analytics.view');
         Route::post('classes', [SchoolClassController::class, 'store'])->can('create', SchoolClass::class);
         Route::match(['put', 'patch'], 'classes/{class}', [SchoolClassController::class, 'update'])->can('update', 'class');
 

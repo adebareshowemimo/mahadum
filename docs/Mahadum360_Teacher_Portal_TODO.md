@@ -47,14 +47,14 @@ needs a **new model pair**, not a re-skin of the family flow.
   roles={['teacher']}`) in `components/auth/ProtectedRoute.tsx`, mirroring
   `AdminRoute`. `/classes`, `/assignments`, `/earnings` wrapped in `App.tsx`.
   24 Vitest cases incl. every non-teacher role redirecting to `/home`.
-- [ ] **Decide `analytics.class.view` vs `schools.classes.view` gating.**
-  `SchoolClassController::analytics` is currently gated by the `view` class
-  policy ability, which only checks `schools.classes.view` + ownership — the
-  distinct `analytics.class.view` permission (also granted to teacher,
-  `school_admin`, `supervisor`) is never independently enforced. Either wire
-  it explicitly or drop it from the matrix as redundant — don't leave a
-  permission that looks enforced but isn't. *(Not touched by §1 — the new
-  assignment routes reuse the same `view`-ability pattern for reads.)*
+- [x] ✅ **`analytics.class.view` vs `schools.classes.view` gating — resolved.**
+  They were exact duplicates (identical 3-role grant, neither ever checked by
+  any route). Decision: dropped `analytics.class.view` entirely (removed
+  from `RolesAndPermissionsSeeder` + the `Roles_Permissions.md` matrix) and
+  wired `schools.analytics.view` explicitly onto
+  `GET /classes/{class}/analytics` (`->middleware('can:schools.analytics.view')`,
+  alongside the existing `SchoolClassPolicy::view` ownership check) — one
+  enforced permission instead of two unenforced ones.
 - [x] ✅ **`/assignments` shipped** (§1) — no longer a nav-only stub.
 
 ---
@@ -119,19 +119,18 @@ needs a **new model pair**, not a re-skin of the family flow.
 
 ---
 
-## 2. Class roster & analytics — polish, not new `[MVP]`
+## 2. Class roster & analytics — polish, not new `[MVP]` — ✅ shipped 2026-07-04
 
-Already ✅ shipped and "verified live" per the master TODO. Only polish
-items surfaced by this audit:
-
-- [ ] Confirm `analytics.class.view` gate (see §0) doesn't silently diverge
-  from `schools.classes.view` as new class-scoped features (assignments)
-  are added — decide once, apply consistently to every `/classes/{class}/*`
-  route.
-- [ ] Once §1 ships, surface **assignment completion rate** as a column in
-  the existing class analytics tab (`ClassesPage.tsx` analytics table)
-  alongside lessons/quiz/speaking — reuse the same table, don't build a
-  parallel view.
+- [x] ✅ `analytics.class.view` / `schools.classes.view` gating resolved —
+  see §0.
+- [x] ✅ **Assignment completion surfaced in class analytics.**
+  `SchoolClassController::analytics` now aggregates
+  `ClassAssignmentSubmission` per learner (scoped to the current class via
+  `whereHas('classAssignment', ...)`) and returns `assignments_submitted` /
+  `assignments_passed` alongside the existing lesson/quiz/speaking stats.
+  `ClassesPage.tsx`'s analytics tab gained an **Assignments** column
+  (`passed/submitted`, or `—` when nothing's been submitted yet) — same
+  table, no parallel view. Verified live: a graded pass shows `1/1`.
 
 ---
 
@@ -177,9 +176,10 @@ checked by any controller (orphaned).
 
 1. ~~§0 portal hardening~~ — ✅ done.
 2. ~~§1 class assignments~~ — ✅ done (paired with §4 notifications).
-3. **§2 analytics polish** — small, next up now that §1's data exists.
-4. **§3 earnings resolution** — needs the product decision first; don't
-   build backend for it speculatively.
+3. ~~§2 analytics polish~~ — ✅ done.
+4. **§3 earnings resolution** — the only thing left, and it's blocked on a
+   product decision (teacher commission payout: cash vs coins). Not
+   actionable without that call.
 
 ## Definition of done (per page/endpoint)
 Guarded by `TeacherRoute` + ownership policy (teacher only sees/acts on

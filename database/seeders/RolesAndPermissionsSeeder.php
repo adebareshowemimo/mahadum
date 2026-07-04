@@ -142,10 +142,12 @@ class RolesAndPermissionsSeeder extends Seeder
         ],
 
         // ── Analytics ──────────────────────────────────────────────────────
+        // Class-level analytics is covered by `schools.analytics.view` (schools
+        // group) — no separate `analytics.class.view` grant; it was an unused
+        // duplicate (same 3 roles, never checked by any route).
         'analytics' => [
             'analytics.platform.view',
             'analytics.lesson.view',
-            'analytics.class.view',
         ],
 
         // ── System ─────────────────────────────────────────────────────────
@@ -216,7 +218,6 @@ class RolesAndPermissionsSeeder extends Seeder
                     'users.view', 'users.manage', 'roles.view', 'roles.assign',
                     'learning.progress.view',
                     'referrals.view',
-                    'analytics.class.view',
                     'competitions.enter', // enter the school play on the school's behalf
                 ]
             ),
@@ -227,7 +228,6 @@ class RolesAndPermissionsSeeder extends Seeder
                 'schools.assignments.create',
                 'schools.assignments.review',
                 'schools.analytics.view',
-                'analytics.class.view',
                 'learning.progress.view',
                 'learning.submissions.review',
                 'referrals.view',
@@ -243,7 +243,6 @@ class RolesAndPermissionsSeeder extends Seeder
                 'schools.roster.view',
                 'schools.classes.view',
                 'schools.analytics.view',
-                'analytics.class.view',
                 'learning.progress.view',
                 'organizations.view',
             ],

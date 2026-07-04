@@ -67,7 +67,7 @@ Naming convention: `aspect.subject.action`.
 | **School ops** | `schools.dashboard.view` · `schools.roster.{view,import}` · `schools.classes.{view,manage}` · `schools.seats.{view,purchase}` · `schools.assignments.{create,review}` · `schools.analytics.view` |
 | **Organizations** | `organizations.{view,manage,activate}` |
 | **Users & access** | `users.{view,manage}` · `roles.{view,assign}` |
-| **Analytics** | `analytics.{platform,lesson,class}.view` |
+| **Analytics** | `analytics.{platform,lesson}.view` |
 | **System** | `audit.view` · `support.handle` · `system.settings.manage` |
 
 ---
@@ -105,13 +105,18 @@ Naming convention: `aspect.subject.action`.
 | learning.progress.view | ● | ● | ● | ● | ● |
 | learning.submissions.review | | | ● | | ● |
 | analytics.lesson.view | ● | | | | |
-| analytics.class.view | | ● | ● | ● | |
 | analytics.platform.view | | | | | |
 | audit.view / system.settings.manage / support.handle | | | | | |
 
 Blank cells under every listed role (e.g. `organizations.activate`, `finance.*`,
 `settlements.*`, `billing.plans.manage`, `analytics.platform.view`,
 `referrals.fraud.review`, `system.settings.manage`) are **super_admin-only** by design.
+
+`analytics.class.view` was removed (2026-07-04): it duplicated `schools.analytics.view`
+exactly (same 3 roles) and was never checked by any route — `GET
+/classes/{class}/analytics` now explicitly enforces `schools.analytics.view` (in
+addition to the `SchoolClassPolicy::view` ownership check), so the class-analytics
+permission story has one source of truth instead of two.
 
 ---
 

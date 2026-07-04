@@ -662,6 +662,8 @@ export interface ClassAnalyticsStudent {
   quiz_correct: number
   quiz_accuracy: number | null
   speaking_count: number
+  assignments_submitted: number
+  assignments_passed: number
 }
 
 export interface ClassAnalytics {

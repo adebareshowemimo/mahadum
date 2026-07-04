@@ -4,6 +4,7 @@ namespace App\Http\Controllers\School;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\School\StoreSchoolClassRequest;
+use App\Models\ClassAssignmentSubmission;
 use App\Models\LessonProgress;
 use App\Models\QuestionResponse;
 use App\Models\SchoolClass;
@@ -69,10 +70,16 @@ class SchoolClassController extends Controller
             ->selectRaw('learner_profile_id, COUNT(*) as c')
             ->groupBy('learner_profile_id')->get()->keyBy('learner_profile_id');
 
-        $students = $class->enrollments->map(function ($e) use ($progress, $quiz, $speaking) {
+        $assignments = ClassAssignmentSubmission::whereIn('learner_profile_id', $ids)
+            ->whereHas('classAssignment', fn ($q) => $q->where('school_class_id', $class->id))
+            ->selectRaw('learner_profile_id, COUNT(*) as total, SUM(CASE WHEN passed = 1 THEN 1 ELSE 0 END) as passed')
+            ->groupBy('learner_profile_id')->get()->keyBy('learner_profile_id');
+
+        $students = $class->enrollments->map(function ($e) use ($progress, $quiz, $speaking, $assignments) {
             $id = $e->learner_profile_id;
             $p = $progress->get($id);
             $qz = $quiz->get($id);
+            $a = $assignments->get($id);
 
             $quizTotal = $qz ? (int) $qz->getAttribute('total') : 0;
             $quizCorrect = $qz ? (int) $qz->getAttribute('correct') : 0;
@@ -86,6 +93,8 @@ class SchoolClassController extends Controller
                 'quiz_correct' => $quizCorrect,
                 'quiz_accuracy' => $quizTotal > 0 ? (int) round($quizCorrect / $quizTotal * 100) : null,
                 'speaking_count' => ($s = $speaking->get($id)) ? (int) $s->getAttribute('c') : 0,
+                'assignments_submitted' => $a ? (int) $a->getAttribute('total') : 0,
+                'assignments_passed' => $a ? (int) $a->getAttribute('passed') : 0,
             ];
         })->values();
 
