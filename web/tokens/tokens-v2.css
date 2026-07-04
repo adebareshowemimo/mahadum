@@ -1,0 +1,19 @@
+/* =============================================================================
+   Mahadum.360 — `.classic` opt-out layer
+
+   The playful direction (Baloo 2 + Quicksand, chunkier corners, 3D buttons) is
+   now the DEFAULT in tokens.css. This file provides the reverse escape hatch:
+   add the `classic` class to any subtree to fall back to the original
+   Fredoka + Nunito treatment with tighter corners. Non-destructive.
+
+       <div class="classic"> … original look … </div>
+   ============================================================================= */
+
+.classic {
+  --font-display: 'Fredoka', ui-rounded, system-ui, sans-serif;
+  --font-sans: 'Nunito', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.75rem;
+  font-weight: 400;
+}

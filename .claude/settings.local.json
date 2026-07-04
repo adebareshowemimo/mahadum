@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(composer create-project *)",
+      "Bash(/c/xampp/php/php.exe artisan *)",
+      "Bash(/c/xampp/mysql/bin/mysql.exe -u root -e \"CREATE DATABASE IF NOT EXISTS mahamu360 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; SHOW DATABASES LIKE 'mahamu360';\")",
+      "Bash(composer require *)",
+      "Bash(set -e)",
+      "Bash(cp -r __TRACKED_VAR__/docs/app/Models/. __TRACKED_VAR__/app/Models/)",
+      "Bash(mkdir -p __TRACKED_VAR__/app/Http/Middleware __TRACKED_VAR__/app/Providers __TRACKED_VAR__/app/Policies)",
+      "Bash(cp __TRACKED_VAR__/docs/app/Http/Middleware/IdentifyTenant.php __TRACKED_VAR__/app/Http/Middleware/)",
+      "Bash(cp __TRACKED_VAR__/docs/app/Providers/AuthServiceProvider.php __TRACKED_VAR__/app/Providers/)"
+    ]
+  }
+}

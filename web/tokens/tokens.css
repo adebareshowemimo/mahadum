@@ -1,0 +1,307 @@
+/* =============================================================================
+   Mahadum.360 — Design Tokens (brand-meaning oriented)
+
+   Warm African heritage · addictive learning · premium family education.
+   Brand is built on Heritage Green (CTA/correct/learning), African Gold
+   (rewards/coins/premium/streaks), Deep Navy (premium/dashboards/dark) and an
+   Ivory base (learner & family reading comfort). Blue is demoted to an AI /
+   learning-support role — never the main CTA.
+
+   Layers:  :root primitives + light semantics → .dark navy semantics → @theme.
+   ============================================================================= */
+
+:root {
+  /* ---- Heritage Green — primary CTA, correct answers, active learning ---- */
+  --heritage-50:  #ebf7f0;
+  --heritage-100: #cdebd9;
+  --heritage-200: #9fd8b6;
+  --heritage-300: #67bd8d;
+  --heritage-400: #379e69;
+  --heritage-500: #1a7d49;
+  --heritage-600: #14653b;
+  --heritage-700: #115231;
+  --heritage-800: #114228;
+  --heritage-900: #0e3622;
+  --heritage-950: #061d12;
+
+  /* ---- African Gold — rewards, coins, premium, streaks, celebration ---- */
+  --gold-50:  #fdf8e7;
+  --gold-100: #faedbf;
+  --gold-200: #f6da83;
+  --gold-300: #f1c544;
+  --gold-400: #ecb01d;
+  --gold-500: #d9970f;
+  --gold-600: #b6740b;
+  --gold-700: #91530d;
+  --gold-800: #784213;
+  --gold-900: #663715;
+  --gold-950: #3b1d07;
+
+  /* ---- Deep Navy — premium surfaces, dashboards, dark mode ---- */
+  --navy-50:  #eef1f7;
+  --navy-100: #d6dded;
+  --navy-200: #b0bedb;
+  --navy-300: #8195c1;
+  --navy-400: #566ca3;
+  --navy-500: #3c4f86;
+  --navy-600: #2e3d6b;
+  --navy-700: #253158;
+  --navy-800: #1a2440;
+  --navy-900: #111a33;
+  --navy-950: #0a1124;
+
+  /* ---- Ivory — warm light neutrals (learner/family backgrounds) ---- */
+  --ivory-50:  #fdfbf6;
+  --ivory-100: #f8f2e6;
+  --ivory-200: #efe6d3;
+  --ivory-300: #e2d4ba;
+  --ivory-400: #cbb896;
+
+  /* ---- Charcoal — text, headings, serious admin neutrals ---- */
+  --charcoal-50:  #f6f4f1;
+  --charcoal-100: #e9e5df;
+  --charcoal-200: #d6cfc5;
+  --charcoal-300: #b3a99b;
+  --charcoal-400: #8c8175;
+  --charcoal-500: #6e655b;
+  --charcoal-600: #564e46;
+  --charcoal-700: #433d37;
+  --charcoal-800: #2f2b27;
+  --charcoal-900: #221f1b;
+  --charcoal-950: #14120f;
+
+  /* ---- Chore Blue — parent review, pending tasks, school workflow ---- */
+  --chore-50:  #eef4ff;
+  --chore-100: #d9e6ff;
+  --chore-200: #bcd2fb;
+  --chore-300: #8eb2f5;
+  --chore-400: #5b8aec;
+  --chore-500: #2f6fe0;
+  --chore-600: #2156c2;
+  --chore-700: #1c459b;
+  --chore-800: #1b3c7e;
+  --chore-900: #1b3568;
+
+  /* ---- AI / learning support (demoted blue → indigo) ---- */
+  --ai-50:  #eef0ff;
+  --ai-100: #e0e2ff;
+  --ai-200: #c6c8ff;
+  --ai-300: #a3a4fc;
+  --ai-400: #837ff7;
+  --ai-500: #6359ee;
+  --ai-600: #5340d4;
+  --ai-700: #4632ab;
+  --ai-800: #3a2c89;
+  --ai-900: #322a6e;
+
+  /* ---- Soft Clay / Coral — cultural warmth, friendly highlights ---- */
+  --clay-50:  #fdf3ef;
+  --clay-100: #fbe2d8;
+  --clay-200: #f6c4ae;
+  --clay-300: #ee9c7c;
+  --clay-400: #e57650;
+  --clay-500: #d65a35;
+  --clay-600: #bb4324;
+  --clay-700: #9b3420;
+  --clay-800: #7f2e20;
+  --clay-900: #6a2a1f;
+
+  /* ---- Leaf Green — progress, completion, wallet success ---- */
+  --leaf-50:  #edf9ef;
+  --leaf-100: #d1f0d8;
+  --leaf-200: #a6e0b3;
+  --leaf-300: #6fcb87;
+  --leaf-400: #43b063;
+  --leaf-500: #2f9b50;
+  --leaf-600: #237e40;
+  --leaf-700: #1d6535;
+
+  /* ---- Error Red — wrong answers, payment failure, danger ---- */
+  --red-50:  #fdf2f2;
+  --red-100: #fbe1e1;
+  --red-200: #f6c4c5;
+  --red-300: #ee9a9c;
+  --red-400: #e56164;
+  --red-500: #dc3b40;
+  --red-600: #c12529;
+  --red-700: #a01e22;
+
+  /* ---- Rainbow — language tags, badge categories, charts ---- */
+  --rainbow-red: #e5484d;    --rainbow-orange: #e8833a; --rainbow-yellow: #e0a91b;
+  --rainbow-green: #2f9b50;  --rainbow-teal: #149e8e;   --rainbow-blue: #2f6fe0;
+  --rainbow-purple: #7c5cd6; --rainbow-pink: #d65a8f;
+
+  /* ===================== Semantic — LIGHT (learner / family) ===================== */
+  --background:        var(--ivory-50);
+  --background-subtle: var(--ivory-100);
+  --surface:           #ffffff;
+  --surface-muted:     var(--ivory-100);
+  --surface-sunken:    var(--ivory-200);
+  --overlay:           rgb(20 18 15 / 0.5);
+
+  --foreground:    var(--charcoal-900);
+  --muted:         var(--charcoal-500);
+  --subtle:        var(--charcoal-400);
+  --inverse:       var(--ivory-50);
+
+  --border:        var(--ivory-300);
+  --border-strong: var(--ivory-400);
+
+  /* primary = Heritage Green */
+  --primary:        var(--heritage-500);
+  --primary-hover:  var(--heritage-600);
+  --primary-active: var(--heritage-700);
+  --primary-fg:     #ffffff;
+  --primary-soft:   var(--heritage-50);
+
+  /* accent = African Gold — pairs with CHARCOAL text, never white */
+  --accent:        var(--gold-500);
+  --accent-hover:  var(--gold-600);
+  --accent-fg:     var(--charcoal-900);
+  --accent-soft:   var(--gold-50);
+
+  --success:      var(--leaf-500);  --success-fg: #ffffff;             --success-soft: var(--leaf-50);
+  --warning:      var(--gold-500);  --warning-fg: var(--charcoal-900); --warning-soft: var(--gold-50);
+  --danger:       var(--red-500);   --danger-fg:  #ffffff;             --danger-soft:  var(--red-50);
+  --info:         var(--chore-500); --info-fg:    #ffffff;             --info-soft:    var(--chore-50);
+
+  /* product semantics */
+  --correct:       var(--heritage-500);   /* learning.correct */
+  --wrong:         var(--red-500);         /* learning.wrong */
+  --coin:          var(--gold-500);        /* reward.coin */
+  --grace:         var(--gold-500);        /* billing.grace (framed positively) */
+  --chore-pending: var(--chore-500);       /* family.chorePending */
+  --speaking:      var(--ai-500);          /* ai.speakingScore */
+  --premium:       var(--navy-900);        /* premium surfaces */
+
+  --ring: var(--heritage-400);
+}
+
+/* ===================== Semantic — DARK (premium / dashboards / navy) ===================== */
+.dark {
+  --background:        var(--navy-950);
+  --background-subtle: #0c1530;
+  --surface:           var(--navy-900);
+  --surface-muted:     var(--navy-800);
+  --surface-sunken:    #0c1631;
+  --overlay:           rgb(5 8 18 / 0.65);
+
+  --foreground:    var(--ivory-100);
+  --muted:         var(--navy-300);
+  --subtle:        var(--navy-400);
+  --inverse:       var(--navy-950);
+
+  --border:        #26345c;
+  --border-strong: var(--navy-700);
+
+  --primary:        var(--heritage-400);
+  --primary-hover:  var(--heritage-300);
+  --primary-active: var(--heritage-200);
+  --primary-fg:     var(--navy-950);
+  --primary-soft:   #0e3a26;
+
+  --accent:        var(--gold-400);
+  --accent-hover:  var(--gold-300);
+  --accent-fg:     var(--charcoal-950);
+  --accent-soft:   #2e2208;
+
+  --success-soft: #08240f;
+  --warning-soft: #2a2008;
+  --danger-soft:  #2a0f10;
+  --info-soft:    #0f2350;
+
+  --ring: var(--heritage-400);
+}
+
+/* ===================== Tailwind v4 bridge ===================== */
+@theme inline {
+  /* heritage */
+  --color-heritage-50: var(--heritage-50);   --color-heritage-100: var(--heritage-100); --color-heritage-200: var(--heritage-200);
+  --color-heritage-300: var(--heritage-300); --color-heritage-400: var(--heritage-400); --color-heritage-500: var(--heritage-500);
+  --color-heritage-600: var(--heritage-600); --color-heritage-700: var(--heritage-700); --color-heritage-800: var(--heritage-800);
+  --color-heritage-900: var(--heritage-900); --color-heritage-950: var(--heritage-950);
+  /* gold */
+  --color-gold-50: var(--gold-50);   --color-gold-100: var(--gold-100); --color-gold-200: var(--gold-200);
+  --color-gold-300: var(--gold-300); --color-gold-400: var(--gold-400); --color-gold-500: var(--gold-500);
+  --color-gold-600: var(--gold-600); --color-gold-700: var(--gold-700); --color-gold-800: var(--gold-800);
+  --color-gold-900: var(--gold-900); --color-gold-950: var(--gold-950);
+  /* navy */
+  --color-navy-50: var(--navy-50);   --color-navy-100: var(--navy-100); --color-navy-200: var(--navy-200);
+  --color-navy-300: var(--navy-300); --color-navy-400: var(--navy-400); --color-navy-500: var(--navy-500);
+  --color-navy-600: var(--navy-600); --color-navy-700: var(--navy-700); --color-navy-800: var(--navy-800);
+  --color-navy-900: var(--navy-900); --color-navy-950: var(--navy-950);
+  /* ivory + charcoal */
+  --color-ivory-50: var(--ivory-50);   --color-ivory-100: var(--ivory-100); --color-ivory-200: var(--ivory-200);
+  --color-ivory-300: var(--ivory-300); --color-ivory-400: var(--ivory-400);
+  --color-charcoal-50: var(--charcoal-50);   --color-charcoal-100: var(--charcoal-100); --color-charcoal-200: var(--charcoal-200);
+  --color-charcoal-300: var(--charcoal-300); --color-charcoal-400: var(--charcoal-400); --color-charcoal-500: var(--charcoal-500);
+  --color-charcoal-600: var(--charcoal-600); --color-charcoal-700: var(--charcoal-700); --color-charcoal-800: var(--charcoal-800);
+  --color-charcoal-900: var(--charcoal-900); --color-charcoal-950: var(--charcoal-950);
+  /* chore / ai / clay / leaf / red */
+  --color-chore-50: var(--chore-50);   --color-chore-100: var(--chore-100); --color-chore-200: var(--chore-200);
+  --color-chore-300: var(--chore-300); --color-chore-400: var(--chore-400); --color-chore-500: var(--chore-500);
+  --color-chore-600: var(--chore-600); --color-chore-700: var(--chore-700); --color-chore-800: var(--chore-800); --color-chore-900: var(--chore-900);
+  --color-ai-50: var(--ai-50);   --color-ai-100: var(--ai-100); --color-ai-200: var(--ai-200); --color-ai-300: var(--ai-300);
+  --color-ai-400: var(--ai-400); --color-ai-500: var(--ai-500); --color-ai-600: var(--ai-600); --color-ai-700: var(--ai-700);
+  --color-clay-50: var(--clay-50);   --color-clay-100: var(--clay-100); --color-clay-200: var(--clay-200); --color-clay-300: var(--clay-300);
+  --color-clay-400: var(--clay-400); --color-clay-500: var(--clay-500); --color-clay-600: var(--clay-600); --color-clay-700: var(--clay-700);
+  --color-leaf-50: var(--leaf-50);   --color-leaf-100: var(--leaf-100); --color-leaf-200: var(--leaf-200); --color-leaf-300: var(--leaf-300);
+  --color-leaf-400: var(--leaf-400); --color-leaf-500: var(--leaf-500); --color-leaf-600: var(--leaf-600); --color-leaf-700: var(--leaf-700);
+  --color-red-50: var(--red-50);   --color-red-100: var(--red-100); --color-red-200: var(--red-200); --color-red-300: var(--red-300);
+  --color-red-400: var(--red-400); --color-red-500: var(--red-500); --color-red-600: var(--red-600); --color-red-700: var(--red-700);
+  /* rainbow */
+  --color-rainbow-red: var(--rainbow-red);       --color-rainbow-orange: var(--rainbow-orange);
+  --color-rainbow-yellow: var(--rainbow-yellow); --color-rainbow-green: var(--rainbow-green);
+  --color-rainbow-teal: var(--rainbow-teal);     --color-rainbow-blue: var(--rainbow-blue);
+  --color-rainbow-purple: var(--rainbow-purple); --color-rainbow-pink: var(--rainbow-pink);
+
+  /* semantic */
+  --color-background: var(--background); --color-background-subtle: var(--background-subtle);
+  --color-surface: var(--surface); --color-surface-muted: var(--surface-muted); --color-surface-sunken: var(--surface-sunken);
+  --color-foreground: var(--foreground); --color-muted: var(--muted); --color-subtle: var(--subtle); --color-inverse: var(--inverse);
+  --color-border: var(--border); --color-border-strong: var(--border-strong);
+  --color-primary: var(--primary); --color-primary-hover: var(--primary-hover); --color-primary-active: var(--primary-active);
+  --color-primary-fg: var(--primary-fg); --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent); --color-accent-hover: var(--accent-hover); --color-accent-fg: var(--accent-fg); --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success); --color-success-fg: var(--success-fg); --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning); --color-warning-fg: var(--warning-fg); --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger); --color-danger-fg: var(--danger-fg); --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info); --color-info-fg: var(--info-fg); --color-info-soft: var(--info-soft);
+  --color-correct: var(--correct); --color-wrong: var(--wrong); --color-coin: var(--coin);
+  --color-grace: var(--grace); --color-chore-pending: var(--chore-pending); --color-speaking: var(--speaking);
+  --color-premium: var(--premium); --color-ring: var(--ring);
+
+  /* typography — playful default: Baloo 2 (display) + Quicksand (body).
+     Add the `.classic` class anywhere to revert to Fredoka + Nunito. */
+  --font-display: 'Baloo 2', 'Fredoka', ui-rounded, system-ui, sans-serif;
+  --font-sans: 'Quicksand', 'Nunito', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --text-xs: 0.75rem;    --text-xs--line-height: 1rem;
+  --text-sm: 0.875rem;   --text-sm--line-height: 1.25rem;
+  --text-base: 1rem;     --text-base--line-height: 1.5rem;
+  --text-lg: 1.125rem;   --text-lg--line-height: 1.75rem;
+  --text-xl: 1.25rem;    --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;    --text-2xl--line-height: 2rem;
+  --text-3xl: 1.875rem;  --text-3xl--line-height: 2.25rem;
+  --text-4xl: 2.25rem;   --text-4xl--line-height: 2.5rem;
+  --text-5xl: 3rem;      --text-5xl--line-height: 1.1;
+
+  --tracking-tight: -0.015em; --tracking-normal: 0em; --tracking-wide: 0.02em;
+
+  --radius-xs: 0.25rem; --radius-sm: 0.375rem; --radius-md: 0.625rem; --radius-lg: 1rem;
+  --radius-xl: 1.5rem; --radius-2xl: 2rem; --radius-full: 9999px;
+
+  --shadow-xs: 0 1px 2px 0 rgb(34 31 27 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(34 31 27 / 0.08), 0 1px 2px -1px rgb(34 31 27 / 0.08);
+  --shadow-md: 0 4px 12px -2px rgb(34 31 27 / 0.10), 0 2px 6px -2px rgb(34 31 27 / 0.06);
+  --shadow-lg: 0 12px 28px -6px rgb(34 31 27 / 0.14), 0 6px 12px -6px rgb(34 31 27 / 0.08);
+  --shadow-xl: 0 24px 48px -12px rgb(34 31 27 / 0.22);
+  --shadow-gold: 0 8px 24px -6px rgb(217 151 15 / 0.40);
+  --shadow-heritage: 0 8px 24px -6px rgb(26 125 73 / 0.35);
+
+  --spacing: 0.25rem;
+  --breakpoint-sm: 40rem; --breakpoint-md: 48rem; --breakpoint-lg: 64rem; --breakpoint-xl: 80rem; --breakpoint-2xl: 96rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}

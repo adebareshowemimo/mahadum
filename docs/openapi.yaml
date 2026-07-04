@@ -1,0 +1,2880 @@
+openapi: 3.1.0
+info:
+  title: Mahadum.360 API
+  version: "1.0.0"
+  description: |
+    Mahadum.360 mobile + web backend API (v1).
+
+    ## Authentication
+    Laravel Sanctum. Two styles:
+    - **Mobile / third-party:** `Authorization: Bearer <token>` (obtained from the auth endpoints).
+    - **Web SPA:** session cookie + `X-XSRF-TOKEN` (stateful domains).
+
+    ## Conventions
+    - All success bodies are wrapped in a `data` envelope unless noted; webhooks return a bare `{ "status": ... }`.
+    - **Money** is always in **minor units** (kobo; ₦1 = 100). Money is only ever credited/reversed server-side via webhooks, never by the client.
+    - **Idempotency:** money-moving POSTs require an `Idempotency-Key` header. Replays return the cached response with `Idempotency-Replayed: true`.
+    - **Tenancy:** optionally scope a request to an organization with `X-Organization-Id`. super_admin runs unscoped.
+    - **Min version gate:** mobile clients send `X-Client` + `X-App-Version`; an out-of-date client receives `426`.
+
+    ## Error shapes
+    Two shapes appear:
+    - **Coded envelope** `{ "error": { "code", "message", "status" } }` — returned by money/idempotency/version guards and a few explicit business rules.
+    - **Framework default** — `{ "message" }` for auth/authorization/not-found/abort, and `{ "message", "errors": { field: [..] } }` for validation (422).
+
+servers:
+  - url: https://api.mahadum360.com/api/v1
+    description: Production
+  - url: http://localhost/api/v1
+    description: Local (XAMPP)
+
+tags:
+  - name: System
+  - name: Auth
+  - name: Account
+  - name: Content
+  - name: Learning
+  - name: Gamification
+  - name: Family & Wallet
+  - name: Billing
+  - name: Referrals & Payouts
+  - name: School
+  - name: Admin
+  - name: Webhooks
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ----------------------------------------------------------------- System
+  /config:
+    get:
+      tags: [System]
+      summary: Public bootstrap config
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      min_supported_version:
+                        type: object
+                        properties:
+                          ios: { type: string, nullable: true }
+                          android: { type: string, nullable: true }
+                      feature_flags: { type: object, additionalProperties: true }
+                      cdn_base: { type: string, nullable: true }
+                      languages:
+                        type: array
+                        items: { $ref: "#/components/schemas/Language" }
+
+  # ------------------------------------------------------------------- Auth
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new account
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
+        - $ref: "#/components/parameters/DeviceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [first_name, last_name, email, password, password_confirmation, device_name]
+              properties:
+                first_name: { type: string, maxLength: 255 }
+                last_name: { type: string, maxLength: 255 }
+                email: { type: string, format: email, maxLength: 255 }
+                username: { type: string, maxLength: 50, nullable: true, description: "alpha_dash; unique" }
+                password: { type: string, format: password }
+                password_confirmation: { type: string, format: password }
+                device_name: { type: string, maxLength: 255 }
+                account_type: { type: string, enum: [parent, learner], default: parent }
+                family_name: { type: string, maxLength: 255, nullable: true }
+                date_of_birth: { type: string, format: date, nullable: true, description: "before today" }
+                referral_code: { type: string, maxLength: 50, nullable: true }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/AuthToken" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in with email/username + password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [login, password, device_name]
+              properties:
+                login: { type: string, description: "email or username" }
+                password: { type: string, format: password }
+                device_name: { type: string, maxLength: 255 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/AuthToken" }
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "403":
+          description: Account disabled
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /auth/google:
+    post:
+      tags: [Auth]
+      summary: Log in / register with a Google ID token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id_token, device_name]
+              properties:
+                id_token: { type: string }
+                device_name: { type: string, maxLength: 255 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/AuthToken" }
+        "401":
+          description: Invalid Google token
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "500":
+          description: Google auth unavailable
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+
+  /auth/password/forgot:
+    post:
+      tags: [Auth]
+      summary: Request a password reset link
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "202":
+          description: Accepted (does not reveal whether the email exists)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageData" }
+
+  /auth/password/reset:
+    post:
+      tags: [Auth]
+      summary: Reset a password using a token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, email, password, password_confirmation]
+              properties:
+                token: { type: string }
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+                password_confirmation: { type: string, format: password }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageData" }
+        "422":
+          description: Reset failed / validation
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: "#/components/schemas/ErrorEnvelope" }
+                  - { $ref: "#/components/schemas/ValidationErrors" }
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Rotate the current access token
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      token: { type: string }
+                      token_type: { type: string, example: Bearer }
+                      expires_at: { type: string, format: date-time, nullable: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/token:
+    delete:
+      tags: [Auth]
+      summary: Revoke the current device token (logout)
+      responses:
+        "204": { description: No Content }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ---------------------------------------------------------------- Account
+  /me:
+    get:
+      tags: [Account]
+      summary: Current user, families and organizations
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        type: object
+                        properties:
+                          id: { type: integer }
+                          first_name: { type: string }
+                          last_name: { type: string }
+                          name: { type: string }
+                          email: { type: string, format: email }
+                          email_verified: { type: boolean }
+                          roles: { type: array, items: { type: string } }
+                      families:
+                        type: array
+                        items: { $ref: "#/components/schemas/Family" }
+                      organizations:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: integer }
+                            name: { type: string, nullable: true }
+                            role: { type: string }
+                      active_organization_id: { type: integer, nullable: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /me/devices:
+    post:
+      tags: [Account]
+      summary: Register/refresh a device (push token)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [device_id, platform]
+              properties:
+                device_id: { type: string, maxLength: 255 }
+                platform: { type: string, enum: [ios, android, web] }
+                push_token: { type: string, maxLength: 512, nullable: true }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IdData" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /profiles/{learner}/switch:
+    post:
+      tags: [Account]
+      summary: Switch the active learner profile (PIN-gated)
+      parameters:
+        - $ref: "#/components/parameters/LearnerId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pin: { type: string, minLength: 4, maxLength: 8, nullable: true }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      active_learner_id: { type: integer }
+        "403":
+          description: Invalid PIN / not viewable
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: "#/components/schemas/ErrorEnvelope" }
+                  - { $ref: "#/components/schemas/MessageError" }
+
+  /me/notifications:
+    get:
+      tags: [Account]
+      summary: List the caller's in-app notifications (newest first)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        type: { type: string }
+                        data: { type: object, additionalProperties: true }
+                        read_at: { type: string, format: date-time, nullable: true }
+                        created_at: { type: string, format: date-time }
+                  unread: { type: integer }
+                  meta:
+                    type: object
+                    properties:
+                      current_page: { type: integer }
+                      last_page: { type: integer }
+                      per_page: { type: integer }
+                      total: { type: integer }
+
+  /me/notifications/{id}/read:
+    post:
+      tags: [Account]
+      summary: Mark a single notification read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      read_at: { type: string, format: date-time, nullable: true }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /me/notifications/read-all:
+    post:
+      tags: [Account]
+      summary: Mark every unread notification read
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      unread: { type: integer, example: 0 }
+
+  /email/verify/{id}/{hash}:
+    get:
+      tags: [Auth]
+      summary: Verify an email from the signed link
+      description: |
+        Public — the URL signature + email hash prove authenticity, so no bearer
+        token is required. The route is `signed`; tampered or expired links 403.
+      security: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+        - { name: hash, in: path, required: true, schema: { type: string } }
+        - { name: expires, in: query, required: true, schema: { type: integer } }
+        - { name: signature, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Verified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      verified: { type: boolean }
+        "403":
+          description: Invalid/expired link or hash mismatch
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageError" }
+
+  /email/verification-notification:
+    post:
+      tags: [Auth]
+      summary: Resend the verification email (authenticated, throttled)
+      responses:
+        "202":
+          description: Verification link sent
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageData" }
+        "200":
+          description: Already verified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      verified: { type: boolean }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  # ---------------------------------------------------------------- Content
+  /courses:
+    get:
+      tags: [Content]
+      summary: List courses
+      parameters:
+        - name: language
+          in: query
+          required: false
+          schema: { type: string }
+          description: Filter by language code
+      responses:
+        "200":
+          description: OK (paginated)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/Course" } }
+    post:
+      tags: [Content]
+      summary: Create a course (content_owner)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [language_id, title]
+              properties:
+                language_id: { type: integer }
+                title: { type: string, maxLength: 255 }
+                description: { type: string, nullable: true }
+                level_band: { type: string, maxLength: 50, nullable: true }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CourseData" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /courses/{course}:
+    parameters:
+      - $ref: "#/components/parameters/CourseId"
+    get:
+      tags: [Content]
+      summary: Show a course with its levels
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CourseData" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Content]
+      summary: Update a course
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CourseUpdate" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CourseData" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    patch:
+      tags: [Content]
+      summary: Update a course
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CourseUpdate" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CourseData" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      tags: [Content]
+      summary: Delete a course
+      responses:
+        "204": { description: No Content }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /courses/{course}/levels:
+    parameters:
+      - $ref: "#/components/parameters/CourseId"
+    get:
+      tags: [Content]
+      summary: List levels of a course
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/CourseLevel" } }
+    post:
+      tags: [Content]
+      summary: Add a level (content.lessons.manage)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string, maxLength: 255 }
+                position: { type: integer, minimum: 1, nullable: true }
+                has_assessment: { type: boolean }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/CourseLevel" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /levels/{level}/lessons:
+    parameters:
+      - name: level
+        in: path
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [Content]
+      summary: List lessons in a level
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Lesson" } }
+    post:
+      tags: [Content]
+      summary: Add a lesson (content.lessons.manage)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string, maxLength: 255 }
+                position: { type: integer, minimum: 1, nullable: true }
+                est_minutes: { type: integer, minimum: 1, nullable: true, default: 5 }
+                is_locked_by_default: { type: boolean, default: true }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Lesson" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /lessons/{lesson}:
+    parameters:
+      - $ref: "#/components/parameters/LessonId"
+    get:
+      tags: [Content]
+      summary: Show a lesson with components (authoring view, includes answer keys)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Lesson" }
+
+  /lessons/{lesson}/components:
+    parameters:
+      - $ref: "#/components/parameters/LessonId"
+    post:
+      tags: [Content]
+      summary: Add a component to a lesson (content.lessons.manage)
+      description: |
+        Polymorphic. The `video`/`quiz`/`speaking` sub-objects are required when `type` matches.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LessonComponentCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/LessonComponent" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /lessons/{lesson}/publish:
+    parameters:
+      - $ref: "#/components/parameters/LessonId"
+    post:
+      tags: [Content]
+      summary: Publish a lesson (content.courses.publish)
+      responses:
+        "200":
+          description: Published
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Lesson" }
+        "422":
+          description: Publish checks failed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ErrorEnvelope"
+                  - type: object
+                    properties:
+                      error:
+                        type: object
+                        properties:
+                          details: { type: array, items: { type: string } }
+
+  # --------------------------------------------------------------- Learning
+  /assessments:
+    post:
+      tags: [Learning]
+      summary: Submit a placement assessment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [learner_id, language_id]
+              properties:
+                learner_id: { type: integer }
+                language_id: { type: integer }
+                answers: { type: array, items: { type: object, additionalProperties: true }, nullable: true }
+                score: { type: number, minimum: 0, maximum: 1, nullable: true }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      result_level: { type: string, enum: [A1, A2, B1] }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /enrollments:
+    post:
+      tags: [Learning]
+      summary: Enroll a learner in a course (learning.enrollments.manage)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [learner_id, course_id]
+              properties:
+                learner_id: { type: integer }
+                course_id: { type: integer }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      enrollment_id: { type: integer }
+                      course_id: { type: integer }
+                      path:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            lesson_id: { type: integer }
+                            state: { type: string }
+                            position: { type: integer }
+        "422":
+          description: Validation, or course_not_published
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: "#/components/schemas/ErrorEnvelope" }
+                  - { $ref: "#/components/schemas/ValidationErrors" }
+
+  /learners/{learner}/path:
+    parameters:
+      - $ref: "#/components/parameters/LearnerId"
+    get:
+      tags: [Learning]
+      summary: Learning path (units → nodes)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      units:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            title: { type: string }
+                            nodes:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  lesson_id: { type: integer }
+                                  title: { type: string }
+                                  state: { type: string }
+                                  position: { type: integer }
+
+  /learners/{learner}/progress:
+    parameters:
+      - $ref: "#/components/parameters/LearnerId"
+    get:
+      tags: [Learning]
+      summary: Per-lesson progress for a learner
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      lessons:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: integer }
+                            lesson_id: { type: integer }
+                            status: { type: string }
+                            score: { type: number, nullable: true }
+                            components_completed: { type: integer }
+                            completed_at: { type: string, format: date-time, nullable: true }
+
+  /lessons/{lesson}/play:
+    parameters:
+      - $ref: "#/components/parameters/LessonId"
+    get:
+      tags: [Learning]
+      summary: Player payload for a lesson (answer keys stripped)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      lesson:
+                        type: object
+                        properties:
+                          id: { type: integer }
+                          title: { type: string }
+                          est_minutes: { type: integer }
+                      components:
+                        type: array
+                        items:
+                          type: object
+                          description: "Each item carries a dynamic key equal to its `type` with the player payload."
+                          properties:
+                            id: { type: integer }
+                            type: { type: string }
+                            position: { type: integer }
+                            xp: { type: integer }
+                          additionalProperties: true
+
+  /lessons/{lesson}/progress:
+    parameters:
+      - $ref: "#/components/parameters/LessonId"
+    post:
+      tags: [Learning]
+      summary: Record component progress
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [learner_id, component_id]
+              properties:
+                learner_id: { type: integer }
+                component_id: { type: integer }
+                watched_seconds: { type: integer, minimum: 0, nullable: true }
+                completed: { type: boolean }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      component_id: { type: integer }
+                      status: { type: string, enum: [in_progress, complete] }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /components/{component}/answer:
+    parameters:
+      - name: component
+        in: path
+        required: true
+        schema: { type: integer }
+    post:
+      tags: [Learning]
+      summary: Submit a quiz answer (graded)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [learner_id, question_id, answer]
+              properties:
+                learner_id: { type: integer }
+                question_id: { type: integer }
+                answer:
+                  type: object
+                  description: "One of { option_id } | { option_ids: [] } | { text }"
+                  additionalProperties: true
+                time_ms: { type: integer, minimum: 0, nullable: true }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      correct: { type: boolean }
+                      correct_answer: {}
+                      explanation: { type: string, nullable: true }
+                      hearts_remaining: { type: integer }
+                      xp_awarded: { type: integer }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /lessons/{lesson}/complete:
+    parameters:
+      - $ref: "#/components/parameters/LessonId"
+    post:
+      tags: [Learning]
+      summary: Complete a lesson (scores, XP, streak, badges)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [learner_id]
+              properties:
+                learner_id: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      lesson_score: { type: number }
+                      xp_total: { type: integer }
+                      streak:
+                        type: object
+                        properties:
+                          count: { type: integer }
+                          state: { type: string }
+                      badges_unlocked: { type: array, items: { type: object, additionalProperties: true } }
+                      next_node:
+                        type: object
+                        nullable: true
+                        properties:
+                          lesson_id: { type: integer }
+                          unlocked: { type: boolean }
+        "422":
+          description: Validation, or lesson_incomplete
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: "#/components/schemas/ErrorEnvelope" }
+                  - { $ref: "#/components/schemas/ValidationErrors" }
+
+  /speaking-submissions:
+    post:
+      tags: [Learning]
+      summary: Upload a speaking submission (multipart)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [learner_id, component_id]
+              properties:
+                learner_id: { type: integer }
+                component_id: { type: integer }
+                audio:
+                  type: string
+                  format: binary
+                  nullable: true
+                  description: "audio/mpeg|aac|wav|webm|ogg, max 10 MB"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id: { type: integer }
+                      status: { type: string, example: needs_review }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  # ------------------------------------------------------------ Gamification
+  /learners/{learner}/streak:
+    parameters:
+      - $ref: "#/components/parameters/LearnerId"
+    get:
+      tags: [Gamification]
+      summary: Streak status
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      count: { type: integer }
+                      longest: { type: integer }
+                      state: { type: string }
+                      frozen_until: { type: string, format: date-time, nullable: true }
+
+  /streak/shield:
+    post:
+      tags: [Gamification]
+      summary: Buy/activate a streak shield
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [learner_id]
+              properties:
+                learner_id: { type: integer }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      protection_id: { type: integer }
+                      type: { type: string }
+                      active_to: { type: string, format: date-time, nullable: true }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /hearts:
+    get:
+      tags: [Gamification]
+      summary: Heart balance
+      parameters:
+        - name: learner_id
+          in: query
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      current: { type: integer }
+                      refills_at: { type: string, format: date-time, nullable: true }
+
+  /hearts/refill:
+    post:
+      tags: [Gamification]
+      summary: Refill hearts (ad or coins)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [learner_id, method]
+              properties:
+                learner_id: { type: integer }
+                method: { type: string, enum: [ad, coins] }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      current: { type: integer }
+                      refills_at: { type: string, format: date-time, nullable: true }
+                      method: { type: string }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /leagues/current:
+    get:
+      tags: [Gamification]
+      summary: Current league + rank for a learner
+      parameters:
+        - name: learner_id
+          in: query
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      league:
+                        type: object
+                        properties:
+                          id: { type: integer }
+                          name: { type: string }
+                          tier: {}
+                          week_start: { type: string, format: date }
+                      rank: { type: integer, nullable: true }
+                      weekly_xp: { type: integer, nullable: true }
+
+  /leaderboard:
+    get:
+      tags: [Gamification]
+      summary: Leaderboard for a league or a learner's league
+      parameters:
+        - name: league
+          in: query
+          required: false
+          schema: { type: integer }
+        - name: learner_id
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        rank: { type: integer }
+                        learner_id: { type: integer }
+                        display_name: { type: string, nullable: true }
+                        weekly_xp: { type: integer }
+        "422":
+          description: Neither league nor learner_id provided
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageError" }
+
+  /learners/{learner}/badges:
+    parameters:
+      - $ref: "#/components/parameters/LearnerId"
+    get:
+      tags: [Gamification]
+      summary: Earned and locked badges
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      earned:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            code: { type: string }
+                            name: { type: string }
+                            earned_at: { type: string, format: date-time }
+                      locked:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            code: { type: string }
+                            name: { type: string }
+                            description: { type: string }
+
+  # --------------------------------------------------------- Family & Wallet
+  /family:
+    get:
+      tags: [Family & Wallet]
+      summary: Family overview (family.manage)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Family" }
+
+  /family/children:
+    post:
+      tags: [Family & Wallet]
+      summary: Add a child learner (family.manage)
+      description: |
+        Records a verifiable parental-consent record (COPPA / NDPA). `consent`
+        must be affirmatively accepted or the request is rejected (422).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [display_name, consent]
+              properties:
+                display_name: { type: string, maxLength: 255 }
+                date_of_birth: { type: string, format: date, nullable: true }
+                age_band: { type: string, maxLength: 50, nullable: true }
+                target_language_id: { type: integer, nullable: true }
+                consent:
+                  type: boolean
+                  description: Guardian's verifiable parental consent — must be true.
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id: { type: integer }
+                      display_name: { type: string }
+        "422":
+          description: Validation, or child_limit_reached
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: "#/components/schemas/ErrorEnvelope" }
+                  - { $ref: "#/components/schemas/ValidationErrors" }
+
+  /family/pin:
+    put:
+      tags: [Family & Wallet]
+      summary: Set the family parental PIN (family.manage)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pin]
+              properties:
+                pin: { type: string, pattern: "^\\d{4,8}$" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      pin_set: { type: boolean }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /wallet:
+    get:
+      tags: [Family & Wallet]
+      summary: Wallet balances (family.wallet.view)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Wallet" }
+
+  /chores:
+    get:
+      tags: [Family & Wallet]
+      summary: List chores (family.chores.manage)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        title: { type: string }
+                        status: { type: string }
+                        coin_reward: { type: integer }
+                        assignee: { type: string, nullable: true }
+                        due_at: { type: string, format: date-time, nullable: true }
+    post:
+      tags: [Family & Wallet]
+      summary: Create a chore (family.chores.manage)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, assignee_learner_profile_id, coin_reward]
+              properties:
+                title: { type: string, maxLength: 255 }
+                description: { type: string, nullable: true }
+                assignee_learner_profile_id: { type: integer }
+                coin_reward: { type: integer, minimum: 0 }
+                due_at: { type: string, format: date, nullable: true }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id: { type: integer }
+                      status: { type: string, example: active }
+        "422":
+          description: Validation, or assignee not in family
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: "#/components/schemas/MessageError" }
+                  - { $ref: "#/components/schemas/ValidationErrors" }
+
+  /chores/{chore}/review:
+    parameters:
+      - name: chore
+        in: path
+        required: true
+        schema: { type: integer }
+    post:
+      tags: [Family & Wallet]
+      summary: Review a chore (family.chores.review)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [approve, reject, more_evidence] }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      chore_id: { type: integer }
+                      status: { type: string }
+                      coins_released: { type: integer }
+        "403":
+          description: Not your family chore
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageError" }
+
+  /reviews/pending:
+    get:
+      tags: [Family & Wallet]
+      summary: Pending parent reviews (family.reviews.handle)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      chores: { type: array, items: { type: object, additionalProperties: true } }
+                      speaking: { type: array, items: { type: object, additionalProperties: true } }
+                      assignments: { type: array, items: { type: object, additionalProperties: true } }
+
+  /wallet/fund:
+    post:
+      tags: [Family & Wallet]
+      summary: Initiate a wallet top-up (family.wallet.fund)
+      description: Creates a pending funding row; the wallet is credited later by the gateway webhook.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, gateway]
+              properties:
+                amount: { type: integer, minimum: 1, description: "minor units" }
+                gateway: { type: string, enum: [flutterwave, paystack] }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      funding_id: { type: integer }
+                      status: { type: string, example: pending }
+                      gateway: { type: string }
+                      gateway_ref: { type: string, format: uuid }
+                      checkout_url: { type: string, nullable: true }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /wallet/transfer:
+    post:
+      tags: [Family & Wallet]
+      summary: Transfer coins to a child (family.wallet.fund)
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to_learner_id, coins]
+              properties:
+                to_learner_id: { type: integer }
+                coins: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      family_balance: { type: integer }
+                      learner_balance: { type: integer }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+        "422":
+          description: Validation, not-in-family, or insufficient_coins
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: "#/components/schemas/ErrorEnvelope" }
+                  - { $ref: "#/components/schemas/MessageError" }
+                  - { $ref: "#/components/schemas/ValidationErrors" }
+
+  # ---------------------------------------------------------------- Billing
+  /plans:
+    get:
+      tags: [Billing]
+      summary: Subscription plans
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Plan" } }
+
+  /telco/status:
+    get:
+      tags: [Billing]
+      summary: Airtime subscription status (billing.telco.view)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      state: { type: string }
+                      grace_until: { type: string, format: date-time, nullable: true }
+                      next_attempt_at: { type: string, format: date-time, nullable: true }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /telco/otp/request:
+    post:
+      tags: [Billing]
+      summary: Request an airtime opt-in OTP (billing.telco.manage)
+      description: Rate-limited 6/min. The code is delivered out-of-band and never returned.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [msisdn, operator]
+              properties:
+                msisdn: { type: string, pattern: "^\\+?[0-9]{10,15}$" }
+                operator: { type: string, enum: [mtn, airtel, glo, t2] }
+      responses:
+        "202":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      expires_at: { type: string, format: date-time }
+                      msisdn: { type: string }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /telco/otp/verify:
+    post:
+      tags: [Billing]
+      summary: Verify an airtime opt-in OTP (billing.telco.manage)
+      description: Rate-limited 10/min. 6-digit code, 5-min TTL, ≤5 attempts.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [msisdn, code]
+              properties:
+                msisdn: { type: string, pattern: "^\\+?[0-9]{10,15}$" }
+                code: { type: string, pattern: "^[0-9]{6}$" }
+      responses:
+        "200":
+          description: Verified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      verified: { type: boolean }
+        "422":
+          description: Invalid/expired code or validation
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: "#/components/schemas/MessageError" }
+                  - { $ref: "#/components/schemas/ValidationErrors" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /telco/subscribe:
+    post:
+      tags: [Billing]
+      summary: Enroll in airtime billing (billing.telco.manage)
+      description: Requires a fresh verified OTP for the MSISDN (single-use); otherwise 403.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan_id, msisdn, operator]
+              properties:
+                plan_id: { type: integer }
+                msisdn: { type: string, pattern: "^\\+?[0-9]{10,15}$" }
+                operator: { type: string, enum: [mtn, airtel, glo, t2] }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      subscription_id: { type: integer }
+                      state: { type: string }
+                      msisdn: { type: string }
+                      next_attempt_at: { type: string, format: date-time }
+        "403":
+          description: Phone number not verified
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /subscriptions:
+    post:
+      tags: [Billing]
+      summary: Start a subscription (billing.subscriptions.manage)
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan_id, method]
+              properties:
+                plan_id: { type: integer }
+                method: { type: string, enum: [card, invoice] }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      subscription_id: { type: integer }
+                      status: { type: string }
+                      payment_reference: { type: string, nullable: true, description: "present when method=card, e.g. sub_<id>" }
+                      checkout_url: { type: string, nullable: true }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /subscriptions/{subscription}/cancel:
+    parameters:
+      - name: subscription
+        in: path
+        required: true
+        schema: { type: integer }
+    post:
+      tags: [Billing]
+      summary: Cancel a subscription (billing.subscriptions.manage)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      status: { type: string, example: cancelled }
+                      message: { type: string }
+        "403":
+          description: Not your subscription
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /data-bundles:
+    get:
+      tags: [Billing]
+      summary: Data bundle catalogue
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        bundle_mb: { type: integer }
+                        amount_minor: { type: integer }
+                        currency: { type: string, example: NGN }
+
+  /data-bundles/purchase:
+    post:
+      tags: [Billing]
+      summary: Purchase a data bundle (billing.databundles.manage)
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [operator, bundle_mb, consent]
+              properties:
+                operator: { type: string, enum: [mtn, airtel, glo, t2] }
+                bundle_mb: { type: integer, minimum: 1 }
+                consent: { type: boolean, description: "must be accepted (true)" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      purchase_id: { type: integer }
+                      status: { type: string, example: pending }
+                      amount_minor: { type: integer }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  # ----------------------------------------------------- Referrals & Payouts
+  /referral-code:
+    get:
+      tags: [Referrals & Payouts]
+      summary: Caller's referral code (referrals.view)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      code: { type: string }
+                      status: { type: string }
+                      share_url: { type: string }
+                      share_text: { type: string }
+
+  /referrals/summary:
+    get:
+      tags: [Referrals & Payouts]
+      summary: Referral + commission summary (referrals.view)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      code: { type: string }
+                      referrals: { type: object, additionalProperties: { type: integer } }
+                      commissions: { type: object, additionalProperties: true }
+
+  /payouts:
+    get:
+      tags: [Referrals & Payouts]
+      summary: List payouts (own; all for super_admin)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Payout" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /payouts/request:
+    post:
+      tags: [Referrals & Payouts]
+      summary: Request a payout
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount_minor, method]
+              properties:
+                amount_minor: { type: integer, minimum: 500000, description: "min ₦5,000" }
+                method: { type: string, enum: [bank, coins] }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id: { type: integer }
+                      status: { type: string, example: requested }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+        "422":
+          description: Validation, or payout_cap_exceeded
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: "#/components/schemas/ErrorEnvelope" }
+                  - { $ref: "#/components/schemas/ValidationErrors" }
+
+  # ----------------------------------------------------------------- School
+  /schools/{organization}/dashboard:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationId"
+    get:
+      tags: [School]
+      summary: School dashboard (schools.dashboard.view)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      organization: { type: object, properties: { id: { type: integer }, name: { type: string }, status: { type: string } } }
+                      classes: { type: integer }
+                      students: { type: integer }
+                      seats: { type: object, properties: { purchased: { type: integer }, filled: { type: integer } } }
+                      invoices: { type: object, properties: { unpaid: { type: integer }, unpaid_minor: { type: integer } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /schools/{organization}/students/import:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationId"
+    post:
+      tags: [School]
+      summary: Bulk import students (schools.roster.import)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                students:
+                  type: array
+                  description: "required without `file`"
+                  items:
+                    type: object
+                    required: [display_name]
+                    properties:
+                      display_name: { type: string, maxLength: 255 }
+                      level: { type: string, maxLength: 100, nullable: true }
+                      class_id: { type: integer, nullable: true }
+                class_id: { type: integer, nullable: true }
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary, description: "csv/txt, max 2 MB; required without `students`" }
+                class_id: { type: integer, nullable: true }
+      responses:
+        "201":
+          description: Created (per-row soft errors reported)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      created: { type: integer }
+                      errors:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            row: { type: integer }
+                            error: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /schools/{organization}/seats:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationId"
+    get:
+      tags: [School]
+      summary: Seat allocations (schools.seats.view)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      total_purchased: { type: integer }
+                      active_filled: { type: integer }
+                      allocations:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: integer }
+                            total_purchased: { type: integer }
+                            active_filled: { type: integer }
+                            term_label: { type: string, nullable: true }
+                            expires_at: { type: string, format: date-time, nullable: true }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /schools/{organization}/seats/purchase:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationId"
+    post:
+      tags: [School]
+      summary: Purchase seats (schools.seats.purchase)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quantity]
+              properties:
+                quantity: { type: integer, minimum: 1, maximum: 100000 }
+                term_label: { type: string, maxLength: 100, nullable: true }
+                auto_renew: { type: boolean }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      allocation_id: { type: integer }
+                      quantity: { type: integer }
+                      discount_percent: { type: integer }
+                      enterprise: { type: boolean }
+                      amount_minor: { type: integer }
+                      invoice_id: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /schools/{organization}/invoices:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationId"
+    get:
+      tags: [School]
+      summary: Organization invoices (billing.invoices.view)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        type: { type: string }
+                        amount_minor: { type: integer }
+                        status: { type: string }
+                        issued_at: { type: string, format: date-time, nullable: true }
+                        paid_at: { type: string, format: date-time, nullable: true }
+                        has_pdf: { type: boolean }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /schools/{organization}/invoices/{invoice}/pdf:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationId"
+      - name: invoice
+        in: path
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [School]
+      summary: Download the invoice PDF (billing.invoices.view)
+      description: Generates the PDF on first request (cached as a media asset) and streams it as an attachment.
+      responses:
+        "200":
+          description: PDF download
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /classes:
+    get:
+      tags: [School]
+      summary: List classes (tenant-scoped)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        name: { type: string }
+                        level: { type: string, nullable: true }
+                        teacher: { type: string, nullable: true }
+                        students: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [School]
+      summary: Create a class
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SchoolClassInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: object, properties: { id: { type: integer }, name: { type: string } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /classes/{class}:
+    parameters:
+      - name: class
+        in: path
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [School]
+      summary: Show a class with its students
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id: { type: integer }
+                      name: { type: string }
+                      level: { type: string, nullable: true }
+                      teacher: { type: string, nullable: true }
+                      students:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            learner_id: { type: integer }
+                            display_name: { type: string, nullable: true }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [School]
+      summary: Update a class
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SchoolClassInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: object, properties: { id: { type: integer }, name: { type: string } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [School]
+      summary: Update a class
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SchoolClassInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: object, properties: { id: { type: integer }, name: { type: string } } }
+
+  # ------------------------------------------------------------------ Admin
+  /admin/metrics:
+    get:
+      tags: [Admin]
+      summary: Platform metrics (analytics.platform.view)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      users: { type: integer }
+                      organizations: { type: object, additionalProperties: { type: integer } }
+                      subscriptions: { type: object, additionalProperties: { type: integer } }
+                      revenue_minor: { type: integer }
+                      languages: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/billing/health:
+    get:
+      tags: [Admin]
+      summary: Billing health (billing.health.view)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      telco: { type: object, properties: { attempts: { type: integer }, success: { type: integer }, success_rate: { type: number, nullable: true } } }
+                      funding: { type: object, additionalProperties: { type: integer } }
+                      subscriptions: { type: object, additionalProperties: { type: integer } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/settlements:
+    get:
+      tags: [Admin]
+      summary: Settlement totals (settlements.view)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      commissions: { type: object, additionalProperties: true }
+                      payouts: { type: object, additionalProperties: true }
+                      telco_revenue_minor: { type: integer }
+                      clawback:
+                        type: object
+                        description: Cleared commissions on refunded subscriptions, awaiting manual recovery.
+                        properties:
+                          pending_count: { type: integer }
+                          pending_minor: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/payouts/{payout}/approve:
+    parameters:
+      - name: payout
+        in: path
+        required: true
+        schema: { type: integer }
+    post:
+      tags: [Admin]
+      summary: Approve a payout (super_admin; separation-of-duties enforced)
+      responses:
+        "200":
+          description: Approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id: { type: integer }
+                      status: { type: string, example: approved }
+                      approved_by: { type: integer }
+        "403":
+          description: Self-approval forbidden, or not authorized
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: "#/components/schemas/ErrorEnvelope" }
+                  - { $ref: "#/components/schemas/MessageError" }
+        "409":
+          description: Payout not in a requested state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/promo-codes:
+    post:
+      tags: [Admin]
+      summary: Create a promo code (promocodes.manage)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, discount_type, value]
+              properties:
+                code: { type: string, maxLength: 50 }
+                discount_type: { type: string, enum: [percent, fixed] }
+                value: { type: integer, minimum: 1 }
+                applicable_tier: { type: string, maxLength: 50, nullable: true }
+                valid_from: { type: string, format: date, nullable: true }
+                valid_to: { type: string, format: date, nullable: true }
+                max_redemptions: { type: integer, minimum: 1, nullable: true }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: object, properties: { id: { type: integer }, code: { type: string }, status: { type: string } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /admin/organizations:
+    get:
+      tags: [Admin]
+      summary: List organizations (organizations.view)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        name: { type: string }
+                        type: { type: string }
+                        status: { type: string }
+                        members: { type: integer }
+                        classes: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/organizations/{organization}/activate:
+    parameters:
+      - name: organization
+        in: path
+        required: true
+        schema: { type: integer }
+    post:
+      tags: [Admin]
+      summary: Activate an organization (organizations.activate)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: object, properties: { id: { type: integer }, status: { type: string, example: active } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # --------------------------------------------------------------- Webhooks
+  /webhooks/paystack:
+    post:
+      tags: [Webhooks]
+      summary: Paystack webhook (HMAC-SHA512 signed)
+      security: []
+      parameters:
+        - name: x-paystack-signature
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200":
+          description: Processed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WebhookStatus" }
+        "401":
+          description: Invalid signature
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageError" }
+
+  /webhooks/flutterwave:
+    post:
+      tags: [Webhooks]
+      summary: Flutterwave webhook (verif-hash)
+      security: []
+      parameters:
+        - name: verif-hash
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200":
+          description: Processed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WebhookStatus" }
+        "401":
+          description: Invalid signature
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageError" }
+
+  /webhooks/telco/dlr:
+    post:
+      tags: [Webhooks]
+      summary: Telco delivery/billing result (SDP)
+      description: HMAC-SHA256 signed (raw body) and idempotent on operator_ref.
+      security: []
+      parameters:
+        - name: x-telco-signature
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                operator_ref: { type: string }
+                result: { type: string, description: "success | <other = error>" }
+              additionalProperties: true
+      responses:
+        "200":
+          description: Processed (or duplicate on replay)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, description: "ok | duplicate" }
+        "401":
+          description: Invalid signature
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageError" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Sanctum personal access token (mobile / API clients).
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: mahadum_session
+      description: Sanctum stateful session cookie (web SPA); pair with X-XSRF-TOKEN.
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string }
+      description: Unique key per money-moving request; replays return the cached response.
+    OrganizationId:
+      name: organization
+      in: path
+      required: true
+      schema: { type: integer }
+    CourseId:
+      name: course
+      in: path
+      required: true
+      schema: { type: integer }
+    LessonId:
+      name: lesson
+      in: path
+      required: true
+      schema: { type: integer }
+    LearnerId:
+      name: learner
+      in: path
+      required: true
+      schema: { type: integer }
+    AcceptLanguage:
+      name: Accept-Language
+      in: header
+      required: false
+      schema: { type: string }
+    DeviceId:
+      name: X-Device-Id
+      in: header
+      required: false
+      schema: { type: string }
+      description: Device fingerprint, used for referral attribution at register time.
+
+  responses:
+    Unauthorized:
+      description: Unauthenticated
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/MessageError" }
+    Forbidden:
+      description: Forbidden (missing permission / policy denied)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/MessageError" }
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/MessageError" }
+    ValidationError:
+      description: Unprocessable entity (validation)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ValidationErrors" }
+    TooManyRequests:
+      description: Rate limit exceeded
+      headers:
+        Retry-After: { schema: { type: integer } }
+        X-RateLimit-Limit: { schema: { type: integer } }
+        X-RateLimit-Remaining: { schema: { type: integer } }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/MessageError" }
+    IdempotencyConflict:
+      description: Idempotency key reused with a different body
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+    UpgradeRequired:
+      description: Client app below minimum supported version
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+
+  schemas:
+    ErrorEnvelope:
+      type: object
+      description: Coded error envelope returned by money/idempotency/version guards and explicit business rules.
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, status]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            status: { type: integer }
+    MessageError:
+      type: object
+      description: Laravel default error body (auth / authorization / not-found / abort).
+      required: [message]
+      properties:
+        message: { type: string }
+    ValidationErrors:
+      type: object
+      required: [message, errors]
+      properties:
+        message: { type: string }
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
+    MessageData:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            message: { type: string }
+    IdData:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            id: { type: integer }
+    WebhookStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          description: "duplicate | ignored | funded | subscription_active | reversed | unmatched"
+    Paginated:
+      type: object
+      properties:
+        links:
+          type: object
+          properties:
+            first: { type: string, nullable: true }
+            last: { type: string, nullable: true }
+            prev: { type: string, nullable: true }
+            next: { type: string, nullable: true }
+        meta:
+          type: object
+          properties:
+            current_page: { type: integer }
+            from: { type: integer, nullable: true }
+            last_page: { type: integer }
+            per_page: { type: integer }
+            to: { type: integer, nullable: true }
+            total: { type: integer }
+
+    AuthToken:
+      type: object
+      properties:
+        token: { type: string }
+        token_type: { type: string, example: Bearer }
+        expires_at: { type: string, format: date-time, nullable: true }
+        abilities: { type: array, items: { type: string } }
+        user: { $ref: "#/components/schemas/User" }
+
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        first_name: { type: string }
+        last_name: { type: string }
+        name: { type: string }
+        email: { type: string, format: email }
+        username: { type: string, nullable: true }
+        locale: { type: string }
+        roles: { type: array, items: { type: string } }
+        active_organization_id: { type: integer, nullable: true }
+
+    Language:
+      type: object
+      properties:
+        id: { type: integer }
+        code: { type: string }
+        name: { type: string }
+        script: { type: string, nullable: true }
+        is_active: { type: boolean }
+
+    Family:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        child_limit: { type: integer }
+        pin_set: { type: boolean }
+        wallet: { $ref: "#/components/schemas/Wallet" }
+        learners:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: integer }
+              display_name: { type: string }
+              is_child: { type: boolean }
+
+    Wallet:
+      type: object
+      properties:
+        coin_balance: { type: integer }
+        currency_minor: { type: integer }
+        currency: { type: string, example: NGN }
+
+    Plan:
+      type: object
+      properties:
+        code: { type: string }
+        name: { type: string }
+        price_minor: { type: integer }
+        currency: { type: string }
+        interval: { type: string }
+        max_profiles: { type: integer }
+        features: {}
+
+    Payout:
+      type: object
+      properties:
+        id: { type: integer }
+        amount_minor: { type: integer }
+        method: { type: string }
+        status: { type: string }
+        requested_at: { type: string, format: date-time, nullable: true }
+        paid_at: { type: string, format: date-time, nullable: true }
+
+    Course:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        level_band: { type: string, nullable: true }
+        status: { type: string }
+        is_published: { type: boolean }
+        language: { type: string, nullable: true, description: "language code (when loaded)" }
+        levels:
+          type: array
+          nullable: true
+          items: { $ref: "#/components/schemas/CourseLevel" }
+
+    CourseData:
+      type: object
+      properties:
+        data: { $ref: "#/components/schemas/Course" }
+
+    CourseUpdate:
+      type: object
+      properties:
+        title: { type: string, maxLength: 255 }
+        description: { type: string, nullable: true }
+        level_band: { type: string, maxLength: 50, nullable: true }
+        language_id: { type: integer }
+
+    CourseLevel:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        position: { type: integer }
+        has_assessment: { type: boolean }
+        lessons:
+          type: array
+          nullable: true
+          items: { $ref: "#/components/schemas/Lesson" }
+
+    Lesson:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        position: { type: integer }
+        est_minutes: { type: integer }
+        is_locked_by_default: { type: boolean }
+        version: { type: integer }
+        published_at: { type: string, format: date-time, nullable: true }
+        is_published: { type: boolean }
+        components:
+          type: array
+          nullable: true
+          items: { $ref: "#/components/schemas/LessonComponent" }
+
+    LessonComponent:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string }
+        position: { type: integer }
+        title: { type: string, nullable: true }
+        is_required: { type: boolean }
+        xp_value: { type: integer }
+        settings: { type: object, nullable: true, additionalProperties: true }
+        detail:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: "Type-specific payload (video / quiz with answer keys / speaking)."
+
+    LessonComponentCreate:
+      type: object
+      required: [type]
+      properties:
+        type: { type: string, enum: [video, quiz, speaking, exercise, game, assignment] }
+        position: { type: integer, minimum: 1, nullable: true }
+        title: { type: string, maxLength: 255, nullable: true }
+        is_required: { type: boolean, default: true }
+        xp_value: { type: integer, minimum: 0, default: 0 }
+        settings: { type: object, nullable: true, additionalProperties: true }
+        video:
+          type: object
+          nullable: true
+          description: "Required when type=video"
+          properties:
+            title: { type: string, maxLength: 255 }
+            presenter_name: { type: string, maxLength: 255, nullable: true }
+            duration_seconds: { type: integer, minimum: 1, nullable: true }
+            default_quality: { type: string, enum: [240p, 360p, 720p], default: 360p }
+            status: { type: string, enum: [uploading, processing, ready, failed], default: ready }
+            language_id: { type: integer, nullable: true }
+        quiz:
+          type: object
+          nullable: true
+          description: "Required when type=quiz"
+          properties:
+            title: { type: string, maxLength: 255, nullable: true }
+            pass_threshold: { type: number, minimum: 0, maximum: 1, default: 0.6 }
+            shuffle_questions: { type: boolean }
+            max_attempts: { type: integer, minimum: 1, nullable: true }
+            hearts_enabled: { type: boolean, default: true }
+            questions:
+              type: array
+              items:
+                type: object
+                properties:
+                  type: { type: string, maxLength: 50 }
+                  prompt: { type: string }
+                  explanation: { type: string, nullable: true }
+                  target_text: { type: string, nullable: true }
+                  points: { type: integer, minimum: 1, default: 1 }
+                  options:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        label: { type: string }
+                        is_correct: { type: boolean }
+                        match_target: { type: string, nullable: true }
+        speaking:
+          type: object
+          nullable: true
+          description: "Required when type=speaking"
+          properties:
+            prompt_text: { type: string }
+            target_text: { type: string, nullable: true }
+            tone_targets: { type: array, items: { type: string }, nullable: true }
+
+    SchoolClassInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 255 }
+        level: { type: string, maxLength: 100, nullable: true }
+        teacher_user_id: { type: integer, nullable: true }
