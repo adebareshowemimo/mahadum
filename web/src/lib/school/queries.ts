@@ -5,6 +5,7 @@ import {
   type CreateClassInput,
   type GradeSubmissionInput,
   type PurchaseSeatsInput,
+  type RequestTeacherCompensationPayoutInput,
 } from '@/lib/api'
 import { useAuth } from '@/lib/auth/AuthProvider'
 
@@ -22,6 +23,7 @@ export const schoolKeys = {
   assignments: (classId: number) => ['class-assignments', classId] as const,
   assignmentDetail: (classId: number, assignmentId: number) =>
     ['class-assignments', classId, assignmentId] as const,
+  teacherCompensation: ['teacher-compensation'] as const,
 }
 
 export function useSchoolDashboard(orgId: number | null) {
@@ -117,6 +119,25 @@ export function useGradeSubmission(classId: number, assignmentId: number) {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: schoolKeys.assignmentDetail(classId, assignmentId) })
       void qc.invalidateQueries({ queryKey: schoolKeys.assignments(classId) })
+    },
+  })
+}
+
+export function useTeacherCompensation() {
+  return useQuery({
+    queryKey: schoolKeys.teacherCompensation,
+    queryFn: schoolApi.teacherCompensationSummary,
+  })
+}
+
+export function useRequestTeacherCompensationPayout() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: RequestTeacherCompensationPayoutInput) =>
+      schoolApi.requestTeacherCompensationPayout(input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: schoolKeys.teacherCompensation })
+      void qc.invalidateQueries({ queryKey: ['payouts'] })
     },
   })
 }

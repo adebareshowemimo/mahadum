@@ -42,6 +42,19 @@ return [
                 ],
             ],
         ],
+        'teacher_compensation' => [
+            'label' => 'Teacher compensation',
+            'settings' => [
+                'teacher_compensation.rate_per_student_minor' => [
+                    'label' => 'Rate per paying student (₦, minor units)',
+                    'help' => 'Monthly amount a teacher accrues per currently-enrolled student whose school has an active/paid seat allocation. 0 disables accrual. 20000 = ₦200.',
+                    'type' => 'int',
+                    'min' => 0,
+                    'default' => 0,
+                ],
+            ],
+        ],
+
         'features' => [
             'label' => 'Feature flags',
             'settings' => [

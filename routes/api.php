@@ -83,6 +83,7 @@ use App\Http\Controllers\School\RosterController;
 use App\Http\Controllers\School\SchoolClassController;
 use App\Http\Controllers\School\SchoolDashboardController;
 use App\Http\Controllers\School\SeatController;
+use App\Http\Controllers\School\TeacherCompensationController;
 use App\Http\Controllers\Support\TicketController;
 use App\Http\Controllers\Webhooks\PaymentWebhookController;
 use App\Http\Controllers\Webhooks\SendgridWebhookController;
@@ -252,6 +253,14 @@ Route::prefix('v1')->group(function () {
         Route::get('payouts', [PayoutController::class, 'index'])->can('viewAny', Payout::class);
         Route::middleware('idempotency')->group(function () {
             Route::post('payouts/request', [PayoutController::class, 'store'])->can('create', Payout::class);
+        });
+
+        /* ---- Teacher class compensation (own accrual; distinct from referrals) ---- */
+        Route::get('teacher-compensation/summary', [TeacherCompensationController::class, 'summary'])
+            ->middleware('can:commissions.view');
+        Route::middleware('idempotency')->group(function () {
+            Route::post('teacher-compensation/payouts/request', [TeacherCompensationController::class, 'requestPayout'])
+                ->middleware('can:payouts.request');
         });
 
         /* ---- School operations (org-scoped) ---- */

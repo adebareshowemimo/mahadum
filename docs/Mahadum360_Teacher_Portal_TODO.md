@@ -15,7 +15,7 @@ all.
 
 ---
 
-## Status snapshot (2026-07-04, updated same day after §0+§1 shipped)
+## Status snapshot (2026-07-04, updated after §0–§3 all shipped — plan complete)
 
 **Landed (✅):**
 
@@ -23,12 +23,12 @@ all.
 |---|---|---|---|
 | Classes | `/classes` | `ClassesPage` | `GET /classes`, `GET /classes/{id}`, `GET /classes/{id}/analytics` ✅ (view-only: teacher lacks `schools.classes.manage`, correctly so — class creation is `school_admin`'s job) |
 | Assignments | `/assignments` | `AssignmentsPage` | `GET/POST /classes/{class}/assignments`, `GET /classes/{class}/assignments/{assignment}`, `POST /class-assignments/{assignment}/submissions`, `POST …/submissions/{submission}/grade` ✅ — teacher-owned, tenant-scoped, coin release on pass. *(§1 shipped 2026-07-04; verified live incl. cross-teacher 403 and full create→submit→grade→wallet-credit flow.)* |
-| Earnings | `/earnings` | `EarningsPage` | `GET /payouts`, `POST /payouts/request` ✅ — **but this is the referral-commission system**, not teaching pay (see §3, still blocked) |
+| Earnings | `/earnings` | `EarningsPage` | Two distinct sections: **referral earnings** (`GET /payouts`, `POST /payouts/request`, unchanged) and **teaching compensation** (`GET /teacher-compensation/summary`, `POST /teacher-compensation/payouts/request`, new, §3) — draw down separate balances via `payouts.source`. |
 
-**Orphaned permissions — now resolved:**
-- `schools.assignments.create` / `.review` — wired to the new `ClassAssignmentController` routes (§1). ✅
+**Orphaned permissions — all resolved:**
+- `schools.assignments.create` / `.review` — wired to the `ClassAssignmentController` routes (§1). ✅
 - `learning.submissions.review` — still unused (grading is gated via `schools.assignments.review` + explicit ownership check instead, matching the `schools.*` permission naming); harmless duplicate grant, not blocking.
-- `commissions.view` — still orphaned, tracked in §3 (blocked on the teacher-commission-payout product decision).
+- `commissions.view` — wired to `GET /teacher-compensation/summary` (§3). ✅
 
 **Existing `Assignment`/submission models are the wrong shape for this.** The
 current `Assignment` model (`app/Models/Assignment.php`) is a **CMS
@@ -134,28 +134,64 @@ needs a **new model pair**, not a re-skin of the family flow.
 
 ---
 
-## 3. Earnings — resolve the referral-vs-teaching-pay conflation `[BE]` `[BLOCK]`
+## 3. Earnings — resolve the referral-vs-teaching-pay conflation `[BE]` — ✅ shipped 2026-07-04
 
-`EarningsPage` at `/earnings` is fully wired but is **entirely the referral
-commission system** (`Commission`/`Referral`/`Payout` models) — a teacher
-sees "earnings" that are actually referral-code payouts, not compensation
-for teaching classes. `commissions.view` is seeded for `teacher` but never
-checked by any controller (orphaned).
+**Product decisions (resolved 2026-07-04):** teacher "earnings" needed a
+distinct real compensation stream, paid to bank — not a relabel of the
+referral program. Trigger: monthly accrual of `rate × currently-enrolled
+students whose school has an active/paid seat allocation` (school students
+are billed via seats, not personal subscriptions — the earlier "family has
+an active subscription" framing didn't match that billing model, so this
+was corrected to seat activity before building).
 
-- [ ] **Product decision (blocks this section):** *"Teacher commission
-  payout — cash to bank vs platform coins"* is explicitly listed as
-  unresolved in `Mahadum360_Implementation_TODO.md` line 60. Until this is
-  resolved, don't build new schema — but do:
-- [ ] **Relabel or split the UI honestly.** Either (a) confirm product intent
-  is that teacher "earnings" *are* the referral program (a teacher earns by
-  referring students/schools, same as a parent) and the current reuse is
-  correct — in which case just rename any teacher-facing copy so it doesn't
-  imply salary; or (b) once the decision above resolves, add a distinct
-  "Teaching compensation" section/tab fed by a new backend concept, and stop
-  routing `commissions.view` through the referral summary alone.
-- [ ] `[BE]` If (b): wire `commissions.view` to something concrete —
-  currently the permission exists with no controller check, which is a
-  silent RBAC no-op.
+- [x] ✅ `[BE]` **`TeacherCompensationEntry`** ledger (tenant-scoped,
+  `teacher_user_id` + `organization_id` + `period` unique) — one row per
+  teacher per org per month, `paying_student_count × rate_minor =
+  amount_minor`. Migration: `2026_07_04_150000_create_teacher_compensation_entries_table.php`.
+- [x] ✅ `[BE]` **`compensation:accrue-teachers`** command, scheduled
+  `monthlyOn(1, '03:00')` for the month just ended — per teacher, per org
+  they teach in: counts distinct enrolled students across their classes in
+  that org, but only if the org currently holds a non-expired
+  `SeatAllocation` with `total_purchased > 0` (mirrors how school billing
+  actually works: seats are an org-level pool, not per-student, so seat
+  *activity* — not a specific seat-to-student link the schema doesn't have
+  — is the "paying" signal). Idempotent upsert per (teacher, org, period).
+- [x] ✅ `[BE]` **Settings**: `teacher_compensation.rate_per_student_minor`
+  (admin-editable, `/admin/settings`, 0 disables accrual) — added to
+  `config/settings.php`; the existing generic `SettingsController`/
+  `SettingsPage` picked it up with zero extra frontend code.
+- [x] ✅ `[BE]` **Payout draws down its own pool.** Added `source` to
+  `payouts` (default `'referral'`, backward-compatible). New
+  `TeacherCompensationController::requestPayout` — cash-to-bank only
+  (`method` hardcoded `'bank'`, no coins option), validates the requested
+  amount against `sum(accrued) − sum(existing 'teaching'-source payouts)`
+  (422 `insufficient_balance` if exceeded — stricter than the referral
+  flow's floor/cap-only check, since this is new code and correctness was
+  cheap to get right), reuses the existing `referral.payout_*` floor/cap
+  settings rather than adding a parallel admin surface. Guard:
+  `commissions.view` for the summary (this **resolves that permission's
+  orphaned status flagged in the original audit**), `payouts.request` for
+  the payout itself (both already held by `teacher`).
+- [x] ✅ `[BE]` `GET /teacher-compensation/summary` (available balance,
+  accrued total, monthly breakdown) + `POST
+  /teacher-compensation/payouts/request` (idempotency-guarded, like every
+  other money POST). Admin's existing payout list/approval queue
+  (`PayoutController::index`/`adminIndex`) now also returns `source` so a
+  `teaching` payout is indistinguishable from `referral` only by that field.
+- [x] ✅ **Frontend**: `EarningsPage` now has two clearly separate sections —
+  "Referral earnings" (unchanged) and "Teaching compensation" (new: balance
+  cards, monthly accrual table, its own payout list filtered by `source`,
+  a bank-only `RequestTeachingPayoutModal`). Admin `PayoutsPage` gained a
+  **Source** column badge (Referral/Teaching).
+- [x] ✅ **Tests**: `tests/Feature/TeacherCompensationTest.php` (5 cases —
+  accrual credits actively-seated classes, skips orgs without active seats,
+  no-op at a zero rate, summary + successful payout request, and a request
+  rejected for exceeding the available balance). Full backend suite green
+  (185 tests). Verified live via browser preview: seeded a class + 4
+  enrolled students + an active seat allocation, ran the accrual command,
+  confirmed `/earnings` rendered "Available ₦800.00" / "Accrued to date
+  ₦800.00" / "2026-06 · 4 students → ₦800.00", and confirmed the payout
+  modal's floor validation surfaced correctly.
 
 ---
 
@@ -177,9 +213,10 @@ checked by any controller (orphaned).
 1. ~~§0 portal hardening~~ — ✅ done.
 2. ~~§1 class assignments~~ — ✅ done (paired with §4 notifications).
 3. ~~§2 analytics polish~~ — ✅ done.
-4. **§3 earnings resolution** — the only thing left, and it's blocked on a
-   product decision (teacher commission payout: cash vs coins). Not
-   actionable without that call.
+4. ~~§3 earnings resolution~~ — ✅ done.
+
+**The Teacher Portal plan is complete.** Every section is shipped; nothing
+is blocked.
 
 ## Definition of done (per page/endpoint)
 Guarded by `TeacherRoute` + ownership policy (teacher only sees/acts on

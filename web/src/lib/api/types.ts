@@ -596,6 +596,7 @@ export interface Payout {
   id: number
   amount_minor: number
   method: PayoutMethod | string
+  source: string
   status: string
   requested_at: string | null
   paid_at: string | null
@@ -607,6 +608,23 @@ export interface RequestPayoutInput {
 }
 
 // ---- School operations ----
+
+export interface TeacherCompensationMonth {
+  period: string
+  paying_student_count: number
+  rate_minor: number
+  amount_minor: number
+}
+
+export interface TeacherCompensationSummary {
+  available_minor: number
+  accrued_total_minor: number
+  months: TeacherCompensationMonth[]
+}
+
+export interface RequestTeacherCompensationPayoutInput {
+  amount_minor: number
+}
 
 export interface SchoolDashboard {
   organization: { id: number; name: string; status: string }
@@ -1310,6 +1328,7 @@ export interface AdminPayout {
   id: number
   amount_minor: number
   method: string
+  source: string
   status: string
   requested_at: string | null
   paid_at: string | null

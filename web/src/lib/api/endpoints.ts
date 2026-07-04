@@ -85,6 +85,8 @@ import type {
   CreateClassInput,
   GradeSubmissionInput,
   GradeSubmissionResult,
+  RequestTeacherCompensationPayoutInput,
+  TeacherCompensationSummary,
   CreateCourseInput,
   CreateLessonInput,
   CreateLevelInput,
@@ -1009,6 +1011,20 @@ export const schoolApi = {
       `/classes/${classId}/assignments/${assignmentId}/submissions/${submissionId}/grade`,
       input,
     )
+    return data.data
+  },
+
+  async teacherCompensationSummary(): Promise<TeacherCompensationSummary> {
+    const { data } = await api.get('/teacher-compensation/summary')
+    return data.data
+  },
+
+  async requestTeacherCompensationPayout(
+    input: RequestTeacherCompensationPayoutInput,
+  ): Promise<{ id: number; status: string }> {
+    const { data } = await api.post('/teacher-compensation/payouts/request', input, {
+      headers: { 'Idempotency-Key': idempotencyKey() },
+    })
     return data.data
   },
 

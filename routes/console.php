@@ -16,6 +16,9 @@ Schedule::command('telco:expire-grace')->hourly();
 Schedule::command('commissions:clear-escrow')->hourly();
 Schedule::command('referrals:flag-velocity')->everyFifteenMinutes();
 
+// Teacher class compensation — accrue for the prior month on the 1st.
+Schedule::command('compensation:accrue-teachers')->monthlyOn(1, '03:00');
+
 // Upcoming-renewal reminders for card/invoice subscriptions (telco auto-bills).
 Schedule::command('subscriptions:remind')->dailyAt('09:00');
 

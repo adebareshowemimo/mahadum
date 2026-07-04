@@ -25,7 +25,7 @@ class PayoutController extends Controller
             $query->where('beneficiary_type', User::class)->where('beneficiary_id', $request->user()->id);
         }
 
-        return response()->json(['data' => $query->get(['id', 'amount_minor', 'method', 'status', 'requested_at', 'paid_at'])]);
+        return response()->json(['data' => $query->get(['id', 'amount_minor', 'method', 'source', 'status', 'requested_at', 'paid_at'])]);
     }
 
     /**
@@ -51,6 +51,7 @@ class PayoutController extends Controller
                     'id' => $p->id,
                     'amount_minor' => $p->amount_minor,
                     'method' => $p->method,
+                    'source' => $p->source,
                     'status' => $p->status,
                     'requested_at' => $p->requested_at?->toIso8601String(),
                     'paid_at' => $p->paid_at?->toIso8601String(),

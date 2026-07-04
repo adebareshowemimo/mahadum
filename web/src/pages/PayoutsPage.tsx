@@ -54,6 +54,11 @@ export function PayoutsPage() {
     },
     { key: 'method', header: 'Method', render: (p) => <span className="capitalize">{p.method}</span> },
     {
+      key: 'source',
+      header: 'Source',
+      render: (p) => <Badge variant={p.source === 'teaching' ? 'info' : 'primary'}>{p.source === 'teaching' ? 'Teaching' : 'Referral'}</Badge>,
+    },
+    {
       key: 'requested',
       header: 'Requested',
       hideOnMobile: true,

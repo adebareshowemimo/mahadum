@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
  * @property int $beneficiary_id
  * @property int $amount_minor
  * @property string $method
+ * @property string $source
  * @property string $status
  * @property Carbon|null $requested_at
  * @property int|null $approved_by
