@@ -20,6 +20,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read Collection<int, ClassEnrollment> $enrollments
  * @property-read int|null $enrollments_count
+ * @property-read Collection<int, ClassAssignment> $assignments
+ * @property-read int|null $assignments_count
  * @property-read Organization|null $organization
  * @property-read User|null $teacherUser
  *
@@ -65,5 +67,13 @@ class SchoolClass extends Model
     public function enrollments(): HasMany
     {
         return $this->hasMany(ClassEnrollment::class);
+    }
+
+    /**
+     * @return HasMany<ClassAssignment, $this>
+     */
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(ClassAssignment::class);
     }
 }

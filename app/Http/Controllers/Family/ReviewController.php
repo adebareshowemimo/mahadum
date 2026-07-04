@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Family\ReviewAssignmentRequest;
 use App\Models\AssignmentSubmission;
 use App\Models\SpeakingSubmission;
+use App\Notifications\AssignmentApproved;
 use App\Services\AuditLogger;
 use App\Services\Family\WalletService;
 use Illuminate\Http\JsonResponse;
@@ -113,6 +114,11 @@ class ReviewController extends Controller
 
             return $released;
         });
+
+        // Sent after commit so a queued mail job never races a rolled-back transaction.
+        if ($decision === 'approve') {
+            $learner->user?->notify(new AssignmentApproved($submission, $coinsReleased));
+        }
 
         return response()->json(['data' => [
             'submission_id' => $submission->id,

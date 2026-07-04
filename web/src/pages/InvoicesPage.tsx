@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Alert, Badge, Button, Card, CardBody, Skeleton } from '@/components/ui'
-import { schoolApi } from '@/lib/api'
+import { ApiError, schoolApi } from '@/lib/api'
 import { formatMoney } from '@/lib/format'
 import { SchoolGate } from '@/components/school/SchoolGate'
-import { useInvoices } from '@/lib/school/queries'
+import { useInvoices, usePayInvoice } from '@/lib/school/queries'
 
 export function InvoicesPage() {
   return <SchoolGate>{(orgId) => <Invoices orgId={orgId} />}</SchoolGate>
@@ -18,8 +18,10 @@ const STATUS_TONE: Record<string, 'success' | 'gold' | 'danger' | 'neutral'> = {
 
 function Invoices({ orgId }: { orgId: number }) {
   const { data, isLoading, isError } = useInvoices(orgId)
+  const pay = usePayInvoice(orgId)
   const [downloading, setDownloading] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
 
   async function download(id: number) {
     setDownloading(id)
@@ -30,6 +32,18 @@ function Invoices({ orgId }: { orgId: number }) {
       setError('Could not download that invoice. Please try again.')
     } finally {
       setDownloading(null)
+    }
+  }
+
+  async function payInvoiceNow(id: number) {
+    setError(null)
+    setCheckoutUrl(null)
+    try {
+      const result = await pay.mutateAsync({ invoiceId: id })
+      if (result.checkout_url) setCheckoutUrl(result.checkout_url)
+      else setError('Payment started — the invoice will be marked paid once confirmed.')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not start payment.')
     }
   }
 
@@ -44,6 +58,13 @@ function Invoices({ orgId }: { orgId: number }) {
       </div>
 
       {error && <Alert variant="danger">{error}</Alert>}
+      {checkoutUrl && (
+        <Alert variant="info" title="Checkout started">
+          <a href={checkoutUrl} className="font-semibold underline" target="_blank" rel="noreferrer">
+            Open secure checkout
+          </a>
+        </Alert>
+      )}
 
       {data.length === 0 ? (
         <Card>
@@ -67,6 +88,16 @@ function Invoices({ orgId }: { orgId: number }) {
                 </div>
                 <div className="flex items-center gap-3">
                   <Badge variant={STATUS_TONE[inv.status] ?? 'neutral'}>{inv.status}</Badge>
+                  {inv.status === 'unpaid' && (
+                    <Button
+                      size="sm"
+                      variant="parent"
+                      loading={pay.isPending && pay.variables?.invoiceId === inv.id}
+                      onClick={() => payInvoiceNow(inv.id)}
+                    >
+                      Pay now
+                    </Button>
+                  )}
                   <Button size="sm" variant="outline" loading={downloading === inv.id} onClick={() => download(inv.id)}>
                     PDF
                   </Button>

@@ -1,8 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { AdminRoute, GuestRoute, ProtectedRoute, RoleRoute } from '@/components/auth/ProtectedRoute'
+import { AdminRoute, GuestRoute, ProtectedRoute, RoleRoute, TeacherRoute } from '@/components/auth/ProtectedRoute'
 import { AdminLayout } from '@/components/admin'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { PaywallGate } from '@/components/billing/PaywallGate'
+import { AssignmentsPage } from '@/pages/AssignmentsPage'
 import { BillingPage } from '@/pages/BillingPage'
 import { ClassesPage } from '@/pages/ClassesPage'
 import { ComponentsPage } from '@/pages/ComponentsPage'
@@ -32,6 +33,7 @@ import { EmailCampaignsPage } from '@/pages/EmailCampaignsPage'
 import { CampaignDetailPage } from '@/pages/CampaignDetailPage'
 import { ContactListsPage } from '@/pages/ContactListsPage'
 import { EmailLogPage } from '@/pages/EmailLogPage'
+import { EmailTemplatesPage } from '@/pages/EmailTemplatesPage'
 import { AuditLogPage } from '@/pages/AuditLogPage'
 import { FraudReviewPage } from '@/pages/FraudReviewPage'
 import { GatewaysPage } from '@/pages/GatewaysPage'
@@ -97,6 +99,7 @@ const REAL_PAGES = new Set([
   '/admin/emails',
   '/admin/emails/contacts',
   '/admin/emails/log',
+  '/admin/emails/templates',
   '/admin/settings/gateways',
   '/admin/audit',
   '/admin/settings',
@@ -113,6 +116,7 @@ const REAL_PAGES = new Set([
   '/admin/promos',
   '/billing',
   '/classes',
+  '/assignments',
   '/earnings',
   '/courses',
   '/media',
@@ -170,8 +174,11 @@ export function App() {
             }
           />
           <Route path="/billing" element={<BillingPage />} />
-          <Route path="/classes" element={<ClassesPage />} />
-          <Route path="/earnings" element={<EarningsPage />} />
+          <Route element={<TeacherRoute />}>
+            <Route path="/classes" element={<ClassesPage />} />
+            <Route path="/assignments" element={<AssignmentsPage />} />
+            <Route path="/earnings" element={<EarningsPage />} />
+          </Route>
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/:courseId" element={<CourseBuilderPage />} />
           <Route path="/courses/:courseId/lessons/:lessonId" element={<LessonBuilderPage />} />
@@ -204,6 +211,7 @@ export function App() {
             <Route path="/admin/emails" element={<EmailCampaignsPage />} />
             <Route path="/admin/emails/contacts" element={<ContactListsPage />} />
             <Route path="/admin/emails/log" element={<EmailLogPage />} />
+            <Route path="/admin/emails/templates" element={<EmailTemplatesPage />} />
             <Route path="/admin/emails/:campaignId" element={<CampaignDetailPage />} />
             <Route path="/admin/settings/gateways" element={<GatewaysPage />} />
             <Route path="/admin/audit" element={<AuditLogPage />} />

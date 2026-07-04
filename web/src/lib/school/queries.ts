@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   schoolApi,
+  type CreateClassAssignmentInput,
   type CreateClassInput,
+  type GradeSubmissionInput,
   type PurchaseSeatsInput,
 } from '@/lib/api'
 import { useAuth } from '@/lib/auth/AuthProvider'
@@ -17,6 +19,9 @@ export const schoolKeys = {
   classes: ['school-classes'] as const,
   seats: (org: number) => ['school-seats', org] as const,
   invoices: (org: number) => ['school-invoices', org] as const,
+  assignments: (classId: number) => ['class-assignments', classId] as const,
+  assignmentDetail: (classId: number, assignmentId: number) =>
+    ['class-assignments', classId, assignmentId] as const,
 }
 
 export function useSchoolDashboard(orgId: number | null) {
@@ -47,6 +52,15 @@ export function useInvoices(orgId: number | null) {
   })
 }
 
+export function usePayInvoice(orgId: number | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ invoiceId, gateway }: { invoiceId: number; gateway?: string }) =>
+      schoolApi.payInvoice(orgId as number, invoiceId, gateway),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: schoolKeys.invoices(orgId ?? 0) }),
+  })
+}
+
 export function useCreateClass() {
   const qc = useQueryClient()
   return useMutation({
@@ -67,6 +81,42 @@ export function usePurchaseSeats(orgId: number) {
       void qc.invalidateQueries({ queryKey: schoolKeys.seats(orgId) })
       void qc.invalidateQueries({ queryKey: schoolKeys.invoices(orgId) })
       void qc.invalidateQueries({ queryKey: schoolKeys.dashboard(orgId) })
+    },
+  })
+}
+
+export function useClassAssignments(classId: number | null) {
+  return useQuery({
+    queryKey: schoolKeys.assignments(classId ?? 0),
+    queryFn: () => schoolApi.classAssignments(classId as number),
+    enabled: !!classId,
+  })
+}
+
+export function useClassAssignmentDetail(classId: number | null, assignmentId: number | null) {
+  return useQuery({
+    queryKey: schoolKeys.assignmentDetail(classId ?? 0, assignmentId ?? 0),
+    queryFn: () => schoolApi.classAssignmentDetail(classId as number, assignmentId as number),
+    enabled: !!classId && !!assignmentId,
+  })
+}
+
+export function useCreateClassAssignment(classId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateClassAssignmentInput) => schoolApi.createClassAssignment(classId, input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: schoolKeys.assignments(classId) }),
+  })
+}
+
+export function useGradeSubmission(classId: number, assignmentId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ submissionId, input }: { submissionId: number; input: GradeSubmissionInput }) =>
+      schoolApi.gradeSubmission(classId, assignmentId, submissionId, input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: schoolKeys.assignmentDetail(classId, assignmentId) })
+      void qc.invalidateQueries({ queryKey: schoolKeys.assignments(classId) })
     },
   })
 }

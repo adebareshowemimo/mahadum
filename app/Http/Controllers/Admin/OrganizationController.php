@@ -11,6 +11,7 @@ use App\Models\Organization;
 use App\Models\OrganizationUser;
 use App\Models\ReferralCode;
 use App\Models\User;
+use App\Notifications\OrganizationSeatAssigned;
 use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -217,6 +218,8 @@ class OrganizationController extends Controller
 
             return $user;
         });
+
+        $user->notify(new OrganizationSeatAssigned($organization, 'school_admin'));
 
         // The set-password link is the invitation.
         Password::broker()->sendResetLink(['email' => $user->email]);

@@ -9,6 +9,7 @@ use App\Http\Requests\Family\StoreChoreRequest;
 use App\Models\Chore;
 use App\Models\ChoreSubmission;
 use App\Models\LearnerProfile;
+use App\Notifications\ChoreApproved;
 use App\Services\Family\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -67,8 +68,9 @@ class ChoreController extends Controller
         abort_unless($chore->family_id === $this->family($request->user())->id, 403, 'Not your family chore.');
 
         $decision = $request->string('decision')->value();
+        $approvedLearner = null;
 
-        $result = DB::transaction(function () use ($request, $chore, $decision) {
+        $result = DB::transaction(function () use ($request, $chore, $decision, &$approvedLearner) {
             ChoreSubmission::updateOrCreate(
                 ['chore_id' => $chore->id],
                 ['decision' => $decision, 'decided_by' => $request->user()->id, 'decided_at' => now()],
@@ -87,6 +89,7 @@ class ChoreController extends Controller
                         $chore,
                     );
                     $coinsReleased = $chore->coin_reward;
+                    $approvedLearner = $learner;
                 }
             } elseif ($decision === 'reject') {
                 $chore->update(['status' => 'rejected']);
@@ -96,6 +99,11 @@ class ChoreController extends Controller
 
             return $coinsReleased;
         });
+
+        // Sent after commit so a queued mail job never races a rolled-back transaction.
+        if ($approvedLearner) {
+            $approvedLearner->user?->notify(new ChoreApproved($chore, $result));
+        }
 
         return response()->json(['data' => [
             'chore_id' => $chore->id,

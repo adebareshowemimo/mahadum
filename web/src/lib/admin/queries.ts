@@ -12,6 +12,7 @@ import {
   type CreateOrgInput,
   type CreatePromoInput,
   type EmailLogQuery,
+  type EmailTemplateContent,
   type InviteOrgAdminInput,
   type IncomeReportQuery,
   type OrgStatus,
@@ -43,6 +44,9 @@ export const adminKeys = {
   contactLists: ['admin-contact-lists'] as const,
   contactList: (id: number, page: number) => ['admin-contact-list', id, page] as const,
   emailLog: (params: EmailLogQuery) => ['admin-email-log', params] as const,
+  emailTemplates: ['admin-email-templates'] as const,
+  emailTemplate: (key: string) => ['admin-email-template', key] as const,
+  emailTemplatePreview: (key: string) => ['admin-email-template-preview', key] as const,
   gateways: ['admin-gateways'] as const,
   audit: (params: AuditLogQuery) => ['admin-audit', params] as const,
   support: (params: AdminTicketsQuery) => ['admin-support', params] as const,
@@ -515,5 +519,53 @@ export function useEmailLog(params: EmailLogQuery) {
     queryKey: adminKeys.emailLog(params),
     queryFn: () => adminApi.emailLog(params),
     placeholderData: (prev) => prev,
+  })
+}
+
+// ── Email: templates ──
+export function useEmailTemplates() {
+  return useQuery({
+    queryKey: adminKeys.emailTemplates,
+    queryFn: () => adminApi.emailTemplates(),
+  })
+}
+
+export function useEmailTemplatePreview(key: string | null) {
+  return useQuery({
+    queryKey: adminKeys.emailTemplatePreview(key ?? ''),
+    queryFn: () => adminApi.emailTemplatePreview(key as string),
+    enabled: key !== null,
+  })
+}
+
+export function useEmailTemplate(key: string | null) {
+  return useQuery({
+    queryKey: adminKeys.emailTemplate(key ?? ''),
+    queryFn: () => adminApi.emailTemplate(key as string),
+    enabled: key !== null,
+  })
+}
+
+export function useUpdateEmailTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ key, input }: { key: string; input: EmailTemplateContent }) => adminApi.updateEmailTemplate(key, input),
+    onSuccess: (data, { key }) => {
+      qc.setQueryData(adminKeys.emailTemplate(key), data)
+      void qc.invalidateQueries({ queryKey: adminKeys.emailTemplates })
+      void qc.invalidateQueries({ queryKey: adminKeys.emailTemplatePreview(key) })
+    },
+  })
+}
+
+export function useResetEmailTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (key: string) => adminApi.resetEmailTemplate(key),
+    onSuccess: (data, key) => {
+      qc.setQueryData(adminKeys.emailTemplate(key), data)
+      void qc.invalidateQueries({ queryKey: adminKeys.emailTemplates })
+      void qc.invalidateQueries({ queryKey: adminKeys.emailTemplatePreview(key) })
+    },
   })
 }

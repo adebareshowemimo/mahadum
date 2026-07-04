@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Payout;
+use App\Notifications\Concerns\CustomizableMail;
 use App\Notifications\Concerns\DeliversOverMessagingChannels;
 use App\Notifications\Concerns\TagsEmail;
 use App\Notifications\Contracts\SendsPush;
@@ -18,7 +19,7 @@ use Illuminate\Notifications\Notification;
  */
 class PayoutApproved extends Notification implements SendsPush, SendsSms, ShouldQueue
 {
-    use DeliversOverMessagingChannels, Queueable, TagsEmail;
+    use CustomizableMail, DeliversOverMessagingChannels, Queueable, TagsEmail;
 
     public function __construct(private Payout $payout) {}
 
@@ -26,9 +27,11 @@ class PayoutApproved extends Notification implements SendsPush, SendsSms, Should
     {
         $amount = number_format($this->payout->amount_minor / 100, 2);
 
-        $mail = (new MailMessage)
+        $default = (new MailMessage)
             ->subject('Your payout was approved')
             ->line("Your payout of ₦{$amount} has been approved and is being processed.");
+
+        $mail = $this->applyOverride('payout_approved', ['{{amount}}' => $amount], $default);
 
         return $this->tagEmail($mail, 'payout_approved', $notifiable);
     }

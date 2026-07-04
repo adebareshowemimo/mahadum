@@ -89,6 +89,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Campaigns', to: '/admin/emails', icon: 'bell', roles: ['super_admin'], end: true },
       { label: 'Contacts', to: '/admin/emails/contacts', icon: 'users', roles: ['super_admin'] },
       { label: 'Email log', to: '/admin/emails/log', icon: 'clipboard', roles: ['super_admin'] },
+      { label: 'Email templates', to: '/admin/emails/templates', icon: 'bell', roles: ['super_admin'] },
       { label: 'Fraud review', to: '/admin/fraud', icon: 'shield', roles: ['super_admin'] },
       { label: 'Gateways', to: '/admin/settings/gateways', icon: 'card', roles: ['super_admin'] },
       { label: 'Audit log', to: '/admin/audit', icon: 'clipboard', roles: ['super_admin'] },

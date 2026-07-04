@@ -3,11 +3,13 @@
 namespace App\Services\Billing;
 
 use App\Models\Family;
+use App\Models\Invoice;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Models\WalletFundingTransaction;
 use App\Models\WebhookEvent;
+use App\Notifications\InvoiceReceipt;
 use App\Notifications\PaymentFailed;
 use App\Notifications\SubscriptionActivated;
 use App\Notifications\WalletFunded;
@@ -15,6 +17,7 @@ use App\Services\AuditLogger;
 use App\Services\Family\WalletService;
 use App\Services\Referral\ReferralService;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Notification;
 
 /**
  * Processes a normalized payment event from any gateway. Idempotent via the
@@ -82,6 +85,12 @@ class PaymentService
             return 'subscription_active';
         }
 
+        if ($invoice = $this->findInvoice($reference)) {
+            $this->settleInvoice($invoice);
+
+            return 'invoice_paid';
+        }
+
         return 'unmatched';
     }
 
@@ -100,6 +109,12 @@ class PaymentService
 
         if ($subscription = $this->findSubscription($reference)) {
             $this->cancelSubscription($subscription);
+
+            return 'reversed';
+        }
+
+        if ($invoice = $this->findInvoice($reference)) {
+            $this->reverseInvoice($invoice);
 
             return 'reversed';
         }
@@ -152,6 +167,19 @@ class PaymentService
         }
 
         return Subscription::where('gateway_txn_ref', $reference)->first();
+    }
+
+    /**
+     * Correlate a webhook to a school invoice by our `invoice_<id>` reference or,
+     * when the gateway omits it on refunds (e.g. Monnify), by gateway_txn_ref.
+     */
+    private function findInvoice(string $reference): ?Invoice
+    {
+        if (str_starts_with($reference, 'invoice_')) {
+            return Invoice::find((int) substr($reference, 8));
+        }
+
+        return Invoice::where('gateway_txn_ref', $reference)->first();
     }
 
     private function settleFunding(WalletFundingTransaction $funding, ?int $amountMinor): void
@@ -215,6 +243,30 @@ class PaymentService
         if ($subscriber instanceof User) {
             $this->referrals->qualifyForSubscriber($subscriber, $subscription);
             $subscriber->notify(new SubscriptionActivated($subscription)); // receipt
+        }
+    }
+
+    private function reverseInvoice(Invoice $invoice): void
+    {
+        if ($invoice->status !== 'paid') {
+            return; // nothing settled to claw back
+        }
+
+        $invoice->update(['status' => 'unpaid', 'paid_at' => null]);
+
+        $this->audit->record('invoice.refunded', $invoice, ['status' => 'paid'], ['status' => 'unpaid']);
+    }
+
+    private function settleInvoice(Invoice $invoice): void
+    {
+        if ($invoice->status === 'paid') {
+            return;
+        }
+
+        $invoice->update(['status' => 'paid', 'paid_at' => now()]);
+
+        if ($email = $invoice->organization?->contact_email) {
+            Notification::route('mail', $email)->notify(new InvoiceReceipt($invoice));
         }
     }
 

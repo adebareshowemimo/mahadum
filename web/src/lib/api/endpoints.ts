@@ -63,6 +63,10 @@ import type {
   EmailCampaignRow,
   EmailLogPage,
   EmailLogQuery,
+  EmailTemplateContent,
+  EmailTemplateDetail,
+  EmailTemplatePreview,
+  EmailTemplateSummary,
   ImportPreview,
   UploadBatchRow,
   InviteOrgAdminInput,
@@ -75,7 +79,12 @@ import type {
   AuthorLesson,
   AuthorLevel,
   BillingHealth,
+  ClassAssignmentDetail,
+  ClassAssignmentRow,
+  CreateClassAssignmentInput,
   CreateClassInput,
+  GradeSubmissionInput,
+  GradeSubmissionResult,
   CreateCourseInput,
   CreateLessonInput,
   CreateLevelInput,
@@ -88,6 +97,7 @@ import type {
   Payout,
   Plan,
   PurchaseSeatsInput,
+  PayInvoiceResult,
   PurchaseSeatsResult,
   ReferralCode,
   ReferralSummary,
@@ -779,6 +789,28 @@ export const adminApi = {
     return data
   },
 
+  // ── Email: templates ──
+  async emailTemplates(): Promise<EmailTemplateSummary[]> {
+    const { data } = await api.get('/admin/email-templates')
+    return data.data
+  },
+  async emailTemplate(key: string): Promise<EmailTemplateDetail> {
+    const { data } = await api.get(`/admin/email-templates/${key}`)
+    return data.data
+  },
+  async emailTemplatePreview(key: string): Promise<EmailTemplatePreview> {
+    const { data } = await api.get(`/admin/email-templates/${key}/preview`)
+    return data.data
+  },
+  async updateEmailTemplate(key: string, input: EmailTemplateContent): Promise<EmailTemplateDetail> {
+    const { data } = await api.put(`/admin/email-templates/${key}`, input)
+    return data.data
+  },
+  async resetEmailTemplate(key: string): Promise<EmailTemplateDetail> {
+    const { data } = await api.delete(`/admin/email-templates/${key}`)
+    return data.data
+  },
+
   async paymentGateways(): Promise<GatewayStatus> {
     const { data } = await api.get('/admin/payment-gateways')
     return data.data
@@ -949,6 +981,37 @@ export const schoolApi = {
     return data.data
   },
 
+  async classAssignments(classId: number): Promise<ClassAssignmentRow[]> {
+    const { data } = await api.get(`/classes/${classId}/assignments`)
+    return data.data
+  },
+
+  async classAssignmentDetail(classId: number, assignmentId: number): Promise<ClassAssignmentDetail> {
+    const { data } = await api.get(`/classes/${classId}/assignments/${assignmentId}`)
+    return data.data
+  },
+
+  async createClassAssignment(
+    classId: number,
+    input: CreateClassAssignmentInput,
+  ): Promise<{ id: number; title: string }> {
+    const { data } = await api.post(`/classes/${classId}/assignments`, input)
+    return data.data
+  },
+
+  async gradeSubmission(
+    classId: number,
+    assignmentId: number,
+    submissionId: number,
+    input: GradeSubmissionInput,
+  ): Promise<GradeSubmissionResult> {
+    const { data } = await api.post(
+      `/classes/${classId}/assignments/${assignmentId}/submissions/${submissionId}/grade`,
+      input,
+    )
+    return data.data
+  },
+
   async seats(orgId: number): Promise<SeatInfo> {
     const { data } = await api.get(`/schools/${orgId}/seats`)
     return data.data
@@ -961,6 +1024,11 @@ export const schoolApi = {
 
   async invoices(orgId: number): Promise<SchoolInvoice[]> {
     const { data } = await api.get(`/schools/${orgId}/invoices`)
+    return data.data
+  },
+
+  async payInvoice(orgId: number, invoiceId: number, gateway?: string): Promise<PayInvoiceResult> {
+    const { data } = await api.post(`/schools/${orgId}/invoices/${invoiceId}/pay`, gateway ? { gateway } : {})
     return data.data
   },
 

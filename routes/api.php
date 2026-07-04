@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\CompetitionAdminController;
 use App\Http\Controllers\Admin\ContactListController;
 use App\Http\Controllers\Admin\EmailCampaignController;
 use App\Http\Controllers\Admin\EmailLogController;
+use App\Http\Controllers\Admin\EmailTemplateController;
 use App\Http\Controllers\Admin\FraudController;
 use App\Http\Controllers\Admin\GatewayController;
 use App\Http\Controllers\Admin\LanguageController;
@@ -77,6 +78,7 @@ use App\Http\Controllers\PricingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Referral\PayoutController;
 use App\Http\Controllers\Referral\ReferralController;
+use App\Http\Controllers\School\ClassAssignmentController;
 use App\Http\Controllers\School\RosterController;
 use App\Http\Controllers\School\SchoolClassController;
 use App\Http\Controllers\School\SchoolDashboardController;
@@ -260,12 +262,22 @@ Route::prefix('v1')->group(function () {
             Route::post('seats/purchase', [SeatController::class, 'purchase'])->middleware('can:schools.seats.purchase');
             Route::get('invoices', [InvoiceController::class, 'index'])->middleware('can:billing.invoices.view');
             Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'download'])->middleware('can:billing.invoices.view');
+            Route::post('invoices/{invoice}/pay', [InvoiceController::class, 'pay'])->middleware('can:billing.invoices.manage');
         });
         Route::get('classes', [SchoolClassController::class, 'index'])->can('viewAny', SchoolClass::class);
         Route::get('classes/{class}', [SchoolClassController::class, 'show'])->can('view', 'class');
         Route::get('classes/{class}/analytics', [SchoolClassController::class, 'analytics'])->can('view', 'class');
         Route::post('classes', [SchoolClassController::class, 'store'])->can('create', SchoolClass::class);
         Route::match(['put', 'patch'], 'classes/{class}', [SchoolClassController::class, 'update'])->can('update', 'class');
+
+        /* ---- Class assignments (teacher → own class; schools.assignments.{create,review}) ---- */
+        Route::get('classes/{class}/assignments', [ClassAssignmentController::class, 'index'])->can('view', 'class');
+        Route::post('classes/{class}/assignments', [ClassAssignmentController::class, 'store'])
+            ->middleware('can:schools.assignments.create');
+        Route::get('classes/{class}/assignments/{assignment}', [ClassAssignmentController::class, 'show'])->can('view', 'class');
+        Route::post('class-assignments/{assignment}/submissions', [ClassAssignmentController::class, 'submit']);
+        Route::post('classes/{class}/assignments/{assignment}/submissions/{submission}/grade', [ClassAssignmentController::class, 'grade'])
+            ->middleware('can:schools.assignments.review');
 
         /* ---- Language & Culture competition ---- */
         // Browsing + voting are open to any signed-in user; entering is permissioned.
@@ -361,6 +373,13 @@ Route::prefix('v1')->group(function () {
 
             // Email — log of every outbound message (§7)
             Route::get('email-log', [EmailLogController::class, 'index'])->middleware('can:emails.log.view');
+
+            // Email — transactional template registry, live preview, and customization
+            Route::get('email-templates', [EmailTemplateController::class, 'index'])->middleware('can:emails.templates.view');
+            Route::get('email-templates/{key}', [EmailTemplateController::class, 'show'])->middleware('can:emails.templates.view');
+            Route::get('email-templates/{key}/preview', [EmailTemplateController::class, 'preview'])->middleware('can:emails.templates.view');
+            Route::put('email-templates/{key}', [EmailTemplateController::class, 'update'])->middleware('can:emails.templates.manage');
+            Route::delete('email-templates/{key}', [EmailTemplateController::class, 'destroy'])->middleware('can:emails.templates.manage');
 
             // Email — contact lists + upload pipeline (super-admin-only)
             Route::get('contact-lists', [ContactListController::class, 'index'])->middleware('can:emails.contacts.manage');

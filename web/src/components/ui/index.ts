@@ -1,6 +1,7 @@
 export { Button, type ButtonProps, type ButtonVariant, type ButtonSize } from './Button'
 export { Button3D, type Button3DProps, type Button3DVariant, type Button3DSize } from './Button3D'
 export { Input, type InputProps } from './Input'
+export { Textarea, type TextareaProps } from './Textarea'
 export { CodeInput, type CodeInputProps } from './CodeInput'
 export { PhoneInput, type PhoneInputProps } from './PhoneInput'
 export { FileUpload, type FileUploadProps } from './FileUpload'

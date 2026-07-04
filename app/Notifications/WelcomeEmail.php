@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Concerns\CustomizableMail;
 use App\Notifications\Concerns\TagsEmail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -15,7 +16,7 @@ use Illuminate\Notifications\Notification;
  */
 class WelcomeEmail extends Notification implements ShouldQueue
 {
-    use Queueable, TagsEmail;
+    use CustomizableMail, Queueable, TagsEmail;
 
     /**
      * @return array<int, string>
@@ -27,12 +28,18 @@ class WelcomeEmail extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $mail = (new MailMessage)
+        $default = (new MailMessage)
             ->subject('Welcome to '.config('brand.name'))
             ->greeting('Ẹ ku àbọ̀ — welcome!')
             ->line('Your account is verified and ready. '.config('brand.tagline'))
             ->action('Start learning', (string) config('brand.url'))
             ->line('Set up a learner profile and pick a language to begin.');
+
+        $mail = $this->applyOverride('welcome', [
+            '{{brand_name}}' => (string) config('brand.name'),
+            '{{brand_tagline}}' => (string) config('brand.tagline'),
+            '{{brand_url}}' => (string) config('brand.url'),
+        ], $default);
 
         return $this->tagEmail($mail, 'welcome', $notifiable);
     }

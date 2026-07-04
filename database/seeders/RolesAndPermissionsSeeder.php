@@ -160,6 +160,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'emails.campaigns.manage',
             'emails.contacts.manage',
             'emails.log.view',
+            'emails.templates.view',
+            'emails.templates.manage',
         ],
     ];
 
@@ -210,6 +212,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'organizations.view',
                     'billing.subscriptions.view',
                     'billing.invoices.view',
+                    'billing.invoices.manage',
                     'users.view', 'users.manage', 'roles.view', 'roles.assign',
                     'learning.progress.view',
                     'referrals.view',

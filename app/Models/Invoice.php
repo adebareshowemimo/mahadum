@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
  * @property string $type
  * @property int $amount_minor
  * @property string $status
+ * @property string|null $gateway_txn_ref
  * @property int|null $pdf_asset_id
  * @property Carbon|null $issued_at
  * @property Carbon|null $paid_at

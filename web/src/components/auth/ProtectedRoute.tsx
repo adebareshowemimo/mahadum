@@ -51,6 +51,11 @@ export function AdminRoute() {
   return <RoleRoute roles={['super_admin']} />
 }
 
+/** Convenience guard for the teacher portal (classes/assignments/earnings). */
+export function TeacherRoute() {
+  return <RoleRoute roles={['teacher']} />
+}
+
 /**
  * Inverse gate for auth pages (login/register): an already-authenticated user is
  * sent on to the app instead of seeing the sign-in form again.

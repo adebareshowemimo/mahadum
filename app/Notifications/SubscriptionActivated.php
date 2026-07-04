@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Subscription;
+use App\Notifications\Concerns\CustomizableMail;
 use App\Notifications\Concerns\DeliversOverMessagingChannels;
 use App\Notifications\Concerns\TagsEmail;
 use App\Notifications\Contracts\SendsPush;
@@ -19,7 +20,7 @@ use Illuminate\Notifications\Notification;
  */
 class SubscriptionActivated extends Notification implements SendsPush, SendsSms, ShouldQueue
 {
-    use DeliversOverMessagingChannels, Queueable, TagsEmail;
+    use CustomizableMail, DeliversOverMessagingChannels, Queueable, TagsEmail;
 
     public function __construct(private Subscription $subscription) {}
 
@@ -28,12 +29,17 @@ class SubscriptionActivated extends Notification implements SendsPush, SendsSms,
         $plan = $this->subscription->plan;
         $amount = number_format(($plan->price_minor ?? 0) / 100, 2);
 
-        $mail = (new MailMessage)
+        $default = (new MailMessage)
             ->subject('Your Mahadum.360 subscription is active')
             ->greeting('Thank you!')
             ->line("Your {$plan->name} plan is now active.")
             ->line("Amount: ₦{$amount}")
             ->line('This message is your receipt.');
+
+        $mail = $this->applyOverride('subscription_activated', [
+            '{{plan_name}}' => (string) $plan->name,
+            '{{amount}}' => $amount,
+        ], $default);
 
         return $this->tagEmail($mail, 'subscription_activated', $notifiable);
     }

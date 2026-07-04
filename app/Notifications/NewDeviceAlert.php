@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Concerns\CustomizableMail;
 use App\Notifications\Concerns\TagsEmail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -14,7 +15,7 @@ use Illuminate\Notifications\Notification;
  */
 class NewDeviceAlert extends Notification implements ShouldQueue
 {
-    use Queueable, TagsEmail;
+    use CustomizableMail, Queueable, TagsEmail;
 
     public function __construct(private ?string $ip, private ?string $userAgent) {}
 
@@ -28,7 +29,7 @@ class NewDeviceAlert extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $mail = (new MailMessage)
+        $default = (new MailMessage)
             ->subject('New sign-in to your '.config('brand.name').' account')
             ->greeting('New sign-in detected')
             ->line('Your account was just signed into from a device we haven’t seen before.')
@@ -37,6 +38,13 @@ class NewDeviceAlert extends Notification implements ShouldQueue
             ->line('If this was you, no action is needed.')
             ->line('If it wasn’t, reset your password right away.')
             ->action('Reset your password', config('brand.url').'/forgot-password');
+
+        $mail = $this->applyOverride('login_alert', [
+            '{{brand_name}}' => (string) config('brand.name'),
+            '{{brand_url}}' => (string) config('brand.url'),
+            '{{ip}}' => $this->ip ?: 'unknown',
+            '{{device}}' => $this->userAgent ?: 'unknown',
+        ], $default);
 
         return $this->tagEmail($mail, 'login_alert', $notifiable);
     }

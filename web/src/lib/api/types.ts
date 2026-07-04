@@ -679,6 +679,12 @@ export interface SchoolInvoice {
   has_pdf: boolean
 }
 
+export interface PayInvoiceResult {
+  invoice_id: number
+  payment_reference: string
+  checkout_url: string | null
+}
+
 export interface RosterImportResult {
   created: number
   errors: { row: number; error: string }[]
@@ -706,6 +712,58 @@ export interface CreateClassInput {
   name: string
   level?: string
   teacher_user_id?: number
+}
+
+export interface ClassAssignmentRow {
+  id: number
+  title: string
+  due_at: string | null
+  coin_reward: number
+  total_students: number
+  submitted_count: number
+  graded_count: number
+}
+
+export interface ClassAssignmentRosterEntry {
+  learner_id: number
+  display_name: string | null
+  submission_id: number | null
+  status: 'submitted' | 'graded' | null
+  passed: boolean | null
+  score: number | null
+  feedback: string | null
+  submitted_at: string | null
+  graded_at: string | null
+  media_url: string | null
+}
+
+export interface ClassAssignmentDetail {
+  id: number
+  title: string
+  instructions: string | null
+  due_at: string | null
+  coin_reward: number
+  roster: ClassAssignmentRosterEntry[]
+}
+
+export interface CreateClassAssignmentInput {
+  title: string
+  instructions?: string
+  due_at?: string
+  coin_reward?: number
+}
+
+export interface GradeSubmissionInput {
+  passed: boolean
+  score?: number
+  feedback?: string
+}
+
+export interface GradeSubmissionResult {
+  submission_id: number
+  status: string
+  passed: boolean
+  coins_released: number
 }
 
 // ---- Super admin ----
@@ -1194,6 +1252,44 @@ export interface EmailLogQuery {
   from?: string
   to?: string
   page?: number
+}
+
+export interface EmailTemplateSummary {
+  key: string
+  label: string
+  category: string
+  trigger: string
+  customizable: boolean
+  customized: boolean
+}
+
+export interface EmailTemplatePreview {
+  key: string
+  subject: string
+  html: string
+}
+
+export interface EmailTemplateContent {
+  subject: string
+  greeting: string | null
+  body: string
+  action_text: string | null
+  action_url: string | null
+}
+
+export interface EmailTemplateOverrideContent extends EmailTemplateContent {
+  updated_at: string | null
+}
+
+export interface EmailTemplateDetail {
+  key: string
+  label: string
+  category: string
+  trigger: string
+  customizable: boolean
+  placeholders: Record<string, string>
+  default: EmailTemplateContent | null
+  override: EmailTemplateOverrideContent | null
 }
 
 export interface RenewalsReport {

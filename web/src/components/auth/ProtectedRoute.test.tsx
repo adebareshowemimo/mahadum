@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { AdminRoute, GuestRoute, ProtectedRoute, RoleRoute } from './ProtectedRoute'
+import { AdminRoute, GuestRoute, ProtectedRoute, RoleRoute, TeacherRoute } from './ProtectedRoute'
 import type { AuthStatus } from '@/lib/auth/AuthProvider'
 import type { Role } from '@/lib/api'
 
@@ -138,6 +138,39 @@ describe('AdminRoute', () => {
       renderAdmin()
       expect(screen.getByText('HOME')).toBeInTheDocument()
       expect(screen.queryByText('ADMIN')).not.toBeInTheDocument()
+    },
+  )
+})
+
+describe('TeacherRoute', () => {
+  beforeEach(() => useAuthMock.mockReset())
+
+  function renderTeacher() {
+    return render(
+      <MemoryRouter initialEntries={['/classes']}>
+        <Routes>
+          <Route element={<TeacherRoute />}>
+            <Route path="/classes" element={<div>CLASSES</div>} />
+          </Route>
+          <Route path="/home" element={<div>HOME</div>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+  }
+
+  it('admits a teacher', () => {
+    setRoles(['teacher'])
+    renderTeacher()
+    expect(screen.getByText('CLASSES')).toBeInTheDocument()
+  })
+
+  it.each<Role>(['parent', 'student', 'super_admin', 'school_admin', 'supervisor', 'content_owner'])(
+    'redirects a %s to /home',
+    (role) => {
+      setRoles([role])
+      renderTeacher()
+      expect(screen.getByText('HOME')).toBeInTheDocument()
+      expect(screen.queryByText('CLASSES')).not.toBeInTheDocument()
     },
   )
 })
