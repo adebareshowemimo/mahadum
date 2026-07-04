@@ -99,4 +99,11 @@ return [
         ],
     ],
 
+    // SendGrid Event Webhook: a shared-secret token in the callback URL guards the
+    // endpoint (bounces/complaints → suppression). Use the same value in the
+    // SendGrid dashboard's Event Webhook URL.
+    'sendgrid' => [
+        'webhook_token' => env('SENDGRID_WEBHOOK_TOKEN'),
+    ],
+
 ];

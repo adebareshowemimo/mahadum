@@ -3,6 +3,9 @@
 use App\Http\Controllers\Admin\AdminMetricsController;
 use App\Http\Controllers\Admin\AuditController;
 use App\Http\Controllers\Admin\CompetitionAdminController;
+use App\Http\Controllers\Admin\ContactListController;
+use App\Http\Controllers\Admin\EmailCampaignController;
+use App\Http\Controllers\Admin\EmailLogController;
 use App\Http\Controllers\Admin\FraudController;
 use App\Http\Controllers\Admin\GatewayController;
 use App\Http\Controllers\Admin\LanguageController;
@@ -80,6 +83,7 @@ use App\Http\Controllers\School\SchoolDashboardController;
 use App\Http\Controllers\School\SeatController;
 use App\Http\Controllers\Support\TicketController;
 use App\Http\Controllers\Webhooks\PaymentWebhookController;
+use App\Http\Controllers\Webhooks\SendgridWebhookController;
 use App\Http\Controllers\Webhooks\TelcoWebhookController;
 use App\Models\Course;
 use App\Models\Payout;
@@ -111,6 +115,8 @@ Route::prefix('v1')->group(function () {
     Route::post('webhooks/flutterwave', [PaymentWebhookController::class, 'flutterwave']);
     Route::post('webhooks/monnify', [PaymentWebhookController::class, 'monnify']);
     Route::post('webhooks/telco/dlr', [TelcoWebhookController::class, 'dlr']);
+    // SendGrid Event Webhook (token in the URL) — bounces/complaints → suppression.
+    Route::post('webhooks/sendgrid/{token}', [SendgridWebhookController::class, 'handle']);
 
     /* ------------------------------------------------------------- protected */
     Route::middleware(['auth:sanctum', 'identify.tenant', 'min.app.version'])->group(function () {
@@ -343,6 +349,24 @@ Route::prefix('v1')->group(function () {
             Route::get('reports/referrals', [ReportController::class, 'referrals'])->middleware('can:analytics.platform.view');
             Route::get('reports/org-activity', [ReportController::class, 'orgActivity'])->middleware('can:analytics.platform.view');
             Route::get('reports/renewals', [ReportController::class, 'renewals'])->middleware('can:analytics.platform.view');
+
+            // Email — campaigns (compose / target / send / schedule)
+            Route::get('email-campaigns', [EmailCampaignController::class, 'index'])->middleware('can:emails.campaigns.manage');
+            Route::post('email-campaigns', [EmailCampaignController::class, 'store'])->middleware('can:emails.campaigns.manage');
+            Route::get('email-campaigns/{emailCampaign}', [EmailCampaignController::class, 'show'])->middleware('can:emails.campaigns.manage');
+            Route::post('email-campaigns/{emailCampaign}/test', [EmailCampaignController::class, 'test'])->middleware('can:emails.campaigns.manage');
+            Route::post('email-campaigns/{emailCampaign}/send', [EmailCampaignController::class, 'send'])->middleware('can:emails.campaigns.manage');
+
+            // Email — log of every outbound message (§7)
+            Route::get('email-log', [EmailLogController::class, 'index'])->middleware('can:emails.log.view');
+
+            // Email — contact lists + upload pipeline (super-admin-only)
+            Route::get('contact-lists', [ContactListController::class, 'index'])->middleware('can:emails.contacts.manage');
+            Route::post('contact-lists', [ContactListController::class, 'store'])->middleware('can:emails.contacts.manage');
+            Route::get('contact-lists/{contactList}', [ContactListController::class, 'show'])->middleware('can:emails.contacts.manage');
+            Route::post('contact-lists/{contactList}/import/preview', [ContactListController::class, 'previewImport'])->middleware('can:emails.contacts.manage');
+            Route::post('contact-lists/{contactList}/import', [ContactListController::class, 'import'])->middleware('can:emails.contacts.manage');
+            Route::delete('contact-lists/{contactList}/contacts/{contact}', [ContactListController::class, 'destroyContact'])->middleware('can:emails.contacts.manage');
 
             // Payment gateway console (env-configured; secrets never leave the server)
             Route::get('payment-gateways', [GatewayController::class, 'index'])->middleware('can:system.settings.manage');

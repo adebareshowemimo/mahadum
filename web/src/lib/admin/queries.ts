@@ -8,8 +8,10 @@ import {
   type UpdateTicketInput,
   type AssignRoleInput,
   type AuditLogQuery,
+  type CreateCampaignInput,
   type CreateOrgInput,
   type CreatePromoInput,
+  type EmailLogQuery,
   type InviteOrgAdminInput,
   type IncomeReportQuery,
   type OrgStatus,
@@ -36,6 +38,11 @@ export const adminKeys = {
   referralsReport: (params: IncomeReportQuery) => ['admin-referrals-report', params] as const,
   orgActivityReport: (params: IncomeReportQuery) => ['admin-org-activity', params] as const,
   renewalsReport: (params: IncomeReportQuery) => ['admin-renewals', params] as const,
+  emailCampaigns: ['admin-email-campaigns'] as const,
+  emailCampaign: (id: number) => ['admin-email-campaign', id] as const,
+  contactLists: ['admin-contact-lists'] as const,
+  contactList: (id: number, page: number) => ['admin-contact-list', id, page] as const,
+  emailLog: (params: EmailLogQuery) => ['admin-email-log', params] as const,
   gateways: ['admin-gateways'] as const,
   audit: (params: AuditLogQuery) => ['admin-audit', params] as const,
   support: (params: AdminTicketsQuery) => ['admin-support', params] as const,
@@ -362,5 +369,81 @@ export function useUpdateSettings() {
       qc.setQueryData(adminKeys.settings, data)
       void qc.invalidateQueries({ queryKey: ['config'] })
     },
+  })
+}
+
+// ── Email: campaigns ──
+export function useEmailCampaigns() {
+  return useQuery({ queryKey: adminKeys.emailCampaigns, queryFn: adminApi.emailCampaigns })
+}
+
+export function useCreateEmailCampaign() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateCampaignInput) => adminApi.createEmailCampaign(input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: adminKeys.emailCampaigns }),
+  })
+}
+
+export function useTestEmailCampaign() {
+  return useMutation({ mutationFn: (id: number) => adminApi.testEmailCampaign(id) })
+}
+
+export function useSendEmailCampaign() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, scheduledAt }: { id: number; scheduledAt?: string }) => adminApi.sendEmailCampaign(id, scheduledAt),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: adminKeys.emailCampaigns }),
+  })
+}
+
+// ── Email: contact lists ──
+export function useContactLists() {
+  return useQuery({ queryKey: adminKeys.contactLists, queryFn: adminApi.contactLists })
+}
+
+export function useCreateContactList() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { name: string; description?: string }) => adminApi.createContactList(input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: adminKeys.contactLists }),
+  })
+}
+
+export function useContactList(id: number, page = 1) {
+  return useQuery({
+    queryKey: adminKeys.contactList(id, page),
+    queryFn: () => adminApi.contactList(id, page),
+    placeholderData: (prev) => prev,
+    enabled: id > 0,
+  })
+}
+
+export function useImportContacts() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, contacts }: { id: number; contacts: { email: string; name: string | null }[] }) =>
+      adminApi.importContacts(id, contacts),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin-contact-list'] })
+      void qc.invalidateQueries({ queryKey: adminKeys.contactLists })
+    },
+  })
+}
+
+export function useDeleteContact() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ listId, contactId }: { listId: number; contactId: number }) => adminApi.deleteContact(listId, contactId),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin-contact-list'] }),
+  })
+}
+
+// ── Email: log ──
+export function useEmailLog(params: EmailLogQuery) {
+  return useQuery({
+    queryKey: adminKeys.emailLog(params),
+    queryFn: () => adminApi.emailLog(params),
+    placeholderData: (prev) => prev,
   })
 }

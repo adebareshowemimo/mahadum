@@ -154,6 +154,13 @@ class RolesAndPermissionsSeeder extends Seeder
             'support.handle',
             'system.settings.manage',
         ],
+
+        // ── Email (campaigns, contact lists, log) — super-admin-only ───────
+        'emails' => [
+            'emails.campaigns.manage',
+            'emails.contacts.manage',
+            'emails.log.view',
+        ],
     ];
 
     public function run(): void

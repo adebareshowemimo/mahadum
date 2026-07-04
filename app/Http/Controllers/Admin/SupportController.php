@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SupportTicket;
 use App\Models\SupportTicketMessage;
 use App\Models\User;
+use App\Notifications\SupportReply;
 use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -73,6 +74,9 @@ class SupportController extends Controller
         if ($ticket->status === 'open') {
             $ticket->update(['status' => 'in_progress']);
         }
+
+        // Email the requester that support has replied.
+        $ticket->user?->notify(new SupportReply($ticket, $validated['body']));
 
         $this->audit->record('support.ticket_replied', $ticket, [], ['status' => $ticket->status]);
 

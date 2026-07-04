@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\Subscription;
 use App\Notifications\Concerns\DeliversOverMessagingChannels;
+use App\Notifications\Concerns\TagsEmail;
 use App\Notifications\Contracts\SendsPush;
 use App\Notifications\Contracts\SendsSms;
 use Illuminate\Bus\Queueable;
@@ -18,7 +19,7 @@ use Illuminate\Notifications\Notification;
  */
 class SubscriptionActivated extends Notification implements SendsPush, SendsSms, ShouldQueue
 {
-    use DeliversOverMessagingChannels, Queueable;
+    use DeliversOverMessagingChannels, Queueable, TagsEmail;
 
     public function __construct(private Subscription $subscription) {}
 
@@ -27,12 +28,14 @@ class SubscriptionActivated extends Notification implements SendsPush, SendsSms,
         $plan = $this->subscription->plan;
         $amount = number_format(($plan->price_minor ?? 0) / 100, 2);
 
-        return (new MailMessage)
+        $mail = (new MailMessage)
             ->subject('Your Mahadum.360 subscription is active')
             ->greeting('Thank you!')
             ->line("Your {$plan->name} plan is now active.")
             ->line("Amount: ₦{$amount}")
             ->line('This message is your receipt.');
+
+        return $this->tagEmail($mail, 'subscription_activated', $notifiable);
     }
 
     public function toSms(object $notifiable): string

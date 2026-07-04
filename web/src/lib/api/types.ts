@@ -1102,6 +1102,86 @@ export interface OrgActivityReport {
   totals: { organizations: number; classes: number; students: number }
 }
 
+// ---- Admin: email (campaigns, contacts, log) ----
+
+export interface EmailCampaignRow {
+  id: number
+  subject: string
+  audience_type: 'user_segment' | 'contact_list'
+  status: string
+  scheduled_at: string | null
+  recipients_count: number
+  sent_count: number
+  failed_count: number
+  sent_at: string | null
+  created_at: string | null
+}
+
+export interface EmailCampaignDetail extends EmailCampaignRow {
+  body: string
+  audience: Record<string, unknown> | null
+  recipients_by_status: Record<string, number>
+}
+
+export interface CreateCampaignInput {
+  subject: string
+  body: string
+  audience_type: 'user_segment' | 'contact_list'
+  audience?: Record<string, unknown>
+}
+
+export interface ContactListRow {
+  id: number
+  name: string
+  description: string | null
+  contacts: number
+  subscribed: number
+  created_at: string | null
+}
+
+export interface ContactRow {
+  id: number
+  email: string
+  name: string | null
+  status: string
+  source: string | null
+}
+
+export interface ContactListDetail extends Paginated<ContactRow> {
+  data: ContactRow[]
+  list: { id: number; name: string; description: string | null }
+}
+
+export interface ImportPreview {
+  counts: { total: number; valid: number; duplicate: number; invalid: number; suppressed: number }
+  valid: { email: string; name: string | null }[]
+}
+
+export interface EmailLogRow {
+  id: number
+  to_email: string
+  type: string
+  source: string | null
+  subject: string | null
+  status: string
+  sent_at: string | null
+  created_at: string | null
+}
+
+export interface EmailLogPage extends Paginated<EmailLogRow> {
+  sources: string[]
+}
+
+export interface EmailLogQuery {
+  q?: string
+  type?: string
+  status?: string
+  source?: string
+  from?: string
+  to?: string
+  page?: number
+}
+
 export interface RenewalsReport {
   from: string
   to: string

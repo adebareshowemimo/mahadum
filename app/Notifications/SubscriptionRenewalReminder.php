@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\Subscription;
 use App\Notifications\Concerns\DeliversOverMessagingChannels;
+use App\Notifications\Concerns\TagsEmail;
 use App\Notifications\Contracts\SendsPush;
 use App\Notifications\Contracts\SendsSms;
 use Illuminate\Bus\Queueable;
@@ -18,7 +19,7 @@ use Illuminate\Notifications\Notification;
  */
 class SubscriptionRenewalReminder extends Notification implements SendsPush, SendsSms, ShouldQueue
 {
-    use DeliversOverMessagingChannels, Queueable;
+    use DeliversOverMessagingChannels, Queueable, TagsEmail;
 
     public function __construct(private Subscription $subscription) {}
 
@@ -32,12 +33,14 @@ class SubscriptionRenewalReminder extends Notification implements SendsPush, Sen
         $plan = $this->subscription->plan;
         $amount = number_format(($plan->price_minor ?? 0) / 100, 2);
 
-        return (new MailMessage)
+        $mail = (new MailMessage)
             ->subject('Your Mahadum.360 plan renews soon')
             ->greeting('Hi there,')
             ->line("Your {$plan->name} plan renews on {$this->renewsOn()}.")
             ->line("Amount: ₦{$amount}")
             ->line('Make sure your payment method is ready so your access continues uninterrupted.');
+
+        return $this->tagEmail($mail, 'subscription_renewal_reminder', $notifiable);
     }
 
     public function toSms(object $notifiable): string

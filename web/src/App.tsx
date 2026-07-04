@@ -28,6 +28,9 @@ import { SubscriptionsReportPage } from '@/pages/SubscriptionsReportPage'
 import { ReferralsReportPage } from '@/pages/ReferralsReportPage'
 import { OrgActivityReportPage } from '@/pages/OrgActivityReportPage'
 import { RenewalsReportPage } from '@/pages/RenewalsReportPage'
+import { EmailCampaignsPage } from '@/pages/EmailCampaignsPage'
+import { ContactListsPage } from '@/pages/ContactListsPage'
+import { EmailLogPage } from '@/pages/EmailLogPage'
 import { AuditLogPage } from '@/pages/AuditLogPage'
 import { FraudReviewPage } from '@/pages/FraudReviewPage'
 import { GatewaysPage } from '@/pages/GatewaysPage'
@@ -90,6 +93,9 @@ const REAL_PAGES = new Set([
   '/admin/reports/referrals',
   '/admin/reports/org-activity',
   '/admin/reports/renewals',
+  '/admin/emails',
+  '/admin/emails/contacts',
+  '/admin/emails/log',
   '/admin/settings/gateways',
   '/admin/audit',
   '/admin/settings',
@@ -194,6 +200,9 @@ export function App() {
             <Route path="/admin/reports/referrals" element={<ReferralsReportPage />} />
             <Route path="/admin/reports/org-activity" element={<OrgActivityReportPage />} />
             <Route path="/admin/reports/renewals" element={<RenewalsReportPage />} />
+            <Route path="/admin/emails" element={<EmailCampaignsPage />} />
+            <Route path="/admin/emails/contacts" element={<ContactListsPage />} />
+            <Route path="/admin/emails/log" element={<EmailLogPage />} />
             <Route path="/admin/settings/gateways" element={<GatewaysPage />} />
             <Route path="/admin/audit" element={<AuditLogPage />} />
             <Route path="/admin/settings" element={<SettingsPage />} />

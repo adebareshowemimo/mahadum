@@ -26,6 +26,7 @@ const GROUPS: AdminGroup[] = [
     match: ['/admin/payouts', '/admin/settlements', '/admin/plans', '/admin/promos', '/admin/settings/gateways'],
   },
   { label: 'Reports', to: '/admin/reports', match: ['/admin/reports'] },
+  { label: 'Email', to: '/admin/emails', match: ['/admin/emails'] },
   { label: 'System', to: '/admin/audit', match: ['/admin/audit', '/admin/fraud', '/admin/support', '/admin/settings'] },
 ]
 

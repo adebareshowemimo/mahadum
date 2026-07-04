@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\SupportTicket;
 use App\Models\User;
+use App\Notifications\SupportReply;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class SupportThreadTest extends TestCase
@@ -49,6 +51,19 @@ class SupportThreadTest extends TestCase
 
         $this->assertDatabaseHas('support_ticket_messages', ['ticket_id' => $ticket->id, 'is_staff' => true]);
         $this->assertDatabaseHas('audit_logs', ['action' => 'support.ticket_replied']);
+    }
+
+    public function test_admin_reply_emails_the_requester(): void
+    {
+        $this->seedRbac();
+        Notification::fake();
+        $owner = $this->userWithRole('parent');
+        $ticket = $this->ticket($owner);
+        $this->actingAsUser($this->userWithRole('super_admin'));
+
+        $this->postJson("/api/v1/admin/support-tickets/{$ticket->id}/messages", ['body' => 'Here’s the fix.'])->assertCreated();
+
+        Notification::assertSentTo($owner, SupportReply::class);
     }
 
     public function test_requester_replies_on_own_ticket_and_reopens_when_resolved(): void

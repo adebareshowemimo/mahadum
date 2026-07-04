@@ -21,3 +21,6 @@ Schedule::command('subscriptions:remind')->dailyAt('09:00');
 
 // Housekeeping: keep the webhook idempotency ledger bounded.
 Schedule::command('webhooks:prune')->dailyAt('03:30');
+
+// Send scheduled email campaigns whose time has arrived.
+Schedule::command('emails:dispatch-scheduled')->everyFiveMinutes();

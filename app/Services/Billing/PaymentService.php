@@ -2,12 +2,14 @@
 
 namespace App\Services\Billing;
 
+use App\Models\Family;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Models\WalletFundingTransaction;
 use App\Models\WebhookEvent;
 use App\Notifications\SubscriptionActivated;
+use App\Notifications\WalletFunded;
 use App\Services\AuditLogger;
 use App\Services\Family\WalletService;
 use App\Services\Referral\ReferralService;
@@ -133,8 +135,14 @@ class PaymentService
             return; // already settled
         }
 
+        $credited = $amountMinor ?? $funding->amount_minor;
         $funding->update(['status' => 'success']);
-        $this->wallets->creditCurrency($funding->wallet, $amountMinor ?? $funding->amount_minor);
+        $this->wallets->creditCurrency($funding->wallet, $credited);
+
+        // Receipt to the wallet owner (a direct-consumer user or a family's owner).
+        $owner = $funding->wallet->owner;
+        $payer = $owner instanceof User ? $owner : ($owner instanceof Family ? $owner->owner : null);
+        $payer?->notify(new WalletFunded($credited));
     }
 
     private function reverseFunding(WalletFundingTransaction $funding, ?int $amountMinor): void

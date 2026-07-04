@@ -38,5 +38,8 @@ class AppServiceProvider extends ServiceProvider
             $token,
             urlencode($notifiable->getEmailForPasswordReset()),
         ));
+
+        // NB: App\Listeners\RecordSentEmail (MessageSent → email log, §7) is
+        // auto-discovered from app/Listeners; no explicit registration needed.
     }
 }

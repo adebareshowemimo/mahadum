@@ -10,6 +10,7 @@ use App\Http\Resources\UserResource;
 use App\Models\Family;
 use App\Models\FamilyMember;
 use App\Models\User;
+use App\Notifications\NewDeviceAlert;
 use App\Services\Referral\ReferralService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
@@ -79,7 +80,30 @@ class AuthController extends Controller
             return $this->error('account_disabled', 'This account is not active.', 403);
         }
 
+        $this->alertOnNewDevice($user, $request);
+
         return $this->tokenResponse($user, $request->string('device_name'));
+    }
+
+    /**
+     * Send a security alert when a login comes from a device fingerprint we
+     * haven't seen for this user. Requires the X-Device-Id header (skipped
+     * otherwise) and at least one already-known device, so a user's first device
+     * — and clients that don't fingerprint — never trigger a false alarm.
+     */
+    private function alertOnNewDevice(User $user, Request $request): void
+    {
+        $fingerprint = $request->header('X-Device-Id');
+        if (! $fingerprint) {
+            return;
+        }
+
+        $devices = $user->devices();
+        if ($devices->count() === 0 || $devices->where('device_fingerprint', $fingerprint)->exists()) {
+            return;
+        }
+
+        $user->notify(new NewDeviceAlert($request->ip(), $request->userAgent()));
     }
 
     public function google(GoogleAuthRequest $request): JsonResponse

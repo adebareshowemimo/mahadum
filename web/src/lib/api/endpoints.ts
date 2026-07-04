@@ -54,7 +54,15 @@ import type {
   UpdatePlanInput,
   AdminUsersQuery,
   AssignRoleInput,
+  ContactListDetail,
+  ContactListRow,
+  CreateCampaignInput,
   CreateOrgInput,
+  EmailCampaignDetail,
+  EmailCampaignRow,
+  EmailLogPage,
+  EmailLogQuery,
+  ImportPreview,
   InviteOrgAdminInput,
   OrgStatus,
   Paginated,
@@ -687,6 +695,62 @@ export const adminApi = {
   async renewalsReport(params: IncomeReportQuery = {}): Promise<RenewalsReport> {
     const { data } = await api.get('/admin/reports/renewals', { params })
     return data.data
+  },
+
+  // ── Email: campaigns ──
+  async emailCampaigns(): Promise<EmailCampaignRow[]> {
+    const { data } = await api.get('/admin/email-campaigns')
+    return data.data
+  },
+  async createEmailCampaign(input: CreateCampaignInput): Promise<EmailCampaignRow> {
+    const { data } = await api.post('/admin/email-campaigns', input)
+    return data.data
+  },
+  async emailCampaign(id: number): Promise<EmailCampaignDetail> {
+    const { data } = await api.get(`/admin/email-campaigns/${id}`)
+    return data.data
+  },
+  async testEmailCampaign(id: number): Promise<{ sent_to: string }> {
+    const { data } = await api.post(`/admin/email-campaigns/${id}/test`)
+    return data.data
+  },
+  async sendEmailCampaign(id: number, scheduledAt?: string): Promise<EmailCampaignRow> {
+    const { data } = await api.post(`/admin/email-campaigns/${id}/send`, scheduledAt ? { scheduled_at: scheduledAt } : {})
+    return data.data
+  },
+
+  // ── Email: contact lists + upload ──
+  async contactLists(): Promise<ContactListRow[]> {
+    const { data } = await api.get('/admin/contact-lists')
+    return data.data
+  },
+  async createContactList(input: { name: string; description?: string }): Promise<{ id: number; name: string }> {
+    const { data } = await api.post('/admin/contact-lists', input)
+    return data.data
+  },
+  async contactList(id: number, page = 1): Promise<ContactListDetail> {
+    const { data } = await api.get(`/admin/contact-lists/${id}`, { params: { page } })
+    return data
+  },
+  async previewContacts(id: number, form: { emails?: string; file?: File }): Promise<ImportPreview> {
+    const body = new FormData()
+    if (form.emails) body.append('emails', form.emails)
+    if (form.file) body.append('file', form.file)
+    const { data } = await api.post(`/admin/contact-lists/${id}/import/preview`, body)
+    return data.data
+  },
+  async importContacts(id: number, contacts: { email: string; name: string | null }[]): Promise<{ imported: number; skipped: number }> {
+    const { data } = await api.post(`/admin/contact-lists/${id}/import`, { contacts })
+    return data.data
+  },
+  async deleteContact(listId: number, contactId: number): Promise<void> {
+    await api.delete(`/admin/contact-lists/${listId}/contacts/${contactId}`)
+  },
+
+  // ── Email: log ──
+  async emailLog(params: EmailLogQuery = {}): Promise<EmailLogPage> {
+    const { data } = await api.get('/admin/email-log', { params })
+    return data
   },
 
   async paymentGateways(): Promise<GatewayStatus> {
