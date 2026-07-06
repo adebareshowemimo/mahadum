@@ -1,4 +1,4 @@
-# Staging deploy — mahadum.agufoninteractivity.com
+# Staging deploy — mahadum.agunfoninteractivity.com
 
 Single-subdomain setup: Apache serves the built React SPA as static files and
 routes `/api`, `/sanctum`, `/storage`, `/up` to Laravel (PHP); everything else
@@ -9,7 +9,7 @@ Assumes Apache2, PHP 8.3, Composer, and Node are already installed.
 
 ## One-time setup
 
-1. **DNS** — point `mahadum.agufoninteractivity.com` (A record) at the
+1. **DNS** — point `mahadum.agunfoninteractivity.com` (A record) at the
    server's IP.
 
 2. **Database**
@@ -44,7 +44,7 @@ Assumes Apache2, PHP 8.3, Composer, and Node are already installed.
    sudo a2enmod rewrite headers
    sudo a2ensite mahadum-staging
    sudo systemctl reload apache2
-   sudo certbot --apache -d mahadum.agufoninteractivity.com
+   sudo certbot --apache -d mahadum.agunfoninteractivity.com
    ```
    If PHP runs via php-fpm rather than mod_php, confirm
    `sudo a2enconf php8.3-fpm` is enabled (Ubuntu's default php-fpm Apache
