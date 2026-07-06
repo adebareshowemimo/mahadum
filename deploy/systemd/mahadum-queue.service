@@ -1,0 +1,25 @@
+# Persistent queue worker for staging (QUEUE_CONNECTION=database).
+#
+# Install:
+#   sudo cp deploy/systemd/mahadum-queue.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now mahadum-queue
+#
+# After each deploy, prefer `php artisan queue:restart` (see deploy.sh) over
+# restarting this unit — it signals workers to finish their current job and
+# reboot with fresh code, no sudo required.
+
+[Unit]
+Description=Mahadum360 staging queue worker
+After=network.target mysql.service
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/mahadum
+ExecStart=/usr/bin/php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
