@@ -1,5 +1,5 @@
 import { Link, Navigate } from 'react-router-dom'
-import { Button, Icon, type IconName } from '@/components/ui'
+import { Icon, LinkButton, type IconName } from '@/components/ui'
 import { Logo } from '@/components/Logo'
 import { cn } from '@/lib/cn'
 import { TAGLINE, WORDMARK } from '@/lib/brand'
@@ -63,19 +63,15 @@ function SiteHeader() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Logo className="h-8" />
         <div className="flex items-center gap-2">
-          <Link to="/pricing" className="hidden sm:block">
-            <Button variant="ghost" size="sm">
-              Pricing
-            </Button>
-          </Link>
-          <Link to="/login">
-            <Button variant="ghost" size="sm">
-              Sign in
-            </Button>
-          </Link>
-          <Link to="/register">
-            <Button size="sm">Get started</Button>
-          </Link>
+          <LinkButton to="/pricing" variant="ghost" size="sm" className="hidden sm:block">
+            Pricing
+          </LinkButton>
+          <LinkButton to="/login" variant="ghost" size="sm">
+            Sign in
+          </LinkButton>
+          <LinkButton to="/register" size="sm">
+            Get started
+          </LinkButton>
         </div>
       </div>
     </header>
@@ -111,16 +107,12 @@ function Hero() {
         </p>
 
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <Link to="/register" className="w-full sm:w-auto">
-            <Button size="lg" fullWidth className="sm:w-auto">
-              Get started free
-            </Button>
-          </Link>
-          <Link to="/login" className="w-full sm:w-auto">
-            <Button size="lg" variant="outline" fullWidth className="sm:w-auto">
-              I have an account
-            </Button>
-          </Link>
+          <LinkButton to="/register" size="lg" fullWidth className="w-full sm:w-auto">
+            Get started free
+          </LinkButton>
+          <LinkButton to="/login" size="lg" variant="outline" fullWidth className="w-full sm:w-auto">
+            I have an account
+          </LinkButton>
         </div>
 
         <div className="mt-10 flex flex-wrap items-center justify-center gap-2">
@@ -212,9 +204,9 @@ function ClosingCta() {
       <p className="mx-auto mt-3 max-w-lg text-muted">
         Free to begin. No card required. Your first lesson is minutes away.
       </p>
-      <Link to="/register" className="mt-8 inline-block">
-        <Button size="lg">Create your free account</Button>
-      </Link>
+      <LinkButton to="/register" size="lg" className="mt-8">
+        Create your free account
+      </LinkButton>
     </section>
   )
 }

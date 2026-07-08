@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, Navigate } from 'react-router-dom'
-import { Alert, Button, Skeleton } from '@/components/ui'
+import { Alert, LinkButton, Skeleton } from '@/components/ui'
 import { Logo } from '@/components/Logo'
 import { pricingApi, type PricingBand, type PricingConsumerPlan, type PricingInfo } from '@/lib/api'
 import { TAGLINE, WORDMARK } from '@/lib/brand'
@@ -29,14 +29,12 @@ export function PricingPage() {
             <Logo className="h-8" />
           </Link>
           <div className="flex items-center gap-2">
-            <Link to="/login">
-              <Button variant="ghost" size="sm">
-                Sign in
-              </Button>
-            </Link>
-            <Link to="/register">
-              <Button size="sm">Get started</Button>
-            </Link>
+            <LinkButton to="/login" variant="ghost" size="sm">
+              Sign in
+            </LinkButton>
+            <LinkButton to="/register" size="sm">
+              Get started
+            </LinkButton>
           </div>
         </div>
       </header>
@@ -113,14 +111,12 @@ function PricingBody({ data }: { data: PricingInfo }) {
         <h2 className="font-display text-2xl font-bold text-foreground">Ready to start?</h2>
         <p className="mx-auto mt-2 max-w-lg text-muted">Free to begin — no card required. Schools can request a quote in minutes.</p>
         <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <Link to="/register">
-            <Button size="lg">Get started free</Button>
-          </Link>
-          <Link to="/register">
-            <Button size="lg" variant="outline">
-              Talk to us about schools
-            </Button>
-          </Link>
+          <LinkButton to="/register" size="lg">
+            Get started free
+          </LinkButton>
+          <LinkButton to="/register" size="lg" variant="outline">
+            Talk to us about schools
+          </LinkButton>
         </div>
       </section>
     </div>
@@ -175,11 +171,9 @@ function PlanCard({
           </li>
         ))}
       </ul>
-      <Link to="/register" className="mt-auto">
-        <Button fullWidth variant={highlight ? 'premium' : 'outline'}>
-          {name === 'Free' ? 'Start free' : `Choose ${name}`}
-        </Button>
-      </Link>
+      <LinkButton to="/register" fullWidth variant={highlight ? 'premium' : 'outline'} className="mt-auto">
+        {name === 'Free' ? 'Start free' : `Choose ${name}`}
+      </LinkButton>
     </div>
   )
 }

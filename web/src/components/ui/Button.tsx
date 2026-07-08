@@ -17,7 +17,10 @@ export type ButtonVariant =
 export type ButtonSize = 'sm' | 'md' | 'lg'
 
 // African Gold (reward/billing) always pairs with charcoal text, never white.
-const VARIANTS: Record<ButtonVariant, string> = {
+// Exported so LinkButton can render identical styling on an <a> — a <button>
+// must never nest inside an <a> (invalid HTML, double-announced to screen
+// readers), so navigation-as-button uses this shared class set instead.
+export const BUTTON_VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: 'bg-primary text-primary-fg hover:bg-primary-hover shadow-sm',
   reward: 'bg-gold-400 text-charcoal-900 hover:bg-gold-500 shadow-gold',
   premium: 'bg-navy-900 text-gold-300 hover:bg-navy-800 shadow-md',
@@ -31,11 +34,15 @@ const VARIANTS: Record<ButtonVariant, string> = {
   soft: 'bg-primary-soft text-primary hover:bg-heritage-100 dark:hover:bg-heritage-900/40',
 }
 
-const SIZES: Record<ButtonSize, string> = {
+export const BUTTON_SIZE_CLASSES: Record<ButtonSize, string> = {
   sm: 'h-9 px-3 text-sm rounded-lg gap-1.5',
   md: 'h-11 px-4 text-sm rounded-xl gap-2',
   lg: 'h-12 px-6 text-base rounded-xl gap-2',
 }
+
+export const BUTTON_BASE_CLASSES =
+  'inline-flex items-center justify-center font-display font-semibold transition-colors ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
@@ -55,11 +62,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center font-display font-semibold transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        BUTTON_BASE_CLASSES,
         'disabled:opacity-50 disabled:pointer-events-none',
-        VARIANTS[variant],
-        SIZES[size],
+        BUTTON_VARIANT_CLASSES[variant],
+        BUTTON_SIZE_CLASSES[size],
         fullWidth && 'w-full',
         className,
       )}

@@ -1,5 +1,4 @@
-import { Link } from 'react-router-dom'
-import { Badge, Button, Card, CardBody, CardHeader, CardTitle } from '@/components/ui'
+import { Badge, Card, CardBody, CardHeader, CardTitle, LinkButton } from '@/components/ui'
 import { useAuth } from '@/lib/auth/AuthProvider'
 
 /** Authenticated landing. Rendered inside the app shell (AppLayout). */
@@ -55,18 +54,14 @@ export function DashboardPage() {
 
       <div className="flex flex-wrap gap-3">
         {hasRole('parent', 'supervisor') && (
-          <Link to="/family">
-            <Button variant="parent">Go to family</Button>
-          </Link>
+          <LinkButton to="/family" variant="parent">
+            Go to family
+          </LinkButton>
         )}
-        {hasRole('student') && (
-          <Link to="/learn">
-            <Button>Continue learning</Button>
-          </Link>
-        )}
-        <Link to="/components">
-          <Button variant="secondary">Browse the design system</Button>
-        </Link>
+        {hasRole('student') && <LinkButton to="/learn">Continue learning</LinkButton>}
+        <LinkButton to="/components" variant="secondary">
+          Browse the design system
+        </LinkButton>
       </div>
     </div>
   )

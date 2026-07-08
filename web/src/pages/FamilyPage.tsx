@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
 import {
   Alert,
   Avatar,
@@ -12,6 +11,7 @@ import {
   CodeInput,
   Icon,
   Input,
+  LinkButton,
   Modal,
   Skeleton,
 } from '@/components/ui'
@@ -62,11 +62,9 @@ export function FamilyPage() {
             <p className="text-sm text-muted">
               Cash balance: {formatMoney(family.wallet.currency_minor, family.wallet.currency)}
             </p>
-            <Link to="/wallet">
-              <Button variant="secondary" size="sm">
-                Manage wallet
-              </Button>
-            </Link>
+            <LinkButton to="/wallet" variant="secondary" size="sm">
+              Manage wallet
+            </LinkButton>
           </CardBody>
         </Card>
 

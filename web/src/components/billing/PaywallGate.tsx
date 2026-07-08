@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { Button, Card, CardBody } from '@/components/ui'
+import { Card, CardBody, LinkButton } from '@/components/ui'
 import type { EntitlementFeature } from '@/lib/api'
 import { FEATURE_META, useEntitlements } from '@/lib/billing/entitlements'
 
@@ -23,9 +22,9 @@ export function PaywallGate({ feature, children }: { feature: EntitlementFeature
           <p className="max-w-xs text-sm text-muted">
             This is part of <strong>{meta.unlockedBy}</strong>. Upgrade to unlock it for your family.
           </p>
-          <Link to="/billing">
-            <Button variant="premium">See plans</Button>
-          </Link>
+          <LinkButton to="/billing" variant="premium">
+            See plans
+          </LinkButton>
         </CardBody>
       </Card>
     </div>
