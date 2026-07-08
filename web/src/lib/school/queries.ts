@@ -5,6 +5,7 @@ import {
   type CreateClassInput,
   type GradeSubmissionInput,
   type PurchaseSeatsInput,
+  type RequestPayoutInput,
   type RequestTeacherCompensationPayoutInput,
 } from '@/lib/api'
 import { useAuth } from '@/lib/auth/AuthProvider'
@@ -24,6 +25,7 @@ export const schoolKeys = {
   assignmentDetail: (classId: number, assignmentId: number) =>
     ['class-assignments', classId, assignmentId] as const,
   teacherCompensation: ['teacher-compensation'] as const,
+  referrals: (org: number) => ['school-referrals', org] as const,
 }
 
 export function useSchoolDashboard(orgId: number | null) {
@@ -43,6 +45,22 @@ export function useSeats(orgId: number | null) {
     queryKey: schoolKeys.seats(orgId ?? 0),
     queryFn: () => schoolApi.seats(orgId as number),
     enabled: !!orgId,
+  })
+}
+
+export function useSchoolReferrals(orgId: number | null) {
+  return useQuery({
+    queryKey: schoolKeys.referrals(orgId ?? 0),
+    queryFn: () => schoolApi.referralSummary(orgId as number),
+    enabled: !!orgId,
+  })
+}
+
+export function useRequestSchoolReferralPayout(orgId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: RequestPayoutInput) => schoolApi.requestReferralPayout(orgId, input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: schoolKeys.referrals(orgId) }),
   })
 }
 

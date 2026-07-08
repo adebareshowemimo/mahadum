@@ -58,6 +58,7 @@ import { ReferralsPage } from '@/pages/ReferralsPage'
 import { ReviewsPage } from '@/pages/ReviewsPage'
 import { RosterPage } from '@/pages/RosterPage'
 import { SchoolDashboardPage } from '@/pages/SchoolDashboardPage'
+import { SchoolReferralsPage } from '@/pages/SchoolReferralsPage'
 import { SeatsPage } from '@/pages/SeatsPage'
 import { CompetitionsPage } from '@/pages/CompetitionsPage'
 import { CompetitionDetailPage } from '@/pages/CompetitionDetailPage'
@@ -84,6 +85,7 @@ const REAL_PAGES = new Set([
   '/roster',
   '/seats',
   '/invoices',
+  '/school/referrals',
   '/competitions',
   '/competitions/manage',
   '/admin',
@@ -188,6 +190,7 @@ export function App() {
           <Route path="/roster" element={<RosterPage />} />
           <Route path="/seats" element={<SeatsPage />} />
           <Route path="/invoices" element={<InvoicesPage />} />
+          <Route path="/school/referrals" element={<SchoolReferralsPage />} />
           {/* Language & Culture competition — browse + vote open to all; organiser
               console gated to super_admin + content_owner. */}
           <Route path="/competitions" element={<CompetitionsPage />} />

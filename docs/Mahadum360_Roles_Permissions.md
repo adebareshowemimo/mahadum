@@ -36,7 +36,7 @@ only ever sees/acts on **their org's** rows because of layers 1–3.
 |---|---|---|
 | `super_admin` | Global | Everything; settlement, payouts, org activation, content & language control |
 | `content_owner` | Global | CMS authoring + publish, badges/leagues, lesson analytics |
-| `school_admin` | Organization | School dashboard, roster + CSV import, classes, seats, invoices, org users/roles |
+| `school_admin` | Organization | School dashboard, roster + CSV import, classes, seats, invoices, org users/roles, the school's own referral code & payout requests |
 | `teacher` | Organization | Own classes, assignments, learner progress, commissions & payout requests |
 | `supervisor` | Organization | Read-only oversight across the org |
 | `parent` | Family | Wallet, chores, review queue, enrollments, own subscriptions/telco, payouts |
@@ -96,7 +96,8 @@ Naming convention: `aspect.subject.action`.
 | billing.plans.manage / billing.health.view | | | | | |
 | finance.* / settlements.* | | | | | |
 | commissions.view | | | ● | | |
-| payouts.{view,request} | | | ● | | ● |
+| payouts.view | | | ● | | ● |
+| payouts.request | | ● | ● | | ● |
 | payouts.approve | | | | | |
 | referrals.view | | ● | ● | | ● |
 | referrals.manage / fraud.review / promocodes | | | | | |

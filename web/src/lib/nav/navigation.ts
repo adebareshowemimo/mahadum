@@ -60,6 +60,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Roster', to: '/roster', icon: 'users', roles: ['school_admin'] },
       { label: 'Seats', to: '/seats', icon: 'layers', roles: ['school_admin'] },
       { label: 'Invoices', to: '/invoices', icon: 'card', roles: ['school_admin'] },
+      { label: 'Referrals', to: '/school/referrals', icon: 'gift', roles: ['school_admin'] },
     ],
   },
   {

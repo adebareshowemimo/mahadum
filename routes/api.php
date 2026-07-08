@@ -82,6 +82,7 @@ use App\Http\Controllers\School\ClassAssignmentController;
 use App\Http\Controllers\School\RosterController;
 use App\Http\Controllers\School\SchoolClassController;
 use App\Http\Controllers\School\SchoolDashboardController;
+use App\Http\Controllers\School\SchoolReferralController;
 use App\Http\Controllers\School\SeatController;
 use App\Http\Controllers\School\TeacherCompensationController;
 use App\Http\Controllers\Support\TicketController;
@@ -272,6 +273,11 @@ Route::prefix('v1')->group(function () {
             Route::get('invoices', [InvoiceController::class, 'index'])->middleware('can:billing.invoices.view');
             Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'download'])->middleware('can:billing.invoices.view');
             Route::post('invoices/{invoice}/pay', [InvoiceController::class, 'pay'])->middleware('can:billing.invoices.manage');
+            Route::get('referrals/summary', [SchoolReferralController::class, 'summary'])->middleware('can:referrals.view');
+            Route::middleware('idempotency')->group(function () {
+                Route::post('referrals/payouts/request', [SchoolReferralController::class, 'requestPayout'])
+                    ->middleware('can:payouts.request');
+            });
         });
         Route::get('classes', [SchoolClassController::class, 'index'])->can('viewAny', SchoolClass::class);
         Route::get('classes/{class}', [SchoolClassController::class, 'show'])->can('view', 'class');

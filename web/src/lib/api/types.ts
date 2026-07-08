@@ -609,6 +609,16 @@ export interface RequestPayoutInput {
 
 // ---- School operations ----
 
+export interface SchoolReferralSummary {
+  code: string
+  status: string
+  share_url: string
+  share_text: string
+  referrals: Record<string, number>
+  commissions: Record<string, CommissionStat>
+  payouts: Payout[]
+}
+
 export interface TeacherCompensationMonth {
   period: string
   paying_student_count: number

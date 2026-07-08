@@ -3,10 +3,12 @@
 namespace App\Services\Referral;
 
 use App\Models\Commission;
+use App\Models\Organization;
 use App\Models\Referral;
 use App\Models\ReferralCode;
 use App\Models\Subscription;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 /**
@@ -19,10 +21,14 @@ use Illuminate\Support\Str;
  */
 class ReferralService
 {
-    public function codeFor(User $user): ReferralCode
+    /**
+     * @param  User|Organization  $owner  ReferralCode.owner is polymorphic — a
+     *                                    personal code (kind 'user') or a school's own code (kind 'org').
+     */
+    public function codeFor(Model $owner): ReferralCode
     {
         return ReferralCode::firstOrCreate(
-            ['owner_type' => $user->getMorphClass(), 'owner_id' => $user->id, 'kind' => 'user'],
+            ['owner_type' => $owner->getMorphClass(), 'owner_id' => $owner->getKey(), 'kind' => $owner instanceof Organization ? 'org' : 'user'],
             ['code' => $this->uniqueCode(), 'status' => 'active'],
         );
     }

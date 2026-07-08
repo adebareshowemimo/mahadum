@@ -38,8 +38,8 @@ backend architecture, content model, DB layer, and UI designs already produced.
 | 4 | Gamification & retention | 3 | 🟡 backend ✅ · frontend ✅ core (streak/hearts/badges/leaderboard) |
 | 5 | Family economy (wallet · chores) | 1, 3 | 🟡 backend ✅ · frontend ✅ core (hub/wallet/chores) |
 | 6 | Monetisation & billing (cards + telco) | 5 | 🟡 backend ✅ (ad network ⬜) · frontend ✅ (paywall/entitlements/subs/telco-opt-in/data-bundles) · ad screen ⬜ |
-| 7 | Referrals & commissions | 6 | 🟡 backend ✅ · frontend ✅ (hub/share/payouts/fraud-alert) · school-org hub ⬜ |
-| 8 | School operations (admin + teacher) | 2, 4 | 🟡 backend ✅ · frontend ✅ admin + teacher core (classes/earnings) · teacher analytics+assignments ⬜ |
+| 7 | Referrals & commissions | 6 | ✅ backend + frontend complete (hub/share/payouts/fraud-alert + school-org hub) |
+| 8 | School operations (admin + teacher) | 2, 4 | ✅ backend + frontend complete (classes/assignments/analytics/compensation — see `Mahadum360_Teacher_Portal_TODO.md`) |
 | 9 | Super Admin | 6, 7, 8 | 🟡 backend ✅ · frontend ✅ (overview/settlements/orgs/promos) |
 | 10 | Hardening & launch | all | 🟡 (security hardening substantially ✅; pen-test/load/WCAG/legal/beta ⬜) |
 
@@ -57,7 +57,7 @@ Ongoing in parallel: **Design**, **Content production**, **Integrations**, **Com
 - [ ] **LRS vendor** — Learning Locker / Veracity / SCORM Cloud (integrate, don't build). *(blocks M3 analytics)*
 - [ ] **Managed video vendor** — Cloudflare Stream / Mux / Bunny. *(blocks M2)*
 - [ ] **Streak Shield** — coins vs premium-only.
-- [ ] **Teacher commission payout** — cash to bank vs platform coins (schema supports both).
+- [x] ✅ **Teacher commission payout** — RESOLVED (2026-07-04): cash to bank, monthly accrual per currently-enrolled paying student (`compensation:accrue-teachers`). See `Mahadum360_Teacher_Portal_TODO.md` §3.
 - [ ] **Diaspora telco VAS** — Nigeria-only for MVP?
 - [x] ✅ **Quiz attempt cap** — RESOLVED: schema supports both (`quizzes.max_attempts` null = unlimited). Enforced in `AnswerController`: replays past the cap are graded for practice (learner still sees the answer + explanation — never dead-ended, Rule 4) but nothing is scored and XP is never re-farmed. Covered by `QuizAttemptCapTest`.
 - [ ] **Spaced-repetition algorithm** for flashcards (SM-2 vs Leitner).
@@ -234,7 +234,8 @@ Ongoing in parallel: **Design**, **Content production**, **Integrations**, **Com
 - [x] ✅ Jobs: `ClearEscrowedCommissions`, `FlagReferralVelocity`.
 
 **Frontend `[MVP]`**
-- [x] ✅ Referral hub: code, **share (copy / WhatsApp / SMS)**, referral + commission counters by status — `/referrals` (`GET /referral-code`, `/referrals/summary`). Verified live. *(School-org referral hub view ⬜.)*
+- [x] ✅ Referral hub: code, **share (copy / WhatsApp / SMS)**, referral + commission counters by status — `/referrals` (`GET /referral-code`, `/referrals/summary`). Verified live.
+- [x] ✅ **School-org referral hub** (2026-07-07) — a school's own referral code (kind `org`, distinct from a staff member's personal code) so commission from families referred by the school accrues to the organization, not an individual. `ReferralService::codeFor()` widened to accept any polymorphic owner (`User|Organization`); new `GET /schools/{org}/referrals/summary` + `POST /schools/{org}/referrals/payouts/request` (`SchoolReferralController`), `school_admin` granted `payouts.request`. Frontend: `/school/referrals` (`SchoolReferralsPage`), reachable from the School nav section. Verified live end-to-end (code issuance → qualified referral → cleared commission → payout request).
 - [x] ✅ Payout request; earnings (pending vs cleared) — request modal (floor ₦5,000 client+server, bank/coins, idempotency-keyed `POST /payouts/request`) + payouts list (`GET /payouts`). Verified live (floor block + valid request).
 - [x] ✅ Fraud-review alert UI (amber, support CTA) — `ReferralStatusAlert` on `/referrals` + `/earnings`: when the referral code is `flagged`/`frozen` (velocity guard FR-7.5), shows an amber "account under review" notice + mailto support CTA. Unit-tested + verified live.
 

@@ -86,6 +86,7 @@ import type {
   GradeSubmissionInput,
   GradeSubmissionResult,
   RequestTeacherCompensationPayoutInput,
+  SchoolReferralSummary,
   TeacherCompensationSummary,
   CreateCourseInput,
   CreateLessonInput,
@@ -1075,6 +1076,18 @@ export const schoolApi = {
     const { data } = await api.post(`/schools/${orgId}/students/import`, {
       students: input.students,
       class_id: input.class_id,
+    })
+    return data.data
+  },
+
+  async referralSummary(orgId: number): Promise<SchoolReferralSummary> {
+    const { data } = await api.get(`/schools/${orgId}/referrals/summary`)
+    return data.data
+  },
+
+  async requestReferralPayout(orgId: number, input: RequestPayoutInput): Promise<{ id: number; status: string }> {
+    const { data } = await api.post(`/schools/${orgId}/referrals/payouts/request`, input, {
+      headers: { 'Idempotency-Key': idempotencyKey() },
     })
     return data.data
   },
