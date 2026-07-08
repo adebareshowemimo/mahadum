@@ -8,6 +8,7 @@ use App\Models\AdImpression;
 use App\Models\Heart;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class HeartController extends Controller
 {
@@ -46,6 +47,10 @@ class HeartController extends Controller
         $method = $request->string('method')->value();
 
         if ($method === 'ad') {
+            // Redeeming a reward is self/parent only — narrower than the
+            // same-tenant-staff view access used to resolve $learner above.
+            Gate::authorize('redeemReward', $learner);
+
             $impression = AdImpression::findOrFail($request->integer('ad_impression_id'));
             abort_unless((int) $impression->learner_profile_id === $learner->id, 403, 'This ad was not requested for this learner.');
             abort_unless($impression->placement === 'rewarded_heart', 422, 'This ad was not for a hearts refill.');

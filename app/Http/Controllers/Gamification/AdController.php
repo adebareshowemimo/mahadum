@@ -32,7 +32,7 @@ class AdController extends Controller
             'placement' => ['required', 'in:post_lesson,rewarded_heart'],
         ]);
 
-        $learner = $this->learner($request->integer('learner_id'));
+        $learner = $this->learnerForReward($request->integer('learner_id'));
         $placement = $request->string('placement')->value();
         $coppaPassed = $this->coppaPassed($learner);
 
@@ -64,7 +64,7 @@ class AdController extends Controller
     /** Client reports the ad finished playing; verified server-side before it can be redeemed. */
     public function complete(AdImpression $impression): JsonResponse
     {
-        $this->learner($impression->learner_profile_id); // authorizes the caller against the impression's learner
+        $this->learnerForReward($impression->learner_profile_id); // self/parent only — not same-tenant staff
 
         abort_unless($impression->ad_ref !== null, 422, 'No ad was requested for this impression.');
         abort_if($impression->shown_at !== null, 422, 'This ad has already been marked as shown.');

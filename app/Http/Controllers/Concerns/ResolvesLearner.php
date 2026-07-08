@@ -21,6 +21,20 @@ trait ResolvesLearner
         return $learner;
     }
 
+    /**
+     * Same as learner(), but for actions that redeem a reward on the
+     * learner's behalf (ads, hearts refills) — self/parent only, deliberately
+     * excluding the same-tenant-staff branch `view()` grants (see
+     * LearnerProfilePolicy::redeemReward).
+     */
+    protected function learnerForReward(int $id): LearnerProfile
+    {
+        $learner = LearnerProfile::findOrFail($id);
+        Gate::authorize('redeemReward', $learner);
+
+        return $learner;
+    }
+
     protected function lessonProgress(LearnerProfile $learner, Lesson $lesson): LessonProgress
     {
         return LessonProgress::firstOrCreate(

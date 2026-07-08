@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AdImpression;
 use App\Models\Family;
 use App\Models\LearnerProfile;
+use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -103,5 +104,38 @@ class AdNetworkTest extends TestCase
         $this->postJson('/api/v1/hearts/refill', [
             'learner_id' => $learner->id, 'method' => 'ad', 'ad_impression_id' => $impressionId,
         ])->assertStatus(422);
+    }
+
+    /**
+     * Same-tenant staff (teacher/supervisor/school_admin) can view a learner's
+     * progress via `learning.progress.view`, but must never be able to trigger
+     * or redeem an ad reward for a learner they aren't the parent of — that
+     * would let staff fabricate "watched ad" compliance records and grant
+     * hearts refills without the parent/learner's involvement.
+     */
+    public function test_same_tenant_staff_cannot_request_or_redeem_ads_for_a_learner_they_do_not_own(): void
+    {
+        $this->seedRbac();
+        $org = Organization::create(['name' => 'Greenfield', 'type' => 'school', 'slug' => 'greenfield', 'status' => 'active']);
+        $teacher = $this->userWithRole('teacher');
+        $org->members()->attach($teacher->id, ['role' => 'teacher', 'status' => 'active']);
+
+        $learner = LearnerProfile::create([
+            'organization_id' => $org->id, 'display_name' => 'Student', 'date_of_birth' => now()->subYears(20)->toDateString(),
+        ]);
+
+        $this->actingAsUser($teacher);
+        $this->postJson('/api/v1/ads/request', ['learner_id' => $learner->id, 'placement' => 'rewarded_heart'])
+            ->assertStatus(403);
+
+        // Even a pre-existing, already-verified impression can't be redeemed by staff.
+        $impression = AdImpression::create([
+            'learner_profile_id' => $learner->id, 'placement' => 'rewarded_heart',
+            'coppa_passed' => true, 'ad_ref' => 'x', 'shown_at' => now(),
+        ]);
+        $this->postJson("/api/v1/ads/{$impression->id}/complete")->assertStatus(403);
+        $this->postJson('/api/v1/hearts/refill', [
+            'learner_id' => $learner->id, 'method' => 'ad', 'ad_impression_id' => $impression->id,
+        ])->assertStatus(403);
     }
 }
