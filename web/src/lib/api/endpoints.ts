@@ -14,6 +14,9 @@ import type {
   CreateChoreInput,
   FamilyOverview,
   HeartsInfo,
+  AdEligibility,
+  AdCompleteResult,
+  AdPlacement,
   LeaderboardRow,
   LeagueStanding,
   LearnerPath,
@@ -1133,8 +1136,22 @@ export const gamificationApi = {
     return data.data
   },
 
-  async refillHearts(learnerId: number, method: 'ad' | 'coins'): Promise<HeartsInfo> {
-    const { data } = await api.post('/hearts/refill', { learner_id: learnerId, method })
+  async refillHearts(learnerId: number, method: 'ad' | 'coins', adImpressionId?: number): Promise<HeartsInfo> {
+    const { data } = await api.post('/hearts/refill', {
+      learner_id: learnerId,
+      method,
+      ad_impression_id: adImpressionId,
+    })
+    return data.data
+  },
+
+  async requestAd(learnerId: number, placement: AdPlacement): Promise<AdEligibility> {
+    const { data } = await api.post('/ads/request', { learner_id: learnerId, placement })
+    return data.data
+  },
+
+  async completeAd(impressionId: number): Promise<AdCompleteResult> {
+    const { data } = await api.post(`/ads/${impressionId}/complete`)
     return data.data
   },
 

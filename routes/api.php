@@ -59,6 +59,7 @@ use App\Http\Controllers\Family\ChoreController;
 use App\Http\Controllers\Family\FamilyController;
 use App\Http\Controllers\Family\ReviewController;
 use App\Http\Controllers\Family\WalletController;
+use App\Http\Controllers\Gamification\AdController;
 use App\Http\Controllers\Gamification\BadgeController;
 use App\Http\Controllers\Gamification\HeartController;
 use App\Http\Controllers\Gamification\LeaderboardController;
@@ -202,6 +203,8 @@ Route::prefix('v1')->group(function () {
         Route::post('streak/shield', [StreakController::class, 'shield']);
         Route::get('hearts', [HeartController::class, 'show']);
         Route::post('hearts/refill', [HeartController::class, 'refill']);
+        Route::post('ads/request', [AdController::class, 'request']);
+        Route::post('ads/{impression}/complete', [AdController::class, 'complete']);
         Route::get('leagues/current', [LeaderboardController::class, 'current']);
         Route::get('leaderboard', [LeaderboardController::class, 'index']);
         Route::get('learners/{learner}/badges', [BadgeController::class, 'index'])->can('view', 'learner');

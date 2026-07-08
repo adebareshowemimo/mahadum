@@ -58,7 +58,7 @@ class GamificationTest extends TestCase
         $learner = $this->parentWithChild($parent);
 
         $this->getJson("/api/v1/hearts?learner_id={$learner->id}")->assertOk()->assertJsonPath('data.current', 5);
-        $this->postJson('/api/v1/hearts/refill', ['learner_id' => $learner->id, 'method' => 'ad'])
+        $this->postJson('/api/v1/hearts/refill', ['learner_id' => $learner->id, 'method' => 'coins'])
             ->assertOk()->assertJsonPath('data.current', 5);
     }
 }

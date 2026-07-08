@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   Alert,
   Badge,
@@ -11,6 +12,7 @@ import {
 import { cn } from '@/lib/cn'
 import type { LearnerProfile } from '@/lib/api'
 import { ActiveLearnerGate } from '@/components/learner/ActiveLearnerGate'
+import { AdModal } from '@/components/gamification/AdModal'
 import {
   useArmShield,
   useBadges,
@@ -33,6 +35,7 @@ function Achievements({ learner }: { learner: LearnerProfile }) {
   const league = useLeagueCurrent(learner.id)
   const armShield = useArmShield(learner.id)
   const refill = useRefillHearts(learner.id)
+  const [adOpen, setAdOpen] = useState(false)
 
   return (
     <div className="flex flex-col gap-8">
@@ -96,10 +99,15 @@ function Achievements({ learner }: { learner: LearnerProfile }) {
                 </p>
                 {(hearts.data?.current ?? 0) < MAX_HEARTS && (
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline" loading={refill.isPending} onClick={() => refill.mutate('ad')}>
+                    <Button size="sm" variant="outline" onClick={() => setAdOpen(true)}>
                       Watch ad
                     </Button>
-                    <Button size="sm" variant="billing" loading={refill.isPending} onClick={() => refill.mutate('coins')}>
+                    <Button
+                      size="sm"
+                      variant="billing"
+                      loading={refill.isPending}
+                      onClick={() => refill.mutate({ method: 'coins' })}
+                    >
                       Use coins
                     </Button>
                   </div>
@@ -157,6 +165,14 @@ function Achievements({ learner }: { learner: LearnerProfile }) {
           </div>
         )}
       </section>
+
+      <AdModal
+        open={adOpen}
+        learnerId={learner.id}
+        placement="rewarded_heart"
+        onClose={() => setAdOpen(false)}
+        onRewarded={(impressionId) => refill.mutate({ method: 'ad', adImpressionId: impressionId })}
+      />
     </div>
   )
 }

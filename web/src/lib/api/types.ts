@@ -536,6 +536,19 @@ export interface HeartsInfo {
   refills_at: string | null
 }
 
+export type AdPlacement = 'post_lesson' | 'rewarded_heart'
+
+export interface AdEligibility {
+  eligible: boolean
+  reason?: 'coppa' | 'unavailable'
+  impression_id?: number
+  ad_ref?: string
+}
+
+export interface AdCompleteResult {
+  shown: boolean
+}
+
 export interface EarnedBadge {
   code: string
   name: string

@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
  * @property string $placement
  * @property bool $coppa_passed
  * @property Carbon|null $shown_at
+ * @property Carbon|null $consumed_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read LearnerProfile|null $learnerProfile
@@ -41,6 +42,7 @@ class AdImpression extends Model
     protected $casts = [
         'coppa_passed' => 'boolean',
         'shown_at' => 'datetime',
+        'consumed_at' => 'datetime',
     ];
 
     /**

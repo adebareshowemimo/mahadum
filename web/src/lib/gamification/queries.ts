@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { gamificationApi } from '@/lib/api'
+import { gamificationApi, type AdPlacement } from '@/lib/api'
 
 export const gamificationKeys = {
   streak: (id: number) => ['streak', id] as const,
@@ -60,7 +60,20 @@ export function useArmShield(learnerId: number) {
 export function useRefillHearts(learnerId: number) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (method: 'ad' | 'coins') => gamificationApi.refillHearts(learnerId, method),
+    mutationFn: ({ method, adImpressionId }: { method: 'ad' | 'coins'; adImpressionId?: number }) =>
+      gamificationApi.refillHearts(learnerId, method, adImpressionId),
     onSuccess: () => qc.invalidateQueries({ queryKey: gamificationKeys.hearts(learnerId) }),
+  })
+}
+
+export function useRequestAd(learnerId: number) {
+  return useMutation({
+    mutationFn: (placement: AdPlacement) => gamificationApi.requestAd(learnerId, placement),
+  })
+}
+
+export function useCompleteAd() {
+  return useMutation({
+    mutationFn: (impressionId: number) => gamificationApi.completeAd(impressionId),
   })
 }

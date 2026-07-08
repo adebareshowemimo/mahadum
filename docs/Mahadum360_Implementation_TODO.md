@@ -37,7 +37,7 @@ backend architecture, content model, DB layer, and UI designs already produced.
 | 3 | Learning loop (Learner app) | 2 | 🟡 backend ✅ (xAPI stored locally; LRS push ⬜) · frontend ✅ core (tree/enroll/player/grading/completion) |
 | 4 | Gamification & retention | 3 | 🟡 backend ✅ · frontend ✅ core (streak/hearts/badges/leaderboard) |
 | 5 | Family economy (wallet · chores) | 1, 3 | 🟡 backend ✅ · frontend ✅ core (hub/wallet/chores) |
-| 6 | Monetisation & billing (cards + telco) | 5 | 🟡 backend ✅ (ad network ⬜) · frontend ✅ (paywall/entitlements/subs/telco-opt-in/data-bundles) · ad screen ⬜ |
+| 6 | Monetisation & billing (cards + telco) | 5 | ✅ backend + frontend complete (paywall/entitlements/subs/telco-opt-in/data-bundles/ad-network seam/ad screen); post-lesson ad placement not yet wired into the lesson-completion screen |
 | 7 | Referrals & commissions | 6 | ✅ backend + frontend complete (hub/share/payouts/fraud-alert + school-org hub) |
 | 8 | School operations (admin + teacher) | 2, 4 | ✅ backend + frontend complete (classes/assignments/analytics/compensation — see `Mahadum360_Teacher_Portal_TODO.md`) |
 | 9 | Super Admin | 6, 7, 8 | 🟡 backend ✅ · frontend ✅ (overview/settlements/orgs/promos) |
@@ -209,14 +209,14 @@ Ongoing in parallel: **Design**, **Content production**, **Integrations**, **Com
 - [x] ✅ **Telco SDP VAS** daily billing engine (02:00) + lifecycle (active→grace→soft_downgrade→reactivation) + signed DLR webhook + OTP enrolment + **swappable `TelcoGatewayManager`** (outbound charge + OTP SMS; live calls opt-in per env).
 - [x] ✅ Jobs: `RunDailyTelcoBilling`, `ExpireGracePeriods`, `RetryFailedBilling`.
 - [x] ✅ Data bundle top-up (one-tap carrier billing + consent).
-- [ ] 🟡 Ad-supported free tier: post-lesson + rewarded-heart ads; **COPPA/NDPA ad filters**. *(data model ✅; ad-network integration ⬜)*
+- [x] ✅ **Ad-network integration seam** (2026-07-07) — `AdImpression` (already existed) gains `consumed_at`; new `App\Services\Ads\AdGateway` interface + `NullAdGateway` (always available/verified) + `AdNetworkManager`, mirroring `PaymentGatewayManager`/`TelcoGatewayManager` — the swappable seam is in place, no real vendor (AdMob/Unity/etc.) chosen/wired yet. `POST /ads/request` (learner + placement `post_lesson`|`rewarded_heart` → eligibility, logging every attempt incl. COPPA-blocked ones for audit) + `POST /ads/{impression}/complete` (server-side reward verification). **COPPA/NDPA filter**: under `compliance.minor_age` (same Settings key as the sign-up consent gate) → no ad, unknown DOB treated as a minor (safe default). Closed a real gap in the process: `HeartController::refill` previously accepted `method: ad` on the client's word alone with no verification; it now requires a specific shown-and-unconsumed `AdImpression` for the `rewarded_heart` placement, consumed exactly once. 5 feature tests (`AdNetworkTest`).
 - [x] ✅ Receipts: `SubscriptionActivated` notification on activation, delivered over email + push + SMS/WhatsApp.
 
 **Frontend `[MVP]`**
 - [x] ✅ Paywall / upgrade — `/billing` plan comparison (Free/Premium/Family) + **entitlements gate** (`useEntitlements` from `/me`) + `PaywallGate` soft-gating family-economy pages (`/family`, `/wallet`, `/reviews`) for non-entitled users. Verified live (free→locked, active Family sub→unlocked, cancel→re-locked).
 - [x] ✅ Subscription management + billing history; grace banners — current plan, **subscribe** (card→checkout via gateway webhook; idempotency-keyed) + **cancel**, history list, grace/pending banners. Backend: `id` on plans, `subscription`+`entitlements` on `/me`, new `GET /subscriptions`.
 - [x] ✅ Telco opt-in (**phone OTP**) + cancellation copy — `TelcoOptInModal` on `/billing` ("or pay with airtime" per paid plan): msisdn+operator → OTP (`/telco/otp/request`) → 6-digit verify (`/telco/otp/verify`) → `/telco/subscribe` (daily airtime billing) + "text STOP to 3600" copy + grace/low-balance banner (`/telco/status`). Verified live (OTP→subscribe→entitlements premium).
-- [ ] Ad screen (skip timer, remove-ads upsell, fail fallback). *(ad-network integration deferred)*
+- [x] ✅ **Ad screen** (2026-07-07) — `AdModal` (`web/src/components/gamification/AdModal.tsx`): placement-agnostic (skip timer → verified completion → reward), a COPPA/unavailable **fail fallback** (never dead-ends — Rule 4), and a **remove-ads upsell** link to `/billing`. Wired into the `rewarded_heart` flow on `/achievements` ("Watch ad" now actually shows one instead of instantly granting the refill); `post_lesson` placement has backend support but isn't wired into the lesson-completion screen yet (deliberately deferred — that's a lesson-player UX/frequency-capping decision, out of scope for the ad-network seam itself). Verified live end-to-end: request → play → complete → hearts refilled → impression row shows `shown_at`/`consumed_at` set.
 - [x] ✅ Data-bundle store modal — `DataBundleModal` (`/data-bundles` catalogue → operator + consent + one-tap `/data-bundles/purchase`, idempotency-keyed). Verified live.
 
 **QA**
