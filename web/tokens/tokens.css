@@ -141,7 +141,10 @@
 
   --foreground:    var(--charcoal-900);
   --muted:         var(--charcoal-500);
-  --subtle:        var(--charcoal-400);
+  /* Own literal, not charcoal-400: that scale step is 3.68:1 on --background,
+     below the 4.5:1 WCAG AA text minimum. This value clears 4.5:1 on both
+     --background and --surface while staying visibly lighter than --muted. */
+  --subtle:        #756c61;
   --inverse:       var(--ivory-50);
 
   --border:        var(--ivory-300);
@@ -188,7 +191,10 @@
 
   --foreground:    var(--ivory-100);
   --muted:         var(--navy-300);
-  --subtle:        var(--navy-400);
+  /* Own literal, not navy-400: that scale step is 3.64:1 on --background,
+     below the 4.5:1 WCAG AA text minimum. This value clears 4.5:1 on
+     --background while staying visibly dimmer than --muted. */
+  --subtle:        #7186b8;
   --inverse:       var(--navy-950);
 
   --border:        #26345c;
