@@ -33,6 +33,12 @@ find web/dist -maxdepth 1 -type f ! -name 'index.html' -exec cp {} public/ \;
 echo "==> Running migrations"
 php artisan migrate --force
 
+echo "==> Syncing RBAC roles & permissions"
+# Idempotent (findOrCreate/syncPermissions) — safe on every deploy. Keeps the
+# live permission matrix in sync whenever a commit adds/renames a permission
+# (e.g. the emails.* group), without a manual step.
+php artisan db:seed --class="Database\Seeders\RolesAndPermissionsSeeder" --force
+
 echo "==> Caching config/routes/views"
 php artisan config:cache
 php artisan route:cache

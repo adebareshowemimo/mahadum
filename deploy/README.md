@@ -71,5 +71,7 @@ Assumes Apache2, PHP 8.3, Composer, and Node are already installed.
 cd /var/www/mahadum && ./deploy/deploy.sh
 ```
 
-Pulls `main`, reinstalls dependencies, rebuilds the SPA, migrates, re-caches
-config, and gracefully restarts the queue worker.
+Pulls `main`, reinstalls dependencies, rebuilds the SPA, migrates, **re-syncs
+RBAC roles/permissions** (idempotent — picks up any new permission a commit
+added, e.g. `emails.*`), re-caches config, and gracefully restarts the queue
+worker.
