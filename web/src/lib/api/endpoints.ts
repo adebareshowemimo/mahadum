@@ -6,6 +6,7 @@ import type {
   AppConfig,
   AuthSession,
   AssignmentDecision,
+  AwardBadgeResult,
   Chore,
   ChoreDecision,
   BadgesInfo,
@@ -62,6 +63,7 @@ import type {
   ContactListRow,
   CreateCampaignInput,
   CreateOrgInput,
+  CreateSchoolLeadInput,
   EmailCampaignDetail,
   EmailCampaignRow,
   EmailLogPage,
@@ -84,6 +86,7 @@ import type {
   BillingHealth,
   ClassAssignmentDetail,
   ClassAssignmentRow,
+  ClassCompletionRow,
   CreateClassAssignmentInput,
   CreateClassInput,
   GradeSubmissionInput,
@@ -96,6 +99,7 @@ import type {
   CreateLevelInput,
   CreatePromoInput,
   CreateSubscriptionInput,
+  PromoCode,
   PromoPreview,
   DataBundle,
   MediaAsset,
@@ -114,6 +118,7 @@ import type {
   SchoolClassRow,
   SchoolDashboard,
   SchoolInvoice,
+  SchoolLead,
   SeatInfo,
   Settlements,
   StreakInfo,
@@ -207,6 +212,11 @@ export const configApi = {
 export const pricingApi = {
   async get(): Promise<PricingInfo> {
     const { data } = await api.get('/pricing')
+    return data.data
+  },
+
+  async submitSchoolLead(input: CreateSchoolLeadInput): Promise<{ id: number }> {
+    const { data } = await api.post('/leads/school', input)
     return data.data
   },
 }
@@ -615,6 +625,11 @@ export const adminApi = {
     return data
   },
 
+  async schoolLeads(): Promise<SchoolLead[]> {
+    const { data } = await api.get('/admin/leads/school')
+    return data.data
+  },
+
   async organization(orgId: number): Promise<AdminOrgDetail> {
     const { data } = await api.get(`/admin/organizations/${orgId}`)
     return data.data
@@ -647,6 +662,16 @@ export const adminApi = {
 
   async createPromo(input: CreatePromoInput): Promise<{ id: number; code: string }> {
     const { data } = await api.post('/admin/promo-codes', input)
+    return data.data
+  },
+
+  async listPromos(): Promise<PromoCode[]> {
+    const { data } = await api.get('/admin/promo-codes')
+    return data.data
+  },
+
+  async deletePromo(id: number): Promise<{ id: number; status: string }> {
+    const { data } = await api.delete(`/admin/promo-codes/${id}`)
     return data.data
   },
 
@@ -967,8 +992,8 @@ export const schoolApi = {
     return data.data
   },
 
-  async classes(): Promise<SchoolClassRow[]> {
-    const { data } = await api.get('/classes')
+  async classes(params: { mine?: boolean } = {}): Promise<SchoolClassRow[]> {
+    const { data } = await api.get('/classes', { params })
     return data.data
   },
 
@@ -989,6 +1014,16 @@ export const schoolApi = {
 
   async classAssignments(classId: number): Promise<ClassAssignmentRow[]> {
     const { data } = await api.get(`/classes/${classId}/assignments`)
+    return data.data
+  },
+
+  async classCompletion(classId: number): Promise<ClassCompletionRow[]> {
+    const { data } = await api.get(`/classes/${classId}/assignments/completion`)
+    return data.data
+  },
+
+  async awardBadge(classId: number, learnerId: number, badgeCode: string): Promise<AwardBadgeResult> {
+    const { data } = await api.post(`/classes/${classId}/students/${learnerId}/badges`, { badge_code: badgeCode })
     return data.data
   },
 

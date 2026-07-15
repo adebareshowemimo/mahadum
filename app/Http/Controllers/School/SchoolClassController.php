@@ -10,6 +10,7 @@ use App\Models\QuestionResponse;
 use App\Models\SchoolClass;
 use App\Models\SpeakingSubmission;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 /**
  * Org-scoped via the BelongsToTenant global scope (auto-filters + auto-fills
@@ -18,9 +19,16 @@ use Illuminate\Http\JsonResponse;
  */
 class SchoolClassController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $classes = SchoolClass::with('teacherUser')->withCount('enrollments')->get()
+        $query = SchoolClass::with('teacherUser')->withCount('enrollments');
+
+        // ?mine=1 — only classes this user teaches (used by the Teacher Profile page).
+        if ($request->boolean('mine')) {
+            $query->where('teacher_user_id', $request->user()->id);
+        }
+
+        $classes = $query->get()
             ->map(fn ($c) => [
                 'id' => $c->id,
                 'name' => $c->name,

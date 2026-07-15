@@ -1,9 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { Alert, Avatar, Badge, Button, Card, CardBody, Input, Modal, Skeleton, Textarea } from '@/components/ui'
 import { ApiError, type ClassAssignmentRosterEntry } from '@/lib/api'
+import { useBadges } from '@/lib/gamification/queries'
 import {
+  useAwardBadge,
   useClassAssignmentDetail,
   useClassAssignments,
+  useClassCompletion,
   useClasses,
   useCreateClassAssignment,
   useGradeSubmission,
@@ -55,6 +58,7 @@ export function AssignmentsPage() {
           )}
 
           <AssignmentList classId={activeClassId} onOpen={setOpenAssignmentId} />
+          <CompletionPanel classId={activeClassId} />
         </>
       )}
 
@@ -103,6 +107,37 @@ function AssignmentList({ classId, onOpen }: { classId: number | null; onOpen: (
           </Card>
         </button>
       ))}
+    </div>
+  )
+}
+
+function CompletionPanel({ classId }: { classId: number | null }) {
+  const { data, isLoading, isError } = useClassCompletion(classId)
+
+  if (isLoading) return <Skeleton className="h-24" />
+  if (isError || !data) return null
+  if (data.length === 0) return null
+
+  return (
+    <div>
+      <h2 className="mb-2 font-display text-lg font-bold text-foreground">Completion</h2>
+      <Card>
+        <CardBody className="flex flex-col gap-2.5">
+          {data.map((s) => (
+            <div key={s.learner_id} className="flex items-center gap-3">
+              <Avatar name={s.display_name ?? 'Student'} size="sm" />
+              <span className="flex-1 text-sm font-medium text-foreground">{s.display_name ?? 'Student'}</span>
+              <span className="text-xs text-muted">
+                {s.submitted}/{s.total} assignments
+              </span>
+              <div className="h-1.5 w-24 overflow-hidden rounded-full bg-surface-muted">
+                <div className="h-full rounded-full bg-primary" style={{ width: `${s.rate ?? 0}%` }} />
+              </div>
+              <span className="w-9 text-right text-xs font-semibold text-foreground">{s.rate ?? 0}%</span>
+            </div>
+          ))}
+        </CardBody>
+      </Card>
     </div>
   )
 }
@@ -237,6 +272,7 @@ function RosterRow({
   coinReward: number
 }) {
   const [grading, setGrading] = useState(false)
+  const [awarding, setAwarding] = useState(false)
   const gradeSubmission = useGradeSubmission(classId, assignmentId)
   const [score, setScore] = useState('')
   const [feedback, setFeedback] = useState('')
@@ -272,10 +308,19 @@ function RosterRow({
             Grade
           </Button>
         )}
+        {!awarding && (
+          <Button size="sm" variant="ghost" onClick={() => setAwarding(true)}>
+            🏅 Award badge
+          </Button>
+        )}
       </div>
 
       {entry.status === 'graded' && entry.feedback && (
         <p className="mt-2 text-sm text-muted">“{entry.feedback}”</p>
+      )}
+
+      {awarding && (
+        <AwardBadgePicker classId={classId} learnerId={entry.learner_id} onClose={() => setAwarding(false)} />
       )}
 
       {grading && (
@@ -302,5 +347,48 @@ function RosterRow({
         </div>
       )}
     </li>
+  )
+}
+
+function AwardBadgePicker({ classId, learnerId, onClose }: { classId: number; learnerId: number; onClose: () => void }) {
+  const badges = useBadges(learnerId)
+  const awardBadge = useAwardBadge(classId)
+  const [awardedCode, setAwardedCode] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function award(code: string) {
+    setError(null)
+    try {
+      await awardBadge.mutateAsync({ learnerId, badgeCode: code })
+      setAwardedCode(code)
+    } catch {
+      setError('Could not award this badge. Please try again.')
+    }
+  }
+
+  return (
+    <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
+      {error && <Alert variant="danger">{error}</Alert>}
+      {awardedCode ? (
+        <p className="text-sm font-semibold text-leaf-600">🎉 Badge awarded.</p>
+      ) : badges.isLoading ? (
+        <Skeleton className="h-8" />
+      ) : badges.isError || !badges.data ? (
+        <Alert variant="danger">Couldn’t load badges.</Alert>
+      ) : badges.data.locked.length === 0 ? (
+        <p className="text-sm text-muted">This student has earned every badge already.</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {badges.data.locked.map((b) => (
+            <Button key={b.code} size="sm" variant="outline" loading={awardBadge.isPending} onClick={() => award(b.code)}>
+              {b.name}
+            </Button>
+          ))}
+        </div>
+      )}
+      <Button size="sm" variant="ghost" className="self-start" onClick={onClose}>
+        Close
+      </Button>
+    </div>
   )
 }

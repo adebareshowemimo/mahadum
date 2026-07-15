@@ -17,7 +17,7 @@ interface AdminGroup {
 // resolves to Finance rather than System).
 const GROUPS: AdminGroup[] = [
   { label: 'Overview', to: '/admin', match: ['/admin'], exact: true },
-  { label: 'Orgs', to: '/admin/orgs', match: ['/admin/orgs'] },
+  { label: 'Orgs', to: '/admin/orgs', match: ['/admin/orgs', '/admin/leads'] },
   { label: 'Users', to: '/admin/users', match: ['/admin/users', '/admin/roles'] },
   { label: 'Content', to: '/admin/courses', match: ['/admin/courses', '/admin/languages'] },
   {

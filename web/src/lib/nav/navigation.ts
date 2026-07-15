@@ -51,6 +51,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Classes', to: '/classes', icon: 'cap', roles: ['teacher'] },
       { label: 'Assignments', to: '/assignments', icon: 'clipboard', roles: ['teacher'] },
       { label: 'Earnings', to: '/earnings', icon: 'wallet', roles: ['teacher'] },
+      { label: 'Teacher profile', to: '/teacher/profile', icon: 'users', roles: ['teacher'] },
     ],
   },
   {
@@ -78,6 +79,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Overview', to: '/admin', icon: 'shield', roles: ['super_admin'], end: true },
       { label: 'Organizations', to: '/admin/orgs', icon: 'building', roles: ['super_admin'] },
+      { label: 'School leads', to: '/admin/leads', icon: 'building', roles: ['super_admin'] },
       { label: 'Users', to: '/admin/users', icon: 'users', roles: ['super_admin'] },
       { label: 'Roles', to: '/admin/roles', icon: 'shield', roles: ['super_admin'] },
       { label: 'Courses', to: '/admin/courses', icon: 'layers', roles: ['super_admin'] },

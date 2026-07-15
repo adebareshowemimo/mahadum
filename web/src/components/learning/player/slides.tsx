@@ -3,6 +3,7 @@ import { Alert, Button3D, Icon } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { ApiError } from '@/lib/api'
 import type { Answer, AssignmentSlide, ExerciseSlide, GameSlide, GenericSlide, PlayerService, QType, QuizSlide, Slide, SpeakingSlide, Verdict, VideoSlide } from './types'
+import { youtubeEmbedUrl } from './types'
 
 export interface SlideProps {
   slide: Slide
@@ -464,9 +465,15 @@ function fmtClock(seconds: number): string {
 // A continue button is always shown. When the video is set to "must watch", the
 // button stays disabled until the clip finishes; otherwise the learner may skip.
 // Every watch is tracked (xAPI Video Profile) — cumulative watch time, play
-// count, playhead position, duration.
+// count, playhead position, duration. YouTube videos (sourceType='youtube')
+// embed via iframe instead — there is no watch-time tracking or "must watch"
+// gate for those, since a cross-origin iframe fires no playback events without
+// integrating the separate YouTube IFrame Player API. Continue is always
+// available for them.
 
 function VideoSlideView({ slide, service, onAdvance }: SlideProps & { slide: VideoSlide }) {
+  const isYoutube = slide.sourceType === 'youtube'
+  const embedUrl = useMemo(() => youtubeEmbedUrl(slide.externalUrl), [slide.externalUrl])
   const videoRef = useRef<HTMLVideoElement>(null)
   const [failed, setFailed] = useState(false)
   // Already-completed videos start unlocked (no forced re-watch).
@@ -587,15 +594,24 @@ function VideoSlideView({ slide, service, onAdvance }: SlideProps & { slide: Vid
     }
   }
 
-  const hasVideo = !!slide.src && !failed
-  // The gate only applies to a real, playable clip the learner could finish.
-  const locked = slide.requireWatch && hasVideo && !watchedToEnd
+  const hasVideo = (isYoutube ? !!embedUrl : !!slide.src) && !failed
+  // The gate only applies to a real, playable clip the learner could finish —
+  // YouTube embeds fire no trackable events, so they're never gated.
+  const locked = !isYoutube && slide.requireWatch && hasVideo && !watchedToEnd
 
   return (
     <>
       <SlideBody chip={{ icon: '▶', label: 'Watch' }}>
         {slide.title && <p className="font-display text-2xl font-bold text-foreground">{slide.title}</p>}
-        {hasVideo ? (
+        {hasVideo && isYoutube ? (
+          <iframe
+            src={embedUrl ?? undefined}
+            title={slide.title ?? 'Video'}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="aspect-video w-full rounded-2xl bg-charcoal-900 ring-1 ring-gold-500/20"
+          />
+        ) : hasVideo ? (
           <video
             ref={videoRef}
             src={slide.src ?? undefined}

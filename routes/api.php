@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\PlanController as AdminPlanController;
 use App\Http\Controllers\Admin\PromoCodeController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\SchoolLeadController as AdminSchoolLeadController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SettlementController;
 use App\Http\Controllers\Admin\SupportController;
@@ -80,12 +81,14 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Referral\PayoutController;
 use App\Http\Controllers\Referral\ReferralController;
 use App\Http\Controllers\School\ClassAssignmentController;
+use App\Http\Controllers\School\ClassBadgeController;
 use App\Http\Controllers\School\RosterController;
 use App\Http\Controllers\School\SchoolClassController;
 use App\Http\Controllers\School\SchoolDashboardController;
 use App\Http\Controllers\School\SchoolReferralController;
 use App\Http\Controllers\School\SeatController;
 use App\Http\Controllers\School\TeacherCompensationController;
+use App\Http\Controllers\SchoolLeadController;
 use App\Http\Controllers\Support\TicketController;
 use App\Http\Controllers\Webhooks\PaymentWebhookController;
 use App\Http\Controllers\Webhooks\SendgridWebhookController;
@@ -107,6 +110,7 @@ Route::prefix('v1')->group(function () {
         Route::post('auth/google', [AuthController::class, 'google']);
         Route::post('auth/password/forgot', [PasswordController::class, 'forgot']);
         Route::post('auth/password/reset', [PasswordController::class, 'reset']);
+        Route::post('leads/school', [SchoolLeadController::class, 'store']);
     });
 
     // Email verification link (clicked from the inbox; proven by the signature
@@ -292,12 +296,15 @@ Route::prefix('v1')->group(function () {
 
         /* ---- Class assignments (teacher → own class; schools.assignments.{create,review}) ---- */
         Route::get('classes/{class}/assignments', [ClassAssignmentController::class, 'index'])->can('view', 'class');
+        Route::get('classes/{class}/assignments/completion', [ClassAssignmentController::class, 'completion'])->can('view', 'class');
         Route::post('classes/{class}/assignments', [ClassAssignmentController::class, 'store'])
             ->middleware('can:schools.assignments.create');
         Route::get('classes/{class}/assignments/{assignment}', [ClassAssignmentController::class, 'show'])->can('view', 'class');
         Route::post('class-assignments/{assignment}/submissions', [ClassAssignmentController::class, 'submit']);
         Route::post('classes/{class}/assignments/{assignment}/submissions/{submission}/grade', [ClassAssignmentController::class, 'grade'])
             ->middleware('can:schools.assignments.review');
+        Route::post('classes/{class}/students/{learner}/badges', [ClassBadgeController::class, 'award'])
+            ->middleware('can:schools.badges.award');
 
         /* ---- Language & Culture competition ---- */
         // Browsing + voting are open to any signed-in user; entering is permissioned.
@@ -321,12 +328,15 @@ Route::prefix('v1')->group(function () {
             Route::get('payouts', [PayoutController::class, 'adminIndex'])->middleware('can:payouts.view');
             Route::post('payouts/{payout}/approve', [PayoutController::class, 'approve'])->can('approve', 'payout');
             Route::post('payouts/{payout}/reject', [PayoutController::class, 'reject'])->middleware('can:payouts.approve');
+            Route::get('promo-codes', [PromoCodeController::class, 'index'])->middleware('can:promocodes.manage');
             Route::post('promo-codes', [PromoCodeController::class, 'store'])->middleware('can:promocodes.manage');
+            Route::delete('promo-codes/{promoCode}', [PromoCodeController::class, 'destroy'])->middleware('can:promocodes.manage');
             Route::get('organizations', [OrganizationController::class, 'index'])->middleware('can:organizations.view');
             Route::get('organizations/{organization}', [OrganizationController::class, 'show'])->middleware('can:organizations.view');
             Route::post('organizations', [OrganizationController::class, 'store'])->middleware('can:organizations.manage');
             Route::post('organizations/{organization}/invite-admin', [OrganizationController::class, 'inviteAdmin'])
                 ->middleware('can:organizations.manage');
+            Route::get('leads/school', [AdminSchoolLeadController::class, 'index'])->middleware('can:organizations.leads.view');
             Route::match(['put', 'patch'], 'organizations/{organization}', [OrganizationController::class, 'update'])
                 ->middleware('can:organizations.manage');
             Route::post('organizations/{organization}/activate', [OrganizationController::class, 'activate'])

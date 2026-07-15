@@ -38,6 +38,8 @@ class LessonComponentResource extends JsonResource
                 'duration_seconds' => $this->video->duration_seconds,
                 'default_quality' => $this->video->default_quality,
                 'status' => $this->video->status,
+                'source_type' => $this->video->source_type,
+                'external_url' => $this->video->external_url,
                 // Playable URL for the CMS preview (null until a source is attached).
                 'src' => $this->video->relationLoaded('sourceAsset') && $this->video->sourceAsset
                     ? url('storage/'.$this->video->sourceAsset->url)

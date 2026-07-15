@@ -22,6 +22,10 @@ export function DashboardPage() {
           <CardBody className="flex flex-col gap-2 text-sm">
             <Row label="Email" value={user?.user.email} />
             <Row label="Verified" value={user?.user.email_verified ? 'Yes' : 'No'} />
+            <Row
+              label="Institution"
+              value={user?.organizations.length ? user.organizations.map((o) => o.name).filter(Boolean).join(', ') : undefined}
+            />
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-muted">Roles:</span>
               {user?.user.roles.map((r) => (

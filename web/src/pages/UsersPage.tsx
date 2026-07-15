@@ -19,13 +19,20 @@ export function UsersPage() {
   const [search, setSearch] = useState('')
   const [role, setRole] = useState('')
   const [status, setStatus] = useState('')
+  const [type, setType] = useState('')
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<AdminUserRow | null>(null)
 
   const q = useDebounced(search)
   const params: AdminUsersQuery = useMemo(
-    () => ({ q: q || undefined, role: role || undefined, status: status || undefined, page }),
-    [q, role, status, page],
+    () => ({
+      q: q || undefined,
+      role: role || undefined,
+      status: status || undefined,
+      type: (type || undefined) as AdminUsersQuery['type'],
+      page,
+    }),
+    [q, role, status, type, page],
   )
   const { data, isLoading, isError, isFetching } = useAdminUsers(params)
 
@@ -128,6 +135,17 @@ export function UsersPage() {
                 { label: 'Suspended', value: 'suspended' },
               ]}
               allLabel="All statuses"
+            />
+            <FilterSelect
+              label="Type"
+              value={type}
+              onChange={onFilter(setType)}
+              options={[
+                { label: 'Single', value: 'single' },
+                { label: 'Family', value: 'family' },
+                { label: 'School', value: 'school' },
+              ]}
+              allLabel="All types"
             />
           </AdminToolbar>
         }

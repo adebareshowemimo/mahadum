@@ -17,7 +17,7 @@ describe('playToSlides — video gate & resume', () => {
         require_watch: true,
         resume_position: 42,
         completed: false,
-        video: { duration: 120, quality: '720p', src: 'x.mp4', hls: null, poster: null, captions: [] },
+        video: { duration: 120, quality: '720p', source_type: 'upload', src: 'x.mp4', external_url: null, hls: null, poster: null, captions: [] },
       },
     ],
   }

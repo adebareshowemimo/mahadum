@@ -1,10 +1,14 @@
 import { useState, type FormEvent } from 'react'
-import { Alert, Button, Card, CardBody, CardHeader, CardTitle, Input } from '@/components/ui'
-import { ApiError, type CreatePromoInput } from '@/lib/api'
-import { useCreatePromo } from '@/lib/admin/queries'
+import { Alert, Badge, Button, Card, CardBody, CardHeader, CardTitle, Input } from '@/components/ui'
+import { DataTable, type Column } from '@/components/admin'
+import { ApiError, type CreatePromoInput, type PromoCode } from '@/lib/api'
+import { useCreatePromo, useDeletePromo, usePromos } from '@/lib/admin/queries'
 
 export function PromoCodesPage() {
   const createPromo = useCreatePromo()
+  const promos = usePromos()
+  const deletePromo = useDeletePromo()
+  const [deletingId, setDeletingId] = useState<number | null>(null)
   const [values, setValues] = useState({
     code: '',
     discount_type: 'percent' as 'percent' | 'fixed',
@@ -48,13 +52,50 @@ export function PromoCodesPage() {
     }
   }
 
+  async function onDelete(promo: PromoCode) {
+    if (!window.confirm(`Delete promo code ${promo.code}? It will stop working immediately.`)) return
+    setDeletingId(promo.id)
+    try {
+      await deletePromo.mutateAsync(promo.id)
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const columns: Column<PromoCode>[] = [
+    { key: 'code', header: 'Code', render: (p) => <span className="font-semibold text-foreground">{p.code}</span> },
+    {
+      key: 'discount',
+      header: 'Discount',
+      render: (p) => (p.discount_type === 'percent' ? `${p.value}%` : `₦${p.value}`),
+    },
+    { key: 'tier', header: 'Tier', render: (p) => p.applicable_tier ?? 'Any', hideOnMobile: true },
+    { key: 'redemptions', header: 'Redeemed', render: (p) => `${p.redemptions_count}${p.max_redemptions ? ` / ${p.max_redemptions}` : ''}`, hideOnMobile: true },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (p) => <Badge variant={p.status === 'active' ? 'success' : 'neutral'}>{p.status}</Badge>,
+    },
+    {
+      key: 'actions',
+      header: '',
+      className: 'text-right',
+      render: (p) =>
+        p.status === 'active' ? (
+          <Button size="sm" variant="ghost" loading={deletingId === p.id} onClick={() => onDelete(p)}>
+            Delete
+          </Button>
+        ) : null,
+    },
+  ]
+
   return (
-    <div className="mx-auto flex max-w-lg flex-col gap-6">
+    <div className="mx-auto flex max-w-3xl flex-col gap-8">
       <h1 className="font-display text-2xl font-bold text-foreground">Promo codes</h1>
 
       {created && <Alert variant="success" title="Promo code created">Code <strong>{created}</strong> is now active.</Alert>}
 
-      <Card>
+      <Card className="mx-auto w-full max-w-lg">
         <CardHeader>
           <CardTitle>Create a code</CardTitle>
         </CardHeader>
@@ -121,6 +162,17 @@ export function PromoCodesPage() {
           </form>
         </CardBody>
       </Card>
+
+      <div>
+        <h2 className="mb-3 font-display text-lg font-bold text-foreground">All codes</h2>
+        <DataTable
+          columns={columns}
+          rows={promos.data ?? []}
+          getRowId={(p) => p.id}
+          isLoading={promos.isLoading}
+          empty="No promo codes yet."
+        />
+      </div>
     </div>
   )
 }

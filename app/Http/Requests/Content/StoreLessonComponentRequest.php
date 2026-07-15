@@ -32,6 +32,10 @@ class StoreLessonComponentRequest extends FormRequest
             'video.status' => ['nullable', 'in:uploading,processing,ready,failed'],
             'video.language_id' => ['nullable', 'integer', 'exists:languages,id'],
             'video.source_asset_id' => ['nullable', 'integer', 'exists:media_assets,id'],
+            'video.external_url' => [
+                'nullable', 'string', 'max:500',
+                'regex:/^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//i',
+            ],
 
             // type=quiz
             'quiz' => ['required_if:type,quiz', 'array'],

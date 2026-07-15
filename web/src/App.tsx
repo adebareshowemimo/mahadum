@@ -6,6 +6,7 @@ import { PaywallGate } from '@/components/billing/PaywallGate'
 import { AssignmentsPage } from '@/pages/AssignmentsPage'
 import { BillingPage } from '@/pages/BillingPage'
 import { ClassesPage } from '@/pages/ClassesPage'
+import { TeacherProfilePage } from '@/pages/TeacherProfilePage'
 import { ComponentsPage } from '@/pages/ComponentsPage'
 import { CoursesPage } from '@/pages/content/CoursesPage'
 import { CourseBuilderPage } from '@/pages/content/CourseBuilderPage'
@@ -47,6 +48,7 @@ import { OrganizationCreatePage } from '@/pages/OrganizationCreatePage'
 import { OrganizationDetailPage } from '@/pages/OrganizationDetailPage'
 import { PayoutsPage } from '@/pages/PayoutsPage'
 import { PromoCodesPage } from '@/pages/PromoCodesPage'
+import { SchoolLeadsPage } from '@/pages/SchoolLeadsPage'
 import { RolesMatrixPage } from '@/pages/RolesMatrixPage'
 import { SettlementsPage } from '@/pages/SettlementsPage'
 import { UsersPage } from '@/pages/UsersPage'
@@ -112,6 +114,7 @@ const REAL_PAGES = new Set([
   '/admin/plans',
   '/admin/orgs',
   '/admin/orgs/new',
+  '/admin/leads',
   '/admin/users',
   '/admin/roles',
   '/admin/courses',
@@ -120,6 +123,7 @@ const REAL_PAGES = new Set([
   '/classes',
   '/assignments',
   '/earnings',
+  '/teacher/profile',
   '/courses',
   '/media',
 ])
@@ -180,6 +184,7 @@ export function App() {
             <Route path="/classes" element={<ClassesPage />} />
             <Route path="/assignments" element={<AssignmentsPage />} />
             <Route path="/earnings" element={<EarningsPage />} />
+            <Route path="/teacher/profile" element={<TeacherProfilePage />} />
           </Route>
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/:courseId" element={<CourseBuilderPage />} />
@@ -226,6 +231,7 @@ export function App() {
             <Route path="/admin/orgs" element={<OrganizationsPage />} />
             <Route path="/admin/orgs/new" element={<OrganizationCreatePage />} />
             <Route path="/admin/orgs/:orgId" element={<OrganizationDetailPage />} />
+            <Route path="/admin/leads" element={<SchoolLeadsPage />} />
             <Route path="/admin/users" element={<UsersPage />} />
             <Route path="/admin/roles" element={<RolesMatrixPage />} />
             <Route path="/admin/courses" element={<AdminCoursesPage />} />

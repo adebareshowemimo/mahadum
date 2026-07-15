@@ -333,7 +333,7 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
   const { submit, error, pending, isEdit } = useComponentForm(lessonId, editing, onClose)
   const library = useMediaAssets({ type: 'video', per_page: 100 })
   const d = (editing?.detail ?? {}) as Record<string, unknown>
-  const [source, setSource] = useState<'upload' | 'library'>('upload')
+  const [source, setSource] = useState<'upload' | 'library' | 'youtube'>(d.source_type === 'youtube' ? 'youtube' : 'upload')
   const [title, setTitle] = useState((d.title as string) ?? '')
   const [presenter, setPresenter] = useState((d.presenter_name as string) ?? '')
   const [quality, setQuality] = useState<'240p' | '360p' | '720p'>(((d.default_quality as string) ?? '360p') as '240p' | '360p' | '720p')
@@ -343,10 +343,12 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
   )
   const [file, setFile] = useState<File | null>(null)
   const [pickedAssetId, setPickedAssetId] = useState<number | null>(null)
+  const [youtubeUrl, setYoutubeUrl] = useState((d.external_url as string) ?? '')
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
 
   const videoAssets = (library.data ?? []).filter((a) => a.type === 'video')
+  const youtubeUrlValid = /^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(youtubeUrl.trim())
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -354,7 +356,7 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
     let sourceAssetId: number | undefined
     if (source === 'library') {
       sourceAssetId = pickedAssetId ?? undefined
-    } else if (file) {
+    } else if (source === 'upload' && file) {
       setUploading(true)
       try {
         const asset = await contentApi.uploadMedia(file)
@@ -370,9 +372,16 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
       type: 'video',
       xp_value: 5,
       settings: { require_watch: requireWatch },
-      video: { title, presenter_name: presenter || undefined, default_quality: quality, status: 'ready', source_asset_id: sourceAssetId },
+      video: {
+        title,
+        presenter_name: presenter || undefined,
+        default_quality: quality,
+        status: 'ready',
+        source_asset_id: sourceAssetId,
+        external_url: source === 'youtube' ? youtubeUrl.trim() : undefined,
+      },
     })
-    if (ok) { setTitle(''); setPresenter(''); setFile(null); setPickedAssetId(null); setSource('upload') }
+    if (ok) { setTitle(''); setPresenter(''); setFile(null); setPickedAssetId(null); setYoutubeUrl(''); setSource('upload') }
   }
 
   return (
@@ -381,6 +390,7 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
       onClose={onClose}
       title={isEdit ? 'Edit video' : 'Add video'}
       description={isEdit ? 'Update the details, or attach a new file to replace the current one.' : 'Upload a file or reuse one from your media library.'}
+      className="max-w-2xl"
     >
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         {error && <Alert variant="danger">{error}</Alert>}
@@ -392,14 +402,14 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
         )}
 
         <div className="flex rounded-xl bg-surface-muted p-1 text-sm font-semibold">
-          {(['upload', 'library'] as const).map((opt) => (
+          {(['upload', 'library', 'youtube'] as const).map((opt) => (
             <button
               key={opt}
               type="button"
               onClick={() => setSource(opt)}
               className={cn('flex-1 rounded-lg py-1.5 capitalize transition-colors', source === opt ? 'bg-surface text-foreground shadow-sm' : 'text-muted')}
             >
-              {opt === 'upload' ? 'Upload new' : 'From library'}
+              {opt === 'upload' ? 'Upload new' : opt === 'library' ? 'From library' : 'YouTube link'}
             </button>
           ))}
         </div>
@@ -420,6 +430,14 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
               }}
             />
           </label>
+        ) : source === 'youtube' ? (
+          <Input
+            label="YouTube URL"
+            value={youtubeUrl}
+            onChange={(e) => setYoutubeUrl(e.target.value)}
+            placeholder="https://www.youtube.com/watch?v=…"
+            error={youtubeUrl && !youtubeUrlValid ? 'Enter a valid youtube.com or youtu.be URL.' : undefined}
+          />
         ) : library.isLoading ? (
           <Skeleton className="h-24" />
         ) : videoAssets.length === 0 ? (
@@ -462,10 +480,18 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
             <option value="required">Must watch to the end (Continue stays locked)</option>
             <option value="optional">Optional — learners can skip</option>
           </select>
+          {source === 'youtube' && (
+            <span className="text-xs text-subtle">YouTube videos can’t be watch-gated — Continue is always available.</span>
+          )}
         </label>
         <div className="flex gap-2">
           <Button type="button" variant="secondary" fullWidth onClick={onClose}>Cancel</Button>
-          <Button type="submit" fullWidth loading={uploading || pending} disabled={source === 'library' && pickedAssetId == null}>
+          <Button
+            type="submit"
+            fullWidth
+            loading={uploading || pending}
+            disabled={(source === 'library' && pickedAssetId == null) || (source === 'youtube' && !youtubeUrlValid)}
+          >
             {uploading ? 'Uploading…' : isEdit ? 'Save changes' : 'Add video'}
           </Button>
         </div>

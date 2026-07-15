@@ -54,6 +54,21 @@ function Dashboard({ orgId }: { orgId: number }) {
         />
       </div>
 
+      <Card>
+        <CardBody className="flex flex-wrap items-center gap-x-8 gap-y-2">
+          <div>
+            <p className="text-xs text-muted">Subscription</p>
+            <p className="font-semibold capitalize text-foreground">{data.subscription.status ?? 'None'}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted">Last payment</p>
+            <p className="font-semibold text-foreground">
+              {data.subscription.last_payment_at ? new Date(data.subscription.last_payment_at).toLocaleDateString() : '—'}
+            </p>
+          </div>
+        </CardBody>
+      </Card>
+
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-display text-lg font-bold text-foreground">Classes</h2>

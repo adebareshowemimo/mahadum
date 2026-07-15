@@ -1,8 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
+import { useState, type FormEvent } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link, Navigate } from 'react-router-dom'
-import { Alert, LinkButton, Skeleton } from '@/components/ui'
+import { Alert, Button, Input, LinkButton, Modal, Skeleton } from '@/components/ui'
 import { Logo } from '@/components/Logo'
-import { pricingApi, type PricingBand, type PricingConsumerPlan, type PricingInfo } from '@/lib/api'
+import { ApiError, pricingApi, type CreateSchoolLeadInput, type PricingBand, type PricingConsumerPlan, type PricingInfo } from '@/lib/api'
 import { TAGLINE, WORDMARK } from '@/lib/brand'
 import { useAuth } from '@/lib/auth/AuthProvider'
 
@@ -18,6 +19,7 @@ function pick(plans: PricingConsumerPlan[], audience: string, interval: string) 
 export function PricingPage() {
   const { status } = useAuth()
   const { data, isLoading, isError } = useQuery({ queryKey: ['pricing'], queryFn: pricingApi.get })
+  const [quoteOpen, setQuoteOpen] = useState(false)
 
   if (status === 'authenticated') return <Navigate to="/billing" replace />
 
@@ -50,7 +52,7 @@ export function PricingPage() {
       <div className="mx-auto max-w-6xl px-4 pb-24 sm:px-6 lg:px-8">
         {isLoading && <Skeleton className="h-96" />}
         {isError && <Alert variant="danger">Couldn’t load pricing. Please try again.</Alert>}
-        {data && <PricingBody data={data} />}
+        {data && <PricingBody data={data} onOpenQuote={() => setQuoteOpen(true)} />}
       </div>
 
       <footer className="border-t border-border">
@@ -62,11 +64,13 @@ export function PricingPage() {
           </p>
         </div>
       </footer>
+
+      <GetQuoteModal open={quoteOpen} onClose={() => setQuoteOpen(false)} />
     </div>
   )
 }
 
-function PricingBody({ data }: { data: PricingInfo }) {
+function PricingBody({ data, onOpenQuote }: { data: PricingInfo; onOpenQuote: () => void }) {
   const individualMonthly = pick(data.consumer, 'individual', 'month')
   const individualAnnual = pick(data.consumer, 'individual', 'year')
   const familyMonthly = pick(data.consumer, 'family', 'month')
@@ -74,11 +78,11 @@ function PricingBody({ data }: { data: PricingInfo }) {
 
   return (
     <div className="flex flex-col gap-16">
-      <div className="grid gap-5 lg:grid-cols-3">
+      <div className="grid gap-5 lg:grid-cols-4">
         <PlanCard
           name={data.free.name}
-          price="Free"
-          cadence="forever"
+          price="FREE"
+          cadence="— ₦0/month"
           blurb={data.free.blurb}
           features={['Full access to every lesson', 'Speaking practice & quizzes', 'Ad-supported']}
         />
@@ -103,6 +107,15 @@ function PricingBody({ data }: { data: PricingInfo }) {
             'Family dashboard, chores & coins',
           ]}
         />
+        <PlanCard
+          name="School"
+          price="Custom"
+          cadence="per school"
+          blurb="For classrooms and whole schools."
+          features={['Ad-free learning', 'Offline lesson dashboards', 'Class and school dashboards']}
+          ctaLabel="Get Quote"
+          onCtaClick={onOpenQuote}
+        />
       </div>
 
       <SchoolPricing bands={data.school.bands} termMonths={data.school.term_months} />
@@ -114,9 +127,9 @@ function PricingBody({ data }: { data: PricingInfo }) {
           <LinkButton to="/register" size="lg">
             Get started free
           </LinkButton>
-          <LinkButton to="/register" size="lg" variant="outline">
+          <Button size="lg" variant="outline" onClick={onOpenQuote}>
             Talk to us about schools
-          </LinkButton>
+          </Button>
         </div>
       </section>
     </div>
@@ -132,6 +145,8 @@ function PlanCard({
   blurb,
   features,
   highlight = false,
+  ctaLabel,
+  onCtaClick,
 }: {
   name: string
   price: string
@@ -141,6 +156,8 @@ function PlanCard({
   blurb?: string
   features: string[]
   highlight?: boolean
+  ctaLabel?: string
+  onCtaClick?: () => void
 }) {
   return (
     <div
@@ -171,9 +188,15 @@ function PlanCard({
           </li>
         ))}
       </ul>
-      <LinkButton to="/register" fullWidth variant={highlight ? 'premium' : 'outline'} className="mt-auto">
-        {name === 'Free' ? 'Start free' : `Choose ${name}`}
-      </LinkButton>
+      {onCtaClick ? (
+        <Button fullWidth variant={highlight ? 'premium' : 'outline'} className="mt-auto" onClick={onCtaClick}>
+          {ctaLabel}
+        </Button>
+      ) : (
+        <LinkButton to="/register" fullWidth variant={highlight ? 'premium' : 'outline'} className="mt-auto">
+          {name === 'Free' ? 'Start free' : `Choose ${name}`}
+        </LinkButton>
+      )}
     </div>
   )
 }
@@ -213,5 +236,129 @@ function SchoolPricing({ bands, termMonths }: { bands: PricingBand[]; termMonths
         </table>
       </div>
     </section>
+  )
+}
+
+const SCHOOL_SIZES = ['1–99 students', '100–249 students', '250–500 students', 'Above 500 students']
+
+function GetQuoteModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [values, setValues] = useState({ school_name: '', contact_name: '', email: '', phone: '', school_size: '', city: '' })
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [formError, setFormError] = useState<string | null>(null)
+  const [submitted, setSubmitted] = useState(false)
+
+  const submit = useMutation({
+    mutationFn: (input: CreateSchoolLeadInput) => pricingApi.submitSchoolLead(input),
+  })
+
+  function update<K extends keyof typeof values>(key: K, val: (typeof values)[K]) {
+    setValues((v) => ({ ...v, [key]: val }))
+  }
+
+  function handleClose() {
+    onClose()
+    // Reset after the close animation so the form doesn't visibly reset first.
+    setTimeout(() => {
+      setSubmitted(false)
+      setValues({ school_name: '', contact_name: '', email: '', phone: '', school_size: '', city: '' })
+      setFieldErrors({})
+      setFormError(null)
+    }, 200)
+  }
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault()
+    setFieldErrors({})
+    setFormError(null)
+    try {
+      await submit.mutateAsync({
+        school_name: values.school_name.trim(),
+        contact_name: values.contact_name.trim(),
+        email: values.email.trim(),
+        phone: values.phone.trim() || undefined,
+        school_size: values.school_size || undefined,
+        city: values.city.trim() || undefined,
+      })
+      setSubmitted(true)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setFieldErrors(err.fieldErrors)
+        if (!Object.keys(err.fieldErrors).length) setFormError(err.message)
+      } else {
+        setFormError('Something went wrong. Please try again.')
+      }
+    }
+  }
+
+  return (
+    <Modal open={open} onClose={handleClose} title="Tell us about your school" description="We'll follow up with a quote tailored to your school size.">
+      {submitted ? (
+        <div className="flex flex-col items-center gap-3 py-6 text-center">
+          <span className="text-4xl" aria-hidden="true">🎉</span>
+          <p className="font-display text-lg font-bold text-foreground">Thanks — we've got it!</p>
+          <p className="text-sm text-muted">Our team will reach out with a quote shortly.</p>
+          <Button variant="outline" onClick={handleClose}>Close</Button>
+        </div>
+      ) : (
+        <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+          {formError && <Alert variant="danger">{formError}</Alert>}
+          <Input
+            label="School name"
+            value={values.school_name}
+            onChange={(e) => update('school_name', e.target.value)}
+            error={fieldErrors.school_name}
+            autoFocus
+            required
+          />
+          <Input
+            label="Your name"
+            value={values.contact_name}
+            onChange={(e) => update('contact_name', e.target.value)}
+            error={fieldErrors.contact_name}
+            required
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Email"
+              type="email"
+              value={values.email}
+              onChange={(e) => update('email', e.target.value)}
+              error={fieldErrors.email}
+              required
+            />
+            <Input
+              label="Phone (optional)"
+              value={values.phone}
+              onChange={(e) => update('phone', e.target.value)}
+              error={fieldErrors.phone}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-semibold text-foreground">School size (optional)</span>
+              <select
+                value={values.school_size}
+                onChange={(e) => update('school_size', e.target.value)}
+                className="h-11 rounded-xl border border-border-strong bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">Choose…</option>
+                {SCHOOL_SIZES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </label>
+            <Input
+              label="City (optional)"
+              value={values.city}
+              onChange={(e) => update('city', e.target.value)}
+              error={fieldErrors.city}
+            />
+          </div>
+          <Button type="submit" fullWidth loading={submit.isPending}>
+            Request a quote
+          </Button>
+        </form>
+      )}
+    </Modal>
   )
 }

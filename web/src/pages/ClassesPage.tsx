@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Alert, Avatar, Badge, Card, CardBody, Modal, Skeleton } from '@/components/ui'
 import { schoolApi } from '@/lib/api'
-import { useClasses, schoolKeys } from '@/lib/school/queries'
+import { useClasses } from '@/lib/school/queries'
 
 export function ClassesPage() {
   const { data, isLoading, isError } = useClasses()
@@ -50,7 +50,7 @@ export function ClassesPage() {
 function ClassDetailModal({ classId, onClose }: { classId: number | null; onClose: () => void }) {
   const [tab, setTab] = useState<'students' | 'analytics'>('students')
   const detail = useQuery({
-    queryKey: [...schoolKeys.classes, 'detail', classId],
+    queryKey: ['school-classes', 'detail', classId],
     queryFn: () => schoolApi.classDetail(classId as number),
     enabled: classId != null,
   })
@@ -99,7 +99,7 @@ function ClassDetailModal({ classId, onClose }: { classId: number | null; onClos
 
 function ClassAnalyticsTab({ classId }: { classId: number | null }) {
   const analytics = useQuery({
-    queryKey: [...schoolKeys.classes, 'analytics', classId],
+    queryKey: ['school-classes', 'analytics', classId],
     queryFn: () => schoolApi.classAnalytics(classId as number),
     enabled: classId != null,
   })

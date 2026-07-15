@@ -96,11 +96,13 @@ class LessonPlayController extends Controller
             'video' => $component->video ? [
                 'duration' => $component->video->duration_seconds,
                 'quality' => $component->video->default_quality,
+                'source_type' => $component->video->source_type,
                 // Direct file URL from the local-disk upload (MP4/WebM). A managed
-                // vendor would populate `hls` instead.
+                // vendor would populate `hls` instead. Null for source_type=youtube.
                 'src' => $component->video->sourceAsset
                     ? url('storage/'.$component->video->sourceAsset->url)
                     : null,
+                'external_url' => $component->video->external_url,
                 'hls' => null,
                 'poster' => null,
                 'captions' => [],

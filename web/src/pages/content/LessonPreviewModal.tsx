@@ -1,5 +1,6 @@
 import { Modal } from '@/components/ui'
 import { cn } from '@/lib/cn'
+import { youtubeEmbedUrl } from '@/components/learning/player'
 import type { AuthorComponent, AuthorLesson } from '@/lib/api'
 
 export const TYPE_ICON: Record<string, string> = { video: '🎬', quiz: '❓', speaking: '🎙️', exercise: '🎯', game: '🎮', assignment: '📝' }
@@ -40,6 +41,20 @@ export function StepPreview({ component }: { component: AuthorComponent }) {
 
   if (component.type === 'video') {
     const src = (d.src as string | null) ?? null
+    const embedUrl = d.source_type === 'youtube' ? youtubeEmbedUrl((d.external_url as string | null) ?? null) : null
+
+    if (embedUrl) {
+      return (
+        <iframe
+          src={embedUrl}
+          title="Video preview"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          className="aspect-video w-full rounded-xl bg-charcoal-900"
+        />
+      )
+    }
+
     return src ? (
       <video src={src} controls className="aspect-video w-full rounded-xl bg-charcoal-900" />
     ) : (

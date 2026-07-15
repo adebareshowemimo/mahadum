@@ -9,6 +9,7 @@ import {
   type RequestTeacherCompensationPayoutInput,
 } from '@/lib/api'
 import { useAuth } from '@/lib/auth/AuthProvider'
+import { gamificationKeys } from '@/lib/gamification/queries'
 
 /** The organization a school-admin operates on: active org, else their first membership. */
 export function useSchoolOrgId(): number | null {
@@ -18,10 +19,12 @@ export function useSchoolOrgId(): number | null {
 
 export const schoolKeys = {
   dashboard: (org: number) => ['school-dashboard', org] as const,
-  classes: ['school-classes'] as const,
+  classes: (org: number | null) => ['school-classes', org] as const,
+  myClasses: (org: number | null) => ['school-classes', 'mine', org] as const,
   seats: (org: number) => ['school-seats', org] as const,
   invoices: (org: number) => ['school-invoices', org] as const,
   assignments: (classId: number) => ['class-assignments', classId] as const,
+  completion: (classId: number) => ['class-completion', classId] as const,
   assignmentDetail: (classId: number, assignmentId: number) =>
     ['class-assignments', classId, assignmentId] as const,
   teacherCompensation: ['teacher-compensation'] as const,
@@ -37,7 +40,14 @@ export function useSchoolDashboard(orgId: number | null) {
 }
 
 export function useClasses() {
-  return useQuery({ queryKey: schoolKeys.classes, queryFn: schoolApi.classes })
+  const orgId = useSchoolOrgId()
+  return useQuery({ queryKey: schoolKeys.classes(orgId), queryFn: () => schoolApi.classes() })
+}
+
+/** Classes taught by the current user — for the Teacher Profile page. */
+export function useMyClasses() {
+  const orgId = useSchoolOrgId()
+  return useQuery({ queryKey: schoolKeys.myClasses(orgId), queryFn: () => schoolApi.classes({ mine: true }) })
 }
 
 export function useSeats(orgId: number | null) {
@@ -86,8 +96,8 @@ export function useCreateClass() {
   return useMutation({
     mutationFn: (input: CreateClassInput) => schoolApi.createClass(input),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: schoolKeys.classes })
-      // Dashboard KPI ['school-dashboard', org] — invalidate by prefix.
+      // Both keys are parameterized by org — invalidate by prefix.
+      void qc.invalidateQueries({ queryKey: ['school-classes'] })
       void qc.invalidateQueries({ queryKey: ['school-dashboard'] })
     },
   })
@@ -113,6 +123,25 @@ export function useClassAssignments(classId: number | null) {
   })
 }
 
+export function useClassCompletion(classId: number | null) {
+  return useQuery({
+    queryKey: schoolKeys.completion(classId ?? 0),
+    queryFn: () => schoolApi.classCompletion(classId as number),
+    enabled: !!classId,
+  })
+}
+
+export function useAwardBadge(classId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ learnerId, badgeCode }: { learnerId: number; badgeCode: string }) =>
+      schoolApi.awardBadge(classId, learnerId, badgeCode),
+    onSuccess: (_res, { learnerId }) => {
+      void qc.invalidateQueries({ queryKey: gamificationKeys.badges(learnerId) })
+    },
+  })
+}
+
 export function useClassAssignmentDetail(classId: number | null, assignmentId: number | null) {
   return useQuery({
     queryKey: schoolKeys.assignmentDetail(classId ?? 0, assignmentId ?? 0),
@@ -125,7 +154,10 @@ export function useCreateClassAssignment(classId: number) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: CreateClassAssignmentInput) => schoolApi.createClassAssignment(classId, input),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: schoolKeys.assignments(classId) }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: schoolKeys.assignments(classId) })
+      void qc.invalidateQueries({ queryKey: schoolKeys.completion(classId) })
+    },
   })
 }
 

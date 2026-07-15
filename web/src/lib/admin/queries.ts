@@ -54,6 +54,8 @@ export const adminKeys = {
   flaggedReferrals: ['admin-flagged-referrals'] as const,
   languages: ['admin-languages'] as const,
   plans: ['admin-plans'] as const,
+  promos: ['admin-promos'] as const,
+  schoolLeads: ['admin-school-leads'] as const,
 }
 
 export function useAdminMetrics() {
@@ -66,6 +68,10 @@ export function useBillingHealth() {
 
 export function useSettlements() {
   return useQuery({ queryKey: adminKeys.settlements, queryFn: adminApi.settlements })
+}
+
+export function useSchoolLeads() {
+  return useQuery({ queryKey: adminKeys.schoolLeads, queryFn: adminApi.schoolLeads })
 }
 
 export function useAdminOrganizations(params: AdminOrgQuery = {}) {
@@ -142,9 +148,27 @@ export function useInviteOrgAdmin() {
   })
 }
 
+export function usePromos() {
+  return useQuery({ queryKey: adminKeys.promos, queryFn: adminApi.listPromos })
+}
+
 export function useCreatePromo() {
+  const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: CreatePromoInput) => adminApi.createPromo(input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: adminKeys.promos })
+    },
+  })
+}
+
+export function useDeletePromo() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => adminApi.deletePromo(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: adminKeys.promos })
+    },
   })
 }
 

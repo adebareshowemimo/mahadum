@@ -18,6 +18,11 @@ class AdminMetricsController extends Controller
     {
         return response()->json(['data' => [
             'users' => User::count(),
+            'users_by_type' => [
+                'school' => User::whereHas('organizations')->count(),
+                'family' => User::whereDoesntHave('organizations')->whereHas('ownedFamilies')->count(),
+                'single' => User::whereDoesntHave('organizations')->whereDoesntHave('ownedFamilies')->count(),
+            ],
             'organizations' => Organization::selectRaw('status, COUNT(*) c')->groupBy('status')->pluck('c', 'status'),
             'subscriptions' => Subscription::selectRaw('status, COUNT(*) c')->groupBy('status')->pluck('c', 'status'),
             'revenue_minor' => (int) WalletFundingTransaction::where('status', 'success')->sum('amount_minor'),

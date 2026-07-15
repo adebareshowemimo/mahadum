@@ -64,8 +64,8 @@ Naming convention: `aspect.subject.action`.
 | **Billing** | `billing.plans.manage` · `billing.subscriptions.{view,manage}` · `billing.telco.{view,manage}` · `billing.databundles.manage` · `billing.invoices.{view,manage}` · `billing.health.view` · `billing.webhooks.view` |
 | **Finance / settlement** | `finance.wallets.{view,adjust}` · `finance.ledger.view` · `commissions.{view,manage}` · `payouts.{view,request,approve}` · `settlements.{view,manage}` |
 | **Referrals** | `referrals.{view,manage}` · `referrals.fraud.review` · `promocodes.manage` |
-| **School ops** | `schools.dashboard.view` · `schools.roster.{view,import}` · `schools.classes.{view,manage}` · `schools.seats.{view,purchase}` · `schools.assignments.{create,review}` · `schools.analytics.view` |
-| **Organizations** | `organizations.{view,manage,activate}` |
+| **School ops** | `schools.dashboard.view` · `schools.roster.{view,import}` · `schools.classes.{view,manage}` · `schools.seats.{view,purchase}` · `schools.assignments.{create,review}` · `schools.analytics.view` · `schools.badges.award` (teacher; manual recognition alongside `gamification.badges.manage`'s automatic conditions) |
+| **Organizations** | `organizations.{view,manage,activate}` · `organizations.leads.view` (super_admin only — prospective-school "Get Quote" contacts) |
 | **Users & access** | `users.{view,manage}` · `roles.{view,assign}` |
 | **Analytics** | `analytics.{platform,lesson}.view` |
 | **System** | `audit.view` · `support.handle` · `system.settings.manage` |
@@ -83,11 +83,13 @@ Naming convention: `aspect.subject.action`.
 | schools.* | | ● | partial | partial | |
 | schools.classes.view | | ● | ● | ● | |
 | schools.assignments.{create,review} | | | ● | | |
+| schools.badges.award | | | ● | | |
 | schools.roster.{view,import} | | ● | | view | |
 | schools.seats.{view,purchase} | | ● | | | |
 | schools.analytics.view | | ● | ● | ● | |
 | organizations.view | | ● | | ● | |
 | organizations.{manage,activate} | | | | | |
+| organizations.leads.view | | | | | |
 | users.{view,manage} / roles.{view,assign} | | ● | | | |
 | billing.subscriptions.view | | ● | | | ● |
 | billing.subscriptions.manage | | | | | ● |

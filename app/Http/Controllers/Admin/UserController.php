@@ -45,6 +45,15 @@ class UserController extends Controller
             $query->whereHas('organizations', fn ($o) => $o->where('organizations.id', $orgId));
         }
 
+        if ($type = $request->query('type')) {
+            match ($type) {
+                'school' => $query->whereHas('organizations'),
+                'family' => $query->whereDoesntHave('organizations')->whereHas('ownedFamilies'),
+                'single' => $query->whereDoesntHave('organizations')->whereDoesntHave('ownedFamilies'),
+                default => null,
+            };
+        }
+
         $page = $query->latest()->paginate(20);
         $users = collect($page->items());
 

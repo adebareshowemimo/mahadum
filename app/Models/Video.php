@@ -20,6 +20,8 @@ use Illuminate\Support\Carbon;
  * @property string $kind
  * @property int|null $duration_seconds
  * @property int|null $source_asset_id
+ * @property string $source_type
+ * @property string|null $external_url
  * @property int|null $poster_asset_id
  * @property string $default_quality
  * @property string $status
@@ -43,6 +45,7 @@ use Illuminate\Support\Carbon;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Video whereDefaultQuality($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Video whereDescription($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Video whereDurationSeconds($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Video whereExternalUrl($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Video whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Video whereIsCultural($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Video whereKind($value)
@@ -51,6 +54,7 @@ use Illuminate\Support\Carbon;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Video wherePosterAssetId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Video wherePresenterName($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Video whereSourceAssetId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Video whereSourceType($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Video whereStatus($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Video whereTitle($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Video whereUpdatedAt($value)

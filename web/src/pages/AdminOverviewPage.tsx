@@ -42,7 +42,15 @@ export function AdminOverviewPage() {
         <Kpi icon="book" label="Languages" value={m.languages} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>Users by type</CardTitle>
+          </CardHeader>
+          <CardBody>
+            <StatusChips map={m.users_by_type} />
+          </CardBody>
+        </Card>
         <Card>
           <CardHeader>
             <CardTitle>Organizations</CardTitle>

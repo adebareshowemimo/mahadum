@@ -388,6 +388,7 @@ export interface AddComponentInput {
     status?: 'uploading' | 'processing' | 'ready' | 'failed'
     language_id?: number
     source_asset_id?: number
+    external_url?: string
   }
   quiz?: {
     title?: string
@@ -432,8 +433,11 @@ export interface QuizQuestion {
 export interface VideoPayload {
   duration: number | null
   quality: string | null
-  /** Direct file URL (local-disk upload). Null until a source is attached. */
+  source_type: 'upload' | 'youtube' | string
+  /** Direct file URL (local-disk upload). Null until a source is attached, or when source_type=youtube. */
   src: string | null
+  /** YouTube URL. Set only when source_type=youtube. */
+  external_url: string | null
   hls: string | null
   poster: string | null
   captions: unknown[]
@@ -566,6 +570,13 @@ export interface BadgesInfo {
   locked: LockedBadge[]
 }
 
+export interface AwardBadgeResult {
+  code: string
+  name: string
+  earned_at: string | null
+  already_earned: boolean
+}
+
 export interface LeagueStanding {
   league: { id: number; name: string; tier: number | string; week_start: string | null }
   rank: number | null
@@ -655,6 +666,7 @@ export interface SchoolDashboard {
   students: number
   seats: { purchased: number; filled: number }
   invoices: { unpaid: number; unpaid_minor: number }
+  subscription: { status: string | null; last_payment_at: string | null }
 }
 
 export interface SeatAllocation {
@@ -767,6 +779,14 @@ export interface ClassAssignmentRow {
   graded_count: number
 }
 
+export interface ClassCompletionRow {
+  learner_id: number
+  display_name: string | null
+  submitted: number
+  total: number
+  rate: number | null
+}
+
 export interface ClassAssignmentRosterEntry {
   learner_id: number
   display_name: string | null
@@ -813,6 +833,7 @@ export interface GradeSubmissionResult {
 
 export interface AdminMetrics {
   users: number
+  users_by_type: { school: number; family: number; single: number }
   organizations: Record<string, number>
   subscriptions: Record<string, number>
   revenue_minor: number
@@ -1397,6 +1418,7 @@ export interface AdminUsersQuery {
   q?: string
   role?: string
   status?: string
+  type?: 'single' | 'family' | 'school'
   organization_id?: number
   page?: number
 }
@@ -1427,6 +1449,44 @@ export interface CreatePromoInput {
   valid_from?: string
   valid_to?: string
   max_redemptions?: number
+}
+
+export interface CreateSchoolLeadInput {
+  school_name: string
+  contact_name: string
+  email: string
+  phone?: string
+  school_size?: string
+  city?: string
+  notes?: string
+}
+
+export interface SchoolLead {
+  id: number
+  school_name: string
+  contact_name: string
+  email: string
+  phone: string | null
+  school_size: string | null
+  city: string | null
+  notes: string | null
+  status: string
+  created_at: string | null
+}
+
+export interface PromoCode {
+  id: number
+  code: string
+  discount_type: 'percent' | 'fixed'
+  value: number
+  applicable_tier: string | null
+  valid_from: string | null
+  valid_to: string | null
+  max_redemptions: number | null
+  redeemed_count: number
+  status: string
+  redemptions_count: number
+  created_at: string | null
 }
 
 /** Response from GET /config — launch-time bootstrap (public). */

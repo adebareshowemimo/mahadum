@@ -97,15 +97,20 @@ class LessonComponentController extends Controller
     private function createVideo(LessonComponent $component, StoreLessonComponentRequest $request): void
     {
         $v = $request->input('video');
+        $externalUrl = $v['external_url'] ?? null;
+
         $component->video()->create([
             'language_id' => $v['language_id'] ?? null,
             'title' => $v['title'],
             'presenter_name' => $v['presenter_name'] ?? null,
             'duration_seconds' => $v['duration_seconds'] ?? null,
             'default_quality' => $v['default_quality'] ?? '360p',
-            // Local-disk source file (uploaded via /media/upload). A managed
-            // vendor would set HLS renditions instead; status marks readiness.
-            'source_asset_id' => $v['source_asset_id'] ?? null,
+            // Local-disk source file (uploaded via /media/upload) or a YouTube
+            // link. A managed vendor would set HLS renditions instead for the
+            // uploaded case; status marks readiness.
+            'source_asset_id' => $externalUrl ? null : ($v['source_asset_id'] ?? null),
+            'source_type' => $externalUrl ? 'youtube' : 'upload',
+            'external_url' => $externalUrl,
             'status' => $v['status'] ?? 'ready',
             'kind' => 'lesson',
         ]);
@@ -149,9 +154,15 @@ class LessonComponentController extends Controller
             'kind' => 'lesson',
         ];
 
-        // Only swap the source when a new one is supplied; keep the current file otherwise.
-        if (array_key_exists('source_asset_id', $v) && $v['source_asset_id'] !== null) {
+        // Only swap the source when a new one is supplied; keep the current one otherwise.
+        if (! empty($v['external_url'])) {
+            $payload['source_type'] = 'youtube';
+            $payload['external_url'] = $v['external_url'];
+            $payload['source_asset_id'] = null;
+        } elseif (array_key_exists('source_asset_id', $v) && $v['source_asset_id'] !== null) {
+            $payload['source_type'] = 'upload';
             $payload['source_asset_id'] = $v['source_asset_id'];
+            $payload['external_url'] = null;
         }
 
         $component->video()->updateOrCreate([], $payload);

@@ -5,6 +5,7 @@ export {
   createLiveService,
   createPreviewService,
   playToSlides,
+  youtubeEmbedUrl,
   type PlayerService,
   type Slide,
 } from './types'

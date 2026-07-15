@@ -116,6 +116,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'schools.assignments.create',
             'schools.assignments.review',
             'schools.analytics.view',
+            // Manual recognition, own class only — alongside gamification.badges.manage's
+            // automatic conditions (BadgeService). Held by teacher.
+            'schools.badges.award',
         ],
 
         // ── Language & Culture competition ─────────────────────────────────
@@ -131,6 +134,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'organizations.view',
             'organizations.manage',
             'organizations.activate',
+            // Super-admin-only (unassigned below) — prospective-school contact
+            // details captured pre-signup, not an org-scoped record.
+            'organizations.leads.view',
         ],
 
         // ── Users & access control ─────────────────────────────────────────
@@ -229,6 +235,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'schools.assignments.create',
                 'schools.assignments.review',
                 'schools.analytics.view',
+                'schools.badges.award',
                 'learning.progress.view',
                 'learning.submissions.review',
                 'referrals.view',

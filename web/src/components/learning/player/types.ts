@@ -66,6 +66,9 @@ export interface VideoSlide extends SlideBase {
   title: string | null
   src: string | null
   poster: string | null
+  /** 'youtube' videos embed via iframe and are never watch-gated (no playback events to track). */
+  sourceType: 'upload' | 'youtube' | string
+  externalUrl: string | null
   /** When true, the learner must finish the clip before the continue button unlocks. */
   requireWatch: boolean
   /** Saved playhead (seconds) to resume from; 0 = start. */
@@ -133,12 +136,33 @@ export function countQuiz(slides: Slide[]): number {
   return slides.filter((s) => s.kind === 'quiz').length
 }
 
+/** Extracts an embeddable youtube-nocookie.com URL from a youtube.com/youtu.be link, or null if unparseable. */
+export function youtubeEmbedUrl(url: string | null): string | null {
+  if (!url) return null
+  try {
+    const u = new URL(url)
+    let id: string | null = null
+    if (u.hostname === 'youtu.be') {
+      id = u.pathname.slice(1)
+    } else if (u.hostname.endsWith('youtube.com')) {
+      id = u.searchParams.get('v') ?? (u.pathname.startsWith('/embed/') ? u.pathname.slice(7) : null)
+    }
+    return id ? `https://www.youtube-nocookie.com/embed/${id}` : null
+  } catch {
+    return null
+  }
+}
+
 // ---- Adapters ----
 
 function playComponentToSlides(c: PlayComponent, lessonTitle?: string): Slide[] {
   const base = { componentId: c.id, lessonTitle }
   if (c.type === 'video') {
-    return [{ ...base, id: `v${c.id}`, kind: 'video', title: null, src: c.video?.src ?? null, poster: c.video?.poster ?? null, requireWatch: !!c.require_watch, resumeAt: c.resume_position ?? 0, alreadyCompleted: !!c.completed }]
+    return [{
+      ...base, id: `v${c.id}`, kind: 'video', title: null, src: c.video?.src ?? null, poster: c.video?.poster ?? null,
+      sourceType: c.video?.source_type ?? 'upload', externalUrl: c.video?.external_url ?? null,
+      requireWatch: !!c.require_watch, resumeAt: c.resume_position ?? 0, alreadyCompleted: !!c.completed,
+    }]
   }
   if (c.type === 'speaking') {
     return [{ ...base, id: `s${c.id}`, kind: 'speaking', prompt: c.speaking?.prompt ?? '', target: c.speaking?.target_text ?? null }]
@@ -194,7 +218,11 @@ export function authorToSlides(lesson: AuthorLesson): { slides: Slide[]; key: Ma
     const base = { componentId: c.id, lessonTitle: lesson.title }
 
     if (c.type === 'video') {
-      slides.push({ ...base, id: `v${c.id}`, kind: 'video', title: (d.title as string) ?? null, src: (d.src as string) ?? null, poster: (d.poster as string) ?? null, requireWatch: !!(c.settings?.require_watch), resumeAt: 0, alreadyCompleted: false })
+      slides.push({
+        ...base, id: `v${c.id}`, kind: 'video', title: (d.title as string) ?? null, src: (d.src as string) ?? null, poster: (d.poster as string) ?? null,
+        sourceType: (d.source_type as string) ?? 'upload', externalUrl: (d.external_url as string) ?? null,
+        requireWatch: !!(c.settings?.require_watch), resumeAt: 0, alreadyCompleted: false,
+      })
     } else if (c.type === 'speaking') {
       slides.push({ ...base, id: `s${c.id}`, kind: 'speaking', prompt: (d.prompt_text as string) || (d.prompt as string) || '', target: (d.target_text as string) ?? null })
     } else if (c.type === 'assignment') {

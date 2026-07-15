@@ -58,6 +58,35 @@ class ClassAssignmentController extends Controller
         return response()->json(['data' => $assignments->values()]);
     }
 
+    /** Per-student completion across every assignment in the class (submitted / total). */
+    public function completion(SchoolClass $class): JsonResponse
+    {
+        $totalAssignments = $class->assignments()->count();
+
+        $submittedCounts = ClassAssignmentSubmission::whereHas(
+            'classAssignment',
+            fn ($q) => $q->where('school_class_id', $class->id),
+        )
+            ->whereIn('status', ['submitted', 'graded'])
+            ->selectRaw('learner_profile_id, COUNT(*) as c')
+            ->groupBy('learner_profile_id')
+            ->pluck('c', 'learner_profile_id');
+
+        $roster = $class->enrollments()->with('learnerProfile')->get()->map(function ($enrollment) use ($submittedCounts, $totalAssignments) {
+            $submitted = (int) ($submittedCounts[$enrollment->learner_profile_id] ?? 0);
+
+            return [
+                'learner_id' => $enrollment->learner_profile_id,
+                'display_name' => $enrollment->learnerProfile?->display_name,
+                'submitted' => $submitted,
+                'total' => $totalAssignments,
+                'rate' => $totalAssignments > 0 ? (int) round($submitted / $totalAssignments * 100) : null,
+            ];
+        });
+
+        return response()->json(['data' => $roster->values()]);
+    }
+
     public function store(StoreClassAssignmentRequest $request, SchoolClass $class): JsonResponse
     {
         abort_unless($class->teacher_user_id === $request->user()->id, 403, 'Only this class\'s teacher can create assignments.');
