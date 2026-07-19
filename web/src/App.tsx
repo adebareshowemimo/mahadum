@@ -1,75 +1,112 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Suspense, lazy } from 'react'
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { AdminRoute, GuestRoute, ProtectedRoute, RoleRoute, TeacherRoute } from '@/components/auth/ProtectedRoute'
 import { AdminLayout } from '@/components/admin'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { PaywallGate } from '@/components/billing/PaywallGate'
-import { AssignmentsPage } from '@/pages/AssignmentsPage'
-import { BillingPage } from '@/pages/BillingPage'
-import { ClassesPage } from '@/pages/ClassesPage'
-import { TeacherProfilePage } from '@/pages/TeacherProfilePage'
-import { ComponentsPage } from '@/pages/ComponentsPage'
-import { CoursesPage } from '@/pages/content/CoursesPage'
-import { CourseBuilderPage } from '@/pages/content/CourseBuilderPage'
-import { CoursePreviewPage } from '@/pages/content/CoursePreviewPage'
-import { LessonBuilderPage } from '@/pages/content/LessonBuilderPage'
-import { MediaPage } from '@/pages/content/MediaPage'
-import { EarningsPage } from '@/pages/EarningsPage'
+import { Spinner } from '@/components/ui/Spinner'
+// ComingSoon stays static: it backs every not-yet-built nav destination in the
+// .map() below, so lazy-loading it would mean one chunk request per placeholder.
 import { ComingSoon } from '@/pages/ComingSoon'
-import { DashboardPage } from '@/pages/DashboardPage'
-import { FamilyPage } from '@/pages/FamilyPage'
-import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage'
-import { AchievementsPage } from '@/pages/AchievementsPage'
-import { AdminOverviewPage } from '@/pages/AdminOverviewPage'
-import { LandingPage } from '@/pages/LandingPage'
-import { PricingPage } from '@/pages/PricingPage'
-import { AdminCoursesPage } from '@/pages/AdminCoursesPage'
-import { AdminIncomePage } from '@/pages/AdminIncomePage'
-import { ReportsPage } from '@/pages/ReportsPage'
-import { GrowthReportPage } from '@/pages/GrowthReportPage'
-import { SubscriptionsReportPage } from '@/pages/SubscriptionsReportPage'
-import { ReferralsReportPage } from '@/pages/ReferralsReportPage'
-import { OrgActivityReportPage } from '@/pages/OrgActivityReportPage'
-import { RenewalsReportPage } from '@/pages/RenewalsReportPage'
-import { EmailCampaignsPage } from '@/pages/EmailCampaignsPage'
-import { CampaignDetailPage } from '@/pages/CampaignDetailPage'
-import { ContactListsPage } from '@/pages/ContactListsPage'
-import { EmailLogPage } from '@/pages/EmailLogPage'
-import { EmailTemplatesPage } from '@/pages/EmailTemplatesPage'
-import { AuditLogPage } from '@/pages/AuditLogPage'
-import { FraudReviewPage } from '@/pages/FraudReviewPage'
-import { GatewaysPage } from '@/pages/GatewaysPage'
-import { LanguagesPage } from '@/pages/LanguagesPage'
-import { PlansPage } from '@/pages/PlansPage'
-import { SettingsPage } from '@/pages/SettingsPage'
-import { SupportPage } from '@/pages/SupportPage'
-import { ContactSupportPage } from '@/pages/ContactSupportPage'
-import { OrganizationsPage } from '@/pages/OrganizationsPage'
-import { OrganizationCreatePage } from '@/pages/OrganizationCreatePage'
-import { OrganizationDetailPage } from '@/pages/OrganizationDetailPage'
-import { PayoutsPage } from '@/pages/PayoutsPage'
-import { PromoCodesPage } from '@/pages/PromoCodesPage'
-import { SchoolLeadsPage } from '@/pages/SchoolLeadsPage'
-import { RolesMatrixPage } from '@/pages/RolesMatrixPage'
-import { SettlementsPage } from '@/pages/SettlementsPage'
-import { UsersPage } from '@/pages/UsersPage'
-import { LeaderboardPage } from '@/pages/LeaderboardPage'
-import { LearnPage } from '@/pages/LearnPage'
-import { LessonPlayerPage } from '@/pages/LessonPlayerPage'
-import { InvoicesPage } from '@/pages/InvoicesPage'
-import { ReferralsPage } from '@/pages/ReferralsPage'
-import { ReviewsPage } from '@/pages/ReviewsPage'
-import { RosterPage } from '@/pages/RosterPage'
-import { SchoolDashboardPage } from '@/pages/SchoolDashboardPage'
-import { SchoolReferralsPage } from '@/pages/SchoolReferralsPage'
-import { SeatsPage } from '@/pages/SeatsPage'
-import { CompetitionsPage } from '@/pages/CompetitionsPage'
-import { CompetitionDetailPage } from '@/pages/CompetitionDetailPage'
-import { CompetitionsAdminPage } from '@/pages/CompetitionsAdminPage'
-import { WalletPage } from '@/pages/WalletPage'
-import { LoginPage } from '@/pages/LoginPage'
-import { RegisterPage } from '@/pages/RegisterPage'
-import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
 import { allNavItems } from '@/lib/nav/navigation'
+
+// Every real page is route-split. All page components are named exports, hence
+// the `.then(m => ({ default: m.X }))` shim React.lazy requires.
+const AssignmentsPage = lazy(() => import('@/pages/AssignmentsPage').then((m) => ({ default: m.AssignmentsPage })))
+const BillingPage = lazy(() => import('@/pages/BillingPage').then((m) => ({ default: m.BillingPage })))
+const ClassesPage = lazy(() => import('@/pages/ClassesPage').then((m) => ({ default: m.ClassesPage })))
+const TeacherProfilePage = lazy(() => import('@/pages/TeacherProfilePage').then((m) => ({ default: m.TeacherProfilePage })))
+const ComponentsPage = lazy(() => import('@/pages/ComponentsPage').then((m) => ({ default: m.ComponentsPage })))
+const CoursesPage = lazy(() => import('@/pages/content/CoursesPage').then((m) => ({ default: m.CoursesPage })))
+const CourseBuilderPage = lazy(() => import('@/pages/content/CourseBuilderPage').then((m) => ({ default: m.CourseBuilderPage })))
+const CoursePreviewPage = lazy(() => import('@/pages/content/CoursePreviewPage').then((m) => ({ default: m.CoursePreviewPage })))
+const LessonBuilderPage = lazy(() => import('@/pages/content/LessonBuilderPage').then((m) => ({ default: m.LessonBuilderPage })))
+const MediaPage = lazy(() => import('@/pages/content/MediaPage').then((m) => ({ default: m.MediaPage })))
+const EarningsPage = lazy(() => import('@/pages/EarningsPage').then((m) => ({ default: m.EarningsPage })))
+const DashboardPage = lazy(() => import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
+const FamilyPage = lazy(() => import('@/pages/FamilyPage').then((m) => ({ default: m.FamilyPage })))
+const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })))
+const AchievementsPage = lazy(() => import('@/pages/AchievementsPage').then((m) => ({ default: m.AchievementsPage })))
+const AdminOverviewPage = lazy(() => import('@/pages/AdminOverviewPage').then((m) => ({ default: m.AdminOverviewPage })))
+const LandingPage = lazy(() => import('@/pages/LandingPage').then((m) => ({ default: m.LandingPage })))
+const LandingV1Page = lazy(() => import('@/pages/LandingVariantsPage').then((m) => ({ default: m.LandingV1Page })))
+const LandingV2Page = lazy(() => import('@/pages/LandingVariantsPage').then((m) => ({ default: m.LandingV2Page })))
+const LandingV3Page = lazy(() => import('@/pages/LandingVariantsPage').then((m) => ({ default: m.LandingV3Page })))
+const LandingV4Page = lazy(() => import('@/pages/LandingExtendedVariantsPage').then((m) => ({ default: m.LandingV4Page })))
+const LandingV5Page = lazy(() => import('@/pages/LandingExtendedVariantsPage').then((m) => ({ default: m.LandingV5Page })))
+const PricingPage = lazy(() => import('@/pages/PricingPage').then((m) => ({ default: m.PricingPage })))
+const AdminCoursesPage = lazy(() => import('@/pages/AdminCoursesPage').then((m) => ({ default: m.AdminCoursesPage })))
+const AdminIncomePage = lazy(() => import('@/pages/AdminIncomePage').then((m) => ({ default: m.AdminIncomePage })))
+const ReportsPage = lazy(() => import('@/pages/ReportsPage').then((m) => ({ default: m.ReportsPage })))
+const GrowthReportPage = lazy(() => import('@/pages/GrowthReportPage').then((m) => ({ default: m.GrowthReportPage })))
+const SubscriptionsReportPage = lazy(() => import('@/pages/SubscriptionsReportPage').then((m) => ({ default: m.SubscriptionsReportPage })))
+const ReferralsReportPage = lazy(() => import('@/pages/ReferralsReportPage').then((m) => ({ default: m.ReferralsReportPage })))
+const OrgActivityReportPage = lazy(() => import('@/pages/OrgActivityReportPage').then((m) => ({ default: m.OrgActivityReportPage })))
+const RenewalsReportPage = lazy(() => import('@/pages/RenewalsReportPage').then((m) => ({ default: m.RenewalsReportPage })))
+const EmailCampaignsPage = lazy(() => import('@/pages/EmailCampaignsPage').then((m) => ({ default: m.EmailCampaignsPage })))
+const CampaignDetailPage = lazy(() => import('@/pages/CampaignDetailPage').then((m) => ({ default: m.CampaignDetailPage })))
+const ContactListsPage = lazy(() => import('@/pages/ContactListsPage').then((m) => ({ default: m.ContactListsPage })))
+const EmailLogPage = lazy(() => import('@/pages/EmailLogPage').then((m) => ({ default: m.EmailLogPage })))
+const EmailTemplatesPage = lazy(() => import('@/pages/EmailTemplatesPage').then((m) => ({ default: m.EmailTemplatesPage })))
+const AuditLogPage = lazy(() => import('@/pages/AuditLogPage').then((m) => ({ default: m.AuditLogPage })))
+const FraudReviewPage = lazy(() => import('@/pages/FraudReviewPage').then((m) => ({ default: m.FraudReviewPage })))
+const GatewaysPage = lazy(() => import('@/pages/GatewaysPage').then((m) => ({ default: m.GatewaysPage })))
+const LanguagesPage = lazy(() => import('@/pages/LanguagesPage').then((m) => ({ default: m.LanguagesPage })))
+const PlansPage = lazy(() => import('@/pages/PlansPage').then((m) => ({ default: m.PlansPage })))
+const SettingsPage = lazy(() => import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
+const SupportPage = lazy(() => import('@/pages/SupportPage').then((m) => ({ default: m.SupportPage })))
+const ContactSupportPage = lazy(() => import('@/pages/ContactSupportPage').then((m) => ({ default: m.ContactSupportPage })))
+const OrganizationsPage = lazy(() => import('@/pages/OrganizationsPage').then((m) => ({ default: m.OrganizationsPage })))
+const OrganizationCreatePage = lazy(() => import('@/pages/OrganizationCreatePage').then((m) => ({ default: m.OrganizationCreatePage })))
+const OrganizationDetailPage = lazy(() => import('@/pages/OrganizationDetailPage').then((m) => ({ default: m.OrganizationDetailPage })))
+const PayoutsPage = lazy(() => import('@/pages/PayoutsPage').then((m) => ({ default: m.PayoutsPage })))
+const PromoCodesPage = lazy(() => import('@/pages/PromoCodesPage').then((m) => ({ default: m.PromoCodesPage })))
+const SchoolLeadsPage = lazy(() => import('@/pages/SchoolLeadsPage').then((m) => ({ default: m.SchoolLeadsPage })))
+const RolesMatrixPage = lazy(() => import('@/pages/RolesMatrixPage').then((m) => ({ default: m.RolesMatrixPage })))
+const SettlementsPage = lazy(() => import('@/pages/SettlementsPage').then((m) => ({ default: m.SettlementsPage })))
+const UsersPage = lazy(() => import('@/pages/UsersPage').then((m) => ({ default: m.UsersPage })))
+const LeaderboardPage = lazy(() => import('@/pages/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })))
+const LearnPage = lazy(() => import('@/pages/LearnPage').then((m) => ({ default: m.LearnPage })))
+const LessonPlayerPage = lazy(() => import('@/pages/LessonPlayerPage').then((m) => ({ default: m.LessonPlayerPage })))
+const InvoicesPage = lazy(() => import('@/pages/InvoicesPage').then((m) => ({ default: m.InvoicesPage })))
+const ReferralsPage = lazy(() => import('@/pages/ReferralsPage').then((m) => ({ default: m.ReferralsPage })))
+const ReviewsPage = lazy(() => import('@/pages/ReviewsPage').then((m) => ({ default: m.ReviewsPage })))
+const RosterPage = lazy(() => import('@/pages/RosterPage').then((m) => ({ default: m.RosterPage })))
+const SchoolDashboardPage = lazy(() => import('@/pages/SchoolDashboardPage').then((m) => ({ default: m.SchoolDashboardPage })))
+const SchoolReferralsPage = lazy(() => import('@/pages/SchoolReferralsPage').then((m) => ({ default: m.SchoolReferralsPage })))
+const SeatsPage = lazy(() => import('@/pages/SeatsPage').then((m) => ({ default: m.SeatsPage })))
+const CompetitionsPage = lazy(() => import('@/pages/CompetitionsPage').then((m) => ({ default: m.CompetitionsPage })))
+const CompetitionDetailPage = lazy(() => import('@/pages/CompetitionDetailPage').then((m) => ({ default: m.CompetitionDetailPage })))
+const CompetitionsAdminPage = lazy(() => import('@/pages/CompetitionsAdminPage').then((m) => ({ default: m.CompetitionsAdminPage })))
+const WalletPage = lazy(() => import('@/pages/WalletPage').then((m) => ({ default: m.WalletPage })))
+const LoginPage = lazy(() => import('@/pages/LoginPage').then((m) => ({ default: m.LoginPage })))
+const RegisterPage = lazy(() => import('@/pages/RegisterPage').then((m) => ({ default: m.RegisterPage })))
+const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })))
+
+// Full-viewport fallback for chunks loaded before any shell exists.
+function RouteFallback() {
+  return (
+    <div className="grid min-h-dvh place-items-center" aria-busy="true">
+      <Spinner className="size-8 opacity-60" />
+    </div>
+  )
+}
+
+// Nested boundary used *inside* AppLayout, so a page chunk loading swaps only the
+// content area — the sidebar/header stay mounted and nothing in the shell shifts.
+function ShellSuspense() {
+  return (
+    <Suspense
+      fallback={
+        <div className="grid min-h-[60vh] place-items-center" aria-busy="true">
+          <Spinner className="size-8 opacity-60" />
+        </div>
+      }
+    >
+      <Outlet />
+    </Suspense>
+  )
+}
 
 // Destinations that already have real screens; everything else in the nav
 // resolves to a ComingSoon placeholder so links never dead-end.
@@ -130,9 +167,15 @@ const REAL_PAGES = new Set([
 
 export function App() {
   return (
-    <Routes>
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
       {/* Public marketing (redirects signed-in users away). */}
       <Route path="/" element={<LandingPage />} />
+      <Route path="/v1" element={<LandingV1Page />} />
+      <Route path="/v2" element={<LandingV2Page />} />
+      <Route path="/v3" element={<LandingV3Page />} />
+      <Route path="/v4" element={<LandingV4Page />} />
+      <Route path="/v5" element={<LandingV5Page />} />
       <Route path="/pricing" element={<PricingPage />} />
 
       {/* Public auth screens — redirect away if already signed in. */}
@@ -151,6 +194,7 @@ export function App() {
         <Route path="/courses/:courseId/levels/:levelId/preview" element={<CoursePreviewPage />} />
 
         <Route element={<AppLayout />}>
+          <Route element={<ShellSuspense />}>
           <Route path="/home" element={<DashboardPage />} />
           <Route path="/learn" element={<LearnPage />} />
           <Route path="/achievements" element={<AchievementsPage />} />
@@ -249,10 +293,12 @@ export function App() {
                 element={<ComingSoon title={item.label} icon={item.icon} />}
               />
             ))}
+          </Route>
         </Route>
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   )
 }

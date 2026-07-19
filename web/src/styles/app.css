@@ -11,6 +11,7 @@
   html {
     -webkit-text-size-adjust: 100%;
     font-feature-settings: 'cv11', 'ss01';
+    scroll-behavior: smooth;
   }
 
   body {
@@ -28,6 +29,14 @@
     letter-spacing: var(--tracking-tight);
   }
 
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
@@ -40,6 +49,113 @@
 }
 
 @layer components {
+  /* Landing palette: the physical scene is a family learning together in a
+     bright living room, so the marketing surface stays daylight-first. The
+     colour relationship comes directly from the approved rainbow wordmark and
+     supplied family artwork, without changing the authenticated app theme. */
+  .landing-page {
+    --landing-sky: #eaf6ff;
+    --landing-blue: #1478db;
+    --landing-orange: #f76014;
+    --background: #ffffff;
+    --background-subtle: #f7fbff;
+    --surface: #ffffff;
+    --surface-muted: #eef6ff;
+    --surface-sunken: #d9e6ff;
+    --foreground: #071a3d;
+    --muted: #415375;
+    --subtle: #5b6b89;
+    --border: #d9e6ff;
+    --border-strong: #b8d2ff;
+    --primary: #1478db;
+    --primary-hover: #0f63bc;
+    --primary-active: #0c4e97;
+    --primary-fg: #ffffff;
+    --primary-soft: #eef6ff;
+    --accent: #c94106;
+    --accent-hover: #a93403;
+    --accent-fg: #ffffff;
+    --accent-soft: #fff2e8;
+    --ring: #1478db;
+    color-scheme: light;
+  }
+
+  .landing-hero {
+    background-color: var(--landing-sky);
+    background-image:
+      radial-gradient(circle at 7% 18%, rgb(247 96 20 / 0.14) 0 5.25rem, transparent 5.35rem),
+      radial-gradient(circle at 93% 84%, rgb(47 111 224 / 0.12) 0 12rem, transparent 12.1rem);
+  }
+
+  .landing-lesson-stage {
+    background-color: #071a3d;
+    background-image:
+      radial-gradient(circle at 92% 8%, rgb(247 96 20 / 0.22), transparent 16rem),
+      radial-gradient(circle at 0% 100%, rgb(20 120 219 / 0.3), transparent 19rem);
+  }
+
+  .landing-image-fallback {
+    background-color: #eaf6ff;
+    background-image:
+      radial-gradient(circle at 20% 20%, rgb(247 96 20 / 0.2), transparent 8rem),
+      radial-gradient(circle at 80% 80%, rgb(20 120 219 / 0.18), transparent 10rem);
+  }
+
+  .variant-page {
+    --background: #ffffff;
+    --background-subtle: #f7fbff;
+    --surface: #ffffff;
+    --surface-muted: #eef6ff;
+    --surface-sunken: #d9e6ff;
+    --foreground: #071a3d;
+    --muted: #415375;
+    --subtle: #5b6b89;
+    --border: #d9e6ff;
+    --border-strong: #b8d2ff;
+    --primary: #1478db;
+    --primary-hover: #0f63bc;
+    --primary-active: #0c4e97;
+    --primary-fg: #ffffff;
+    --primary-soft: #eef6ff;
+    --accent: #c94106;
+    --accent-hover: #a93403;
+    --accent-fg: #ffffff;
+    --accent-soft: #fff2e8;
+    --ring: #1478db;
+    color-scheme: light;
+  }
+
+  .variant-skip-link {
+    position: fixed;
+    left: 1rem;
+    top: 0.75rem;
+    z-index: 50;
+    transform: translateY(-5rem);
+    border-radius: 0.5rem;
+    background: #ffffff;
+    color: #071a3d;
+    padding: 0.75rem 1rem;
+    font-family: var(--font-display);
+    font-weight: 800;
+    transition: transform 180ms var(--ease-out);
+  }
+
+  .variant-skip-link:focus {
+    transform: translateY(0);
+  }
+
+  .variant-page :where(a, button) {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .motion-press {
+    transition: transform 120ms cubic-bezier(0.25, 1, 0.5, 1), background-color 180ms ease;
+  }
+
+  .motion-press:active {
+    transform: scale(0.97);
+  }
+
   /*
    * Immersive lesson-player "stage" — a deep navy ground with a faint adire /
    * kente-inspired gold lattice and a warm top glow. Rooted in West African
@@ -85,25 +201,214 @@
   /* Playful pop for selectable cards / emojis. */
   @keyframes pop-in {
     0% {
-      opacity: 0;
-      transform: scale(0.8);
-    }
-    60% {
-      transform: scale(1.06);
+      opacity: 0.65;
+      transform: scale(0.96) translateY(6px);
     }
     100% {
       opacity: 1;
-      transform: scale(1);
+      transform: scale(1) translateY(0);
     }
   }
   .animate-pop-in {
     animation: pop-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
+  /* Landing concept motion language. Each family has one signature hero
+     entrance, while interaction feedback stays short and functional. */
+  .motion-hero-copy > * {
+    animation: hero-copy-in 0.72s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .motion-hero-copy > :nth-child(2) { animation-delay: 70ms; }
+  .motion-hero-copy > :nth-child(3) { animation-delay: 140ms; }
+  .motion-hero-copy > :nth-child(4) { animation-delay: 210ms; }
+  .motion-hero-copy > :nth-child(5) { animation-delay: 280ms; }
+  .motion-hero-copy > :nth-child(n + 6) { animation-delay: 340ms; }
+
+  .motion-hero-media {
+    animation: hero-media-in 1.05s cubic-bezier(0.16, 1, 0.3, 1) both;
+    transform-origin: 70% 50%;
+  }
+
+  .motion-hero-pan {
+    animation: hero-pan-in 1.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+    transform-origin: 62% 50%;
+  }
+
+  .motion-word-pop,
+  .motion-confirm,
+  .motion-value {
+    animation: word-pop 0.36s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .motion-chip-entry,
+  .motion-word-chip {
+    animation: chip-in 0.46s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--chip-i, 0) * 65ms + 300ms);
+  }
+
+  .motion-panel-swap {
+    animation: panel-swap 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .motion-float {
+    animation: gentle-float 4.8s ease-in-out infinite;
+    animation-delay: calc(var(--float-i, 0) * -1.3s);
+  }
+
+  .motion-coin {
+    --coin-x: -2.5rem;
+    --coin-y: -3.25rem;
+    color: #e2a400;
+    animation: coin-release 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--coin-i, 0) * 45ms);
+  }
+  .motion-coin:nth-child(2) { --coin-x: -0.8rem; --coin-y: -4rem; }
+  .motion-coin:nth-child(3) { --coin-x: 1.2rem; --coin-y: -3.65rem; }
+  .motion-coin:nth-child(4) { --coin-x: 2.8rem; --coin-y: -2.6rem; }
+  .motion-coin:nth-child(5) { --coin-x: 0.2rem; --coin-y: -4.6rem; }
+
+  .motion-network-node {
+    animation: network-node 2.8s ease-in-out infinite;
+    animation-delay: calc(var(--node-i, 0) * 520ms);
+  }
+
+  .motion-network-signal {
+    background-image: linear-gradient(90deg, transparent, rgb(255 178 119 / 0.95), transparent);
+    background-size: 45% 100%;
+    background-repeat: no-repeat;
+    animation: network-signal 1.7s linear infinite;
+  }
+
+  .motion-marquee {
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    overflow: hidden;
+  }
+
+  .motion-marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee-left 30s linear infinite;
+  }
+
+  .motion-wave-bar {
+    animation: wave-talk 1.05s ease-in-out infinite alternate;
+    animation-delay: calc(var(--bar-i, 0) * -95ms);
+    transform-origin: bottom;
+  }
+
+  @keyframes hero-copy-in {
+    from { opacity: 0; transform: translateY(24px); filter: blur(5px); }
+    to { opacity: 1; transform: none; filter: none; }
+  }
+
+  @keyframes hero-media-in {
+    from { opacity: 0.55; transform: scale(1.055); clip-path: inset(0 0 0 9%); filter: saturate(0.82); }
+    to { opacity: 1; transform: scale(1); clip-path: inset(0); filter: none; }
+  }
+
+  @keyframes hero-pan-in {
+    from { opacity: 0.55; transform: scale(1.075) translateX(1.5%); filter: saturate(0.8); }
+    to { opacity: 1; transform: scale(1.01); filter: none; }
+  }
+
+  @keyframes word-pop {
+    from { opacity: 0.35; transform: scale(0.94) translateY(5px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes chip-in {
+    from { opacity: 0; transform: translateY(10px) scale(0.94); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes panel-swap {
+    from { opacity: 0.3; transform: translateX(16px); clip-path: inset(0 0 0 5%); }
+    to { opacity: 1; transform: none; clip-path: inset(0); }
+  }
+
+  @keyframes gentle-float {
+    0%, 100% { transform: translateY(0) rotate(-1deg); }
+    50% { transform: translateY(-10px) rotate(1deg); }
+  }
+
+  @keyframes coin-release {
+    0% { opacity: 0; transform: translate(-50%, -20%) scale(0.55); }
+    35% { opacity: 1; }
+    100% { opacity: 0; transform: translate(var(--coin-x), var(--coin-y)) scale(1.05); }
+  }
+
+  @keyframes network-node {
+    0%, 75%, 100% { box-shadow: 0 0 0 0 rgb(255 178 119 / 0); }
+    20% { box-shadow: 0 0 0 7px rgb(255 178 119 / 0.22); }
+  }
+
+  @keyframes network-signal {
+    from { background-position: -80% 0; }
+    to { background-position: 180% 0; }
+  }
+
+  @keyframes marquee-left {
+    to { transform: translateX(-50%); }
+  }
+
+  @keyframes wave-talk {
+    from { transform: scaleY(0.35); opacity: 0.45; }
+    to { transform: scaleY(1); opacity: 1; }
+  }
+
+  /* Landing-page reveal. Content is fully visible by default; Intersection-
+     Observer only adds a brief arrival treatment. If JS, the observer, or a
+     headless renderer fails, no content is ever held invisible. */
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+  .reveal.is-in {
+    animation: reveal-in 0.55s var(--ease-out) both;
+    animation-delay: var(--reveal-delay, 0ms);
+  }
+
+  @keyframes reveal-in {
+    from {
+      opacity: 0.72;
+      transform: translateY(12px);
+      filter: saturate(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+      filter: none;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-step-in,
-    .animate-pop-in {
+    .animate-pop-in,
+    .animate-stamp-in,
+    .motion-hero-copy > *,
+    .motion-hero-media,
+    .motion-hero-pan,
+    .motion-word-pop,
+    .motion-confirm,
+    .motion-value,
+    .motion-chip-entry,
+    .motion-word-chip,
+    .motion-panel-swap,
+    .motion-float,
+    .motion-coin,
+    .motion-network-node,
+    .motion-network-signal,
+    .motion-marquee-track,
+    .motion-wave-bar {
       animation: none;
+    }
+    /* Never hold content hidden behind a transition the user opted out of. */
+    .reveal {
+      animation: none;
+    }
+
+    html {
+      scroll-behavior: auto;
     }
   }
 }

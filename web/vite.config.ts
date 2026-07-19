@@ -13,6 +13,18 @@ export default defineConfig({
       '@tokens': fileURLToPath(new URL('./tokens', import.meta.url)),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Split the rarely-changing framework/data-layer deps into their own
+        // chunk so app-code deploys don't bust the vendor cache entry.
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-data': ['@tanstack/react-query', 'axios'],
+        },
+      },
+    },
+  },
   server: {
     // Honor PORT when set (e.g. preview tooling), else default to 5173.
     port: Number(process.env.PORT) || 5173,
