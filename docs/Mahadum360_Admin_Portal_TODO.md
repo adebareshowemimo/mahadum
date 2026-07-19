@@ -17,7 +17,14 @@ the missing backend seams they need, and portal-level hardening** so the
 
 ---
 
-## Status snapshot (2026-07-01)
+## Status snapshot (2026-07-01) — **superseded, see the note below**
+
+> ⚠️ **Stale as of 2026-07-18.** Every "live-review gap" listed in this snapshot
+> (§1–§9, §11–§14) has since shipped and is marked ✅ in its own section. §10 was
+> reconciled on 2026-07-18 (it duplicated work already delivered by §13). The only
+> genuinely open item left in this document is the blocked video thumbnail/poster
+> generation in §12, which needs ffmpeg or a managed video vendor. Read the
+> per-section statuses below, not this snapshot.
 
 **Landed (✅):** the 4 core Phase-9 pages, all wired to `adminApi`
 (`web/src/lib/api/endpoints.ts`) via `web/src/lib/admin/queries.ts`:
@@ -282,12 +289,16 @@ are wired into the real call sites so edits take effect with no redeploy.
 
 ## 10. Billing plans management `[MVP]` `[BE]`
 
-`billing.plans.manage` — plans are **seeded only** (`GET /plans` reads them); no admin
-CRUD. Prices/entitlements shouldn't need a redeploy.
+✅ **Shipped — see §13**, which is the authoritative record for this section. This
+section's checkboxes were left stale after §13 landed and are reconciled here
+(2026-07-18); the description below is kept only as the original problem statement.
 
-- [ ] `[BE]` `POST/PATCH /admin/plans` (+ entitlement editing).
-- [ ] **Plans page** (`/admin/plans`) — list, edit price/interval/entitlements,
-  create/retire; warn on changes affecting active subscribers.
+> *(Original problem statement: `billing.plans.manage` — plans are **seeded only**
+> (`GET /plans` reads them); no admin CRUD. Prices/entitlements shouldn't need a redeploy.)*
+
+- [x] ✅ `[BE]` `POST/PATCH /admin/plans` (+ entitlement editing) — `Admin\PlanController` (§13).
+- [x] ✅ **Plans page** (`/admin/plans`) — list, edit price/interval/entitlements,
+  create/retire (§13).
 
 ---
 

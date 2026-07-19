@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { Avatar, Icon } from '@/components/ui'
+import { Avatar, Icon, IconButton } from '@/components/ui'
 import { Logo } from '@/components/Logo'
 import { cn } from '@/lib/cn'
 import { useAuth } from '@/lib/auth/AuthProvider'
@@ -68,13 +68,9 @@ function SidebarContent({
           <Logo className="h-8" />
         </NavLink>
         {onClose && (
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-muted hover:bg-surface-muted lg:hidden"
-            aria-label="Close menu"
-          >
+          <IconButton onClick={onClose} size="sm" className="lg:hidden" aria-label="Close menu">
             <Icon name="close" />
-          </button>
+          </IconButton>
         )}
       </div>
 
@@ -94,7 +90,7 @@ function SidebarContent({
                     end={item.end}
                     className={({ isActive }) =>
                       cn(
-                        'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors',
+                        'flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors',
                         isActive
                           ? 'bg-primary-soft text-primary'
                           : 'text-muted hover:bg-surface-muted hover:text-foreground',
@@ -119,13 +115,9 @@ function Topbar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border bg-surface/80 px-4 backdrop-blur sm:px-6 lg:px-8">
-      <button
-        onClick={onOpenDrawer}
-        className="rounded-lg p-2 text-muted hover:bg-surface-muted lg:hidden"
-        aria-label="Open menu"
-      >
+      <IconButton onClick={onOpenDrawer} className="lg:hidden" aria-label="Open menu">
         <Icon name="menu" />
-      </button>
+      </IconButton>
 
       <div className="lg:hidden">
         <Logo className="h-7" />
@@ -137,13 +129,12 @@ function Topbar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
 
       <OrgSwitcher />
 
-      <button
+      <IconButton
         onClick={toggle}
-        className="rounded-lg p-2 text-muted hover:bg-surface-muted"
         aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
       >
         <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
-      </button>
+      </IconButton>
 
       <UserMenu />
     </header>
@@ -193,7 +184,7 @@ function UserMenu() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-full p-1 pr-2 hover:bg-surface-muted"
+        className="relative flex items-center gap-2 rounded-full p-1 pr-2 hover:bg-surface-muted after:absolute after:inset-x-0 after:-inset-y-0.5 after:content-['']"
         aria-haspopup="menu"
         aria-expanded={open}
       >
@@ -219,7 +210,7 @@ function UserMenu() {
               setOpen(false)
               void logout()
             }}
-            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-surface-muted"
+            className="flex min-h-11 w-full items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-surface-muted"
           >
             <Icon name="logout" className="size-[18px] text-muted" />
             Sign out

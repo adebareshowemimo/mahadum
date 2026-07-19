@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Button3D, Icon } from '@/components/ui'
+import { Button3D, Icon, IconButton } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { countQuiz, type PlayerService, type Slide } from './types'
 import { SlideView } from './slides'
@@ -117,13 +117,9 @@ function Header({
 }) {
   return (
     <header className="sticky top-0 z-20 flex items-center gap-4 px-4 py-4 sm:px-6">
-      <button
-        onClick={onExit}
-        className="flex size-9 shrink-0 items-center justify-center rounded-full text-foreground/60 transition-colors hover:bg-foreground/10 hover:text-foreground"
-        aria-label="Exit"
-      >
+      <IconButton onClick={onExit} variant="overlay" shape="circle" aria-label="Exit">
         <Icon name="close" className="size-5" />
-      </button>
+      </IconButton>
 
       <SegmentedProgress total={total} filled={phase === 'start' ? 0 : filled} />
 

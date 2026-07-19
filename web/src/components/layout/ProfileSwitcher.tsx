@@ -53,7 +53,7 @@ export function ProfileSwitcher() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-full p-1 pr-2 hover:bg-surface-muted"
+        className="relative flex items-center gap-2 rounded-full p-1 pr-2 hover:bg-surface-muted after:absolute after:inset-x-0 after:-inset-y-0.5 after:content-['']"
         aria-haspopup="menu"
         aria-expanded={open}
         title="Switch profile"
@@ -116,7 +116,7 @@ export function ProfileSwitcher() {
             <button
               role="menuitem"
               onClick={exitToParent}
-              className="flex w-full items-center gap-2.5 border-t border-border px-4 py-2.5 text-sm text-foreground hover:bg-surface-muted"
+              className="flex min-h-11 w-full items-center gap-2.5 border-t border-border px-4 py-2.5 text-sm text-foreground hover:bg-surface-muted"
             >
               <Icon name="logout" className="size-[18px] text-muted" />
               Exit to parent

@@ -72,7 +72,9 @@ class AuthController extends Controller
 
         $user = User::where('email', $login)->orWhere('username', $login)->first();
 
-        if (! $user || ! Hash::check($request->string('password'), $user->password)) {
+        // A null password means an OAuth-only account (see the google() flow):
+        // it must never be reachable by password, and never reach Hash::check.
+        if (! $user || $user->password === null || ! Hash::check($request->string('password'), $user->password)) {
             return $this->error('invalid_credentials', 'The provided credentials are incorrect.', 401);
         }
 

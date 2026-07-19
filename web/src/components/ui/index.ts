@@ -1,6 +1,13 @@
 export { Button, type ButtonProps, type ButtonVariant, type ButtonSize } from './Button'
 export { LinkButton, type LinkButtonProps } from './LinkButton'
 export { Button3D, type Button3DProps, type Button3DVariant, type Button3DSize } from './Button3D'
+export {
+  IconButton,
+  type IconButtonProps,
+  type IconButtonVariant,
+  type IconButtonSize,
+  type IconButtonShape,
+} from './IconButton'
 export { Input, type InputProps } from './Input'
 export { Textarea, type TextareaProps } from './Textarea'
 export { CodeInput, type CodeInputProps } from './CodeInput'

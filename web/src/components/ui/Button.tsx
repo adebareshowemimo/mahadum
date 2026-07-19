@@ -34,8 +34,13 @@ export const BUTTON_VARIANT_CLASSES: Record<ButtonVariant, string> = {
   soft: 'bg-primary-soft text-primary hover:bg-heritage-100 dark:hover:bg-heritage-900/40',
 }
 
+// WCAG 2.5.5/2.5.8 want a 44px target. `sm` stays 36px tall visually — bumping
+// it to 44 would flatten the size scale everywhere — so it grows an invisible
+// 4px band above and below via ::after. Width is already >= 44 (px-3 + label).
+const SM_HIT_AREA = "after:absolute after:inset-x-0 after:-inset-y-1 after:content-['']"
+
 export const BUTTON_SIZE_CLASSES: Record<ButtonSize, string> = {
-  sm: 'h-9 px-3 text-sm rounded-lg gap-1.5',
+  sm: `relative h-9 px-3 text-sm rounded-lg gap-1.5 ${SM_HIT_AREA}`,
   md: 'h-11 px-4 text-sm rounded-xl gap-2',
   lg: 'h-12 px-6 text-base rounded-xl gap-2',
 }

@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { cn } from '@/lib/cn'
 import { Icon } from './Icon'
+import { IconButton } from './IconButton'
 
 /** Centered modal dialog with overlay, Esc-to-close, and a header/close button. */
 export function Modal({
@@ -46,13 +47,9 @@ export function Modal({
             <h2 className="font-display text-lg font-bold text-foreground">{title}</h2>
             {description && <p className="mt-0.5 text-sm text-muted">{description}</p>}
           </div>
-          <button
-            onClick={onClose}
-            className="-mr-1 -mt-1 rounded-lg p-1.5 text-muted hover:bg-surface-muted"
-            aria-label="Close"
-          >
+          <IconButton onClick={onClose} size="sm" className="-mr-1 -mt-1" aria-label="Close">
             <Icon name="close" />
-          </button>
+          </IconButton>
         </div>
         <div className="p-5">{children}</div>
       </div>

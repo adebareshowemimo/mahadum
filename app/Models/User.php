@@ -26,7 +26,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string $last_name
  * @property string $email
  * @property Carbon|null $email_verified_at
- * @property string $password
+ * @property string|null $password Null for OAuth-only accounts (see AuthController@google)
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at

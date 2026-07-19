@@ -7,6 +7,7 @@ import {
   Card,
   CardBody,
   Icon,
+  IconButton,
   Input,
   Modal,
   Skeleton,
@@ -1162,28 +1163,35 @@ function OptionEditor({ draft, onPatch }: EditorProps) {
       </span>
       {draft.options.map((o) => (
         <div key={o.key} className="flex items-center gap-2">
-          <button
-            type="button"
+          <IconButton
+            size="lg"
+            variant="plain"
             onClick={() => onPatch((x) => ({ ...x, options: toggleCorrectIn(x.options, o.key, multi) }))}
             aria-label="Mark correct"
             className={cn(
-              'flex size-8 shrink-0 items-center justify-center rounded-lg border',
+              'border',
               o.correct ? 'border-leaf-400 bg-leaf-50 text-leaf-700' : 'border-border-strong text-subtle',
             )}
           >
             ✓
-          </button>
+          </IconButton>
           <input
             value={o.label}
             onChange={(e) => onPatch((x) => ({ ...x, options: x.options.map((y) => (y.key === o.key ? { ...y, label: e.target.value } : y)) }))}
             placeholder="Option text"
             disabled={lockLabels}
-            className="h-10 flex-1 rounded-xl border border-border-strong bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-70"
+            className="h-11 flex-1 rounded-xl border border-border-strong bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-70"
           />
           {!lockLabels && draft.options.length > 2 && (
-            <button type="button" className="text-xs text-danger" onClick={() => onPatch((x) => ({ ...x, options: x.options.filter((y) => y.key !== o.key) }))}>
+            <IconButton
+              size="lg"
+              variant="danger"
+              aria-label="Remove option"
+              className="text-xs"
+              onClick={() => onPatch((x) => ({ ...x, options: x.options.filter((y) => y.key !== o.key) }))}
+            >
               ✕
-            </button>
+            </IconButton>
           )}
         </div>
       ))}
@@ -1315,18 +1323,16 @@ function IconBtn({
   children: ReactNode
 }) {
   return (
-    <button
-      type="button"
+    <IconButton
+      size="lg"
+      variant={danger ? 'danger' : 'ghost'}
       aria-label={label}
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className={cn(
-        'flex size-8 items-center justify-center rounded-lg text-sm transition-colors hover:bg-surface-muted disabled:opacity-30 disabled:hover:bg-transparent',
-        danger ? 'text-danger' : 'text-muted',
-      )}
+      className="text-sm disabled:opacity-30 disabled:hover:bg-transparent"
     >
       {children}
-    </button>
+    </IconButton>
   )
 }

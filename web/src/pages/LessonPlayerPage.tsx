@@ -4,7 +4,9 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Alert, Button3D, Skeleton } from '@/components/ui'
 import { ApiError, learningApi, type CompleteResult, type LessonPlay } from '@/lib/api'
 import { useActiveProfile } from '@/lib/profile/ActiveProfile'
+import { useEntitlements } from '@/lib/billing/entitlements'
 import { learningKeys } from '@/lib/learning/queries'
+import { AdModal } from '@/components/gamification/AdModal'
 import { SlideDeck, createLiveService, playToSlides } from '@/components/learning/player'
 
 /** Immersive, slide-based lesson player for learners (server-graded). */
@@ -65,8 +67,10 @@ export function LessonPlayerPage() {
 
 function LessonComplete({ lessonId, learnerId, onExit }: { lessonId: number; learnerId: number; onExit: () => void }) {
   const qc = useQueryClient()
+  const { ads: adsEnabled } = useEntitlements()
   const [result, setResult] = useState<CompleteResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [adOpen, setAdOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -108,7 +112,31 @@ function LessonComplete({ lessonId, learnerId, onExit }: { lessonId: number; lea
       {badgeCount > 0 && (
         <p className="text-sm font-semibold text-primary">🏅 {badgeCount} new badge{badgeCount === 1 ? '' : 's'}!</p>
       )}
-      <Button3D variant="reward" size="lg" fullWidth onClick={onExit}>Back to journey</Button3D>
+      <Button3D
+        variant="reward"
+        size="lg"
+        fullWidth
+        onClick={() => (adsEnabled ? setAdOpen(true) : onExit())}
+      >
+        Back to journey
+      </Button3D>
+
+      {/*
+        Rule 10: the interstitial runs only once the learner has finished and
+        chosen to leave — never mid-lesson, and never for a paid tier (the
+        `ads` entitlement is false on Premium). Closing it always continues to
+        the journey, so a missing/declined ad can never strand the learner.
+      */}
+      <AdModal
+        open={adOpen}
+        learnerId={learnerId}
+        placement="post_lesson"
+        onClose={() => {
+          setAdOpen(false)
+          onExit()
+        }}
+        onRewarded={() => {}}
+      />
     </div>
   )
 }

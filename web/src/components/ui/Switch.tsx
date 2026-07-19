@@ -14,7 +14,10 @@ export function Switch({ checked, onChange, label, disabled, id }: SwitchProps) 
   const switchId = id ?? autoId
 
   return (
-    <label htmlFor={switchId} className={cn('inline-flex items-center gap-2.5', disabled ? 'opacity-50' : 'cursor-pointer')}>
+    <label
+      htmlFor={switchId}
+      className={cn('inline-flex min-h-11 items-center gap-2.5', disabled ? 'opacity-50' : 'cursor-pointer')}
+    >
       <button
         id={switchId}
         type="button"
@@ -23,7 +26,10 @@ export function Switch({ checked, onChange, label, disabled, id }: SwitchProps) 
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(
+          // The track stays 24x44 visually; an invisible 10px band top and
+          // bottom lifts the tappable region to 44x44 (WCAG 2.5.5/2.5.8).
           'relative h-6 w-11 shrink-0 rounded-full transition-colors',
+          "after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-['']",
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
           checked ? 'bg-primary' : 'bg-surface-sunken',
         )}

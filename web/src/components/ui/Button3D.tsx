@@ -21,7 +21,9 @@ const VARIANTS: Record<Button3DVariant, string> = {
 }
 
 const SIZES: Record<Button3DSize, string> = {
-  sm: 'h-10 px-4 text-sm rounded-xl gap-1.5',
+  // 40px painted + an invisible 2px band top/bottom = a 44px WCAG 2.5.5 target,
+  // without thickening the chunky 3D silhouette.
+  sm: "relative h-10 px-4 text-sm rounded-xl gap-1.5 after:absolute after:inset-x-0 after:-inset-y-0.5 after:content-['']",
   md: 'h-12 px-6 text-base rounded-2xl gap-2',
   lg: 'h-14 px-8 text-lg rounded-2xl gap-2.5',
 }
