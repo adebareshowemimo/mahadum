@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Alert, Button, Input } from '@/components/ui'
+import { Alert, Button, Icon, Input } from '@/components/ui'
 import { AuthLayout } from '@/components/auth/AuthLayout'
 import { GoogleButton, OrDivider } from '@/components/auth/GoogleButton'
 import { cn } from '@/lib/cn'
@@ -37,6 +37,7 @@ export function RegisterPage() {
     first_name: '',
     last_name: '',
     email: '',
+    phone: '',
     password: '',
     password_confirmation: '',
   })
@@ -90,6 +91,7 @@ export function RegisterPage() {
         first_name: values.first_name,
         last_name: values.last_name,
         email: values.email,
+        phone: values.phone,
         password: values.password,
         password_confirmation: values.password_confirmation,
         account_type: 'parent',
@@ -120,12 +122,19 @@ export function RegisterPage() {
 
   return (
     <AuthLayout
-      title="Create your account"
+      eyebrow={step === 'age' ? 'A safe start for every learner' : step === 'guardian' ? 'Designed with guardians in control' : 'Your learning circle starts here'}
+      title="Create your family account."
       subtitle={subtitle}
+      image="/images/landing-v1-family-call.webp"
+      imageAlt="Amara practising a family greeting with Iya while relatives join by video call"
+      imagePosition="object-[68%_center]"
+      visualTitle="Bring your family language into everyday life."
+      visualBody="Start free, learn at your own pace, and give every learner a safe profile connected to the people guiding them."
+      phrases={['Nnọọ', 'Báwo ni?', 'Sannu']}
       footer={
         <>
           Already have an account?{' '}
-          <Link to="/login" className="font-semibold text-primary hover:underline">
+          <Link to="/login" className="inline-flex min-h-11 items-center font-bold text-chore-700 hover:underline">
             Sign in
           </Link>
         </>
@@ -136,15 +145,21 @@ export function RegisterPage() {
       <div key={step} className="animate-step-in">
         {step === 'age' && (
           <form onSubmit={continueFromAge} className="flex flex-col gap-4" noValidate>
-            <div className="flex flex-col items-center gap-1 py-2 text-center">
-              <span className="text-4xl" aria-hidden="true">
-                {age == null ? '🎂' : age < digitalAge ? '🧒' : '🎉'}
+            <div className="flex items-center gap-4 rounded-xl bg-chore-50 p-4">
+              <span
+                aria-hidden="true"
+                className="flex size-12 shrink-0 items-center justify-center rounded-full bg-white font-display text-lg font-extrabold text-chore-700 shadow-sm"
+              >
+                {age == null ? '✓' : age}
               </span>
-              {age != null && (
-                <p className="animate-pop-in text-sm font-semibold text-foreground">
-                  You’re {age} year{age === 1 ? '' : 's'} old
+              <div>
+                <p className="font-display font-extrabold text-navy-950">
+                  {age == null ? 'We begin with safety.' : `You’re ${age} year${age === 1 ? '' : 's'} old.`}
                 </p>
-              )}
+                <p className="mt-1 text-sm font-semibold text-navy-600">
+                  Your age helps us choose the right account setup.
+                </p>
+              </div>
             </div>
             <Input
               label="Date of birth"
@@ -160,7 +175,7 @@ export function RegisterPage() {
               autoFocus
               required
             />
-            <Button type="submit" fullWidth size="lg">
+            <Button type="submit" fullWidth size="lg" variant="parent">
               Continue
             </Button>
           </form>
@@ -168,17 +183,17 @@ export function RegisterPage() {
 
         {step === 'guardian' && (
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col items-center gap-3 rounded-2xl bg-primary-soft p-5 text-center">
-              <span className="animate-pop-in text-4xl" aria-hidden="true">
-                🧑‍🍼
+            <div className="flex flex-col items-center gap-3 rounded-xl bg-chore-50 p-6 text-center">
+              <span className="animate-pop-in flex size-12 items-center justify-center rounded-full bg-white text-chore-700 shadow-sm">
+                <Icon name="shield" className="size-6" />
               </span>
-              <p className="text-sm text-foreground">
+              <p className="text-sm font-semibold leading-relaxed text-navy-700">
                 Because you’re under <strong>{digitalAge}</strong>, a parent or guardian needs to
                 create the account and give permission. They’ll add your learner profile in a moment —
-                then you can dive in! 🚀
+                then learning can begin.
               </p>
             </div>
-            <Button size="lg" fullWidth onClick={() => setStep('form')}>
+            <Button size="lg" fullWidth variant="parent" onClick={() => setStep('form')}>
               I’m a parent / guardian — continue
             </Button>
             <Button variant="ghost" fullWidth onClick={() => setStep('age')}>
@@ -197,7 +212,7 @@ export function RegisterPage() {
               </Alert>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <Input
                 label="First name"
                 autoComplete="given-name"
@@ -228,6 +243,17 @@ export function RegisterPage() {
             />
 
             <Input
+              label="Phone number"
+              type="tel"
+              autoComplete="tel"
+              hint="Used for airtime billing and account recovery."
+              value={values.phone}
+              onChange={update('phone')}
+              error={fieldErrors.phone}
+              required
+            />
+
+            <Input
               label="Password"
               type="password"
               autoComplete="new-password"
@@ -249,12 +275,12 @@ export function RegisterPage() {
             />
 
             {isGuardianFlow && (
-              <label className="flex items-start gap-2.5 text-sm text-foreground">
+              <label className="flex min-h-11 items-start gap-3 text-sm font-semibold leading-relaxed text-navy-700">
                 <input
                   type="checkbox"
                   checked={consent}
                   onChange={(e) => setConsent(e.target.checked)}
-                  className="mt-0.5 size-4 rounded border-border-strong text-primary focus:ring-ring"
+                  className="mt-0.5 size-5 shrink-0 rounded border-border-strong text-primary focus:ring-ring"
                 />
                 <span>
                   I am the parent or legal guardian and I consent to creating and managing this child’s
@@ -263,7 +289,7 @@ export function RegisterPage() {
               </label>
             )}
 
-            <Button type="submit" fullWidth size="lg" loading={submitting}>
+            <Button type="submit" fullWidth size="lg" variant="parent" loading={submitting}>
               Create account
             </Button>
 
@@ -302,8 +328,8 @@ function Stepper({ labels, index }: { labels: string[]; index: number }) {
           />
           <span
             className={cn(
-              'text-[11px] font-medium transition-colors',
-              i === index ? 'text-primary' : 'text-subtle',
+              'text-sm font-semibold transition-colors',
+              i === index ? 'text-chore-700' : 'text-subtle',
             )}
           >
             {label}

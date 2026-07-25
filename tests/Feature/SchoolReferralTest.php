@@ -55,7 +55,7 @@ class SchoolReferralTest extends TestCase
         $code = $this->getJson("/api/v1/schools/{$org->id}/referrals/summary")->json('data.code');
 
         $this->postJson('/api/v1/auth/register', [
-            'first_name' => 'Ref', 'last_name' => 'Erred', 'email' => 'org-referred@test.local',
+            'first_name' => 'Ref', 'last_name' => 'Erred', 'email' => 'org-referred@test.local', 'phone' => '+2348012340005',
             'password' => 'Password123!', 'password_confirmation' => 'Password123!', 'device_name' => 'd',
             'referral_code' => $code,
         ], ['X-Device-Id' => 'dev-org-1'])->assertCreated();

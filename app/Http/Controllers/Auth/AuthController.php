@@ -33,6 +33,7 @@ class AuthController extends Controller
                 'first_name' => $request->string('first_name'),
                 'last_name' => $request->string('last_name'),
                 'email' => $request->string('email'),
+                'phone' => $request->string('phone'),
                 'username' => $request->input('username'),
                 'password' => $request->string('password'), // hashed by cast
                 'locale' => $request->header('Accept-Language', 'en'),

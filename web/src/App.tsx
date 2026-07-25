@@ -5,6 +5,7 @@ import { AdminLayout } from '@/components/admin'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { PaywallGate } from '@/components/billing/PaywallGate'
 import { Spinner } from '@/components/ui/Spinner'
+import { useAuth } from '@/lib/auth/AuthProvider'
 // ComingSoon stays static: it backs every not-yet-built nav destination in the
 // .map() below, so lazy-loading it would mean one chunk request per placeholder.
 import { ComingSoon } from '@/pages/ComingSoon'
@@ -12,6 +13,14 @@ import { allNavItems } from '@/lib/nav/navigation'
 
 // Every real page is route-split. All page components are named exports, hence
 // the `.then(m => ({ default: m.X }))` shim React.lazy requires.
+const AboutPage = lazy(() => import('@/pages/AboutPage').then((m) => ({ default: m.AboutPage })))
+const FamiliesPage = lazy(() => import('@/pages/PublicAudiencePages').then((m) => ({ default: m.FamiliesPage })))
+const InstitutionsPage = lazy(() => import('@/pages/PublicAudiencePages').then((m) => ({ default: m.InstitutionsPage })))
+const ContactPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.ContactPage })))
+const PrivacyPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.PrivacyPage })))
+const TermsPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.TermsPage })))
+const ChildSafetyPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.ChildSafetyPage })))
+const AccessibilityPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.AccessibilityPage })))
 const AssignmentsPage = lazy(() => import('@/pages/AssignmentsPage').then((m) => ({ default: m.AssignmentsPage })))
 const BillingPage = lazy(() => import('@/pages/BillingPage').then((m) => ({ default: m.BillingPage })))
 const ClassesPage = lazy(() => import('@/pages/ClassesPage').then((m) => ({ default: m.ClassesPage })))
@@ -28,7 +37,6 @@ const FamilyPage = lazy(() => import('@/pages/FamilyPage').then((m) => ({ defaul
 const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })))
 const AchievementsPage = lazy(() => import('@/pages/AchievementsPage').then((m) => ({ default: m.AchievementsPage })))
 const AdminOverviewPage = lazy(() => import('@/pages/AdminOverviewPage').then((m) => ({ default: m.AdminOverviewPage })))
-const LandingPage = lazy(() => import('@/pages/LandingPage').then((m) => ({ default: m.LandingPage })))
 const LandingV1Page = lazy(() => import('@/pages/LandingVariantsPage').then((m) => ({ default: m.LandingV1Page })))
 const LandingV2Page = lazy(() => import('@/pages/LandingVariantsPage').then((m) => ({ default: m.LandingV2Page })))
 const LandingV3Page = lazy(() => import('@/pages/LandingVariantsPage').then((m) => ({ default: m.LandingV3Page })))
@@ -90,6 +98,14 @@ function RouteFallback() {
       <Spinner className="size-8 opacity-60" />
     </div>
   )
+}
+
+// V1 is the selected home page; keep the same authenticated-user redirect the
+// previous canonical LandingPage enforced at "/".
+function HomePage() {
+  const { status } = useAuth()
+  if (status === 'authenticated') return <Navigate to="/home" replace />
+  return <LandingV1Page />
 }
 
 // Nested boundary used *inside* AppLayout, so a page chunk loading swaps only the
@@ -169,14 +185,23 @@ export function App() {
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>
-      {/* Public marketing (redirects signed-in users away). */}
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/v1" element={<LandingV1Page />} />
+      {/* Public marketing (redirects signed-in users away). V1 is the selected home page. */}
+      <Route path="/" element={<HomePage />} />
+      <Route path="/v1" element={<Navigate to="/" replace />} />
       <Route path="/v2" element={<LandingV2Page />} />
       <Route path="/v3" element={<LandingV3Page />} />
       <Route path="/v4" element={<LandingV4Page />} />
-      <Route path="/v5" element={<LandingV5Page />} />
+      <Route path="/schools" element={<LandingV5Page />} />
+      <Route path="/v5" element={<Navigate to="/schools" replace />} />
       <Route path="/pricing" element={<PricingPage />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/families" element={<FamiliesPage />} />
+      <Route path="/institutions" element={<InstitutionsPage />} />
+      <Route path="/contact" element={<ContactPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/child-safety" element={<ChildSafetyPage />} />
+      <Route path="/accessibility" element={<AccessibilityPage />} />
 
       {/* Public auth screens — redirect away if already signed in. */}
       <Route element={<GuestRoute />}>

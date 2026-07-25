@@ -1,6 +1,7 @@
-import { useMemo, useState, type CSSProperties } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { Link } from 'react-router-dom'
 import { Figure } from '@/components/landing/Figure'
+import { ConceptHeader } from '@/components/landing/ConceptHeader'
 import { LANDING_LANGUAGES } from '@/components/landing/languages'
 import { Reveal } from '@/components/landing/Reveal'
 import { TryItLesson } from '@/components/landing/TryItLesson'
@@ -9,97 +10,72 @@ import { Icon, LinkButton } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { TAGLINE, WORDMARK } from '@/lib/brand'
 
+export { ConceptHeader } from '@/components/landing/ConceptHeader'
+
 type ConceptTone = 'light' | 'blue' | 'navy'
-
-const CONCEPTS = [
-  { to: '/v1', short: 'V1', label: 'Family story' },
-  { to: '/v2', short: 'V2', label: 'Culture world' },
-  { to: '/v3', short: 'V3', label: 'Whole community' },
-  { to: '/v4', short: 'V4', label: 'Living language' },
-  { to: '/v5', short: 'V5', label: 'Learning ecosystem' },
-]
-
-export function ConceptHeader({ tone = 'light' }: { tone?: ConceptTone }) {
-  const dark = tone !== 'light'
-
-  return (
-    <header
-      className={cn(
-        'relative z-30 border-b',
-        tone === 'light' && 'border-chore-100 bg-white',
-        tone === 'blue' && 'border-white/20 bg-[#0757bd] text-white',
-        tone === 'navy' && 'border-white/15 bg-[#061a3c] text-white',
-      )}
-    >
-      <div className="mx-auto flex min-h-[4.75rem] max-w-[90rem] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2 sm:h-[4.75rem] sm:flex-nowrap sm:px-6 sm:py-0 lg:px-10">
-        <Link
-          to="/"
-          aria-label={`${WORDMARK} home`}
-          className={cn(
-            'inline-flex min-h-11 shrink-0 items-center rounded-lg px-1',
-            dark && 'bg-white/95 px-2',
-          )}
-        >
-          <Logo className="h-8 sm:h-9" />
-        </Link>
-
-        <nav aria-label="Landing page concepts" className="order-3 mx-auto flex w-full items-center justify-center gap-1 rounded-full bg-black/8 p-1 sm:order-none sm:w-auto">
-          {CONCEPTS.map((concept) => (
-            <NavLink
-              key={concept.to}
-              to={concept.to}
-              className={({ isActive }) =>
-                cn(
-                  'inline-flex min-h-10 items-center rounded-full px-3 font-display text-xs font-bold transition-colors sm:px-4 sm:text-sm',
-                  isActive && (dark ? 'bg-white text-navy-950 shadow-sm' : 'bg-white text-navy-950 shadow-sm'),
-                  !isActive &&
-                    (dark
-                      ? 'text-white/75 hover:bg-white/15 hover:text-white'
-                      : 'text-navy-600 hover:bg-chore-50 hover:text-chore-700'),
-                )
-              }
-            >
-              <span>{concept.short}</span>
-              <span className="ml-1.5 hidden lg:inline">{concept.label}</span>
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="flex items-center gap-2">
-          <Link
-            to="/login"
-            className={cn(
-              'hidden min-h-11 items-center px-3 font-display text-sm font-bold sm:inline-flex',
-              dark ? 'text-white hover:text-white/75' : 'text-navy-700 hover:text-chore-700',
-            )}
-          >
-            Sign in
-          </Link>
-          <LinkButton to="/register" variant={dark ? 'accent' : 'parent'} size="md">
-            Start free
-          </LinkButton>
-        </div>
-      </div>
-    </header>
-  )
-}
 
 export function ConceptFooter({ tone = 'light' }: { tone?: ConceptTone }) {
   const dark = tone !== 'light'
   return (
     <footer className={cn('border-t', dark ? 'border-white/15 bg-[#061a3c] text-white' : 'border-chore-100 bg-white')}>
-      <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-10 sm:px-6 lg:flex-row lg:items-end lg:justify-between lg:px-8">
-        <div className="max-w-md">
-          <span className={cn('inline-flex rounded-lg p-2', dark && 'bg-white')}>
-            <Logo className="h-8" />
-          </span>
-          <p className={cn('mt-4 text-sm font-semibold', dark ? 'text-white/75' : 'text-navy-600')}>{TAGLINE}</p>
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.35fr_0.8fr_0.8fr] lg:gap-16">
+          <div className="max-w-sm sm:col-span-2 lg:col-span-1">
+            <span className={cn('inline-flex rounded-lg p-2', dark && 'bg-white')}>
+              <Logo className="h-16" />
+            </span>
+            <p className={cn('mt-4 max-w-[34ch] text-sm font-semibold leading-relaxed', dark ? 'text-white/75' : 'text-navy-600')}>{TAGLINE}</p>
+          </div>
+          <nav aria-label="Explore Mahadum">
+            <h2 className={cn('font-display text-sm font-extrabold', dark ? 'text-[#ffb277]' : 'text-chore-700')}>Explore</h2>
+            <div className="mt-3 grid text-sm font-bold">
+              <Link className="inline-flex min-h-11 items-center hover:underline" to="/families">Families</Link>
+              <Link className="inline-flex min-h-11 items-center hover:underline" to="/schools">Schools</Link>
+              <Link className="inline-flex min-h-11 items-center hover:underline" to="/institutions">Institutions</Link>
+              <Link className="inline-flex min-h-11 items-center hover:underline" to="/about">About us</Link>
+              <Link className="inline-flex min-h-11 items-center hover:underline" to="/pricing">Pricing</Link>
+              <Link className="inline-flex min-h-11 items-center hover:underline" to="/login">Sign in</Link>
+            </div>
+          </nav>
+          <nav aria-label="Help and legal information">
+            <h2 className={cn('font-display text-sm font-extrabold', dark ? 'text-[#ffb277]' : 'text-chore-700')}>Help &amp; trust</h2>
+            <div className="mt-3 grid text-sm font-bold">
+              <Link className="inline-flex min-h-11 items-center hover:underline" to="/contact">Contact us</Link>
+              <Link className="inline-flex min-h-11 items-center hover:underline" to="/child-safety">Child safety</Link>
+              <Link className="inline-flex min-h-11 items-center hover:underline" to="/accessibility">Accessibility</Link>
+              <Link className="inline-flex min-h-11 items-center hover:underline" to="/privacy">Privacy</Link>
+              <Link className="inline-flex min-h-11 items-center hover:underline" to="/terms">Terms</Link>
+            </div>
+          </nav>
         </div>
-        <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold">
-          <Link className="inline-flex min-h-11 items-center hover:underline" to="/pricing">Pricing</Link>
-          <Link className="inline-flex min-h-11 items-center hover:underline" to="/register">Families</Link>
-          <Link className="inline-flex min-h-11 items-center hover:underline" to="/pricing">Schools</Link>
-          <Link className="inline-flex min-h-11 items-center hover:underline" to="/login">Sign in</Link>
+        <div
+          className={cn(
+            'mt-8 grid gap-4 border-t pt-6 sm:grid-cols-[1fr_auto_auto] sm:items-center sm:gap-8',
+            dark ? 'border-white/15' : 'border-chore-100',
+          )}
+        >
+          <p className={cn('text-xs font-semibold', dark ? 'text-white/60' : 'text-navy-500')}>
+            © {WORDMARK} · {new Date().getFullYear()} · Lagos, Nigeria
+          </p>
+          <p className={cn('text-xs font-semibold', dark ? 'text-white/60' : 'text-navy-500')}>
+            Yorùbá · Igbo · Hausa · Pidgin
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+              window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' })
+            }}
+            className={cn(
+              'inline-flex min-h-11 items-center gap-2 justify-self-start font-display text-sm font-extrabold hover:underline sm:justify-self-end',
+              dark ? 'text-white' : 'text-chore-700',
+            )}
+          >
+            Back to top
+            <span className={cn('flex size-9 items-center justify-center rounded-full', dark ? 'bg-white/10' : 'bg-chore-50')}>
+              <Icon name="arrow-left" className="size-4 rotate-90" />
+            </span>
+          </button>
         </div>
       </div>
     </footer>
@@ -159,62 +135,208 @@ export function CheckLine({ children, inverse = false }: { children: string; inv
 /* V1 — intimate diaspora-family story                                        */
 /* -------------------------------------------------------------------------- */
 
+// Hero carousel — one story per audience, per the "Carousel / Carousel 2:
+// School carousel / 3rd Carousel" test feedback.
+const HERO_SLIDES = [
+  {
+    id: 'family',
+    tab: 'Family',
+    image: '/images/landing-v1-family-call.webp',
+    alt: 'Amara greeting family on a video call while learning with Iya',
+    focus: 'object-center',
+    mobileFocus: 'object-[68%_center]',
+    eyebrow: 'For families raising children between cultures',
+    headline: 'One hello can bring the whole family closer.',
+    body: 'Five joyful minutes a day connects your child to your roots. They can greet mama, follow family conversations and answer back with confidence.',
+    cta: { label: 'Start your family free', to: '/register' },
+  },
+  {
+    id: 'school',
+    tab: 'School',
+    image: '/images/landing-v3-school-community.webp',
+    alt: 'Amara learning with classmates while family members arrive for the school Language and Culture club',
+    focus: 'object-[54%_center]',
+    mobileFocus: 'object-[54%_center]',
+    eyebrow: 'For schools',
+    headline: 'The policy says teach it. The materials never arrived.',
+    body: 'MAHADUM.360 gives a school a structured curriculum across four languages, rosters imported from a spreadsheet, and per-student progress a head teacher can actually inspect.',
+    cta: { label: 'See school pricing', to: '/pricing' },
+  },
+  {
+    id: 'community',
+    tab: 'Community',
+    image: '/images/community-multigenerational.webp',
+    alt: 'A multigenerational Nigerian learning circle with a child, teenager, young adults, parents and grandmother talking together outdoors',
+    focus: 'object-center',
+    mobileFocus: 'object-[72%_center]',
+    eyebrow: 'Beyond the screen',
+    headline: 'Connect across generations.',
+    body: 'Language becomes a community where everyone is included — parents, teenagers, young adults and grandparents share the same words.',
+    cta: { label: 'Build the first learning circle', to: '/register' },
+  },
+  {
+    id: 'diaspora',
+    tab: 'Diaspora',
+    image: '/images/diaspora-young-adult.webp',
+    alt: 'Musa using a phone lesson while greeting family on a video call from his apartment abroad',
+    focus: 'object-center',
+    mobileFocus: 'object-[68%_center]',
+    eyebrow: 'For families around the world',
+    headline: 'Keep your roots alive. One click is all it takes.',
+    body: "We've built Africa's digital home for Nigerian languages and culture. Learn anytime, anywhere on your phone, tablet or computer. Our engaging lessons make it simple to connect, communicate, and celebrate your heritage from anywhere in the world.",
+    cta: { label: 'Start free', to: '/register' },
+  },
+]
+
 export function LandingV1Page() {
-  const [languageIndex, setLanguageIndex] = useState(0)
-  const language = LANDING_LANGUAGES[languageIndex]
   const [approved, setApproved] = useState(false)
+  const [slideIndex, setSlideIndex] = useState(0)
+  const [isHovering, setIsHovering] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
+  const [quizLanguageIndex, setQuizLanguageIndex] = useState(0)
+  const slide = HERO_SLIDES[slideIndex]
+  const quizLanguage = LANDING_LANGUAGES[quizLanguageIndex]
+
+  const goToPrevSlide = () => setSlideIndex((current) => (current - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)
+  const goToNextSlide = () => setSlideIndex((current) => (current + 1) % HERO_SLIDES.length)
+
+  // Auto-advance the hero carousel, but respect reduced-motion and give
+  // pointer, keyboard and screen-reader users an explicit way to stop it
+  // (WCAG 2.2.2 — content that moves on its own for >5s needs a pause control).
+  useEffect(() => {
+    if (isPaused || isHovering) return
+    if (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const timer = window.setInterval(goToNextSlide, 6000)
+    return () => window.clearInterval(timer)
+  }, [slideIndex, isPaused, isHovering])
 
   return (
     <div className="variant-page variant-v1 min-h-screen bg-white text-navy-950">
       <a href="#v1-main" className="variant-skip-link">Skip to main content</a>
       <ConceptHeader />
       <main id="v1-main">
-        <section className="motion-hero relative overflow-hidden bg-[#dff3ff] lg:min-h-[calc(100svh-4.75rem)]">
+        <section
+          className="motion-hero relative overflow-hidden bg-[#dff3ff] lg:min-h-[calc(100svh-4.75rem)]"
+          aria-roledescription="carousel"
+          aria-label="Who Mahadum360 is for"
+          onMouseEnter={() => setIsHovering(true)}
+          onMouseLeave={() => setIsHovering(false)}
+          onFocus={() => setIsHovering(true)}
+          onBlur={() => setIsHovering(false)}
+        >
           <img
-            src="/images/landing-v1-family-call.webp"
-            alt="Amara greeting family on a video call while learning with Iya"
-            className="motion-hero-media absolute inset-0 hidden size-full object-cover object-center lg:block"
+            key={slide.id}
+            src={slide.image}
+            alt={slide.alt}
+            className={cn('motion-hero-media absolute inset-0 hidden size-full object-cover lg:block', slide.focus)}
           />
           <div className="pointer-events-none absolute inset-0 hidden bg-[linear-gradient(90deg,rgba(223,243,255,0.98)_0%,rgba(223,243,255,0.9)_35%,rgba(223,243,255,0)_58%)] lg:block" />
 
           <div className="relative z-10 mx-auto max-w-[90rem] px-4 py-12 sm:px-6 sm:py-16 lg:px-10 lg:py-[clamp(5rem,9vw,9rem)]">
             <div className="motion-hero-copy max-w-[42rem]">
-              <p className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-bold text-chore-700 shadow-sm">
-                <span aria-hidden="true" className="size-2 rounded-full bg-rainbow-orange" />
-                For families raising children between cultures
-              </p>
-              <h1 className="mt-6 max-w-[12ch] font-display text-[clamp(3rem,6.1vw,5.8rem)] font-extrabold leading-[0.98] tracking-[-0.035em] text-navy-950">
-                One hello can bring the whole family closer.
-              </h1>
-              <p className="mt-6 max-w-[36rem] text-lg font-semibold leading-relaxed text-navy-700 sm:text-xl">
-                Five joyful minutes a day gives your child the words to greet Iya, follow the family story, and answer back with confidence.
-              </p>
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                <LinkButton to="/register" size="lg" variant="parent">Start your family free</LinkButton>
-                <a href="#v1-how" className="inline-flex h-12 items-center justify-center rounded-xl border-2 border-chore-200 bg-white px-6 font-display font-bold text-chore-700 hover:bg-chore-50">
-                  See how a word travels
-                </a>
-              </div>
-              <p className="mt-3 text-sm font-bold text-navy-600">No card. Every lesson included on Free.</p>
-
-              <div className="mt-8 border-t border-chore-300/70 pt-6">
-                <LanguageButtons selected={languageIndex} onSelect={setLanguageIndex} />
-                <div key={language.code} data-testid="v1-greeting" className="motion-word-pop mt-5 flex items-center gap-4">
-                  <span aria-hidden="true" className="flex size-12 items-center justify-center rounded-full bg-rainbow-orange text-xl">👋🏾</span>
-                  <div>
-                    <p className="text-sm font-bold text-navy-600">Their first morning greeting</p>
-                    <p className="font-display text-2xl font-extrabold text-chore-700">{language.greeting}</p>
-                  </div>
+              <div key={slide.id} id="hero-slide-panel" role="tabpanel" className="motion-panel-swap">
+                <p className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-bold text-chore-700 shadow-sm">
+                  <span aria-hidden="true" className="size-2 rounded-full bg-rainbow-orange" />
+                  {slide.eyebrow}
+                </p>
+                <h1 className="mt-6 max-w-[14ch] font-display text-[clamp(3rem,6.1vw,5.8rem)] font-extrabold leading-[0.98] tracking-[-0.035em] text-navy-950">
+                  {slide.headline}
+                </h1>
+                <p className="mt-6 max-w-[36rem] text-lg font-semibold leading-relaxed text-navy-700 sm:text-xl">
+                  {slide.body}
+                </p>
+                <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                  <LinkButton to={slide.cta.to} size="lg" variant="parent">{slide.cta.label}</LinkButton>
+                  <a href="#v1-how" className="inline-flex h-12 items-center justify-center rounded-xl border-2 border-chore-200 bg-white px-6 font-display font-bold text-chore-700 hover:bg-chore-50">
+                    See how a word travels
+                  </a>
                 </div>
+                <p className="mt-3 text-sm font-bold text-navy-600">No card. Every lesson included on Free.</p>
+              </div>
+
+              <div className="mt-8 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={goToPrevSlide}
+                  aria-label="Previous story"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white text-navy-700 shadow-sm hover:bg-chore-50"
+                >
+                  <Icon name="chevron" className="size-4 rotate-90" />
+                </button>
+                <div role="tablist" aria-label="Hero stories" className="flex gap-2">
+                  {HERO_SLIDES.map((item, index) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={slideIndex === index}
+                      aria-controls="hero-slide-panel"
+                      onClick={() => setSlideIndex(index)}
+                      className={cn(
+                        'min-h-9 rounded-full px-3.5 font-display text-xs font-bold transition-colors sm:text-sm',
+                        slideIndex === index ? 'bg-navy-950 text-white' : 'bg-white/70 text-navy-600 hover:bg-white',
+                      )}
+                    >
+                      {item.tab}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={goToNextSlide}
+                  aria-label="Next story"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white text-navy-700 shadow-sm hover:bg-chore-50"
+                >
+                  <Icon name="chevron" className="size-4 -rotate-90" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsPaused((value) => !value)}
+                  aria-label={isPaused ? 'Play carousel' : 'Pause carousel'}
+                  aria-pressed={isPaused}
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white text-navy-700 shadow-sm hover:bg-chore-50"
+                >
+                  <span aria-hidden="true">{isPaused ? '▶' : '❚❚'}</span>
+                </button>
               </div>
             </div>
           </div>
 
           <img
-            src="/images/landing-v1-family-call.webp"
-            alt="Amara greeting family on a video call while learning with Iya"
-            className="motion-hero-media aspect-[16/10] w-full object-cover object-[68%_center] lg:hidden"
+            key={`${slide.id}-mobile`}
+            src={slide.image}
+            alt={slide.alt}
+            className={cn('motion-hero-media aspect-[16/10] w-full object-cover lg:hidden', slide.mobileFocus)}
           />
+        </section>
+
+        <div className="bg-white py-8 text-center">
+          <a
+            href="#v1-quiz"
+            className="inline-flex h-12 items-center justify-center rounded-xl bg-chore-600 px-8 font-display font-bold text-white hover:bg-chore-700"
+          >
+            Take a 1 minute quiz
+          </a>
+        </div>
+
+        <section id="v1-quiz" className="bg-[#eef6ff] py-20 sm:py-28">
+          <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
+            <h2 className="font-display text-4xl font-extrabold leading-tight text-navy-950 sm:text-5xl">
+              Try the first three words now.
+            </h2>
+            <p className="mt-4 text-lg font-semibold text-navy-700">
+              Pick a language and play a one-minute lesson — no account and no email first.
+            </p>
+            <div className="mx-auto mt-8 flex justify-center">
+              <LanguageButtons selected={quizLanguageIndex} onSelect={setQuizLanguageIndex} />
+            </div>
+            <div className="mt-6">
+              <TryItLesson language={quizLanguage} />
+            </div>
+            <p className="mx-auto mt-6 max-w-lg text-sm font-bold text-navy-600">
+              Children have no direct sign-up — a parent signs up and generates a unique code to keep them safe. The platform is monitored, and any reported breach is treated seriously.
+            </p>
+          </div>
         </section>
 
         <section id="v1-how" className="bg-white py-20 sm:py-28">
@@ -366,7 +488,7 @@ export function LandingV2Page() {
   return (
     <div className="variant-page variant-v2 min-h-screen bg-[#0757bd] text-white">
       <a href="#v2-main" className="variant-skip-link">Skip to main content</a>
-      <ConceptHeader tone="blue" />
+      <ConceptHeader />
       <main id="v2-main">
         <section className="motion-hero relative min-h-[calc(100svh-4.75rem)] overflow-hidden bg-[#0757bd]">
           <img
@@ -503,7 +625,7 @@ export function LandingV2Page() {
           </div>
         </section>
       </main>
-      <ConceptFooter tone="blue" />
+      <ConceptFooter />
     </div>
   )
 }
@@ -555,17 +677,66 @@ const SCHOOL_BANDS = [
 
 const money = new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 })
 
-export function LandingV3Page() {
-  const [roleIndex, setRoleIndex] = useState(0)
+// Shared school-quote calculator — reused by V3 and the /schools (V5) page so
+// the pricing bands and copy stay in one place.
+export function SchoolQuoteSection({ id }: { id?: string }) {
   const [students, setStudents] = useState(120)
-  const role = ROLE_VIEWS[roleIndex]
   const band = useMemo(() => SCHOOL_BANDS.find((item) => students <= item.max) ?? SCHOOL_BANDS[3], [students])
   const schoolTotal = band.registration + students * band.perStudent
 
   return (
+    <section id={id} className="bg-white py-20 sm:py-28">
+      <div className="mx-auto grid max-w-7xl gap-14 px-4 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:px-8">
+        <Reveal>
+          <p className="font-display text-xl font-extrabold text-chore-700">A school quote you can understand.</p>
+          <h2 className="mt-3 font-display text-4xl font-extrabold leading-tight sm:text-5xl">Price the roll, then see what the team gets.</h2>
+          <p className="mt-5 text-lg font-semibold leading-relaxed text-navy-700">School plans combine annual registration with a per-student rate that steps down as enrollment grows.</p>
+          <ul className="mt-7 space-y-3">
+            <CheckLine>CSV roster import with row-level errors</CheckLine>
+            <CheckLine>Classes, seats, assignments and learner analytics</CheckLine>
+            <CheckLine>Invoices, receipts and referral earnings</CheckLine>
+            <CheckLine>Language & Culture club and competition entry</CheckLine>
+          </ul>
+        </Reveal>
+        <Reveal delay={80}>
+          <div className="rounded-[1rem] bg-navy-950 p-7 text-white shadow-md sm:p-10">
+            <label htmlFor="school-students" className="font-display text-lg font-extrabold text-white">How many students?</label>
+            <div className="mt-3 flex items-end justify-between gap-4">
+              <output htmlFor="school-students" className="motion-value font-display text-5xl font-extrabold text-[#ffb277]">{students}</output>
+              <span className="pb-1 text-sm font-bold text-white/65">9-month academic year</span>
+            </div>
+            <input
+              id="school-students"
+              type="range"
+              min="25"
+              max="800"
+              step="5"
+              value={students}
+              onChange={(event) => setStudents(Number(event.target.value))}
+              className="mt-6 w-full accent-[#ff650f]"
+            />
+            <div className="mt-8 divide-y divide-white/15 border-y border-white/15">
+              <div className="flex items-center justify-between py-4"><span className="font-bold text-white/70">Registration</span><strong className="font-display text-xl">{money.format(band.registration)}</strong></div>
+              <div className="flex items-center justify-between py-4"><span className="font-bold text-white/70">Per student</span><strong className="font-display text-xl">{money.format(band.perStudent)}</strong></div>
+              <div className="flex items-center justify-between py-4"><span className="font-bold text-white/70">Estimated total</span><strong className="font-display text-2xl text-[#ffb277]">{money.format(schoolTotal)}</strong></div>
+            </div>
+            <p className="mt-4 text-xs font-semibold text-white/58">Estimate based on published bands; final invoice reflects confirmed seats and organization terms.</p>
+            <LinkButton to="/pricing" variant="accent" fullWidth className="mt-6">Get a school quote</LinkButton>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  )
+}
+
+export function LandingV3Page() {
+  const [roleIndex, setRoleIndex] = useState(0)
+  const role = ROLE_VIEWS[roleIndex]
+
+  return (
     <div className="variant-page variant-v3 min-h-screen bg-white text-navy-950">
       <a href="#v3-main" className="variant-skip-link">Skip to main content</a>
-      <ConceptHeader tone="navy" />
+      <ConceptHeader />
       <main id="v3-main">
         <section className="motion-hero relative min-h-[calc(100svh-4.75rem)] overflow-hidden bg-[#061a3c]">
           <img
@@ -669,47 +840,7 @@ export function LandingV3Page() {
           </div>
         </section>
 
-        <section id="v3-school" className="bg-white py-20 sm:py-28">
-          <div className="mx-auto grid max-w-7xl gap-14 px-4 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:px-8">
-            <Reveal>
-              <p className="font-display text-xl font-extrabold text-chore-700">A school quote you can understand.</p>
-              <h2 className="mt-3 font-display text-4xl font-extrabold leading-tight sm:text-5xl">Price the roll, then see what the team gets.</h2>
-              <p className="mt-5 text-lg font-semibold leading-relaxed text-navy-700">School plans combine annual registration with a per-student rate that steps down as enrollment grows.</p>
-              <ul className="mt-7 space-y-3">
-                <CheckLine>CSV roster import with row-level errors</CheckLine>
-                <CheckLine>Classes, seats, assignments and learner analytics</CheckLine>
-                <CheckLine>Invoices, receipts and referral earnings</CheckLine>
-                <CheckLine>Language & Culture club and competition entry</CheckLine>
-              </ul>
-            </Reveal>
-            <Reveal delay={80}>
-              <div className="rounded-[1rem] bg-navy-950 p-7 text-white shadow-md sm:p-10">
-                <label htmlFor="school-students" className="font-display text-lg font-extrabold text-white">How many students?</label>
-                <div className="mt-3 flex items-end justify-between gap-4">
-                  <output htmlFor="school-students" className="motion-value font-display text-5xl font-extrabold text-[#ffb277]">{students}</output>
-                  <span className="pb-1 text-sm font-bold text-white/65">9-month academic year</span>
-                </div>
-                <input
-                  id="school-students"
-                  type="range"
-                  min="25"
-                  max="800"
-                  step="5"
-                  value={students}
-                  onChange={(event) => setStudents(Number(event.target.value))}
-                  className="mt-6 w-full accent-[#ff650f]"
-                />
-                <div className="mt-8 divide-y divide-white/15 border-y border-white/15">
-                  <div className="flex items-center justify-between py-4"><span className="font-bold text-white/70">Registration</span><strong className="font-display text-xl">{money.format(band.registration)}</strong></div>
-                  <div className="flex items-center justify-between py-4"><span className="font-bold text-white/70">Per student</span><strong className="font-display text-xl">{money.format(band.perStudent)}</strong></div>
-                  <div className="flex items-center justify-between py-4"><span className="font-bold text-white/70">Estimated total</span><strong className="font-display text-2xl text-[#ffb277]">{money.format(schoolTotal)}</strong></div>
-                </div>
-                <p className="mt-4 text-xs font-semibold text-white/58">Estimate based on published bands; final invoice reflects confirmed seats and organization terms.</p>
-                <LinkButton to="/pricing" variant="accent" fullWidth className="mt-6">Get a school quote</LinkButton>
-              </div>
-            </Reveal>
-          </div>
-        </section>
+        <SchoolQuoteSection id="v3-school" />
 
         <section className="relative overflow-hidden bg-[#061a3c] py-20 text-white sm:py-28">
           <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-center lg:px-8">
@@ -723,7 +854,7 @@ export function LandingV3Page() {
           </div>
         </section>
       </main>
-      <ConceptFooter tone="navy" />
+      <ConceptFooter />
     </div>
   )
 }

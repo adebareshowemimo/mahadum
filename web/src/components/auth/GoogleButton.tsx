@@ -139,7 +139,7 @@ export function GoogleButton({
         'inline-flex h-11 w-full items-center justify-center gap-2.5 rounded-xl border border-border-strong bg-surface',
         'text-sm font-semibold text-foreground transition-colors hover:bg-surface-muted',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-        'disabled:cursor-not-allowed disabled:opacity-60',
+        'disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted disabled:opacity-100',
       )}
     >
       <GoogleGlyph />

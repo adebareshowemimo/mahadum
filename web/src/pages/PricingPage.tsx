@@ -1,19 +1,30 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Link, Navigate } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
+import { Figure } from '@/components/landing/Figure'
+import { Reveal } from '@/components/landing/Reveal'
 import { Alert, Button, Input, LinkButton, Modal, Skeleton } from '@/components/ui'
-import { Logo } from '@/components/Logo'
-import { ApiError, pricingApi, type CreateSchoolLeadInput, type PricingBand, type PricingConsumerPlan, type PricingInfo } from '@/lib/api'
-import { TAGLINE, WORDMARK } from '@/lib/brand'
+import {
+  ApiError,
+  pricingApi,
+  type CreateSchoolLeadInput,
+  type PricingBand,
+  type PricingConsumerPlan,
+  type PricingInfo,
+} from '@/lib/api'
 import { useAuth } from '@/lib/auth/AuthProvider'
+import { cn } from '@/lib/cn'
+import { ConceptFooter, ConceptHeader } from './LandingVariantsPage'
+
+type BillingInterval = 'month' | 'year'
 
 /** Whole-naira formatting for marketing (no kobo). */
 function naira(minor: number): string {
   return `₦${Math.round(minor / 100).toLocaleString()}`
 }
 
-function pick(plans: PricingConsumerPlan[], audience: string, interval: string) {
-  return plans.find((p) => p.audience === audience && p.interval === interval) ?? null
+function pick(plans: PricingConsumerPlan[], audience: string, interval: BillingInterval) {
+  return plans.find((plan) => plan.audience === audience && plan.interval === interval) ?? null
 }
 
 export function PricingPage() {
@@ -24,216 +35,344 @@ export function PricingPage() {
   if (status === 'authenticated') return <Navigate to="/billing" replace />
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-20 border-b border-border/60 bg-background/80 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link to="/">
-            <Logo className="h-8" />
-          </Link>
-          <div className="flex items-center gap-2">
-            <LinkButton to="/login" variant="ghost" size="sm">
-              Sign in
-            </LinkButton>
-            <LinkButton to="/register" size="sm">
-              Get started
-            </LinkButton>
+    <div className="variant-page min-h-screen bg-white text-navy-950">
+      <a href="#pricing-main" className="variant-skip-link">Skip to main content</a>
+      <ConceptHeader />
+
+      <main id="pricing-main">
+        <PricingHero />
+
+        <section id="plans" className="scroll-mt-24 bg-white py-16 sm:py-24">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            {isLoading && <Skeleton className="h-[34rem] rounded-[1rem]" />}
+            {isError && (
+              <Alert variant="danger">
+                We couldn’t load the latest prices. Please refresh the page or try again shortly.
+              </Alert>
+            )}
+            {data && <PricingBody data={data} onOpenQuote={() => setQuoteOpen(true)} />}
           </div>
-        </div>
-      </header>
+        </section>
+      </main>
 
-      <section className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6">
-        <h1 className="font-display text-4xl font-extrabold tracking-tight text-foreground">Simple, family-friendly pricing</h1>
-        <p className="mx-auto mt-4 max-w-xl text-lg text-muted">
-          Learning is always free. Upgrade for an ad-free experience, offline lessons and the family dashboard — or bring
-          your whole school on board.
-        </p>
-      </section>
-
-      <div className="mx-auto max-w-6xl px-4 pb-24 sm:px-6 lg:px-8">
-        {isLoading && <Skeleton className="h-96" />}
-        {isError && <Alert variant="danger">Couldn’t load pricing. Please try again.</Alert>}
-        {data && <PricingBody data={data} onOpenQuote={() => setQuoteOpen(true)} />}
-      </div>
-
-      <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 py-10 text-center sm:px-6">
-          <Logo className="h-7" />
-          <p className="text-sm font-medium text-muted">{TAGLINE}</p>
-          <p className="text-xs text-subtle">
-            © {WORDMARK} · {new Date().getFullYear()}
-          </p>
-        </div>
-      </footer>
-
+      <ConceptFooter />
       <GetQuoteModal open={quoteOpen} onClose={() => setQuoteOpen(false)} />
     </div>
   )
 }
 
+function PricingHero() {
+  return (
+    <section className="relative overflow-hidden bg-[#dff3ff]">
+      <div className="mx-auto grid max-w-[90rem] items-center gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[0.88fr_1.12fr] lg:gap-14 lg:px-10 lg:py-24">
+        <Reveal className="relative z-10">
+          <p className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-bold text-chore-700 shadow-sm">
+            <span aria-hidden="true" className="size-2 rounded-full bg-rainbow-orange" />
+            Straightforward pricing for families and schools
+          </p>
+          <h1 className="mt-6 max-w-[12ch] font-display text-[clamp(3rem,6vw,5.5rem)] font-extrabold leading-[0.98] tracking-[-0.035em] text-navy-950">
+            Every lesson is free. Choose how you learn.
+          </h1>
+          <p className="mt-6 max-w-[38rem] text-lg font-semibold leading-relaxed text-navy-700 sm:text-xl">
+            Start with the complete learning experience at no cost. Upgrade for convenience—no ads, offline lessons,
+            unlimited hearts, and family tools—not for access to your language.
+          </p>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <a
+              href="#plans"
+              className="inline-flex h-12 items-center justify-center rounded-xl bg-chore-500 px-6 font-display font-bold text-white shadow-sm transition-colors hover:bg-chore-600"
+            >
+              Compare family plans
+            </a>
+            <a
+              href="#school-pricing"
+              className="inline-flex h-12 items-center justify-center rounded-xl border border-chore-200 bg-white px-6 font-display font-bold text-chore-700 transition-colors hover:bg-chore-50"
+            >
+              See school pricing
+            </a>
+          </div>
+          <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-navy-700">
+            <span>✓ No card to start</span>
+            <span>✓ Cancel anytime</span>
+            <span>✓ Learning never locked</span>
+          </div>
+        </Reveal>
+
+        <Reveal delay={80} className="relative">
+          <div aria-hidden="true" className="absolute -left-7 -top-7 size-28 rounded-full bg-rainbow-orange/15" />
+          <Figure
+            src="/images/landing-v4-kitchen-hero.webp"
+            alt="A Nigerian family learning everyday language together while preparing food at home"
+            className="relative aspect-[16/11] w-full rounded-[1rem]"
+            imgClassName="object-[63%_center]"
+            priority
+          />
+          <div className="absolute bottom-4 left-4 max-w-[15rem] rounded-xl bg-white p-4 shadow-md sm:bottom-6 sm:left-6">
+            <p className="font-display text-lg font-extrabold text-navy-950">Free means every lesson.</p>
+            <p className="mt-1 text-sm font-semibold text-navy-600">Paying adds comfort, never access.</p>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  )
+}
+
 function PricingBody({ data, onOpenQuote }: { data: PricingInfo; onOpenQuote: () => void }) {
-  const individualMonthly = pick(data.consumer, 'individual', 'month')
-  const individualAnnual = pick(data.consumer, 'individual', 'year')
-  const familyMonthly = pick(data.consumer, 'family', 'month')
-  const familyAnnual = pick(data.consumer, 'family', 'year')
+  const [interval, setInterval] = useState<BillingInterval>('month')
+  const individual = pick(data.consumer, 'individual', interval)
+  const family = pick(data.consumer, 'family', interval)
 
   return (
-    <div className="flex flex-col gap-16">
-      <div className="grid gap-5 lg:grid-cols-4">
+    <div>
+      <Reveal className="flex flex-col gap-7 sm:flex-row sm:items-end sm:justify-between">
+        <div className="max-w-2xl">
+          <h2 className="font-display text-3xl font-extrabold leading-tight text-navy-950 sm:text-5xl">
+            Begin free. Add what your household needs.
+          </h2>
+          <p className="mt-4 text-lg font-semibold leading-relaxed text-navy-600">
+            One learner or six, every plan begins with the same complete curriculum.
+          </p>
+        </div>
+        <div className="inline-flex w-fit rounded-xl bg-chore-50 p-1" role="group" aria-label="Billing period">
+          {(['month', 'year'] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={interval === option}
+              onClick={() => setInterval(option)}
+              className={cn(
+                'min-h-11 rounded-lg px-5 font-display text-sm font-bold transition-colors',
+                interval === option ? 'bg-white text-chore-700 shadow-sm' : 'text-navy-600 hover:text-navy-950',
+              )}
+            >
+              {option === 'month' ? 'Monthly' : 'Annual'}
+            </button>
+          ))}
+        </div>
+      </Reveal>
+
+      <div className="mt-10 grid gap-5 lg:grid-cols-3">
         <PlanCard
           name={data.free.name}
-          price="FREE"
-          cadence="— ₦0/month"
+          price="₦0"
+          cadence="forever"
           blurb={data.free.blurb}
-          features={['Full access to every lesson', 'Speaking practice & quizzes', 'Ad-supported']}
+          features={['Every lesson and quiz', 'Speaking practice', 'XP, streaks and badges', 'Supported by age-appropriate ads']}
         />
         <PlanCard
           name="Individual"
-          price={individualMonthly ? naira(individualMonthly.price_minor) : '—'}
-          cadence="/ month"
-          annual={individualAnnual ? `or ${naira(individualAnnual.price_minor)}/year` : undefined}
-          daily={individualMonthly ? `≈ ${naira(individualMonthly.price_minor / 30)}/day with airtime` : undefined}
-          features={['Ad-free learning', 'Offline lesson downloads', 'Unlimited hearts', '1 learner profile']}
+          plan={individual}
+          interval={interval}
+          features={['Everything in Free', 'Ad-free learning', 'Offline lesson downloads', 'Unlimited hearts', '1 learner profile']}
         />
         <PlanCard
           name="Family"
-          price={familyMonthly ? naira(familyMonthly.price_minor) : '—'}
-          cadence="/ month"
-          annual={familyAnnual ? `or ${naira(familyAnnual.price_minor)}/year` : undefined}
-          daily={familyMonthly ? `≈ ${naira(familyMonthly.price_minor / 30)}/day with airtime` : undefined}
+          plan={family}
+          interval={interval}
           highlight
           features={[
             'Everything in Individual',
-            `Up to ${familyMonthly?.max_profiles ?? 6} learner profiles`,
-            'Family dashboard, chores & coins',
+            `Up to ${family?.max_profiles ?? 6} learner profiles`,
+            'Family progress dashboard',
+            'Chores, coins and parent approvals',
           ]}
-        />
-        <PlanCard
-          name="School"
-          price="Custom"
-          cadence="per school"
-          blurb="For classrooms and whole schools."
-          features={['Ad-free learning', 'Offline lesson dashboards', 'Class and school dashboards']}
-          ctaLabel="Get Quote"
-          onCtaClick={onOpenQuote}
         />
       </div>
 
-      <SchoolPricing bands={data.school.bands} termMonths={data.school.term_months} />
+      <Reveal className="mt-8 grid overflow-hidden rounded-[1rem] border border-chore-100 bg-[#f7fbff] md:grid-cols-3">
+        <PromisePoint title="The curriculum stays open">
+          Free learners can complete the same language lessons as paying learners.
+        </PromisePoint>
+        <PromisePoint title="Upgrade for convenience">
+          Paid plans remove interruptions and make learning easier on journeys and weak connections.
+        </PromisePoint>
+        <PromisePoint title="Parents stay in control">
+          Family tools let adults review progress and approve chore rewards before coins are released.
+        </PromisePoint>
+      </Reveal>
 
-      <section className="rounded-3xl border border-border bg-surface p-8 text-center sm:p-12">
-        <h2 className="font-display text-2xl font-bold text-foreground">Ready to start?</h2>
-        <p className="mx-auto mt-2 max-w-lg text-muted">Free to begin — no card required. Schools can request a quote in minutes.</p>
-        <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <LinkButton to="/register" size="lg">
-            Get started free
-          </LinkButton>
-          <Button size="lg" variant="outline" onClick={onOpenQuote}>
+      <SchoolPricing
+        bands={data.school.bands}
+        termMonths={data.school.term_months}
+        onOpenQuote={onOpenQuote}
+      />
+
+      <Reveal className="mt-16 overflow-hidden rounded-[1rem] bg-chore-700 px-6 py-12 text-center text-white sm:px-10 sm:py-16">
+        <p className="font-display text-lg font-bold text-[#ffb277]">Your first lesson takes about five minutes.</p>
+        <h2 className="mx-auto mt-3 max-w-3xl font-display text-3xl font-extrabold leading-tight sm:text-5xl">
+          Start with a word your family can use today.
+        </h2>
+        <p className="mx-auto mt-4 max-w-xl text-lg font-semibold text-chore-50">
+          No card. No locked course. Just Yorùbá, Igbo, Hausa and Pidgin made joyful.
+        </p>
+        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <LinkButton to="/register" size="lg" variant="accent">Create a free account</LinkButton>
+          <Button size="lg" variant="ghost" className="text-white hover:bg-white/10" onClick={onOpenQuote}>
             Talk to us about schools
           </Button>
         </div>
-      </section>
+      </Reveal>
+    </div>
+  )
+}
+
+function PromisePoint({ title, children }: { title: string; children: string }) {
+  return (
+    <div className="border-b border-chore-100 p-6 last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0">
+      <p className="font-display text-lg font-extrabold text-navy-950">{title}</p>
+      <p className="mt-2 text-sm font-semibold leading-relaxed text-navy-600">{children}</p>
     </div>
   )
 }
 
 function PlanCard({
   name,
+  plan,
+  interval,
   price,
   cadence,
-  annual,
-  daily,
   blurb,
   features,
   highlight = false,
-  ctaLabel,
-  onCtaClick,
 }: {
   name: string
-  price: string
-  cadence: string
-  annual?: string
-  daily?: string
+  plan?: PricingConsumerPlan | null
+  interval?: BillingInterval
+  price?: string
+  cadence?: string
   blurb?: string
   features: string[]
   highlight?: boolean
-  ctaLabel?: string
-  onCtaClick?: () => void
 }) {
+  const displayPrice = plan ? naira(plan.price_minor) : price ?? '—'
+  const displayCadence = plan ? (interval === 'year' ? 'per year' : 'per month') : cadence
+  const monthlyEquivalent = plan && interval === 'year' ? `${naira(plan.price_minor / 12)}/month, billed annually` : null
+  const dailyEquivalent = plan && interval === 'month' ? `About ${naira(plan.price_minor / 30)} a day` : null
+
   return (
-    <div
-      className={`flex flex-col gap-5 rounded-3xl border bg-surface p-8 ${
-        highlight ? 'border-gold-400 ring-2 ring-gold-300/50' : 'border-border'
-      }`}
-    >
-      <div>
-        <div className="flex items-center gap-2">
-          <h3 className="font-display text-xl font-bold text-foreground">{name}</h3>
-          {highlight && <span className="rounded-full bg-gold-100 px-2 py-0.5 text-xs font-bold text-gold-800">Popular</span>}
+    <Reveal>
+      <article
+        className={cn(
+          'flex h-full flex-col rounded-[1rem] p-7 sm:p-8',
+          highlight ? 'bg-navy-950 text-white shadow-md' : 'border border-chore-100 bg-white',
+        )}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <h3 className={cn('font-display text-2xl font-extrabold', highlight ? 'text-white' : 'text-navy-950')}>
+            {name}
+          </h3>
+          {highlight && (
+            <span className="rounded-full bg-[#ffeadb] px-3 py-1 text-xs font-bold text-[#9f3400]">For households</span>
+          )}
         </div>
-        {blurb && <p className="mt-1 text-sm text-muted">{blurb}</p>}
-      </div>
-      <div>
-        <div className="flex items-baseline gap-1.5">
-          <span className="font-display text-4xl font-extrabold text-foreground">{price}</span>
-          <span className="text-muted">{cadence}</span>
+        {blurb && <p className={cn('mt-2 text-sm font-semibold', highlight ? 'text-navy-100' : 'text-navy-600')}>{blurb}</p>}
+
+        <div className="mt-7">
+          <div className="flex flex-wrap items-baseline gap-x-2">
+            <span className={cn('font-display text-4xl font-extrabold', highlight ? 'text-white' : 'text-navy-950')}>
+              {displayPrice}
+            </span>
+            {displayCadence && (
+              <span className={cn('text-sm font-semibold', highlight ? 'text-navy-100' : 'text-navy-500')}>
+                {displayCadence}
+              </span>
+            )}
+          </div>
+          {(monthlyEquivalent || dailyEquivalent) && (
+            <p className={cn('mt-2 text-sm font-bold', highlight ? 'text-[#ffb277]' : 'text-leaf-700')}>
+              {monthlyEquivalent ?? dailyEquivalent}
+            </p>
+          )}
         </div>
-        {annual && <p className="mt-1 text-sm font-semibold text-leaf-600">{annual}</p>}
-        {daily && <p className="text-xs text-subtle">{daily}</p>}
-      </div>
-      <ul className="flex flex-col gap-2.5">
-        {features.map((f) => (
-          <li key={f} className="flex items-start gap-2 text-sm text-foreground">
-            <span aria-hidden="true" className="mt-0.5 font-bold text-leaf-600">✓</span>
-            {f}
-          </li>
-        ))}
-      </ul>
-      {onCtaClick ? (
-        <Button fullWidth variant={highlight ? 'premium' : 'outline'} className="mt-auto" onClick={onCtaClick}>
-          {ctaLabel}
-        </Button>
-      ) : (
-        <LinkButton to="/register" fullWidth variant={highlight ? 'premium' : 'outline'} className="mt-auto">
+
+        <ul className="my-7 flex flex-1 flex-col gap-3">
+          {features.map((feature) => (
+            <li key={feature} className={cn('flex items-start gap-3 text-sm font-semibold', highlight ? 'text-white' : 'text-navy-700')}>
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-extrabold',
+                  highlight ? 'bg-[#ffeadb] text-[#9f3400]' : 'bg-leaf-100 text-leaf-700',
+                )}
+              >
+                ✓
+              </span>
+              {feature}
+            </li>
+          ))}
+        </ul>
+
+        <LinkButton
+          to="/register"
+          fullWidth
+          size="lg"
+          variant={highlight ? 'accent' : name === 'Free' ? 'outline' : 'parent'}
+        >
           {name === 'Free' ? 'Start free' : `Choose ${name}`}
         </LinkButton>
-      )}
-    </div>
+      </article>
+    </Reveal>
   )
 }
 
-function SchoolPricing({ bands, termMonths }: { bands: PricingBand[]; termMonths: number }) {
+function SchoolPricing({
+  bands,
+  termMonths,
+  onOpenQuote,
+}: {
+  bands: PricingBand[]
+  termMonths: number
+  onOpenQuote: () => void
+}) {
   return (
-    <section className="rounded-3xl border border-border bg-surface-muted/40 p-8 sm:p-12">
-      <div className="mx-auto max-w-2xl text-center">
-        <span className="text-4xl" aria-hidden="true">
-          🏫
-        </span>
-        <h2 className="mt-3 font-display text-3xl font-bold text-foreground">For schools</h2>
-        <p className="mt-3 text-muted">
-          An annual registration plus a per-student rate that steps down as your school grows — for a {termMonths}-month
-          academic year. Includes the Language &amp; Culture club and automatic entry to the national competition.
-        </p>
-      </div>
+    <section id="school-pricing" className="scroll-mt-24 pt-16 sm:pt-24">
+      <div className="overflow-hidden rounded-[1rem] bg-[#eef6ff]">
+        <div className="grid lg:grid-cols-[0.86fr_1.14fr]">
+          <Figure
+            src="/images/school-classroom.webp"
+            alt="A teacher guides three children through a Nigerian-language lesson on a shared tablet"
+            className="min-h-[22rem] lg:min-h-full"
+            imgClassName="object-center"
+          />
+          <div className="p-6 sm:p-10 lg:p-12">
+            <p className="font-display text-lg font-extrabold text-[#a93403]">For schools and institutions</p>
+            <h2 className="mt-3 max-w-[15ch] font-display text-3xl font-extrabold leading-tight text-navy-950 sm:text-5xl">
+              One curriculum. Every learner visible.
+            </h2>
+            <p className="mt-5 max-w-2xl text-base font-semibold leading-relaxed text-navy-600 sm:text-lg">
+              Annual registration plus a per-student rate that steps down as your school grows, covering a
+              {` ${termMonths}`}-month academic year. Schools receive curriculum, rosters, assignments, reporting,
+              billing tools, and the Language &amp; Culture club.
+            </p>
 
-      <div className="mx-auto mt-8 max-w-3xl overflow-x-auto">
-        <table className="w-full min-w-[28rem] border-separate border-spacing-y-2 text-left">
-          <thead>
-            <tr className="text-xs uppercase tracking-wide text-subtle">
-              <th className="px-4 py-2">School size</th>
-              <th className="px-4 py-2">Annual registration</th>
-              <th className="px-4 py-2">Per student</th>
-            </tr>
-          </thead>
-          <tbody>
-            {bands.map((b) => (
-              <tr key={b.label} className="bg-surface">
-                <td className="rounded-l-xl px-4 py-3 font-semibold text-foreground">{b.label}</td>
-                <td className="px-4 py-3 text-foreground">{naira(b.registration_minor)}</td>
-                <td className="rounded-r-xl px-4 py-3 text-foreground">{naira(b.per_student_minor)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            <div className="mt-8 overflow-x-auto rounded-xl bg-white">
+              <table className="w-full min-w-[31rem] text-left text-sm">
+                <caption className="sr-only">School pricing by number of students</caption>
+                <thead className="bg-navy-950 text-white">
+                  <tr>
+                    <th scope="col" className="px-4 py-3 font-display font-bold">School size</th>
+                    <th scope="col" className="px-4 py-3 font-display font-bold">Registration</th>
+                    <th scope="col" className="px-4 py-3 font-display font-bold">Per student</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bands.map((band) => (
+                    <tr key={band.label} className="border-t border-chore-100">
+                      <td className="px-4 py-3 font-bold text-navy-950">{band.label}</td>
+                      <td className="px-4 py-3 font-semibold text-navy-700">{naira(band.registration_minor)}</td>
+                      <td className="px-4 py-3 font-semibold text-navy-700">{naira(band.per_student_minor)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Button size="lg" variant="parent" onClick={onOpenQuote}>Request a school quote</Button>
+              <p className="text-sm font-semibold text-navy-600">We’ll tailor the rollout to your school size.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   )
@@ -251,13 +390,12 @@ function GetQuoteModal({ open, onClose }: { open: boolean; onClose: () => void }
     mutationFn: (input: CreateSchoolLeadInput) => pricingApi.submitSchoolLead(input),
   })
 
-  function update<K extends keyof typeof values>(key: K, val: (typeof values)[K]) {
-    setValues((v) => ({ ...v, [key]: val }))
+  function update<K extends keyof typeof values>(key: K, value: (typeof values)[K]) {
+    setValues((current) => ({ ...current, [key]: value }))
   }
 
   function handleClose() {
     onClose()
-    // Reset after the close animation so the form doesn't visibly reset first.
     setTimeout(() => {
       setSubmitted(false)
       setValues({ school_name: '', contact_name: '', email: '', phone: '', school_size: '', city: '' })
@@ -266,8 +404,8 @@ function GetQuoteModal({ open, onClose }: { open: boolean; onClose: () => void }
     }, 200)
   }
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault()
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault()
     setFieldErrors({})
     setFormError(null)
     try {
@@ -280,10 +418,10 @@ function GetQuoteModal({ open, onClose }: { open: boolean; onClose: () => void }
         city: values.city.trim() || undefined,
       })
       setSubmitted(true)
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setFieldErrors(err.fieldErrors)
-        if (!Object.keys(err.fieldErrors).length) setFormError(err.message)
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setFieldErrors(error.fieldErrors)
+        if (!Object.keys(error.fieldErrors).length) setFormError(error.message)
       } else {
         setFormError('Something went wrong. Please try again.')
       }
@@ -291,11 +429,16 @@ function GetQuoteModal({ open, onClose }: { open: boolean; onClose: () => void }
   }
 
   return (
-    <Modal open={open} onClose={handleClose} title="Tell us about your school" description="We'll follow up with a quote tailored to your school size.">
+    <Modal
+      open={open}
+      onClose={handleClose}
+      title="Tell us about your school"
+      description="We’ll follow up with a quote tailored to your school size."
+    >
       {submitted ? (
         <div className="flex flex-col items-center gap-3 py-6 text-center">
           <span className="text-4xl" aria-hidden="true">🎉</span>
-          <p className="font-display text-lg font-bold text-foreground">Thanks — we've got it!</p>
+          <p className="font-display text-lg font-bold text-foreground">Thanks—we’ve got it.</p>
           <p className="text-sm text-muted">Our team will reach out with a quote shortly.</p>
           <Button variant="outline" onClick={handleClose}>Close</Button>
         </div>
@@ -305,7 +448,7 @@ function GetQuoteModal({ open, onClose }: { open: boolean; onClose: () => void }
           <Input
             label="School name"
             value={values.school_name}
-            onChange={(e) => update('school_name', e.target.value)}
+            onChange={(event) => update('school_name', event.target.value)}
             error={fieldErrors.school_name}
             autoFocus
             required
@@ -313,50 +456,46 @@ function GetQuoteModal({ open, onClose }: { open: boolean; onClose: () => void }
           <Input
             label="Your name"
             value={values.contact_name}
-            onChange={(e) => update('contact_name', e.target.value)}
+            onChange={(event) => update('contact_name', event.target.value)}
             error={fieldErrors.contact_name}
             required
           />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <Input
               label="Email"
               type="email"
               value={values.email}
-              onChange={(e) => update('email', e.target.value)}
+              onChange={(event) => update('email', event.target.value)}
               error={fieldErrors.email}
               required
             />
             <Input
               label="Phone (optional)"
               value={values.phone}
-              onChange={(e) => update('phone', e.target.value)}
+              onChange={(event) => update('phone', event.target.value)}
               error={fieldErrors.phone}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-semibold text-foreground">School size (optional)</span>
               <select
                 value={values.school_size}
-                onChange={(e) => update('school_size', e.target.value)}
+                onChange={(event) => update('school_size', event.target.value)}
                 className="h-11 rounded-xl border border-border-strong bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">Choose…</option>
-                {SCHOOL_SIZES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
+                {SCHOOL_SIZES.map((size) => <option key={size} value={size}>{size}</option>)}
               </select>
             </label>
             <Input
               label="City (optional)"
               value={values.city}
-              onChange={(e) => update('city', e.target.value)}
+              onChange={(event) => update('city', event.target.value)}
               error={fieldErrors.city}
             />
           </div>
-          <Button type="submit" fullWidth loading={submit.isPending}>
-            Request a quote
-          </Button>
+          <Button type="submit" fullWidth loading={submit.isPending}>Request a quote</Button>
         </form>
       )}
     </Modal>

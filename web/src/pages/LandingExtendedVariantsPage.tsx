@@ -1,11 +1,10 @@
 import { useState, type CSSProperties } from 'react'
-import { Link } from 'react-router-dom'
 import { Figure } from '@/components/landing/Figure'
 import { LANDING_LANGUAGES } from '@/components/landing/languages'
 import { Reveal } from '@/components/landing/Reveal'
 import { LinkButton } from '@/components/ui'
 import { cn } from '@/lib/cn'
-import { CheckLine, ConceptFooter, ConceptHeader, LanguageButtons } from './LandingVariantsPage'
+import { CheckLine, ConceptFooter, ConceptHeader, LanguageButtons, SchoolQuoteSection } from './LandingVariantsPage'
 
 function Waveform({ inverse = false }: { inverse?: boolean }) {
   return (
@@ -69,7 +68,7 @@ export function LandingV4Page() {
   return (
     <div className="variant-page variant-v4 min-h-screen bg-white text-navy-950">
       <a href="#v4-main" className="variant-skip-link">Skip to main content</a>
-      <ConceptHeader tone="navy" />
+      <ConceptHeader />
       <main id="v4-main">
         <section className="motion-hero relative min-h-[calc(100svh-8rem)] overflow-hidden bg-[#083f9f] sm:min-h-[calc(100svh-4.75rem)]">
           <img
@@ -240,7 +239,7 @@ export function LandingV4Page() {
           </Reveal>
         </section>
       </main>
-      <ConceptFooter tone="navy" />
+      <ConceptFooter />
     </div>
   )
 }
@@ -282,14 +281,12 @@ const ECOSYSTEM_VIEWS = [
 
 export function LandingV5Page() {
   const [viewIndex, setViewIndex] = useState(0)
-  const [languageIndex, setLanguageIndex] = useState(0)
   const view = ECOSYSTEM_VIEWS[viewIndex]
-  const language = LANDING_LANGUAGES[languageIndex]
 
   return (
     <div className="variant-page variant-v5 min-h-screen bg-white text-navy-950">
       <a href="#v5-main" className="variant-skip-link">Skip to main content</a>
-      <ConceptHeader tone="navy" />
+      <ConceptHeader />
       <main id="v5-main">
         <section className="motion-hero relative min-h-[calc(100svh-8rem)] overflow-hidden bg-[#061a3c] sm:min-h-[calc(100svh-4.75rem)]">
           <img
@@ -419,7 +416,11 @@ export function LandingV5Page() {
                 <LinkButton to="/register" variant="parent" size="lg" className="mt-7">Start the first learning circle</LinkButton>
               </Reveal>
               <Reveal delay={80}>
-                <Figure src="/images/culture-storytelling.webp" alt="Children and Iya sharing a family folktale together at blue hour" className="aspect-[5/4] rounded-[1rem]" />
+                <Figure
+                  src="/images/school-teen-culture-club.webp"
+                  alt="Aondo leading an older-teen Language and Culture club while classmates, a teacher and a young voice guide listen"
+                  className="aspect-[5/4] rounded-[1rem]"
+                />
               </Reveal>
             </div>
           </div>
@@ -447,21 +448,9 @@ export function LandingV5Page() {
           </div>
         </section>
 
-        <section className="bg-[#ffd44a] py-20 text-navy-950 sm:py-24">
-          <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[0.65fr_0.35fr] lg:items-end lg:px-8">
-            <Reveal>
-              <h2 className="font-display text-5xl font-extrabold leading-[1.02] sm:text-7xl">Begin with a learner. Grow into a community.</h2>
-              <p className="mt-5 max-w-2xl text-lg font-bold">Families can start free today. Schools can inspect transparent seat pricing and request a quote.</p>
-            </Reveal>
-            <Reveal delay={80}>
-              <LanguageButtons selected={languageIndex} onSelect={setLanguageIndex} />
-              <p className="motion-word-pop mt-5 font-display text-3xl font-extrabold text-chore-700">{language.greeting}</p>
-              <div className="mt-6 flex flex-col gap-3"><LinkButton to="/register" size="lg" variant="parent">Start learning free</LinkButton><Link to="/pricing" className="motion-press inline-flex min-h-12 items-center justify-center rounded-xl border-2 border-navy-950 px-5 font-display font-extrabold hover:bg-white/55">See school pricing</Link></div>
-            </Reveal>
-          </div>
-        </section>
+        <SchoolQuoteSection id="v5-school" />
       </main>
-      <ConceptFooter tone="navy" />
+      <ConceptFooter />
     </div>
   )
 }

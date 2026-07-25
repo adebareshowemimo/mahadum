@@ -29,7 +29,7 @@ class ReferralTest extends TestCase
 
         // referred signs up with the code
         $this->postJson('/api/v1/auth/register', [
-            'first_name' => 'Ref', 'last_name' => 'Erred', 'email' => 'referred@test.local',
+            'first_name' => 'Ref', 'last_name' => 'Erred', 'email' => 'referred@test.local', 'phone' => '+2348012340002',
             'password' => 'Password123!', 'password_confirmation' => 'Password123!', 'device_name' => 'd',
             'referral_code' => $code,
         ], ['X-Device-Id' => 'dev1'])->assertCreated();
@@ -125,12 +125,12 @@ class ReferralTest extends TestCase
         $code = app(ReferralService::class)->codeFor($referrer)->code;
 
         $this->postJson('/api/v1/auth/register', [
-            'first_name' => 'A', 'last_name' => 'One', 'email' => 'a@test.local',
+            'first_name' => 'A', 'last_name' => 'One', 'email' => 'a@test.local', 'phone' => '+2348012340003',
             'password' => 'Password123!', 'password_confirmation' => 'Password123!', 'device_name' => 'd', 'referral_code' => $code,
         ], ['X-Device-Id' => 'dev9'])->assertCreated();
 
         $this->postJson('/api/v1/auth/register', [
-            'first_name' => 'B', 'last_name' => 'Two', 'email' => 'b@test.local',
+            'first_name' => 'B', 'last_name' => 'Two', 'email' => 'b@test.local', 'phone' => '+2348012340004',
             'password' => 'Password123!', 'password_confirmation' => 'Password123!', 'device_name' => 'd', 'referral_code' => $code,
         ], ['X-Device-Id' => 'dev9'])->assertCreated();
 

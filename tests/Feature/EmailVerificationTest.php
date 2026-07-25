@@ -19,7 +19,7 @@ class EmailVerificationTest extends TestCase
         $this->seedRbac();
 
         $this->postJson('/api/v1/auth/register', [
-            'first_name' => 'Vee', 'last_name' => 'Rify', 'email' => 'verify@test.local',
+            'first_name' => 'Vee', 'last_name' => 'Rify', 'email' => 'verify@test.local', 'phone' => '+2348012340001',
             'password' => 'Password123!', 'password_confirmation' => 'Password123!', 'device_name' => 'd',
         ])->assertCreated();
 

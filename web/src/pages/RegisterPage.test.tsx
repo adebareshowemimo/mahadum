@@ -48,6 +48,7 @@ describe('RegisterPage age gate', () => {
     await userEvent.click(screen.getByRole('button', { name: /continue/i }))
     expect(await screen.findByLabelText(/first name/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/phone number/i)).toBeRequired()
   })
 
   it('requires a date of birth before continuing', async () => {

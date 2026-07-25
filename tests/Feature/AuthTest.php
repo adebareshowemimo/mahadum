@@ -16,7 +16,7 @@ class AuthTest extends TestCase
 
         $res = $this->postJson('/api/v1/auth/register', [
             'first_name' => 'Funmi', 'last_name' => 'Adeyemi',
-            'email' => 'funmi@test.local', 'password' => 'Password123!',
+            'email' => 'funmi@test.local', 'phone' => '+2348012345678', 'password' => 'Password123!',
             'password_confirmation' => 'Password123!', 'device_name' => 'iPhone',
         ]);
 
@@ -25,7 +25,7 @@ class AuthTest extends TestCase
             ->assertJsonPath('data.user.name', 'Funmi Adeyemi')
             ->assertJsonPath('data.abilities', ['parent']);
 
-        $this->assertDatabaseHas('users', ['email' => 'funmi@test.local', 'first_name' => 'Funmi', 'last_name' => 'Adeyemi']);
+        $this->assertDatabaseHas('users', ['email' => 'funmi@test.local', 'first_name' => 'Funmi', 'last_name' => 'Adeyemi', 'phone' => '+2348012345678']);
         $this->assertDatabaseHas('families', ['name' => "Funmi's Family"]);
     }
 
@@ -34,9 +34,19 @@ class AuthTest extends TestCase
         $this->seedRbac();
 
         $this->postJson('/api/v1/auth/register', [
-            'first_name' => 'X', 'email' => 'x@test.local', 'password' => 'Password123!',
+            'first_name' => 'X', 'email' => 'x@test.local', 'phone' => '+2348012345679', 'password' => 'Password123!',
             'password_confirmation' => 'Password123!', 'device_name' => 'd',
         ])->assertStatus(422)->assertJsonValidationErrors('last_name');
+    }
+
+    public function test_register_requires_phone(): void
+    {
+        $this->seedRbac();
+
+        $this->postJson('/api/v1/auth/register', [
+            'first_name' => 'X', 'last_name' => 'Y', 'email' => 'x2@test.local', 'password' => 'Password123!',
+            'password_confirmation' => 'Password123!', 'device_name' => 'd',
+        ])->assertStatus(422)->assertJsonValidationErrors('phone');
     }
 
     public function test_login_returns_token(): void

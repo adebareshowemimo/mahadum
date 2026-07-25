@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
@@ -55,13 +55,15 @@ describe('landing concepts', () => {
     expect(screen.getByRole('heading', { level: 1, name: /Build the place where a language keeps growing/i })).toBeInTheDocument()
   })
 
-  it('V1 connects language selection to the family greeting', async () => {
+  it('V1 hero carousel switches story on tab select', async () => {
     const user = userEvent.setup()
     renderConcept(<LandingV1Page />)
 
-    expect(within(screen.getByTestId('v1-greeting')).getByText('Ẹ káàrọ̀')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Igbo' }))
-    expect(within(screen.getByTestId('v1-greeting')).getByText('Ụtụtụ ọma')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /One hello can bring the whole family closer/i })).toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: 'School' }))
+    expect(screen.getByRole('heading', { name: /The policy says teach it/i })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Next story' }))
+    expect(screen.getByRole('heading', { name: /Connect across generations/i })).toBeInTheDocument()
   })
 
   it('V2 changes the visual story and content as adventures change', async () => {

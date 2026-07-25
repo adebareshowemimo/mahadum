@@ -17,7 +17,7 @@
 | **RBAC** | **spatie/laravel-permission** | Mature roles + permissions; maps cleanly to the 7-role hierarchy. |
 | **API auth** | **Laravel Sanctum** | First-party web SPA (cookie) + mobile (bearer token). Passport not needed (no third-party OAuth yet). |
 | **Social login** | **Laravel Socialite** (Google) | Matches locked auth decision (username/password + Google). |
-| **Phone** | OTP **only at telco-billing opt-in** | Not part of login. |
+| **Phone** | **Required at registration** (2026-07-25); OTP verification stays telco-billing-opt-in only | Collected so airtime billing doesn't need to ask for it again. Still not part of login — sign-in remains email/username + password or Google. |
 | **Payments** | Monnify (default) / Paystack / Flutterwave + Telco SDP (airtime VAS) | Per BRD. Webhook-driven. |
 
 > Note on the package choice: because Mahadum is B2C-heavy with shared content, the *core mechanism* is a `BelongsToTenant` global scope on an `organization_id` column. stancl/tenancy manages the tenant lifecycle and context around that. If you wanted the absolute lightest setup you could hand-roll the scope with no package — but stancl gives you tenant context, cache/queue isolation, and the DB-per-tenant escape hatch for free.
@@ -116,7 +116,7 @@ The single most important modelling decision: **separate "account/auth" from "le
 `id, name, type(school|institution|community), slug, cac_number, address, contact_email, domain(verified), status(pending|active|suspended), licence_model(annual|per_term), settings(json)`
 
 **users**
-`id, organization_id🔒(nullable), name, email(unique), username(unique,nullable), phone(nullable), password(nullable for social-only), google_id(nullable), email_verified_at, locale, status, last_login_at`
+`id, organization_id🔒(nullable), name, email(unique), username(unique,nullable), phone(nullable in schema — required by RegisterRequest for the public sign-up form; still nullable for Google-OAuth/admin-created users), password(nullable for social-only), google_id(nullable), email_verified_at, locale, status, last_login_at`
 
 **organization_user** — membership pivot
 `id, organization_id, user_id, role, status` *(a user may belong to >1 org, e.g. a teacher across campuses)*

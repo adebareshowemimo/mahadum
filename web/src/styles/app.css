@@ -250,6 +250,12 @@
     animation: panel-swap 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
+  /* Auth forms arrive without fading their controls or labels. Keeping
+     opacity at 1 preserves text contrast throughout the transition. */
+  .auth-form-enter {
+    animation: auth-form-arrive 0.68s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
   .motion-float {
     animation: gentle-float 4.8s ease-in-out infinite;
     animation-delay: calc(var(--float-i, 0) * -1.3s);
@@ -326,6 +332,11 @@
     to { opacity: 1; transform: none; clip-path: inset(0); }
   }
 
+  @keyframes auth-form-arrive {
+    from { transform: translateY(18px); clip-path: inset(0 0 5% 0); filter: blur(3px); }
+    to { transform: none; clip-path: inset(0); filter: none; }
+  }
+
   @keyframes gentle-float {
     0%, 100% { transform: translateY(0) rotate(-1deg); }
     50% { transform: translateY(-10px) rotate(1deg); }
@@ -394,6 +405,7 @@
     .motion-chip-entry,
     .motion-word-chip,
     .motion-panel-swap,
+    .auth-form-enter,
     .motion-float,
     .motion-coin,
     .motion-network-node,

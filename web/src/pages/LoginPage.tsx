@@ -44,12 +44,19 @@ export function LoginPage() {
 
   return (
     <AuthLayout
-      title="Welcome back"
-      subtitle="Sign in to keep your streak going."
+      eyebrow="Continue your language journey"
+      title="Welcome back to your learning circle."
+      subtitle="Your lessons, family profiles and progress are ready when you are."
+      image="/images/hero-grandmother-child.webp"
+      imageAlt="Iya and her granddaughter Amara sharing a joyful language lesson on a tablet"
+      imagePosition="object-center"
+      visualTitle="The next family conversation starts with one familiar word."
+      visualBody="Return to short lessons, native voices and the progress your household is building together."
+      phrases={['Ẹ káàrọ̀', 'Ụtụtụ ọma', 'Ina kwana']}
       footer={
         <>
           New to Mahadum.360?{' '}
-          <Link to="/register" className="font-semibold text-primary hover:underline">
+          <Link to="/register" className="inline-flex min-h-11 items-center font-bold text-chore-700 hover:underline">
             Create an account
           </Link>
         </>
@@ -81,13 +88,13 @@ export function LoginPage() {
           />
           <Link
             to="/forgot-password"
-            className="self-end text-xs font-medium text-primary hover:underline"
+            className="inline-flex min-h-11 items-center self-end text-sm font-bold text-chore-700 hover:underline"
           >
             Forgot password?
           </Link>
         </div>
 
-        <Button type="submit" fullWidth size="lg" loading={submitting}>
+        <Button type="submit" fullWidth size="lg" variant="parent" loading={submitting}>
           Sign in
         </Button>
 
