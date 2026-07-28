@@ -24,9 +24,16 @@ echo "==> Building the SPA"
 (cd web && npm ci && npm run build)
 
 echo "==> Publishing SPA build into public/ and resources/spa/"
-mkdir -p resources/spa public/assets
-rm -rf public/assets/*
-cp -r web/dist/assets/. public/assets/
+mkdir -p resources/spa
+# Vite emits bundled code under assets/ and copies every directory from
+# web/public (including images/) to the dist root. Publish both kinds of
+# directories; copying assets alone leaves the landing-page artwork behind.
+find web/dist -mindepth 1 -maxdepth 1 -type d -print0 |
+    while IFS= read -r -d '' source_dir; do
+        target_dir="public/$(basename "$source_dir")"
+        rm -rf "$target_dir"
+        cp -r "$source_dir" "$target_dir"
+    done
 cp web/dist/index.html resources/spa/index.html
 find web/dist -maxdepth 1 -type f ! -name 'index.html' -exec cp {} public/ \;
 
