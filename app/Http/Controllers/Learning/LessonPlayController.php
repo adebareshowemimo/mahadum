@@ -8,6 +8,9 @@ use App\Models\LearnerProfile;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
 use App\Models\MediaAsset;
+use App\Models\QuestionResponse;
+use App\Models\Quiz;
+use App\Models\QuizAttempt;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -36,9 +39,10 @@ class LessonPlayController extends Controller
             'components.game',
         ]);
 
-        $progress = $this->progressByComponent($request->integer('learner_id'), $lesson);
+        $learner = $this->viewableLearner($request->integer('learner_id'));
+        $progress = $this->progressByComponent($learner, $lesson);
 
-        $components = $lesson->components->map(function ($c) use ($progress) {
+        $components = $lesson->components->map(function ($c) use ($progress, $learner) {
             $cp = $progress[$c->id] ?? null;
 
             return [
@@ -51,7 +55,7 @@ class LessonPlayController extends Controller
                 // Resume support — saved playhead + whether already completed.
                 'resume_position' => (float) data_get($cp?->data, 'position_seconds', 0),
                 'completed' => $cp?->status === 'complete',
-                $c->type => $this->payloadFor($c),
+                $c->type => $this->payloadFor($c, $learner),
             ];
         })->values();
 
@@ -61,19 +65,26 @@ class LessonPlayController extends Controller
         ]]);
     }
 
+    /** The learner to personalise the payload for, if one is given and viewable. */
+    private function viewableLearner(int $learnerId): ?LearnerProfile
+    {
+        if ($learnerId <= 0) {
+            return null;
+        }
+        $learner = LearnerProfile::find($learnerId);
+
+        return ($learner && Gate::allows('view', $learner)) ? $learner : null;
+    }
+
     /**
-     * Map of component id → ComponentProgress for a (viewable) learner on this
-     * lesson. Empty when no learner is given or the caller can't view them.
+     * Map of component id → ComponentProgress for this learner on this lesson.
+     * Empty when no learner or no progress yet.
      *
      * @return array<int, ComponentProgress>
      */
-    private function progressByComponent(int $learnerId, Lesson $lesson): array
+    private function progressByComponent(?LearnerProfile $learner, Lesson $lesson): array
     {
-        if ($learnerId <= 0) {
-            return [];
-        }
-        $learner = LearnerProfile::find($learnerId);
-        if (! $learner || ! Gate::allows('view', $learner)) {
+        if (! $learner) {
             return [];
         }
 
@@ -90,7 +101,7 @@ class LessonPlayController extends Controller
             ->all();
     }
 
-    private function payloadFor($component): ?array
+    private function payloadFor($component, ?LearnerProfile $learner): ?array
     {
         return match ($component->type) {
             'video' => $component->video ? [
@@ -107,29 +118,7 @@ class LessonPlayController extends Controller
                 'poster' => null,
                 'captions' => [],
             ] : null,
-            'quiz' => $component->quiz ? [
-                'pass_threshold' => (float) $component->quiz->pass_threshold,
-                'hearts_enabled' => (bool) $component->quiz->hearts_enabled,
-                'max_attempts' => $component->quiz->max_attempts,
-                'questions' => $component->quiz->questions->map(fn ($q) => [
-                    'id' => $q->id,
-                    'type' => $q->type,
-                    'prompt' => $q->prompt,
-                    // Prompt media for audio/image question types (signed later with a vendor).
-                    'prompt_audio' => $this->assetUrl($q->promptAudioAsset),
-                    'prompt_image' => $this->assetUrl($q->promptImageAsset),
-                    // options WITHOUT is_correct
-                    'options' => $q->options->map(fn ($o) => [
-                        'id' => $o->id,
-                        'label' => $o->label,
-                    ])->values(),
-                    // For match_pairs, the shuffled right-side pool. The pairing
-                    // (which option maps to which target) stays server-side.
-                    'match_pool' => $q->type === 'match_pairs'
-                        ? $q->options->pluck('match_target')->filter()->shuffle()->values()
-                        : [],
-                ])->values(),
-            ] : null,
+            'quiz' => $component->quiz ? $this->quizPayload($component->quiz, $learner) : null,
             'speaking' => $component->speakingPrompt ? [
                 'prompt' => $component->speakingPrompt->prompt_text,
                 'target_text' => $component->speakingPrompt->target_text,
@@ -159,6 +148,69 @@ class LessonPlayController extends Controller
             ] : null,
             default => null,
         };
+    }
+
+    /**
+     * Quiz payload with is_correct stripped, plus per-question resume flags so a
+     * half-finished quiz can pick up at the first unanswered question.
+     */
+    private function quizPayload(Quiz $quiz, ?LearnerProfile $learner): array
+    {
+        $answered = $this->answeredMap($learner, $quiz);
+
+        return [
+            'pass_threshold' => (float) $quiz->pass_threshold,
+            'hearts_enabled' => (bool) $quiz->hearts_enabled,
+            'max_attempts' => $quiz->max_attempts,
+            'questions' => $quiz->questions->map(fn ($q) => [
+                'id' => $q->id,
+                'type' => $q->type,
+                'prompt' => $q->prompt,
+                // Prompt media for audio/image question types (signed later with a vendor).
+                'prompt_audio' => $this->assetUrl($q->promptAudioAsset),
+                'prompt_image' => $this->assetUrl($q->promptImageAsset),
+                // options WITHOUT is_correct
+                'options' => $q->options->map(fn ($o) => [
+                    'id' => $o->id,
+                    'label' => $o->label,
+                ])->values()->all(),
+                // For match_pairs, the shuffled right-side pool. The pairing
+                // (which option maps to which target) stays server-side.
+                'match_pool' => $q->type === 'match_pairs'
+                    ? $q->options->pluck('match_target')->filter()->shuffle()->values()->all()
+                    : [],
+                // Resume: already answered in the learner's open attempt (+ verdict).
+                'answered' => array_key_exists($q->id, $answered),
+                'was_correct' => $answered[$q->id] ?? null,
+            ])->values(),
+        ];
+    }
+
+    /**
+     * question_id → is_correct for every question the learner already answered in
+     * their open (unfinished) attempt at this quiz. Empty when none.
+     *
+     * @return array<int, bool>
+     */
+    private function answeredMap(?LearnerProfile $learner, Quiz $quiz): array
+    {
+        if (! $learner) {
+            return [];
+        }
+
+        $attempt = QuizAttempt::where('learner_profile_id', $learner->id)
+            ->where('quiz_id', $quiz->id)
+            ->whereNull('completed_at')
+            ->orderByDesc('attempt_no')
+            ->first();
+        if (! $attempt) {
+            return [];
+        }
+
+        return QuestionResponse::where('quiz_attempt_id', $attempt->id)
+            ->pluck('is_correct', 'question_id')
+            ->map(fn ($v) => (bool) $v)
+            ->all();
     }
 
     /** Absolute URL for a local-disk media asset (null when unset). */

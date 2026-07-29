@@ -5,6 +5,7 @@ export {
   createLiveService,
   createPreviewService,
   playToSlides,
+  resumePlan,
   youtubeEmbedUrl,
   type PlayerService,
   type Slide,

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Button3D, Icon, IconButton } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { countQuiz, type PlayerService, type Slide } from './types'
@@ -20,6 +20,10 @@ interface SlideDeckProps {
   slides: Slide[]
   service: PlayerService
   initialHearts: number | null
+  /** Resume: index of the first incomplete slide (0 = fresh start). */
+  startIndex?: number
+  /** Resume: correct answers already earned among the skipped-past slides. */
+  initialCorrect?: number
   onExit: () => void
   /** Render the end-of-deck screen from the run's stats. */
   renderComplete: (stats: DeckStats) => ReactNode
@@ -44,6 +48,8 @@ export function SlideDeck({
   slides,
   service,
   initialHearts,
+  startIndex = 0,
+  initialCorrect = 0,
   onExit,
   renderComplete,
 }: SlideDeckProps) {
@@ -54,6 +60,14 @@ export function SlideDeck({
 
   const total = slides.length
   const quizTotal = countQuiz(slides)
+  const items = useMemo(() => componentItems(slides), [slides])
+  const canResume = startIndex > 0 && startIndex < total
+
+  function begin(fromIndex: number, fromCorrect: number) {
+    setIndex(fromIndex)
+    setCorrect(fromCorrect)
+    setPhase(total === 0 ? 'complete' : 'play')
+  }
 
   function advance() {
     setIndex((i) => {
@@ -64,19 +78,23 @@ export function SlideDeck({
   }
 
   const stats: DeckStats = { total, quizTotal, correct, hearts }
+  const headerFilled = phase === 'start' ? startIndex : phase === 'complete' ? total : Math.min(index, total)
 
   return (
     <div className="dark heritage-stage flex min-h-screen flex-col text-foreground">
-      <Header phase={phase} filled={Math.min(index, total)} total={total} hearts={hearts} onExit={onExit} />
+      <Header filled={headerFilled} total={total} hearts={hearts} onExit={onExit} />
 
       {phase === 'start' && (
         <StartScreen
-          icon={startIcon}
+          icon={canResume ? '⏳' : startIcon}
           title={title}
           subtitle={subtitle}
           cta={startCta}
           empty={total === 0}
-          onStart={() => (total === 0 ? setPhase('complete') : setPhase('play'))}
+          canResume={canResume}
+          items={items}
+          onResume={() => begin(startIndex, initialCorrect)}
+          onStartOver={() => begin(0, 0)}
           onExit={onExit}
         />
       )}
@@ -103,13 +121,11 @@ export function SlideDeck({
 }
 
 function Header({
-  phase,
   filled,
   total,
   hearts,
   onExit,
 }: {
-  phase: Phase
   filled: number
   total: number
   hearts: number | null
@@ -121,7 +137,7 @@ function Header({
         <Icon name="close" className="size-5" />
       </IconButton>
 
-      <SegmentedProgress total={total} filled={phase === 'start' ? 0 : filled} />
+      <SegmentedProgress total={total} filled={filled} />
 
       {hearts !== null && (
         <span
@@ -161,7 +177,10 @@ function StartScreen({
   subtitle,
   cta,
   empty,
-  onStart,
+  canResume,
+  items,
+  onResume,
+  onStartOver,
   onExit,
 }: {
   icon: string
@@ -169,7 +188,10 @@ function StartScreen({
   subtitle?: string
   cta: string
   empty: boolean
-  onStart: () => void
+  canResume: boolean
+  items: CompItem[]
+  onResume: () => void
+  onStartOver: () => void
   onExit: () => void
 }) {
   return (
@@ -181,6 +203,8 @@ function StartScreen({
       </span>
       <h1 className="font-display text-3xl font-bold text-foreground">{title}</h1>
       {subtitle && <p className="text-muted">{subtitle}</p>}
+      {canResume && <p className="text-sm font-semibold text-gold-300">Pick up where you left off.</p>}
+
       {empty ? (
         <>
           <p className="text-sm text-muted">There’s no content to play here yet.</p>
@@ -189,10 +213,93 @@ function StartScreen({
           </Button3D>
         </>
       ) : (
-        <Button3D variant="reward" size="lg" fullWidth className="mt-2" onClick={onStart}>
-          {cta}
-        </Button3D>
+        <div className="mt-1 flex w-full flex-col gap-3">
+          {items.length > 0 && <CompletionChecklist items={items} />}
+          {canResume ? (
+            <>
+              <Button3D variant="reward" size="lg" fullWidth onClick={onResume}>
+                Resume
+              </Button3D>
+              <button
+                type="button"
+                onClick={onStartOver}
+                className="text-sm font-medium text-muted underline underline-offset-2 hover:text-foreground"
+              >
+                Start over from the beginning
+              </button>
+            </>
+          ) : (
+            <Button3D variant="reward" size="lg" fullWidth onClick={onResume}>
+              {cta}
+            </Button3D>
+          )}
+        </div>
       )}
     </div>
+  )
+}
+
+interface CompItem {
+  componentId: number
+  kind: Slide['kind']
+  total: number
+  done: number
+}
+
+/** Collapse the flat slide list into per-component rows (quiz = one row, N questions). */
+function componentItems(slides: Slide[]): CompItem[] {
+  const byId = new Map<number, CompItem>()
+  const order: number[] = []
+  for (const s of slides) {
+    let item = byId.get(s.componentId)
+    if (!item) {
+      item = { componentId: s.componentId, kind: s.kind, total: 0, done: 0 }
+      byId.set(s.componentId, item)
+      order.push(s.componentId)
+    }
+    item.total += 1
+    if (s.completed) item.done += 1
+  }
+  return order.map((id) => byId.get(id) as CompItem)
+}
+
+const KIND_META: Record<Slide['kind'], { icon: string; label: string }> = {
+  video: { icon: '🎬', label: 'Video' },
+  quiz: { icon: '❓', label: 'Quiz' },
+  speaking: { icon: '🎙️', label: 'Speaking' },
+  exercise: { icon: '🎯', label: 'Practice' },
+  game: { icon: '🎮', label: 'Game' },
+  assignment: { icon: '📝', label: 'Assignment' },
+  generic: { icon: '•', label: 'Activity' },
+}
+
+/** Shows which steps are already done (✓) so the learner can see their progress. */
+function CompletionChecklist({ items }: { items: CompItem[] }) {
+  return (
+    <ul className="flex flex-col gap-1.5 rounded-2xl bg-foreground/5 p-3 text-left ring-1 ring-foreground/10">
+      {items.map((it) => {
+        const meta = KIND_META[it.kind]
+        const done = it.done >= it.total
+        return (
+          <li key={it.componentId} className="flex items-center gap-3 text-sm">
+            <span
+              className={cn(
+                'flex size-6 shrink-0 items-center justify-center rounded-full text-xs',
+                done ? 'bg-leaf-400/20 text-leaf-300 ring-1 ring-leaf-400/40' : 'bg-foreground/10',
+              )}
+            >
+              {done ? '✓' : meta.icon}
+            </span>
+            <span className={cn('flex-1', done ? 'text-foreground' : 'text-muted')}>
+              {meta.label}
+              {it.kind === 'quiz' && it.total > 1 && (
+                <span className="text-xs text-muted"> · {it.done}/{it.total} answered</span>
+              )}
+            </span>
+            {done && <span className="text-xs font-semibold text-leaf-300">Completed</span>}
+          </li>
+        )
+      })}
+    </ul>
   )
 }

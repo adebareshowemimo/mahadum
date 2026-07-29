@@ -7,7 +7,7 @@ import { useActiveProfile } from '@/lib/profile/ActiveProfile'
 import { useEntitlements } from '@/lib/billing/entitlements'
 import { learningKeys } from '@/lib/learning/queries'
 import { AdModal } from '@/components/gamification/AdModal'
-import { SlideDeck, createLiveService, playToSlides } from '@/components/learning/player'
+import { SlideDeck, createLiveService, playToSlides, resumePlan } from '@/components/learning/player'
 
 /** Immersive, slide-based lesson player for learners (server-graded). */
 export function LessonPlayerPage() {
@@ -35,6 +35,7 @@ export function LessonPlayerPage() {
   }, [id, activeLearner, navigate])
 
   const slides = useMemo(() => (play ? playToSlides(play) : []), [play])
+  const { startIndex, priorCorrect } = useMemo(() => resumePlan(slides), [slides])
   const service = useMemo(
     () => (activeLearner ? createLiveService(id, activeLearner.id) : null),
     [id, activeLearner],
@@ -59,6 +60,8 @@ export function LessonPlayerPage() {
       slides={slides}
       service={service}
       initialHearts={null}
+      startIndex={startIndex}
+      initialCorrect={priorCorrect}
       onExit={() => navigate('/learn')}
       renderComplete={() => <LessonComplete lessonId={id} learnerId={activeLearner.id} onExit={() => navigate('/learn')} />}
     />

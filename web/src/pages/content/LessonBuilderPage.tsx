@@ -826,6 +826,101 @@ function downloadImportTemplate() {
   URL.revokeObjectURL(url)
 }
 
+/**
+ * A copy-paste prompt that makes ChatGPT/Claude emit questions in the exact
+ * Word (prose) format the importer parses — every question type, upload-safe.
+ * Kept verbatim; edits must stay in lock-step with the SpreadsheetReader parser.
+ */
+const AI_PROMPT = `You are an expert curriculum author for MAHADUM.360, a platform for learning Nigerian languages (Yoruba, Igbo, Hausa, Nigerian Pidgin).
+
+Write [NUMBER] quiz questions for this lesson:
+- Language: [YORUBA / IGBO / HAUSA / NIGERIAN PIDGIN]
+- Topic: [DESCRIBE THE TOPIC, e.g. greetings for the morning]
+- Learner level: [BEGINNER / ELEMENTARY / INTERMEDIATE]
+- Question types to include: [LIST THE TYPES YOU WANT, or write: a mix of all types]
+
+Output the questions as PLAIN TEXT in the EXACT format below. This text is uploaded directly into a Word document, so follow it precisely or the import will fail.
+
+GLOBAL RULES
+- Output ONLY the questions. No title, no intro, no numbering, and no notes about what you did.
+- DO NOT wrap the output in code fences or Markdown. Plain text only.
+- Start EVERY question with a line: TYPE: <type>
+- Put ONE blank line between questions, and NO blank lines inside a question.
+- Preserve every accent and tone mark exactly (e.g. Yoruba "Ẹ kú àárọ̀", Igbo "Ụtụtụ ọma"). Never replace accented letters with plain ASCII.
+- Use ONLY these exact type names: mcq_single, mcq_multi, true_false, fill_blank, complete_the_chat, listen_and_respond, type_what_you_hear, match_pairs, word_bank.
+
+FORMAT FOR EACH TYPE
+
+mcq_single (one correct answer):
+TYPE: mcq_single
+<question>
+A. <option>
+B. <option>
+C. <option>
+ANSWER: A
+
+mcq_multi (two or more correct answers):
+TYPE: mcq_multi
+<question>
+A. <option>
+B. <option>
+C. <option>
+ANSWER: A, C
+
+true_false (no options):
+TYPE: true_false
+<statement>
+ANSWER: True
+
+fill_blank (put ___ where the blank is):
+TYPE: fill_blank
+<question with ___ in it>
+A. <option>
+B. <option>
+ANSWER: A
+
+complete_the_chat (choose the reply):
+TYPE: complete_the_chat
+<a short chat line, then ask for the reply>
+A. <option>
+B. <option>
+ANSWER: A
+
+listen_and_respond (needs audio, then choose the reply):
+TYPE: listen_and_respond
+<question>
+AUDIO: 1
+A. <option>
+B. <option>
+ANSWER: A
+
+type_what_you_hear (needs audio, learner types the text, no options):
+TYPE: type_what_you_hear
+<instruction, e.g. Type what you hear>
+AUDIO: 1
+ANSWER: <the exact text the learner must type>
+
+match_pairs (two or more "left = right" pairs, NO ANSWER line):
+TYPE: match_pairs
+<question>
+A. <left> = <right>
+B. <left> = <right>
+C. <left> = <right>
+
+word_bank (the words in the CORRECT order as bullets, NO ANSWER line):
+TYPE: word_bank
+<question, e.g. Arrange the words to say ...>
+- <word>
+- <word>
+- <word>
+
+NOTES
+- Choice questions need at least 2 options (3–5 is best) with exactly one clearly correct answer (or several for mcq_multi). Distractors must be plausible, not tricks.
+- For listen_and_respond and type_what_you_hear, keep the line "AUDIO: 1" as a placeholder — the real audio is attached later in the app.
+- Do NOT add an ANSWER line to match_pairs or word_bank.
+
+Write the questions now.`
+
 /** A question is "ready" when it has a prompt and a resolvable answer. */
 function isValidDraft(q: QDraft): boolean {
   if (!q.prompt.trim()) return false
@@ -846,7 +941,21 @@ function QuizBuilderModal({ lessonId, editing, onClose }: { lessonId: number; ed
   const [localError, setLocalError] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
   const [importErrors, setImportErrors] = useState<{ row: number; error: string }[] | null>(null)
+  const [copiedPrompt, setCopiedPrompt] = useState(false)
+  // Turns incomplete questions red once the author tries to save (vs. the soft
+  // amber "not ready yet" shown before any save attempt).
+  const [showErrors, setShowErrors] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  async function copyAiPrompt() {
+    try {
+      await navigator.clipboard.writeText(AI_PROMPT)
+      setCopiedPrompt(true)
+      setTimeout(() => setCopiedPrompt(false), 2000)
+    } catch {
+      setLocalError('Could not copy automatically — select the prompt text below and copy it manually.')
+    }
+  }
 
   async function onImportFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -938,12 +1047,14 @@ function QuizBuilderModal({ lessonId, editing, onClose }: { lessonId: number; ed
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setLocalError(null)
+    setShowErrors(false)
     const firstInvalid = questions.find((q) => !isValidDraft(q))
     if (questions.length === 0 || firstInvalid) {
+      setShowErrors(true)
       setLocalError(
         questions.length === 0
           ? 'Add at least one question.'
-          : 'Some questions are incomplete — each needs a prompt, and choice questions need filled options with one correct answer.',
+          : 'Some questions are incomplete (shown in red) — each needs a prompt, and choice questions need filled options with one correct answer.',
       )
       if (firstInvalid) setOpenKey(firstInvalid.key)
       return
@@ -985,18 +1096,42 @@ function QuizBuilderModal({ lessonId, editing, onClose }: { lessonId: number; ed
             <span className="text-subtle"> · {readyCount} ready</span>
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            <input ref={fileRef} type="file" accept=".csv,.xlsx,text/csv" className="hidden" onChange={onImportFile} />
+            <input ref={fileRef} type="file" accept=".csv,.xlsx,.docx,text/csv" className="hidden" onChange={onImportFile} />
             <button type="button" className="text-sm font-medium text-primary hover:underline" onClick={downloadImportTemplate}>
-              Template
+              CSV template
             </button>
+            <a
+              href="/templates/quiz-import-template.docx"
+              download
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Word template
+            </a>
             <Button type="button" size="sm" variant="secondary" loading={importing} onClick={() => fileRef.current?.click()}>
-              Import CSV/Excel
+              Import CSV / Excel / Word
             </Button>
             <Button type="button" size="sm" variant="secondary" onClick={addQuestion}>
               + Add question
             </Button>
           </div>
         </div>
+
+        <details className="rounded-xl border border-border bg-surface-muted px-3 py-2 text-sm">
+          <summary className="cursor-pointer font-medium text-foreground">✨ Generate questions with AI (ChatGPT / Claude)</summary>
+          <div className="mt-2 flex flex-col gap-2">
+            <p className="text-muted">
+              Copy this prompt, fill in the [bracketed] parts, and paste it into ChatGPT or Claude. Paste the reply into a Word document,
+              then upload it above with <span className="font-medium text-foreground">Import CSV / Excel / Word</span>. The prompt is written so
+              the output matches this importer exactly — every question type, no failed rows.
+            </p>
+            <div>
+              <Button type="button" size="sm" variant="secondary" onClick={copyAiPrompt}>
+                {copiedPrompt ? '✓ Copied' : 'Copy AI prompt'}
+              </Button>
+            </div>
+            <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-surface p-3 text-xs leading-relaxed text-muted">{AI_PROMPT}</pre>
+          </div>
+        </details>
 
         {importErrors && importErrors.length > 0 && (
           <Alert variant="warning" title={`${importErrors.length} row${importErrors.length === 1 ? '' : 's'} skipped`}>
@@ -1017,6 +1152,7 @@ function QuizBuilderModal({ lessonId, editing, onClose }: { lessonId: number; ed
               index={qi}
               total={questions.length}
               valid={isValidDraft(q)}
+              flagged={showErrors && !isValidDraft(q)}
               expanded={openKey === q.key}
               onToggle={() => setOpenKey((k) => (k === q.key ? null : q.key))}
               onPatch={(fn) => patch(q.key, fn)}
@@ -1044,6 +1180,7 @@ function QuestionRow({
   index,
   total,
   valid,
+  flagged,
   expanded,
   onToggle,
   onPatch,
@@ -1058,6 +1195,7 @@ function QuestionRow({
   index: number
   total: number
   valid: boolean
+  flagged: boolean
   expanded: boolean
   onToggle: () => void
   onPatch: (fn: (q: QDraft) => QDraft) => void
@@ -1073,16 +1211,20 @@ function QuestionRow({
     : QUESTION_TYPE_LABEL[q.type] ?? q.type
 
   return (
-    <div className={cn('rounded-2xl border bg-surface', expanded ? 'border-primary' : 'border-border')}>
+    <div className={cn('rounded-2xl border bg-surface', flagged ? 'border-red-400' : expanded ? 'border-primary' : 'border-border')}>
       {/* Collapsed header — one line per question for easy scanning at scale. */}
       <div className="flex items-center gap-2 p-2.5">
         <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-3 text-left" aria-expanded={expanded}>
           <span
             className={cn(
               'flex size-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold ring-1',
-              valid ? 'bg-leaf-50 text-leaf-700 ring-leaf-300' : 'bg-gold-50 text-gold-800 ring-gold-300',
+              flagged
+                ? 'bg-red-50 text-red-700 ring-red-300'
+                : valid
+                  ? 'bg-leaf-50 text-leaf-700 ring-leaf-300'
+                  : 'bg-gold-50 text-gold-800 ring-gold-300',
             )}
-            title={valid ? 'Ready' : 'Incomplete'}
+            title={flagged ? 'Incomplete — needs attention' : valid ? 'Ready' : 'Incomplete'}
           >
             {index + 1}
           </span>

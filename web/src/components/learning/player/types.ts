@@ -59,6 +59,8 @@ interface SlideBase {
   id: string
   componentId: number
   lessonTitle?: string
+  /** The learner has already finished this step (for resume + completion ticks). */
+  completed: boolean
 }
 
 export interface VideoSlide extends SlideBase {
@@ -94,6 +96,8 @@ export interface QuizSlide extends SlideBase {
   options: { id: number; label: string }[]
   /** Right-side choices for match_pairs (shuffled, no pairing revealed). */
   matchPool: string[]
+  /** Resume: this question was already answered correctly in the open attempt. */
+  wasCorrect: boolean
 }
 
 export interface AssignmentSlide extends SlideBase {
@@ -156,7 +160,7 @@ export function youtubeEmbedUrl(url: string | null): string | null {
 // ---- Adapters ----
 
 function playComponentToSlides(c: PlayComponent, lessonTitle?: string): Slide[] {
-  const base = { componentId: c.id, lessonTitle }
+  const base = { componentId: c.id, lessonTitle, completed: !!c.completed }
   if (c.type === 'video') {
     return [{
       ...base, id: `v${c.id}`, kind: 'video', title: null, src: c.video?.src ?? null, poster: c.video?.poster ?? null,
@@ -177,6 +181,8 @@ function playComponentToSlides(c: PlayComponent, lessonTitle?: string): Slide[] 
     return [{ ...base, id: `gm${c.id}`, kind: 'game', gameType: c.game?.game_type ?? 'memory', pairs: c.game?.pairs ?? [] }]
   }
   if (c.type === 'quiz') {
+    // Quiz completion is per QUESTION (a half-finished quiz resumes at the first
+    // unanswered one), so override the component-level `completed` here.
     return (c.quiz?.questions ?? []).map((q) => ({
       ...base,
       id: `q${c.id}-${q.id}`,
@@ -188,6 +194,8 @@ function playComponentToSlides(c: PlayComponent, lessonTitle?: string): Slide[] 
       promptImage: q.prompt_image ?? null,
       options: q.options.map((o) => ({ id: o.id, label: o.label })),
       matchPool: q.match_pool ?? [],
+      completed: !!q.answered,
+      wasCorrect: !!q.was_correct,
     }))
   }
   return [{ ...base, id: `g${c.id}`, kind: 'generic', activity: c.type }]
@@ -196,6 +204,21 @@ function playComponentToSlides(c: PlayComponent, lessonTitle?: string): Slide[] 
 /** Live learner payload → slides (correct answers come from the server). */
 export function playToSlides(play: LessonPlay): Slide[] {
   return play.components.flatMap((c) => playComponentToSlides(c, play.lesson.title))
+}
+
+/**
+ * Where to resume a run: the index of the first not-yet-completed slide (0 when
+ * nothing is done, or everything is — a fresh start / full replay). `priorCorrect`
+ * counts the correct quiz answers among the completed slides we skip, so the
+ * run's score and progress stay accurate on resume.
+ */
+export function resumePlan(slides: Slide[]): { startIndex: number; priorCorrect: number } {
+  const firstIncomplete = slides.findIndex((s) => !s.completed)
+  const startIndex = firstIncomplete === -1 ? 0 : firstIncomplete
+  const priorCorrect = slides
+    .slice(0, startIndex)
+    .filter((s) => s.kind === 'quiz' && s.wasCorrect).length
+  return { startIndex, priorCorrect }
 }
 
 /** Per-question answer key the preview grader checks against locally. */
@@ -215,7 +238,8 @@ export function authorToSlides(lesson: AuthorLesson): { slides: Slide[]; key: Ma
 
   for (const c of lesson.components ?? []) {
     const d = (c.detail ?? {}) as Record<string, unknown>
-    const base = { componentId: c.id, lessonTitle: lesson.title }
+    // Preview never persists, so nothing is ever "completed".
+    const base = { componentId: c.id, lessonTitle: lesson.title, completed: false }
 
     if (c.type === 'video') {
       slides.push({
@@ -250,6 +274,7 @@ export function authorToSlides(lesson: AuthorLesson): { slides: Slide[]; key: Ma
           promptImage: (q.prompt_image as string) ?? null,
           options: options.map((o) => ({ id: o.id, label: o.label })),
           matchPool: qtype === 'match_pairs' ? options.map((o) => o.match_target ?? '').filter(Boolean) : [],
+          wasCorrect: false,
         })
         key.set(qid, {
           qtype,

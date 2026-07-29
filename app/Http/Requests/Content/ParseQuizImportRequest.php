@@ -14,7 +14,7 @@ class ParseQuizImportRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'file' => ['required', 'file', 'mimes:csv,txt,xlsx', 'max:5120'],
+            'file' => ['required', 'file', 'mimes:csv,txt,xlsx,docx', 'max:5120'],
         ];
     }
 }

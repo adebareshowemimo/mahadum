@@ -366,7 +366,7 @@ export interface AuthorQuestionInput {
   options?: { label: string; is_correct?: boolean; match_target?: string }[]
 }
 
-/** Result of parsing an uploaded CSV/XLSX of quiz questions (no DB writes). */
+/** Result of parsing an uploaded CSV/XLSX/DOCX of quiz questions (no DB writes). */
 export interface QuizImportResult {
   questions: AuthorQuestionInput[]
   errors: { row: number; error: string }[]
@@ -428,6 +428,10 @@ export interface QuizQuestion {
   options: QuizOption[]
   /** Shuffled right-side pool for match_pairs (pairing stays server-side). */
   match_pool?: string[]
+  /** Resume: the active learner already answered this in their open attempt. */
+  answered?: boolean
+  /** Resume: whether that previous answer was correct (null if unanswered). */
+  was_correct?: boolean | null
 }
 
 export interface VideoPayload {

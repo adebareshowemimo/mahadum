@@ -86,6 +86,24 @@ class QuizImportTest extends TestCase
             ->assertJsonPath('data.questions.0.options.0.is_correct', true);
     }
 
+    public function test_import_drops_audio_ids_that_are_not_real_assets(): void
+    {
+        $this->seedRbac();
+        $this->actingAsUser($this->userWithRole('content_owner'));
+
+        // 999999 is not a real Media asset — audio is optional on import, so it is
+        // dropped rather than failing the "exists:media_assets,id" rule on save.
+        $csv = "type,prompt,options,correct,prompt_audio_asset_id\n"
+            ."listen_and_respond,Pick the reply,Ututu oma|Ka chi fo,Ututu oma,999999\n";
+        $file = UploadedFile::fake()->createWithContent('questions.csv', $csv);
+
+        $this->postJson('/api/v1/quiz-imports/parse', ['file' => $file])
+            ->assertOk()
+            ->assertJsonPath('data.imported', 1)
+            ->assertJsonPath('data.questions.0.type', 'listen_and_respond')
+            ->assertJsonMissingPath('data.questions.0.prompt_audio_asset_id');
+    }
+
     public function test_reader_parses_a_native_xlsx_grid(): void
     {
         $ns = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
@@ -114,5 +132,188 @@ class QuizImportTest extends TestCase
         // And it flows through the parser.
         $result = app(QuizImportParser::class)->parse($rows);
         $this->assertSame('mcq_single', $result['questions'][0]['type']);
+    }
+
+    public function test_reader_parses_the_first_table_of_a_native_docx(): void
+    {
+        $ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+
+        $cell = fn (string $text) => "<w:tc><w:p><w:r><w:t>$text</w:t></w:r></w:p></w:tc>";
+        $row = fn (array $cells) => '<w:tr>'.implode('', array_map($cell, $cells)).'</w:tr>';
+        $table = '<w:tbl>'
+            .$row(['type', 'prompt', 'options', 'correct'])
+            .$row(['mcq_single', 'Capital?', 'Abuja|Lagos', 'Abuja'])
+            .'</w:tbl>';
+
+        $document = "<?xml version=\"1.0\"?><w:document xmlns:w=\"$ns\"><w:body>$table</w:body></w:document>";
+
+        $path = tempnam(sys_get_temp_dir(), 'docx').'.docx';
+        $zip = new ZipArchive;
+        $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        $zip->addFromString('word/document.xml', $document);
+        $zip->close();
+
+        $rows = app(SpreadsheetReader::class)->rows($path, 'docx');
+        @unlink($path);
+
+        $this->assertSame(['type', 'prompt', 'options', 'correct'], $rows[0]);
+        $this->assertSame(['mcq_single', 'Capital?', 'Abuja|Lagos', 'Abuja'], $rows[1]);
+
+        // And it flows through the parser.
+        $result = app(QuizImportParser::class)->parse($rows);
+        $this->assertSame('mcq_single', $result['questions'][0]['type']);
+    }
+
+    public function test_reader_parses_aiken_prose_from_a_docx(): void
+    {
+        $ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+        $lines = [
+            'Quiz for the morning lesson', // a title before the questions — must be ignored
+            '',
+            'What is the correct answer to this question?',
+            'A. Is it this one?',
+            'B. Maybe this answer?',
+            'C. Possibly this one?',
+            'D. Must be this one!',
+            'ANSWER: D',
+            '',
+            'Which of these are greetings?',
+            'A) Ututu oma',
+            'B) Random word',
+            'C) Daalu',
+            'ANSWER: A, C',
+        ];
+        $body = '';
+        foreach ($lines as $line) {
+            $run = $line === '' ? '' : '<w:r><w:t xml:space="preserve">'.htmlspecialchars($line, ENT_QUOTES | ENT_XML1).'</w:t></w:r>';
+            $body .= "<w:p>$run</w:p>";
+        }
+        $document = "<?xml version=\"1.0\"?><w:document xmlns:w=\"$ns\"><w:body>$body</w:body></w:document>";
+
+        $path = tempnam(sys_get_temp_dir(), 'docx').'.docx';
+        $zip = new ZipArchive;
+        $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        $zip->addFromString('word/document.xml', $document);
+        $zip->close();
+
+        $rows = app(SpreadsheetReader::class)->rows($path, 'docx');
+        @unlink($path);
+
+        // Synthesized header + two question rows; the title paragraph is dropped.
+        $this->assertSame(['type', 'prompt', 'options', 'correct', 'explanation', 'points', 'prompt_audio_asset_id'], $rows[0]);
+        $this->assertCount(3, $rows);
+
+        $result = app(QuizImportParser::class)->parse($rows);
+        $this->assertCount(2, $result['questions']);
+        $this->assertCount(0, $result['errors']);
+
+        [$q1, $q2] = $result['questions'];
+
+        // ANSWER: D → the 4th option is the correct one.
+        $this->assertSame('mcq_single', $q1['type']);
+        $this->assertSame('What is the correct answer to this question?', $q1['prompt']);
+        $this->assertSame('Must be this one!', $q1['options'][3]['label']);
+        $this->assertTrue($q1['options'][3]['is_correct']);
+        $this->assertFalse($q1['options'][0]['is_correct']);
+
+        // ANSWER: A, C → two correct options ⇒ mcq_multi.
+        $this->assertSame('mcq_multi', $q2['type']);
+        $this->assertTrue($q2['options'][0]['is_correct']);  // Ututu oma
+        $this->assertFalse($q2['options'][1]['is_correct']); // Random word
+        $this->assertTrue($q2['options'][2]['is_correct']);  // Daalu
+    }
+
+    public function test_reader_parses_every_question_type_from_docx_prose(): void
+    {
+        $lines = [
+            'Quiz for the morning lesson', '', // a title — must be ignored
+            'Capital of Nigeria?', 'A. Abuja', 'B. Lagos', 'C. Kano', 'ANSWER: A', '',
+            'Which are greetings? (choose all)', 'A. Ututu oma', 'B. Random', 'C. Daalu', 'ANSWER: A, C', '',
+            'TYPE: true_false', 'Nna means father.', 'ANSWER: True', '',
+            'TYPE: fill_blank', 'Good ___ (morning)', 'A. morning', 'B. evening', 'ANSWER: A', '',
+            'TYPE: complete_the_chat', 'Reply to Ututu oma', 'A. Ututu oma', 'B. Ka chi fo', 'ANSWER: A', '',
+            'TYPE: listen_and_respond', 'Pick the reply', 'AUDIO: 42', 'A. Ututu oma', 'B. Ka chi fo', 'ANSWER: A', '',
+            'TYPE: type_what_you_hear', 'Type what you hear', 'AUDIO: 42', 'ANSWER: Ututu oma', '',
+            'Match word to meaning', 'A. Mama = Mother', 'B. Nna = Father', '',
+            'TYPE: word_bank', 'Arrange the greeting', '- Ututu', '- oma',
+        ];
+
+        $rows = app(SpreadsheetReader::class)->rows($this->docxFromLines($lines), 'docx');
+        $this->assertSame(['type', 'prompt', 'options', 'correct', 'explanation', 'points', 'prompt_audio_asset_id'], $rows[0]);
+
+        $result = app(QuizImportParser::class)->parse($rows);
+        $this->assertCount(0, $result['errors']);
+
+        $types = array_column($result['questions'], 'type');
+        $this->assertSame([
+            'mcq_single', 'mcq_multi', 'true_false', 'fill_blank', 'complete_the_chat',
+            'listen_and_respond', 'type_what_you_hear', 'match_pairs', 'word_bank',
+        ], $types);
+
+        $byType = array_combine($types, $result['questions']);
+
+        // mcq_multi resolves both correct answers by letter.
+        $this->assertTrue($byType['mcq_multi']['options'][0]['is_correct']);   // Ututu oma
+        $this->assertFalse($byType['mcq_multi']['options'][1]['is_correct']);  // Random
+        $this->assertTrue($byType['mcq_multi']['options'][2]['is_correct']);   // Daalu
+
+        // true_false with no options → defaulted True/False, True marked correct.
+        $this->assertSame('True', $byType['true_false']['options'][0]['label']);
+        $this->assertTrue($byType['true_false']['options'][0]['is_correct']);
+
+        // Audio id carried through for the listen/type variants.
+        $this->assertSame(42, $byType['listen_and_respond']['prompt_audio_asset_id']);
+        $this->assertSame('Ututu oma', $byType['type_what_you_hear']['target_text']);
+
+        // Pairs and word-bank order.
+        $this->assertSame('Mother', $byType['match_pairs']['options'][0]['match_target']);
+        $this->assertSame('Ututu', $byType['word_bank']['options'][0]['label']);
+        $this->assertArrayNotHasKey('is_correct', $byType['word_bank']['options'][0]);
+    }
+
+    public function test_reader_rejects_a_docx_with_no_table(): void
+    {
+        $ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+        $document = "<?xml version=\"1.0\"?><w:document xmlns:w=\"$ns\"><w:body>"
+            .'<w:p><w:r><w:t>Just a paragraph, no table.</w:t></w:r></w:p>'
+            .'</w:body></w:document>';
+
+        $path = tempnam(sys_get_temp_dir(), 'docx').'.docx';
+        $zip = new ZipArchive;
+        $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        $zip->addFromString('word/document.xml', $document);
+        $zip->close();
+
+        $this->expectException(\RuntimeException::class);
+        try {
+            app(SpreadsheetReader::class)->rows($path, 'docx');
+        } finally {
+            @unlink($path);
+        }
+    }
+
+    /**
+     * Write a throwaway .docx whose body is one paragraph per line (blank lines
+     * kept), and return its path.
+     *
+     * @param  array<int, string>  $lines
+     */
+    private function docxFromLines(array $lines): string
+    {
+        $ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+        $body = '';
+        foreach ($lines as $line) {
+            $run = $line === '' ? '' : '<w:r><w:t xml:space="preserve">'.htmlspecialchars($line, ENT_QUOTES | ENT_XML1).'</w:t></w:r>';
+            $body .= "<w:p>$run</w:p>";
+        }
+        $document = "<?xml version=\"1.0\"?><w:document xmlns:w=\"$ns\"><w:body>$body</w:body></w:document>";
+
+        $path = tempnam(sys_get_temp_dir(), 'docx').'.docx';
+        $zip = new ZipArchive;
+        $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        $zip->addFromString('word/document.xml', $document);
+        $zip->close();
+
+        return $path;
     }
 }

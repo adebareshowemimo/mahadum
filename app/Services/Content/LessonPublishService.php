@@ -3,6 +3,7 @@
 namespace App\Services\Content;
 
 use App\Models\Lesson;
+use Illuminate\Support\Str;
 
 /**
  * Enforces the lesson publish rule (Content Model §6 / Business Rule 1):
@@ -46,9 +47,14 @@ class LessonPublishService
 
                 continue;
             }
-            foreach ($quiz->questions as $question) {
+            // Number questions the way the builder shows them (by position, 1-based)
+            // instead of leaking the database id, so authors can find the culprit.
+            foreach ($quiz->questions->sortBy('position')->values() as $index => $question) {
                 if (! $this->questionHasValidAnswer($question)) {
-                    $failures[] = "Question #{$question->id} has no valid correct-answer configuration.";
+                    $number = $index + 1;
+                    $snippet = Str::limit(trim((string) $question->prompt), 50);
+                    $label = $snippet === '' ? "Question {$number}" : "Question {$number} (\"{$snippet}\")";
+                    $failures[] = "{$label} has no correct answer set.";
                 }
             }
         }
@@ -58,12 +64,16 @@ class LessonPublishService
 
     private function questionHasValidAnswer($question): bool
     {
-        // Option-based questions need ≥1 correct option; free-text/audio types
-        // (e.g. type_what_you_hear, pronounce) are graded against target_text.
-        if ($question->options->isNotEmpty()) {
-            return $question->options->where('is_correct', true)->isNotEmpty();
-        }
-
-        return filled($question->target_text);
+        // Correctness is defined differently per type: match_pairs by the pair
+        // targets, word_bank by the authored order, free-text/audio (e.g.
+        // type_what_you_hear) by target_text, and the rest by a correct option.
+        return match ($question->type) {
+            'match_pairs' => $question->options->count() >= 2
+                && $question->options->every(fn ($o) => filled($o->label) && filled($o->match_target)),
+            'word_bank' => $question->options->count() >= 2,
+            default => $question->options->isNotEmpty()
+                ? $question->options->where('is_correct', true)->isNotEmpty()
+                : filled($question->target_text),
+        };
     }
 }
