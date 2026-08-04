@@ -75,3 +75,19 @@ Pulls `main`, reinstalls dependencies, rebuilds the SPA, migrates, **re-syncs
 RBAC roles/permissions** (idempotent — picks up any new permission a commit
 added, e.g. `emails.*`), re-caches config, and gracefully restarts the queue
 worker.
+
+The script is safe to re-run and re-trigger:
+- **Concurrency lock** (`flock` on `/tmp/mahadum-deploy.lock`) — a second
+  deploy started while one is in flight exits immediately instead of racing it.
+- **Maintenance mode** wraps only the migrate/cache window, not the
+  build (`php artisan down` → migrate → cache → `php artisan up`).
+- **Auto-rollback on failure** — any failed step (including a failed
+  `/up` health check after restart) checks the code back out to the
+  commit that was live before the deploy started, re-caches, and takes
+  the app back out of maintenance mode. This only reverts *code* — SPA
+  build artifacts already copied into `public/` before the failure are
+  not reverted, since they aren't version-controlled; re-run the deploy
+  once the underlying issue is fixed.
+- Override `HEALTH_URL` (defaults to `http://127.0.0.1/up`) if the app
+  isn't reachable on localhost, or `LOCK_FILE` if running multiple
+  apps' deploys need distinct locks on the same box.

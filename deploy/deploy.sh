@@ -9,8 +9,35 @@ set -euo pipefail
 APP_DIR="${APP_DIR:-/var/www/mahadum}"
 BRANCH="${BRANCH:-main}"
 WEB_USER="${WEB_USER:-www-data}"
+LOCK_FILE="${LOCK_FILE:-/tmp/mahadum-deploy.lock}"
 
 cd "$APP_DIR"
+
+# ---- Prevent two deploys from stepping on each other ----
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
+    echo "Another deploy is already running (lock: $LOCK_FILE). Aborting." >&2
+    exit 1
+fi
+
+PREVIOUS_COMMIT="$(git rev-parse HEAD)"
+MAINTENANCE_ON=0
+
+rollback() {
+    local exit_code=$?
+    echo "==> Deploy failed (exit $exit_code). Rolling back to $PREVIOUS_COMMIT" >&2
+    git checkout "$PREVIOUS_COMMIT" --quiet || true
+    composer install --no-dev --optimize-autoloader --no-interaction --quiet || true
+    php artisan config:cache || true
+    php artisan route:cache || true
+    php artisan view:cache || true
+    if [ "$MAINTENANCE_ON" = "1" ]; then
+        php artisan up || true
+    fi
+    echo "==> Rolled back to $PREVIOUS_COMMIT. Investigate before retrying." >&2
+    exit "$exit_code"
+}
+trap rollback ERR
 
 echo "==> Pulling $BRANCH"
 git fetch origin
@@ -37,6 +64,10 @@ find web/dist -mindepth 1 -maxdepth 1 -type d -print0 |
 cp web/dist/index.html resources/spa/index.html
 find web/dist -maxdepth 1 -type f ! -name 'index.html' -exec cp {} public/ \;
 
+echo "==> Entering maintenance mode"
+php artisan down --retry=15 || true
+MAINTENANCE_ON=1
+
 echo "==> Running migrations"
 php artisan migrate --force
 
@@ -56,7 +87,19 @@ echo "==> Fixing storage/cache permissions"
 chown -R "$WEB_USER":"$WEB_USER" storage bootstrap/cache
 chmod -R ug+rwX storage bootstrap/cache
 
+echo "==> Leaving maintenance mode"
+php artisan up
+MAINTENANCE_ON=0
+
 echo "==> Restarting queue worker (graceful — finishes in-flight jobs first)"
 php artisan queue:restart
 
-echo "Done."
+echo "==> Health check"
+HEALTH_URL="${HEALTH_URL:-http://127.0.0.1/up}"
+if ! curl --fail --silent --show-error --max-time 10 "$HEALTH_URL" > /dev/null; then
+    echo "==> Health check against $HEALTH_URL failed" >&2
+    false # triggers the ERR trap → rollback
+fi
+
+trap - ERR
+echo "Done. Deployed $(git rev-parse --short HEAD) (was $(git rev-parse --short "$PREVIOUS_COMMIT"))."
