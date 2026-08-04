@@ -154,15 +154,25 @@ Route::prefix('v1')->group(function () {
         Route::delete('courses/{course}', [CourseController::class, 'destroy'])->can('delete', 'course');
         Route::post('courses/{course}/publish', [CourseController::class, 'publish'])->middleware('can:content.courses.publish');
         Route::post('courses/{course}/unpublish', [CourseController::class, 'unpublish'])->middleware('can:content.courses.publish');
+        Route::post('courses/{course}/archive', [CourseController::class, 'archive'])->can('update', 'course');
+        Route::post('courses/{course}/unarchive', [CourseController::class, 'unarchive'])->can('update', 'course');
 
         // course structure: levels → lessons → components
         Route::get('courses/{course}/levels', [CourseController::class, 'levels']);
         Route::post('courses/{course}/levels', [CourseLevelController::class, 'store'])
             ->middleware('can:content.lessons.manage');
+        Route::match(['put', 'patch'], 'levels/{level}', [CourseLevelController::class, 'update'])
+            ->middleware('can:content.lessons.manage');
+        Route::delete('levels/{level}', [CourseLevelController::class, 'destroy'])
+            ->middleware('can:content.lessons.manage');
         Route::get('levels/{level}/lessons', [LessonController::class, 'index']);
         Route::post('levels/{level}/lessons', [LessonController::class, 'store'])
             ->middleware('can:content.lessons.manage');
         Route::get('lessons/{lesson}', [LessonController::class, 'show']);
+        Route::match(['put', 'patch'], 'lessons/{lesson}', [LessonController::class, 'update'])
+            ->middleware('can:content.lessons.manage');
+        Route::delete('lessons/{lesson}', [LessonController::class, 'destroy'])
+            ->middleware('can:content.lessons.manage');
 
         Route::post('quiz-imports/parse', [QuizImportController::class, 'parse'])
             ->middleware('can:content.lessons.manage');

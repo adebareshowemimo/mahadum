@@ -118,6 +118,29 @@ export function useSetCoursePublished() {
   })
 }
 
+export function useSetCourseArchived() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ courseId, archive }: { courseId: number; archive: boolean }) =>
+      archive ? contentApi.archiveCourse(courseId) : contentApi.unarchiveCourse(courseId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['content', 'courses-paged'] })
+      void qc.invalidateQueries({ queryKey: contentKeys.courses })
+    },
+  })
+}
+
+export function useDeleteCourse() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (courseId: number) => contentApi.deleteCourse(courseId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['content', 'courses-paged'] })
+      void qc.invalidateQueries({ queryKey: contentKeys.courses })
+    },
+  })
+}
+
 export function useCourseLevels(courseId: number) {
   return useQuery({ queryKey: contentKeys.levels(courseId), queryFn: () => contentApi.levels(courseId) })
 }
@@ -130,6 +153,23 @@ export function useCreateLevel(courseId: number) {
   })
 }
 
+export function useUpdateLevel(courseId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ levelId, input }: { levelId: number; input: Partial<CreateLevelInput> }) =>
+      contentApi.updateLevel(levelId, input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: contentKeys.levels(courseId) }),
+  })
+}
+
+export function useDeleteLevel(courseId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (levelId: number) => contentApi.deleteLevel(levelId),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: contentKeys.levels(courseId) }),
+  })
+}
+
 export function useLevelLessons(levelId: number) {
   return useQuery({ queryKey: contentKeys.lessons(levelId), queryFn: () => contentApi.lessons(levelId) })
 }
@@ -138,6 +178,23 @@ export function useCreateLesson(levelId: number) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: CreateLessonInput) => contentApi.createLesson(levelId, input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: contentKeys.lessons(levelId) }),
+  })
+}
+
+export function useUpdateLesson(levelId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ lessonId, input }: { lessonId: number; input: Partial<CreateLessonInput> }) =>
+      contentApi.updateLesson(lessonId, input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: contentKeys.lessons(levelId) }),
+  })
+}
+
+export function useDeleteLesson(levelId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (lessonId: number) => contentApi.deleteLesson(lessonId),
     onSuccess: () => void qc.invalidateQueries({ queryKey: contentKeys.lessons(levelId) }),
   })
 }

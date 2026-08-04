@@ -104,6 +104,24 @@ class CourseController extends Controller
         return (new CourseResource($course->load(['language', 'ownerUser'])->loadCount('levels')))->response();
     }
 
+    /**
+     * Archive a course — pulled from the active catalogue without deleting it.
+     * Archived courses are unpublished so learners no longer see them.
+     */
+    public function archive(Course $course): JsonResponse
+    {
+        $course->update(['status' => 'archived', 'is_published' => false]);
+
+        return (new CourseResource($course->load(['language', 'ownerUser'])->loadCount('levels')))->response();
+    }
+
+    public function unarchive(Course $course): JsonResponse
+    {
+        $course->update(['status' => 'draft']);
+
+        return (new CourseResource($course->load(['language', 'ownerUser'])->loadCount('levels')))->response();
+    }
+
     public function levels(Course $course): AnonymousResourceCollection
     {
         return CourseLevelResource::collection($course->levels()->orderBy('position')->get());

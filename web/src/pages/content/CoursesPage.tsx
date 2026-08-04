@@ -1,29 +1,117 @@
-import { useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { AdminToolbar, DataTable, FilterSelect, type Column } from '@/components/admin'
 import {
   Alert,
   Badge,
   Button,
-  Card,
-  CardBody,
   Icon,
   Input,
   Modal,
-  Skeleton,
 } from '@/components/ui'
-import { ApiError, type CreateCourseInput } from '@/lib/api'
+import { ApiError, type AdminCoursesQuery, type CourseSummary, type CreateCourseInput } from '@/lib/api'
 import { useConfig } from '@/lib/config/useConfig'
-import { useAuthorCourses, useCreateCourse } from '@/lib/content/queries'
+import {
+  useAdminCourses,
+  useCreateCourse,
+  useDeleteCourse,
+  useSetCourseArchived,
+} from '@/lib/content/queries'
 import { useCanManageContent } from '@/lib/content/permissions'
 
 export function CoursesPage() {
   const navigate = useNavigate()
-  const { data, isLoading, isError } = useAuthorCourses()
   const canManage = useCanManageContent()
   const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const [language, setLanguage] = useState('')
+  const [status, setStatus] = useState('')
+  const [page, setPage] = useState(1)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [actingId, setActingId] = useState<number | null>(null)
+  const [deleting, setDeleting] = useState<CourseSummary | null>(null)
 
-  if (isLoading) return <Skeleton className="h-48" />
-  if (isError || !data) return <Alert variant="danger">Couldn’t load courses.</Alert>
+  const params: AdminCoursesQuery = useMemo(
+    () => ({ q: search || undefined, language: language || undefined, status: status || undefined, page }),
+    [search, language, status, page],
+  )
+  const { data, isLoading, isError, isFetching } = useAdminCourses(params)
+  const { data: config } = useConfig()
+  const setArchived = useSetCourseArchived()
+
+  const languageOptions = (config?.languages ?? []).map((l) => ({ label: l.name, value: l.code }))
+
+  function onFilter(setter: (v: string) => void) {
+    return (v: string) => {
+      setter(v)
+      setPage(1)
+    }
+  }
+
+  async function toggleArchive(course: CourseSummary) {
+    setActionError(null)
+    setActingId(course.id)
+    try {
+      await setArchived.mutateAsync({ courseId: course.id, archive: course.status !== 'archived' })
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Could not update the course.')
+    } finally {
+      setActingId(null)
+    }
+  }
+
+  const columns: Column<CourseSummary>[] = [
+    {
+      key: 'title',
+      header: 'Course',
+      render: (c) => (
+        <div>
+          <p className="font-semibold text-foreground">{c.title}</p>
+          <p className="text-xs uppercase text-muted">
+            {c.language ?? '—'} · {c.level_band ?? 'no band'} · {c.levels_count ?? 0} levels
+          </p>
+        </div>
+      ),
+    },
+    { key: 'owner', header: 'Owner', hideOnMobile: true, render: (c) => c.owner ?? '—' },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (c) => (
+        <Badge variant={c.status === 'archived' ? 'neutral' : c.is_published ? 'success' : 'neutral'}>
+          {c.status === 'archived' ? 'archived' : c.is_published ? 'published' : 'draft'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      className: 'text-right',
+      render: (c) =>
+        canManage ? (
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="ghost" onClick={() => navigate(`/courses/${c.id}`)}>
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              loading={actingId === c.id && setArchived.isPending}
+              onClick={() => toggleArchive(c)}
+            >
+              {c.status === 'archived' ? 'Unarchive' : 'Archive'}
+            </Button>
+            <Button size="sm" variant="danger" onClick={() => setDeleting(c)}>
+              Delete
+            </Button>
+          </div>
+        ) : null,
+    },
+  ]
+
+  if (isError) return <Alert variant="danger">Couldn’t load courses.</Alert>
+
+  const meta = data?.meta
 
   return (
     <div className="flex flex-col gap-6">
@@ -39,36 +127,50 @@ export function CoursesPage() {
         )}
       </div>
 
-      {data.length === 0 ? (
-        <Card>
-          <CardBody className="py-10 text-center text-sm text-muted">
-            No courses yet. Create your first to start adding content.
-          </CardBody>
-        </Card>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {data.map((c) => (
-            <button key={c.id} onClick={() => navigate(`/courses/${c.id}`)} className="text-left">
-              <Card className="h-full transition-colors hover:bg-surface-muted">
-                <CardBody className="flex h-full flex-col gap-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-semibold text-foreground">{c.title}</p>
-                    <Badge variant={c.is_published ? 'success' : 'neutral'}>
-                      {c.is_published ? 'Published' : 'Draft'}
-                    </Badge>
-                  </div>
-                  {c.description && <p className="line-clamp-2 text-sm text-muted">{c.description}</p>}
-                  <span className="mt-auto text-xs uppercase text-subtle">
-                    {c.language ?? '—'}{c.level_band ? ` · ${c.level_band}` : ''}
-                  </span>
-                </CardBody>
-              </Card>
-            </button>
-          ))}
+      {actionError && <Alert variant="danger">{actionError}</Alert>}
+
+      <DataTable
+        columns={columns}
+        rows={data?.data ?? []}
+        getRowId={(c) => c.id}
+        isLoading={isLoading}
+        empty="No courses match your filters."
+        toolbar={
+          <AdminToolbar search={search} onSearch={(v) => { setSearch(v); setPage(1) }} searchPlaceholder="Search course title…">
+            <FilterSelect label="Language" value={language} onChange={onFilter(setLanguage)} options={languageOptions} allLabel="All languages" />
+            <FilterSelect
+              label="Status"
+              value={status}
+              onChange={onFilter(setStatus)}
+              options={[
+                { label: 'Published', value: 'published' },
+                { label: 'Draft', value: 'draft' },
+                { label: 'Archived', value: 'archived' },
+              ]}
+              allLabel="All statuses"
+            />
+          </AdminToolbar>
+        }
+      />
+
+      {meta && meta.total > 0 && (
+        <div className="flex items-center justify-between text-sm text-muted">
+          <span>
+            Page {meta.current_page} of {meta.last_page} · {meta.total} courses
+          </span>
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" disabled={meta.current_page <= 1 || isFetching} onClick={() => setPage((p) => p - 1)}>
+              Previous
+            </Button>
+            <Button size="sm" variant="ghost" disabled={meta.current_page >= meta.last_page || isFetching} onClick={() => setPage((p) => p + 1)}>
+              Next
+            </Button>
+          </div>
         </div>
       )}
 
       <NewCourseModal open={open} onClose={() => setOpen(false)} onCreated={(id) => navigate(`/courses/${id}`)} />
+      <DeleteCourseModal course={deleting} onClose={() => setDeleting(null)} />
     </div>
   )
 }
@@ -147,6 +249,41 @@ function NewCourseModal({ open, onClose, onCreated }: { open: boolean; onClose: 
           <Button type="submit" fullWidth loading={createCourse.isPending}>Create course</Button>
         </div>
       </form>
+    </Modal>
+  )
+}
+
+function DeleteCourseModal({ course, onClose }: { course: CourseSummary | null; onClose: () => void }) {
+  const deleteCourse = useDeleteCourse()
+  const [error, setError] = useState<string | null>(null)
+
+  async function onConfirm() {
+    if (!course) return
+    setError(null)
+    try {
+      await deleteCourse.mutateAsync(course.id)
+      onClose()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not delete the course.')
+    }
+  }
+
+  return (
+    <Modal
+      open={course != null}
+      onClose={onClose}
+      title="Delete course?"
+      description={course ? `“${course.title}” will be removed from the catalogue.` : undefined}
+    >
+      <div className="flex flex-col gap-4">
+        {error && <Alert variant="danger">{error}</Alert>}
+        <div className="flex gap-2">
+          <Button type="button" variant="secondary" fullWidth onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="danger" fullWidth loading={deleteCourse.isPending} onClick={onConfirm}>
+            Delete
+          </Button>
+        </div>
+      </div>
     </Modal>
   )
 }

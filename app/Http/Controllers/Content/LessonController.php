@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Content;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Content\StoreLessonRequest;
+use App\Http\Requests\Content\UpdateLessonRequest;
 use App\Http\Resources\LessonResource;
 use App\Models\CourseLevel;
 use App\Models\Lesson;
@@ -56,6 +57,20 @@ class LessonController extends Controller
         ]);
 
         return new LessonResource($lesson);
+    }
+
+    public function update(UpdateLessonRequest $request, Lesson $lesson): LessonResource
+    {
+        $lesson->update($request->validated());
+
+        return new LessonResource($lesson);
+    }
+
+    public function destroy(Lesson $lesson): JsonResponse
+    {
+        $lesson->delete();
+
+        return response()->json(null, 204);
     }
 
     public function publish(Lesson $lesson, LessonPublishService $publisher): JsonResponse

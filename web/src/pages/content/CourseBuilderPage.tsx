@@ -11,13 +11,17 @@ import {
   Modal,
   Skeleton,
 } from '@/components/ui'
-import { ApiError } from '@/lib/api'
+import { ApiError, type AuthorLesson, type AuthorLevel } from '@/lib/api'
 import {
   useAuthorCourses,
   useCourseLevels,
   useCreateLesson,
   useCreateLevel,
+  useDeleteLesson,
+  useDeleteLevel,
   useLevelLessons,
+  useUpdateLesson,
+  useUpdateLevel,
 } from '@/lib/content/queries'
 import { useCanManageContent } from '@/lib/content/permissions'
 
@@ -28,6 +32,8 @@ export function CourseBuilderPage() {
   const levels = useCourseLevels(id)
   const canManage = useCanManageContent()
   const [levelOpen, setLevelOpen] = useState(false)
+  const [editingLevel, setEditingLevel] = useState<AuthorLevel | null>(null)
+  const [deletingLevel, setDeletingLevel] = useState<AuthorLevel | null>(null)
 
   const course = courses.data?.find((c) => c.id === id)
 
@@ -68,40 +74,68 @@ export function CourseBuilderPage() {
       ) : (
         <div className="flex flex-col gap-5">
           {levels.data.map((level) => (
-            <LevelSection key={level.id} courseId={id} levelId={level.id} title={level.title} position={level.position} />
+            <LevelSection
+              key={level.id}
+              courseId={id}
+              level={level}
+              onEdit={() => setEditingLevel(level)}
+              onDelete={() => setDeletingLevel(level)}
+            />
           ))}
         </div>
       )}
 
       <NewLevelModal courseId={id} open={levelOpen} onClose={() => setLevelOpen(false)} />
+      <EditLevelModal key={editingLevel?.id ?? 'edit-level'} courseId={id} level={editingLevel} onClose={() => setEditingLevel(null)} />
+      <DeleteLevelModal courseId={id} level={deletingLevel} onClose={() => setDeletingLevel(null)} />
     </div>
   )
 }
 
-function LevelSection({ courseId, levelId, title, position }: { courseId: number; levelId: number; title: string; position: number }) {
+function LevelSection({
+  courseId,
+  level,
+  onEdit,
+  onDelete,
+}: {
+  courseId: number
+  level: AuthorLevel
+  onEdit: () => void
+  onDelete: () => void
+}) {
   const navigate = useNavigate()
-  const lessons = useLevelLessons(levelId)
+  const lessons = useLevelLessons(level.id)
   const canManage = useCanManageContent()
   const [lessonOpen, setLessonOpen] = useState(false)
+  const [editingLesson, setEditingLesson] = useState<AuthorLesson | null>(null)
+  const [deletingLesson, setDeletingLesson] = useState<AuthorLesson | null>(null)
 
   return (
     <section className="rounded-2xl border border-border bg-surface p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="font-display text-lg font-bold text-foreground">
-          <span className="text-subtle">{position}.</span> {title}
+          <span className="text-subtle">{level.position}.</span> {level.title}
         </h2>
         <div className="flex items-center gap-1">
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => window.open(`/courses/${courseId}/levels/${levelId}/preview`, '_blank', 'noopener')}
+            onClick={() => window.open(`/courses/${courseId}/levels/${level.id}/preview`, '_blank', 'noopener')}
           >
             👁 Preview
           </Button>
           {canManage && (
-            <Button size="sm" variant="ghost" onClick={() => setLessonOpen(true)}>
-              + Lesson
-            </Button>
+            <>
+              <Button size="sm" variant="ghost" onClick={() => setLessonOpen(true)}>
+                + Lesson
+              </Button>
+              <Button size="sm" variant="ghost" onClick={onEdit}>
+                Edit
+              </Button>
+              <Button size="sm" variant="danger" onClick={onDelete}>
+                Delete
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -114,26 +148,45 @@ function LevelSection({ courseId, levelId, title, position }: { courseId: number
         <ul className="flex flex-col gap-2">
           {lessons.data?.map((lesson) => (
             <li key={lesson.id}>
-              <button
-                onClick={() => navigate(`/courses/${courseId}/lessons/${lesson.id}`)}
-                className="flex w-full items-center justify-between gap-3 rounded-xl border border-border px-3 py-2.5 text-left hover:bg-surface-muted"
-              >
-                <span className="font-medium text-foreground">
-                  {lesson.position}. {lesson.title}
-                </span>
-                <span className="flex items-center gap-2">
-                  <Badge variant={lesson.is_published ? 'success' : 'neutral'}>
-                    {lesson.is_published ? 'Published' : 'Draft'}
-                  </Badge>
-                  <Icon name="chevron" className="size-4 -rotate-90 text-muted" />
-                </span>
-              </button>
+              <div className="flex w-full items-center justify-between gap-3 rounded-xl border border-border px-3 py-2.5 hover:bg-surface-muted">
+                <button
+                  onClick={() => navigate(`/courses/${courseId}/lessons/${lesson.id}`)}
+                  className="flex flex-1 items-center justify-between gap-3 text-left"
+                >
+                  <span className="font-medium text-foreground">
+                    {lesson.position}. {lesson.title}
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <Badge variant={lesson.is_published ? 'success' : 'neutral'}>
+                      {lesson.is_published ? 'Published' : 'Draft'}
+                    </Badge>
+                    <Icon name="chevron" className="size-4 -rotate-90 text-muted" />
+                  </span>
+                </button>
+                {canManage && (
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button size="sm" variant="ghost" onClick={() => setEditingLesson(lesson)}>
+                      Edit
+                    </Button>
+                    <Button size="sm" variant="danger" onClick={() => setDeletingLesson(lesson)}>
+                      Delete
+                    </Button>
+                  </div>
+                )}
+              </div>
             </li>
           ))}
         </ul>
       )}
 
-      <NewLessonModal levelId={levelId} open={lessonOpen} onClose={() => setLessonOpen(false)} />
+      <NewLessonModal levelId={level.id} open={lessonOpen} onClose={() => setLessonOpen(false)} />
+      <EditLessonModal
+        key={editingLesson?.id ?? 'edit-lesson'}
+        levelId={level.id}
+        lesson={editingLesson}
+        onClose={() => setEditingLesson(null)}
+      />
+      <DeleteLessonModal levelId={level.id} lesson={deletingLesson} onClose={() => setDeletingLesson(null)} />
     </section>
   )
 }
@@ -169,6 +222,83 @@ function NewLevelModal({ courseId, open, onClose }: { courseId: number; open: bo
   )
 }
 
+function EditLevelModal({ courseId, level, onClose }: { courseId: number; level: AuthorLevel | null; onClose: () => void }) {
+  const updateLevel = useUpdateLevel(courseId)
+  const [title, setTitle] = useState(level?.title ?? '')
+  const [error, setError] = useState<string | null>(null)
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (!level) return
+    setError(null)
+    try {
+      await updateLevel.mutateAsync({ levelId: level.id, input: { title } })
+      onClose()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not update the level.')
+    }
+  }
+
+  return (
+    <Modal
+      open={level != null}
+      onClose={onClose}
+      title="Edit level"
+      description="Update this unit’s title."
+    >
+      <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+        {error && <Alert variant="danger">{error}</Alert>}
+        <Input
+          label="Level title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          autoFocus
+          required
+        />
+        <div className="flex gap-2">
+          <Button type="button" variant="secondary" fullWidth onClick={onClose}>Cancel</Button>
+          <Button type="submit" fullWidth loading={updateLevel.isPending}>Save changes</Button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+function DeleteLevelModal({ courseId, level, onClose }: { courseId: number; level: AuthorLevel | null; onClose: () => void }) {
+  const deleteLevel = useDeleteLevel(courseId)
+  const [error, setError] = useState<string | null>(null)
+
+  async function onConfirm() {
+    if (!level) return
+    setError(null)
+    try {
+      await deleteLevel.mutateAsync(level.id)
+      onClose()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not delete the level.')
+    }
+  }
+
+  return (
+    <Modal
+      open={level != null}
+      onClose={onClose}
+      title="Delete level?"
+      description={level ? `“${level.title}” and its lessons will be removed.` : undefined}
+    >
+      <div className="flex flex-col gap-4">
+        {error && <Alert variant="danger">{error}</Alert>}
+        <div className="flex gap-2">
+          <Button type="button" variant="secondary" fullWidth onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="danger" fullWidth loading={deleteLevel.isPending} onClick={onConfirm}>
+            Delete
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
 function NewLessonModal({ levelId, open, onClose }: { levelId: number; open: boolean; onClose: () => void }) {
   const createLesson = useCreateLesson(levelId)
   const [title, setTitle] = useState('')
@@ -198,6 +328,94 @@ function NewLessonModal({ levelId, open, onClose }: { levelId: number; open: boo
           <Button type="submit" fullWidth loading={createLesson.isPending}>Add lesson</Button>
         </div>
       </form>
+    </Modal>
+  )
+}
+
+function EditLessonModal({ levelId, lesson, onClose }: { levelId: number; lesson: AuthorLesson | null; onClose: () => void }) {
+  const updateLesson = useUpdateLesson(levelId)
+  const [title, setTitle] = useState(lesson?.title ?? '')
+  const [minutes, setMinutes] = useState(String(lesson?.est_minutes ?? ''))
+  const [error, setError] = useState<string | null>(null)
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (!lesson) return
+    setError(null)
+    try {
+      await updateLesson.mutateAsync({
+        lessonId: lesson.id,
+        input: { title, est_minutes: minutes ? Number(minutes) : undefined },
+      })
+      onClose()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not update the lesson.')
+    }
+  }
+
+  return (
+    <Modal
+      open={lesson != null}
+      onClose={onClose}
+      title="Edit lesson"
+      description="Update this lesson’s title and length."
+    >
+      <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+        {error && <Alert variant="danger">{error}</Alert>}
+        <Input
+          label="Lesson title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          autoFocus
+          required
+        />
+        <Input
+          label="Estimated minutes"
+          type="number"
+          min={1}
+          value={minutes}
+          onChange={(e) => setMinutes(e.target.value)}
+        />
+        <div className="flex gap-2">
+          <Button type="button" variant="secondary" fullWidth onClick={onClose}>Cancel</Button>
+          <Button type="submit" fullWidth loading={updateLesson.isPending}>Save changes</Button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+function DeleteLessonModal({ levelId, lesson, onClose }: { levelId: number; lesson: AuthorLesson | null; onClose: () => void }) {
+  const deleteLesson = useDeleteLesson(levelId)
+  const [error, setError] = useState<string | null>(null)
+
+  async function onConfirm() {
+    if (!lesson) return
+    setError(null)
+    try {
+      await deleteLesson.mutateAsync(lesson.id)
+      onClose()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not delete the lesson.')
+    }
+  }
+
+  return (
+    <Modal
+      open={lesson != null}
+      onClose={onClose}
+      title="Delete lesson?"
+      description={lesson ? `“${lesson.title}” will be removed.` : undefined}
+    >
+      <div className="flex flex-col gap-4">
+        {error && <Alert variant="danger">{error}</Alert>}
+        <div className="flex gap-2">
+          <Button type="button" variant="secondary" fullWidth onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="danger" fullWidth loading={deleteLesson.isPending} onClick={onConfirm}>
+            Delete
+          </Button>
+        </div>
+      </div>
     </Modal>
   )
 }

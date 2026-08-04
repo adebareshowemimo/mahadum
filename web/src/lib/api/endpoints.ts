@@ -426,9 +426,23 @@ export const contentApi = {
     return data.data
   },
 
+  async archiveCourse(courseId: number): Promise<CourseSummary> {
+    const { data } = await api.post(`/courses/${courseId}/archive`)
+    return data.data
+  },
+
+  async unarchiveCourse(courseId: number): Promise<CourseSummary> {
+    const { data } = await api.post(`/courses/${courseId}/unarchive`)
+    return data.data
+  },
+
   async createCourse(input: CreateCourseInput): Promise<CourseSummary> {
     const { data } = await api.post('/courses', input)
     return data.data
+  },
+
+  async deleteCourse(courseId: number): Promise<void> {
+    await api.delete(`/courses/${courseId}`)
   },
 
   async levels(courseId: number): Promise<AuthorLevel[]> {
@@ -441,6 +455,15 @@ export const contentApi = {
     return data.data
   },
 
+  async updateLevel(levelId: number, input: Partial<CreateLevelInput>): Promise<AuthorLevel> {
+    const { data } = await api.patch(`/levels/${levelId}`, input)
+    return data.data
+  },
+
+  async deleteLevel(levelId: number): Promise<void> {
+    await api.delete(`/levels/${levelId}`)
+  },
+
   async lessons(levelId: number): Promise<AuthorLesson[]> {
     const { data } = await api.get(`/levels/${levelId}/lessons`)
     return data.data
@@ -449,6 +472,15 @@ export const contentApi = {
   async createLesson(levelId: number, input: CreateLessonInput): Promise<AuthorLesson> {
     const { data } = await api.post(`/levels/${levelId}/lessons`, input)
     return data.data
+  },
+
+  async updateLesson(lessonId: number, input: Partial<CreateLessonInput>): Promise<AuthorLesson> {
+    const { data } = await api.patch(`/lessons/${lessonId}`, input)
+    return data.data
+  },
+
+  async deleteLesson(lessonId: number): Promise<void> {
+    await api.delete(`/lessons/${lessonId}`)
   },
 
   async lesson(lessonId: number): Promise<AuthorLesson> {
