@@ -278,6 +278,30 @@ export function useDeleteComponent(lessonId: number) {
   })
 }
 
+export function useReorderComponents(lessonId: number) {
+  const qc = useQueryClient()
+  const key = contentKeys.lesson(lessonId)
+  return useMutation({
+    mutationFn: (order: number[]) => contentApi.reorderComponents(lessonId, order),
+    onMutate: async (order) => {
+      await qc.cancelQueries({ queryKey: key })
+      const previous = qc.getQueryData<AuthorLesson>(key)
+      if (previous?.components) {
+        const byId = new Map(previous.components.map((c) => [c.id, c]))
+        qc.setQueryData(key, {
+          ...previous,
+          components: order.map((id, i) => ({ ...byId.get(id)!, position: i + 1 })),
+        })
+      }
+      return { previous }
+    },
+    onError: (_err, _order, context) => {
+      if (context?.previous) qc.setQueryData(key, context.previous)
+    },
+    onSettled: () => void qc.invalidateQueries({ queryKey: key }),
+  })
+}
+
 export function usePublishLesson(lessonId: number) {
   const qc = useQueryClient()
   return useMutation({

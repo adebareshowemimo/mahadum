@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Content;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Content\ReorderComponentsRequest;
 use App\Http\Requests\Content\StoreLessonComponentRequest;
 use App\Http\Resources\LessonComponentResource;
 use App\Models\ExerciseDeck;
@@ -10,6 +11,7 @@ use App\Models\Lesson;
 use App\Models\LessonComponent;
 use App\Models\Quiz;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
 
 class LessonComponentController extends Controller
@@ -92,6 +94,23 @@ class LessonComponentController extends Controller
         });
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * Persist a new step order within the lesson. `order` is the full list of
+     * component ids in their desired sequence; positions are reassigned 1..n.
+     */
+    public function reorder(ReorderComponentsRequest $request, Lesson $lesson): AnonymousResourceCollection
+    {
+        DB::transaction(function () use ($request, $lesson) {
+            foreach ($request->input('order') as $index => $componentId) {
+                $lesson->components()->whereKey($componentId)->update(['position' => $index + 1]);
+            }
+        });
+
+        $components = $lesson->components()->orderBy('position')->get()->load($this->detailLoads());
+
+        return LessonComponentResource::collection($components);
     }
 
     private function createVideo(LessonComponent $component, StoreLessonComponentRequest $request): void

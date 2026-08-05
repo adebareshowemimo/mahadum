@@ -513,6 +513,11 @@ export const contentApi = {
     await api.delete(`/components/${componentId}`)
   },
 
+  async reorderComponents(lessonId: number, order: number[]): Promise<AuthorComponent[]> {
+    const { data } = await api.post(`/lessons/${lessonId}/components/reorder`, { order })
+    return data.data
+  },
+
   /** Publish a lesson; throws ApiError (details = string[] of failures) on 422. */
   async publishLesson(lessonId: number): Promise<AuthorLesson> {
     const { data } = await api.post(`/lessons/${lessonId}/publish`)

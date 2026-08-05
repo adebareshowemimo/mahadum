@@ -182,6 +182,8 @@ Route::prefix('v1')->group(function () {
             ->middleware('can:content.lessons.manage');
         Route::post('lessons/{lesson}/components', [LessonComponentController::class, 'store'])
             ->middleware('can:content.lessons.manage');
+        Route::post('lessons/{lesson}/components/reorder', [LessonComponentController::class, 'reorder'])
+            ->middleware('can:content.lessons.manage');
         Route::match(['put', 'patch'], 'components/{component}', [LessonComponentController::class, 'update'])
             ->middleware('can:content.lessons.manage');
         Route::delete('components/{component}', [LessonComponentController::class, 'destroy'])

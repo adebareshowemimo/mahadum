@@ -1,6 +1,23 @@
 import { useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import {
   Alert,
   Badge,
   Button,
@@ -21,6 +38,7 @@ import {
   useLessonDetail,
   useMediaAssets,
   usePublishLesson,
+  useReorderComponents,
   useUpdateComponent,
 } from '@/lib/content/queries'
 import { useCanManageContent } from '@/lib/content/permissions'
@@ -50,11 +68,16 @@ export function LessonBuilderPage() {
   const id = Number(lessonId)
   const lesson = useLessonDetail(id)
   const publish = usePublishLesson(id)
+  const reorderComponents = useReorderComponents(id)
   const canManage = useCanManageContent()
   const [modal, setModal] = useState<{ type: 'video' | 'quiz' | 'exercise' | 'game'; component?: AuthorComponent } | null>(null)
   const [deleting, setDeleting] = useState<AuthorComponent | null>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [insightsOpen, setInsightsOpen] = useState(false)
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
   const [publishErrors, setPublishErrors] = useState<string[] | null>(null)
 
   async function onPublish() {
@@ -65,6 +88,26 @@ export function LessonBuilderPage() {
       if (err instanceof ApiError && Array.isArray(err.details)) setPublishErrors(err.details as string[])
       else setPublishErrors([err instanceof ApiError ? err.message : 'Publish failed.'])
     }
+  }
+
+  function moveComponent(index: number, direction: -1 | 1) {
+    const ordered = lesson.data?.components
+    if (!ordered) return
+    const target = index + direction
+    if (target < 0 || target >= ordered.length) return
+    const next = [...ordered]
+    ;[next[index], next[target]] = [next[target], next[index]]
+    reorderComponents.mutate(next.map((c) => c.id))
+  }
+
+  function handleComponentDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    const ordered = lesson.data?.components
+    if (!ordered || !over || active.id === over.id) return
+    const from = ordered.findIndex((c) => c.id === active.id)
+    const to = ordered.findIndex((c) => c.id === over.id)
+    if (from < 0 || to < 0) return
+    reorderComponents.mutate(arrayMove(ordered, from, to).map((c) => c.id))
   }
 
   if (lesson.isLoading) return <Skeleton className="h-64" />
@@ -131,49 +174,25 @@ export function LessonBuilderPage() {
             </CardBody>
           </Card>
         ) : (
-          <ol className="flex flex-col gap-2">
-            {components.map((c) => {
-              const editable = ['video', 'quiz', 'exercise', 'game'].includes(c.type)
-              return (
-                <li key={c.id}>
-                  <Card>
-                    <CardBody className="flex items-center gap-3 py-3">
-                      <span className="text-2xl" aria-hidden="true">{TYPE_ICON[c.type] ?? '•'}</span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block font-semibold capitalize text-foreground">
-                          {c.position}. {c.type}
-                          {c.is_required && <span className="ml-2 text-xs font-normal text-subtle">required</span>}
-                        </span>
-                        <span className="block truncate text-sm text-muted">{componentSummary(c)}</span>
-                      </span>
-                      {c.xp_value > 0 && <span className="hidden text-sm text-muted sm:inline">{c.xp_value} XP</span>}
-                      {canManage && (
-                        <span className="flex items-center gap-1">
-                          {editable && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setModal({ type: c.type as 'video' | 'quiz' | 'exercise' | 'game', component: c })}
-                            >
-                              Edit
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-danger"
-                            onClick={() => setDeleting(c)}
-                          >
-                            Delete
-                          </Button>
-                        </span>
-                      )}
-                    </CardBody>
-                  </Card>
-                </li>
-              )
-            })}
-          </ol>
+          <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleComponentDragEnd}>
+            <SortableContext items={components.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+              <ol className="flex flex-col gap-2">
+                {components.map((c, index) => (
+                  <StepRow
+                    key={c.id}
+                    component={c}
+                    canManage={canManage}
+                    canMoveUp={index > 0}
+                    canMoveDown={index < components.length - 1}
+                    onMoveUp={() => moveComponent(index, -1)}
+                    onMoveDown={() => moveComponent(index, 1)}
+                    onEdit={() => setModal({ type: c.type as 'video' | 'quiz' | 'exercise' | 'game', component: c })}
+                    onDelete={() => setDeleting(c)}
+                  />
+                ))}
+              </ol>
+            </SortableContext>
+          </DndContext>
         )}
       </section>
 
@@ -193,6 +212,84 @@ export function LessonBuilderPage() {
       )}
       <DeleteStepModal lessonId={id} component={deleting} onClose={() => setDeleting(null)} />
     </div>
+  )
+}
+
+function StepRow({
+  component: c,
+  canManage,
+  canMoveUp,
+  canMoveDown,
+  onMoveUp,
+  onMoveDown,
+  onEdit,
+  onDelete,
+}: {
+  component: AuthorComponent
+  canManage: boolean
+  canMoveUp: boolean
+  canMoveDown: boolean
+  onMoveUp: () => void
+  onMoveDown: () => void
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const editable = ['video', 'quiz', 'exercise', 'game'].includes(c.type)
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: c.id,
+    disabled: !canManage,
+  })
+
+  return (
+    <li ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}>
+      <Card className={isDragging ? 'z-10 opacity-90 shadow-lg' : undefined}>
+        <CardBody className="flex items-center gap-3 py-3">
+          {canManage && (
+            <>
+              <IconButton
+                aria-label="Drag to reorder step"
+                size="sm"
+                variant="ghost"
+                className="cursor-grab touch-none active:cursor-grabbing"
+                {...attributes}
+                {...listeners}
+              >
+                <Icon name="grip" className="size-4" />
+              </IconButton>
+              <div className="flex shrink-0 items-center gap-0.5">
+                <IconButton aria-label="Move step up" size="sm" variant="ghost" disabled={!canMoveUp} onClick={onMoveUp}>
+                  <Icon name="chevron" className="size-4 rotate-180" />
+                </IconButton>
+                <IconButton aria-label="Move step down" size="sm" variant="ghost" disabled={!canMoveDown} onClick={onMoveDown}>
+                  <Icon name="chevron" className="size-4" />
+                </IconButton>
+              </div>
+            </>
+          )}
+          <span className="text-2xl" aria-hidden="true">{TYPE_ICON[c.type] ?? '•'}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold capitalize text-foreground">
+              {c.position}. {c.type}
+              {c.is_required && <span className="ml-2 text-xs font-normal text-subtle">required</span>}
+            </span>
+            <span className="block truncate text-sm text-muted">{componentSummary(c)}</span>
+          </span>
+          {c.xp_value > 0 && <span className="hidden text-sm text-muted sm:inline">{c.xp_value} XP</span>}
+          {canManage && (
+            <span className="flex items-center gap-1">
+              {editable && (
+                <Button variant="ghost" size="sm" onClick={onEdit}>
+                  Edit
+                </Button>
+              )}
+              <Button variant="ghost" size="sm" className="text-danger" onClick={onDelete}>
+                Delete
+              </Button>
+            </span>
+          )}
+        </CardBody>
+      </Card>
+    </li>
   )
 }
 
