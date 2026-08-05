@@ -9,12 +9,18 @@ use App\Http\Resources\CourseLevelResource;
 use App\Http\Resources\CourseResource;
 use App\Models\Course;
 use App\Models\Lesson;
+use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class CourseController extends Controller
 {
+    /** Fields tracked in course.updated audit diffs — content, not admin/status flags handled elsewhere. */
+    private const AUDITED_FIELDS = ['title', 'description', 'level_band', 'language_id'];
+
+    public function __construct(private AuditLogger $audit) {}
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $query = Course::query()->with(['language', 'ownerUser'])->withCount('levels');
@@ -55,20 +61,38 @@ class CourseController extends Controller
             'is_published' => false,
         ]);
 
+        $this->audit->record(
+            'course.created',
+            $course,
+            [],
+            $course->only(self::AUDITED_FIELDS),
+        );
+
         return (new CourseResource($course->load('language')))
             ->response()->setStatusCode(201);
     }
 
     public function update(UpdateCourseRequest $request, Course $course): CourseResource
     {
+        $before = $course->only(self::AUDITED_FIELDS);
         $course->update($request->validated());
+
+        $this->audit->record(
+            'course.updated',
+            $course,
+            $before,
+            $course->only(self::AUDITED_FIELDS),
+        );
 
         return new CourseResource($course->load('language'));
     }
 
     public function destroy(Course $course): JsonResponse
     {
+        $before = $course->only([...self::AUDITED_FIELDS, 'status']);
         $course->delete();
+
+        $this->audit->record('course.deleted', $course, $before);
 
         return response()->json(null, 204);
     }

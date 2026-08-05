@@ -1,6 +1,23 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import {
   Alert,
   Badge,
   Button,
@@ -38,6 +55,10 @@ export function CourseBuilderPage() {
   const [levelOpen, setLevelOpen] = useState(false)
   const [editingLevel, setEditingLevel] = useState<AuthorLevel | null>(null)
   const [deletingLevel, setDeletingLevel] = useState<AuthorLevel | null>(null)
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
 
   const course = courses.data?.find((c) => c.id === id)
 
@@ -49,6 +70,16 @@ export function CourseBuilderPage() {
     const next = [...ordered]
     ;[next[index], next[target]] = [next[target], next[index]]
     reorderLevels.mutate(next.map((l) => l.id))
+  }
+
+  function handleLevelDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    const ordered = levels.data
+    if (!ordered || !over || active.id === over.id) return
+    const from = ordered.findIndex((l) => l.id === active.id)
+    const to = ordered.findIndex((l) => l.id === over.id)
+    if (from < 0 || to < 0) return
+    reorderLevels.mutate(arrayMove(ordered, from, to).map((l) => l.id))
   }
 
   if (levels.isLoading) return <Skeleton className="h-48" />
@@ -86,21 +117,26 @@ export function CourseBuilderPage() {
           </CardBody>
         </Card>
       ) : (
-        <div className="flex flex-col gap-5">
-          {levels.data.map((level, index) => (
-            <LevelSection
-              key={level.id}
-              courseId={id}
-              level={level}
-              onEdit={() => setEditingLevel(level)}
-              onDelete={() => setDeletingLevel(level)}
-              canMoveUp={canManage && index > 0}
-              canMoveDown={canManage && index < levels.data.length - 1}
-              onMoveUp={() => moveLevel(index, -1)}
-              onMoveDown={() => moveLevel(index, 1)}
-            />
-          ))}
-        </div>
+        <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleLevelDragEnd}>
+          <SortableContext items={levels.data.map((l) => l.id)} strategy={verticalListSortingStrategy}>
+            <div className="flex flex-col gap-5">
+              {levels.data.map((level, index) => (
+                <LevelSection
+                  key={level.id}
+                  courseId={id}
+                  level={level}
+                  onEdit={() => setEditingLevel(level)}
+                  onDelete={() => setDeletingLevel(level)}
+                  canDrag={canManage}
+                  canMoveUp={canManage && index > 0}
+                  canMoveDown={canManage && index < levels.data.length - 1}
+                  onMoveUp={() => moveLevel(index, -1)}
+                  onMoveDown={() => moveLevel(index, 1)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       <NewLevelModal courseId={id} open={levelOpen} onClose={() => setLevelOpen(false)} />
@@ -115,6 +151,7 @@ function LevelSection({
   level,
   onEdit,
   onDelete,
+  canDrag,
   canMoveUp,
   canMoveDown,
   onMoveUp,
@@ -124,18 +161,26 @@ function LevelSection({
   level: AuthorLevel
   onEdit: () => void
   onDelete: () => void
+  canDrag: boolean
   canMoveUp: boolean
   canMoveDown: boolean
   onMoveUp: () => void
   onMoveDown: () => void
 }) {
-  const navigate = useNavigate()
   const lessons = useLevelLessons(level.id)
   const canManage = useCanManageContent()
   const reorderLessons = useReorderLessons(level.id)
   const [lessonOpen, setLessonOpen] = useState(false)
   const [editingLesson, setEditingLesson] = useState<AuthorLesson | null>(null)
   const [deletingLesson, setDeletingLesson] = useState<AuthorLesson | null>(null)
+  const lessonDndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: level.id,
+    disabled: !canDrag,
+  })
 
   function moveLesson(index: number, direction: -1 | 1) {
     const ordered = lessons.data
@@ -147,13 +192,39 @@ function LevelSection({
     reorderLessons.mutate(next.map((l) => l.id))
   }
 
+  function handleLessonDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    const ordered = lessons.data
+    if (!ordered || !over || active.id === over.id) return
+    const from = ordered.findIndex((l) => l.id === active.id)
+    const to = ordered.findIndex((l) => l.id === over.id)
+    if (from < 0 || to < 0) return
+    reorderLessons.mutate(arrayMove(ordered, from, to).map((l) => l.id))
+  }
+
   return (
-    <section className="rounded-2xl border border-border bg-surface p-4">
+    <section
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`rounded-2xl border border-border bg-surface p-4 ${isDragging ? 'z-10 opacity-90 shadow-lg' : ''}`}
+    >
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="font-display text-lg font-bold text-foreground">
           <span className="text-subtle">{level.position}.</span> {level.title}
         </h2>
         <div className="flex items-center gap-1">
+          {canDrag && (
+            <IconButton
+              aria-label="Drag to reorder unit"
+              size="sm"
+              variant="ghost"
+              className="cursor-grab touch-none active:cursor-grabbing"
+              {...attributes}
+              {...listeners}
+            >
+              <Icon name="grip" className="size-4" />
+            </IconButton>
+          )}
           {canManage && (
             <div className="mr-1 flex items-center gap-0.5">
               <IconButton
@@ -204,60 +275,26 @@ function LevelSection({
       ) : (lessons.data?.length ?? 0) === 0 ? (
         <p className="px-1 text-sm text-muted">No lessons yet.</p>
       ) : (
-        <ul className="flex flex-col gap-2">
-          {lessons.data?.map((lesson, index) => (
-            <li key={lesson.id}>
-              <div className="flex w-full items-center justify-between gap-3 rounded-xl border border-border px-3 py-2.5 hover:bg-surface-muted">
-                {canManage && (
-                  <div className="flex shrink-0 items-center gap-0.5">
-                    <IconButton
-                      aria-label="Move lesson up"
-                      size="sm"
-                      variant="ghost"
-                      disabled={index === 0}
-                      onClick={() => moveLesson(index, -1)}
-                    >
-                      <Icon name="chevron" className="size-4 rotate-180" />
-                    </IconButton>
-                    <IconButton
-                      aria-label="Move lesson down"
-                      size="sm"
-                      variant="ghost"
-                      disabled={index === (lessons.data?.length ?? 0) - 1}
-                      onClick={() => moveLesson(index, 1)}
-                    >
-                      <Icon name="chevron" className="size-4" />
-                    </IconButton>
-                  </div>
-                )}
-                <button
-                  onClick={() => navigate(`/courses/${courseId}/lessons/${lesson.id}`)}
-                  className="flex flex-1 items-center justify-between gap-3 text-left"
-                >
-                  <span className="font-medium text-foreground">
-                    {lesson.position}. {lesson.title}
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <Badge variant={lesson.is_published ? 'success' : 'neutral'}>
-                      {lesson.is_published ? 'Published' : 'Draft'}
-                    </Badge>
-                    <Icon name="chevron" className="size-4 -rotate-90 text-muted" />
-                  </span>
-                </button>
-                {canManage && (
-                  <div className="flex shrink-0 items-center gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => setEditingLesson(lesson)}>
-                      Edit
-                    </Button>
-                    <Button size="sm" variant="danger" onClick={() => setDeletingLesson(lesson)}>
-                      Delete
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+        <DndContext sensors={lessonDndSensors} collisionDetection={closestCenter} onDragEnd={handleLessonDragEnd}>
+          <SortableContext items={lessons.data?.map((l) => l.id) ?? []} strategy={verticalListSortingStrategy}>
+            <ul className="flex flex-col gap-2">
+              {lessons.data?.map((lesson, index) => (
+                <LessonRow
+                  key={lesson.id}
+                  courseId={courseId}
+                  lesson={lesson}
+                  canManage={canManage}
+                  canMoveUp={index > 0}
+                  canMoveDown={index < (lessons.data?.length ?? 0) - 1}
+                  onMoveUp={() => moveLesson(index, -1)}
+                  onMoveDown={() => moveLesson(index, 1)}
+                  onEdit={() => setEditingLesson(lesson)}
+                  onDelete={() => setDeletingLesson(lesson)}
+                />
+              ))}
+            </ul>
+          </SortableContext>
+        </DndContext>
       )}
 
       <NewLessonModal levelId={level.id} open={lessonOpen} onClose={() => setLessonOpen(false)} />
@@ -269,6 +306,89 @@ function LevelSection({
       />
       <DeleteLessonModal levelId={level.id} lesson={deletingLesson} onClose={() => setDeletingLesson(null)} />
     </section>
+  )
+}
+
+function LessonRow({
+  courseId,
+  lesson,
+  canManage,
+  canMoveUp,
+  canMoveDown,
+  onMoveUp,
+  onMoveDown,
+  onEdit,
+  onDelete,
+}: {
+  courseId: number
+  lesson: AuthorLesson
+  canManage: boolean
+  canMoveUp: boolean
+  canMoveDown: boolean
+  onMoveUp: () => void
+  onMoveDown: () => void
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const navigate = useNavigate()
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: lesson.id,
+    disabled: !canManage,
+  })
+
+  return (
+    <li ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}>
+      <div
+        className={`flex w-full items-center justify-between gap-3 rounded-xl border border-border px-3 py-2.5 hover:bg-surface-muted ${isDragging ? 'z-10 opacity-90 shadow-lg' : ''}`}
+      >
+        {canManage && (
+          <>
+            <IconButton
+              aria-label="Drag to reorder lesson"
+              size="sm"
+              variant="ghost"
+              className="cursor-grab touch-none active:cursor-grabbing"
+              {...attributes}
+              {...listeners}
+            >
+              <Icon name="grip" className="size-4" />
+            </IconButton>
+            <div className="flex shrink-0 items-center gap-0.5">
+              <IconButton aria-label="Move lesson up" size="sm" variant="ghost" disabled={!canMoveUp} onClick={onMoveUp}>
+                <Icon name="chevron" className="size-4 rotate-180" />
+              </IconButton>
+              <IconButton aria-label="Move lesson down" size="sm" variant="ghost" disabled={!canMoveDown} onClick={onMoveDown}>
+                <Icon name="chevron" className="size-4" />
+              </IconButton>
+            </div>
+          </>
+        )}
+        <button
+          onClick={() => navigate(`/courses/${courseId}/lessons/${lesson.id}`)}
+          className="flex flex-1 items-center justify-between gap-3 text-left"
+        >
+          <span className="font-medium text-foreground">
+            {lesson.position}. {lesson.title}
+          </span>
+          <span className="flex items-center gap-2">
+            <Badge variant={lesson.is_published ? 'success' : 'neutral'}>
+              {lesson.is_published ? 'Published' : 'Draft'}
+            </Badge>
+            <Icon name="chevron" className="size-4 -rotate-90 text-muted" />
+          </span>
+        </button>
+        {canManage && (
+          <div className="flex shrink-0 items-center gap-1">
+            <Button size="sm" variant="ghost" onClick={onEdit}>
+              Edit
+            </Button>
+            <Button size="sm" variant="danger" onClick={onDelete}>
+              Delete
+            </Button>
+          </div>
+        )}
+      </div>
+    </li>
   )
 }
 
