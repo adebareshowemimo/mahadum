@@ -7,6 +7,7 @@ import {
   Card,
   CardBody,
   Icon,
+  IconButton,
   Input,
   Modal,
   Skeleton,
@@ -20,6 +21,8 @@ import {
   useDeleteLesson,
   useDeleteLevel,
   useLevelLessons,
+  useReorderLessons,
+  useReorderLevels,
   useUpdateLesson,
   useUpdateLevel,
 } from '@/lib/content/queries'
@@ -31,11 +34,22 @@ export function CourseBuilderPage() {
   const courses = useAuthorCourses()
   const levels = useCourseLevels(id)
   const canManage = useCanManageContent()
+  const reorderLevels = useReorderLevels(id)
   const [levelOpen, setLevelOpen] = useState(false)
   const [editingLevel, setEditingLevel] = useState<AuthorLevel | null>(null)
   const [deletingLevel, setDeletingLevel] = useState<AuthorLevel | null>(null)
 
   const course = courses.data?.find((c) => c.id === id)
+
+  function moveLevel(index: number, direction: -1 | 1) {
+    const ordered = levels.data
+    if (!ordered) return
+    const target = index + direction
+    if (target < 0 || target >= ordered.length) return
+    const next = [...ordered]
+    ;[next[index], next[target]] = [next[target], next[index]]
+    reorderLevels.mutate(next.map((l) => l.id))
+  }
 
   if (levels.isLoading) return <Skeleton className="h-48" />
   if (levels.isError || !levels.data) return <Alert variant="danger">Couldn’t load this course.</Alert>
@@ -73,13 +87,17 @@ export function CourseBuilderPage() {
         </Card>
       ) : (
         <div className="flex flex-col gap-5">
-          {levels.data.map((level) => (
+          {levels.data.map((level, index) => (
             <LevelSection
               key={level.id}
               courseId={id}
               level={level}
               onEdit={() => setEditingLevel(level)}
               onDelete={() => setDeletingLevel(level)}
+              canMoveUp={canManage && index > 0}
+              canMoveDown={canManage && index < levels.data.length - 1}
+              onMoveUp={() => moveLevel(index, -1)}
+              onMoveDown={() => moveLevel(index, 1)}
             />
           ))}
         </div>
@@ -97,18 +115,37 @@ function LevelSection({
   level,
   onEdit,
   onDelete,
+  canMoveUp,
+  canMoveDown,
+  onMoveUp,
+  onMoveDown,
 }: {
   courseId: number
   level: AuthorLevel
   onEdit: () => void
   onDelete: () => void
+  canMoveUp: boolean
+  canMoveDown: boolean
+  onMoveUp: () => void
+  onMoveDown: () => void
 }) {
   const navigate = useNavigate()
   const lessons = useLevelLessons(level.id)
   const canManage = useCanManageContent()
+  const reorderLessons = useReorderLessons(level.id)
   const [lessonOpen, setLessonOpen] = useState(false)
   const [editingLesson, setEditingLesson] = useState<AuthorLesson | null>(null)
   const [deletingLesson, setDeletingLesson] = useState<AuthorLesson | null>(null)
+
+  function moveLesson(index: number, direction: -1 | 1) {
+    const ordered = lessons.data
+    if (!ordered) return
+    const target = index + direction
+    if (target < 0 || target >= ordered.length) return
+    const next = [...ordered]
+    ;[next[index], next[target]] = [next[target], next[index]]
+    reorderLessons.mutate(next.map((l) => l.id))
+  }
 
   return (
     <section className="rounded-2xl border border-border bg-surface p-4">
@@ -117,6 +154,28 @@ function LevelSection({
           <span className="text-subtle">{level.position}.</span> {level.title}
         </h2>
         <div className="flex items-center gap-1">
+          {canManage && (
+            <div className="mr-1 flex items-center gap-0.5">
+              <IconButton
+                aria-label="Move unit up"
+                size="sm"
+                variant="ghost"
+                disabled={!canMoveUp}
+                onClick={onMoveUp}
+              >
+                <Icon name="chevron" className="size-4 rotate-180" />
+              </IconButton>
+              <IconButton
+                aria-label="Move unit down"
+                size="sm"
+                variant="ghost"
+                disabled={!canMoveDown}
+                onClick={onMoveDown}
+              >
+                <Icon name="chevron" className="size-4" />
+              </IconButton>
+            </div>
+          )}
           <Button
             size="sm"
             variant="ghost"
@@ -146,9 +205,31 @@ function LevelSection({
         <p className="px-1 text-sm text-muted">No lessons yet.</p>
       ) : (
         <ul className="flex flex-col gap-2">
-          {lessons.data?.map((lesson) => (
+          {lessons.data?.map((lesson, index) => (
             <li key={lesson.id}>
               <div className="flex w-full items-center justify-between gap-3 rounded-xl border border-border px-3 py-2.5 hover:bg-surface-muted">
+                {canManage && (
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <IconButton
+                      aria-label="Move lesson up"
+                      size="sm"
+                      variant="ghost"
+                      disabled={index === 0}
+                      onClick={() => moveLesson(index, -1)}
+                    >
+                      <Icon name="chevron" className="size-4 rotate-180" />
+                    </IconButton>
+                    <IconButton
+                      aria-label="Move lesson down"
+                      size="sm"
+                      variant="ghost"
+                      disabled={index === (lessons.data?.length ?? 0) - 1}
+                      onClick={() => moveLesson(index, 1)}
+                    >
+                      <Icon name="chevron" className="size-4" />
+                    </IconButton>
+                  </div>
+                )}
                 <button
                   onClick={() => navigate(`/courses/${courseId}/lessons/${lesson.id}`)}
                   className="flex flex-1 items-center justify-between gap-3 text-left"

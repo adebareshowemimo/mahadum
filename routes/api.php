@@ -161,12 +161,16 @@ Route::prefix('v1')->group(function () {
         Route::get('courses/{course}/levels', [CourseController::class, 'levels']);
         Route::post('courses/{course}/levels', [CourseLevelController::class, 'store'])
             ->middleware('can:content.lessons.manage');
+        Route::post('courses/{course}/levels/reorder', [CourseLevelController::class, 'reorder'])
+            ->middleware('can:content.lessons.manage');
         Route::match(['put', 'patch'], 'levels/{level}', [CourseLevelController::class, 'update'])
             ->middleware('can:content.lessons.manage');
         Route::delete('levels/{level}', [CourseLevelController::class, 'destroy'])
             ->middleware('can:content.lessons.manage');
         Route::get('levels/{level}/lessons', [LessonController::class, 'index']);
         Route::post('levels/{level}/lessons', [LessonController::class, 'store'])
+            ->middleware('can:content.lessons.manage');
+        Route::post('levels/{level}/lessons/reorder', [LessonController::class, 'reorder'])
             ->middleware('can:content.lessons.manage');
         Route::get('lessons/{lesson}', [LessonController::class, 'show']);
         Route::match(['put', 'patch'], 'lessons/{lesson}', [LessonController::class, 'update'])

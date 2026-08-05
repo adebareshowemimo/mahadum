@@ -3,6 +3,8 @@ import {
   contentApi,
   type AddComponentInput,
   type AdminCoursesQuery,
+  type AuthorLesson,
+  type AuthorLevel,
   type CreateCourseInput,
   type CreateLessonInput,
   type CreateLevelInput,
@@ -162,6 +164,30 @@ export function useUpdateLevel(courseId: number) {
   })
 }
 
+export function useReorderLevels(courseId: number) {
+  const qc = useQueryClient()
+  const key = contentKeys.levels(courseId)
+  return useMutation({
+    mutationFn: (order: number[]) => contentApi.reorderLevels(courseId, order),
+    onMutate: async (order) => {
+      await qc.cancelQueries({ queryKey: key })
+      const previous = qc.getQueryData<AuthorLevel[]>(key)
+      if (previous) {
+        const byId = new Map(previous.map((l) => [l.id, l]))
+        qc.setQueryData(
+          key,
+          order.map((id, i) => ({ ...byId.get(id)!, position: i + 1 })),
+        )
+      }
+      return { previous }
+    },
+    onError: (_err, _order, context) => {
+      if (context?.previous) qc.setQueryData(key, context.previous)
+    },
+    onSettled: () => void qc.invalidateQueries({ queryKey: key }),
+  })
+}
+
 export function useDeleteLevel(courseId: number) {
   const qc = useQueryClient()
   return useMutation({
@@ -196,6 +222,30 @@ export function useDeleteLesson(levelId: number) {
   return useMutation({
     mutationFn: (lessonId: number) => contentApi.deleteLesson(lessonId),
     onSuccess: () => void qc.invalidateQueries({ queryKey: contentKeys.lessons(levelId) }),
+  })
+}
+
+export function useReorderLessons(levelId: number) {
+  const qc = useQueryClient()
+  const key = contentKeys.lessons(levelId)
+  return useMutation({
+    mutationFn: (order: number[]) => contentApi.reorderLessons(levelId, order),
+    onMutate: async (order) => {
+      await qc.cancelQueries({ queryKey: key })
+      const previous = qc.getQueryData<AuthorLesson[]>(key)
+      if (previous) {
+        const byId = new Map(previous.map((l) => [l.id, l]))
+        qc.setQueryData(
+          key,
+          order.map((id, i) => ({ ...byId.get(id)!, position: i + 1 })),
+        )
+      }
+      return { previous }
+    },
+    onError: (_err, _order, context) => {
+      if (context?.previous) qc.setQueryData(key, context.previous)
+    },
+    onSettled: () => void qc.invalidateQueries({ queryKey: key }),
   })
 }
 

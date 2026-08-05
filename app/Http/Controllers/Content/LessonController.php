@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Content;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Content\ReorderLessonsRequest;
 use App\Http\Requests\Content\StoreLessonRequest;
 use App\Http\Requests\Content\UpdateLessonRequest;
 use App\Http\Resources\LessonResource;
@@ -12,6 +13,7 @@ use App\Services\Content\LessonPublishService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 
 class LessonController extends Controller
 {
@@ -71,6 +73,21 @@ class LessonController extends Controller
         $lesson->delete();
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * Persist a new lesson order within the level. `order` is the full list
+     * of lesson ids in their desired sequence; positions are reassigned 1..n.
+     */
+    public function reorder(ReorderLessonsRequest $request, CourseLevel $level): AnonymousResourceCollection
+    {
+        DB::transaction(function () use ($request, $level) {
+            foreach ($request->input('order') as $index => $lessonId) {
+                $level->lessons()->whereKey($lessonId)->update(['position' => $index + 1]);
+            }
+        });
+
+        return LessonResource::collection($level->lessons()->orderBy('position')->get());
     }
 
     public function publish(Lesson $lesson, LessonPublishService $publisher): JsonResponse

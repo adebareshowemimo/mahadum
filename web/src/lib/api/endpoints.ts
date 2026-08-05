@@ -464,6 +464,11 @@ export const contentApi = {
     await api.delete(`/levels/${levelId}`)
   },
 
+  async reorderLevels(courseId: number, order: number[]): Promise<AuthorLevel[]> {
+    const { data } = await api.post(`/courses/${courseId}/levels/reorder`, { order })
+    return data.data
+  },
+
   async lessons(levelId: number): Promise<AuthorLesson[]> {
     const { data } = await api.get(`/levels/${levelId}/lessons`)
     return data.data
@@ -481,6 +486,11 @@ export const contentApi = {
 
   async deleteLesson(lessonId: number): Promise<void> {
     await api.delete(`/lessons/${lessonId}`)
+  },
+
+  async reorderLessons(levelId: number, order: number[]): Promise<AuthorLesson[]> {
+    const { data } = await api.post(`/levels/${levelId}/lessons/reorder`, { order })
+    return data.data
   },
 
   async lesson(lessonId: number): Promise<AuthorLesson> {
