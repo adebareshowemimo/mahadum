@@ -614,6 +614,19 @@ export const billingApi = {
     return data.data
   },
 
+  /** Switch an existing subscription to a different plan (cancels the old one server-side). */
+  async changeSubscription(id: number, input: CreateSubscriptionInput): Promise<{
+    subscription_id: number
+    status: string
+    payment_reference?: string
+    checkout_url?: string | null
+  }> {
+    const { data } = await api.post(`/subscriptions/${id}/change`, input, {
+      headers: { 'Idempotency-Key': idempotencyKey() },
+    })
+    return data.data
+  },
+
   // --- Telco (airtime VAS) ---
   async telcoStatus(): Promise<TelcoStatus> {
     const { data } = await api.get('/telco/status')

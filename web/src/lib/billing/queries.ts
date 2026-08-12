@@ -39,6 +39,18 @@ export function useCancelSubscription() {
   })
 }
 
+export function useChangeSubscription() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, input }: { id: number; input: CreateSubscriptionInput }) => billingApi.changeSubscription(id, input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: billingKeys.subscriptions })
+      // Invoice changes activate immediately → refresh entitlements via /me.
+      void qc.invalidateQueries({ queryKey: ['me'] })
+    },
+  })
+}
+
 export function useTelcoStatus() {
   return useQuery({
     queryKey: billingKeys.telcoStatus,

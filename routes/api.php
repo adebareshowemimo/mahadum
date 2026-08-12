@@ -270,6 +270,8 @@ Route::prefix('v1')->group(function () {
         Route::middleware('idempotency')->group(function () {
             Route::post('subscriptions', [SubscriptionController::class, 'store'])
                 ->middleware('can:billing.subscriptions.manage');
+            Route::post('subscriptions/{subscription}/change', [SubscriptionController::class, 'change'])
+                ->middleware('can:billing.subscriptions.manage');
             Route::post('data-bundles/purchase', [DataBundleController::class, 'purchase'])
                 ->middleware('can:billing.databundles.manage');
         });

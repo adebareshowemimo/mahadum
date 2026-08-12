@@ -5,6 +5,8 @@ import {
   Button,
   Card,
   CardBody,
+  CardHeader,
+  CardTitle,
   Icon,
   Input,
   Skeleton,
@@ -17,11 +19,14 @@ import { useConfig } from '@/lib/config/useConfig'
 import { useEntitlements } from '@/lib/billing/entitlements'
 import {
   useCancelSubscription,
+  useChangeSubscription,
   useCreateSubscription,
   usePlans,
   useSubscriptions,
   useTelcoStatus,
 } from '@/lib/billing/queries'
+import { useFamily } from '@/lib/family/queries'
+import { SetPinModal } from '@/components/family/SetPinModal'
 import { TelcoOptInModal } from '@/components/billing/TelcoOptInModal'
 import { DataBundleModal } from '@/components/billing/DataBundleModal'
 
@@ -41,7 +46,7 @@ function planFeatures(plan: Plan): string[] {
 }
 
 export function BillingPage() {
-  const { user } = useAuth()
+  const { user, hasRole } = useAuth()
   const entitlements = useEntitlements()
   const config = useConfig()
   const telcoBillingEnabled = config.data?.feature_flags.telco_billing === true
@@ -49,6 +54,7 @@ export function BillingPage() {
   const history = useSubscriptions()
   const createSub = useCreateSubscription()
   const cancelSub = useCancelSubscription()
+  const changeSub = useChangeSubscription()
 
   const telco = useTelcoStatus()
   const [notice, setNotice] = useState<string | null>(null)
@@ -56,6 +62,7 @@ export function BillingPage() {
   const [busyPlan, setBusyPlan] = useState<number | null>(null)
   const [telcoPlan, setTelcoPlan] = useState<Plan | null>(null)
   const [bundleOpen, setBundleOpen] = useState(false)
+  const [pinOpen, setPinOpen] = useState(false)
   const [promoInput, setPromoInput] = useState('')
   const [promo, setPromo] = useState<{ code: string; byPlan: Record<number, PromoPreview> } | null>(null)
   const [promoError, setPromoError] = useState<string | null>(null)
@@ -63,6 +70,12 @@ export function BillingPage() {
 
   const sub = user?.subscription ?? null
   const telcoState = telco.data?.state
+  const hasActiveSub = sub != null && sub.status !== 'cancelled'
+
+  // Individual and Family Premium both allow a parental PIN — surfaced here too
+  // (not just on /family) so a premium subscriber can find it right away.
+  const isPremiumPlan = entitlements.tier.startsWith('premium_')
+  const family = useFamily(isPremiumPlan && hasRole('parent'))
 
   // Preview a promo code against every paid plan; keep the tiers it applies to.
   async function applyPromo() {
@@ -117,6 +130,27 @@ export function BillingPage() {
       setNotice(res.message)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not cancel the subscription.')
+    }
+  }
+
+  /** Switch the current subscription straight to a different plan (no manual cancel-then-resubscribe). */
+  async function changePlan(plan: Plan) {
+    if (!sub) return
+    setBusyPlan(plan.id)
+    setError(null)
+    setNotice(null)
+    try {
+      const promoCode = promo?.byPlan[plan.id] ? promo.code : undefined
+      const res = await changeSub.mutateAsync({ id: sub.id, input: { plan_id: plan.id, method: 'card', promo_code: promoCode } })
+      if (res.checkout_url) {
+        window.location.href = res.checkout_url
+      } else {
+        setNotice('Plan changed. Complete payment at checkout to activate — your new plan unlocks once payment is confirmed.')
+      }
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not change your plan.')
+    } finally {
+      setBusyPlan(null)
     }
   }
 
@@ -244,6 +278,10 @@ export function BillingPage() {
                       <Button variant="secondary" fullWidth disabled>
                         Included
                       </Button>
+                    ) : hasActiveSub ? (
+                      <Button variant="premium" fullWidth loading={busyPlan === plan.id} onClick={() => changePlan(plan)}>
+                        Switch to this plan
+                      </Button>
                     ) : (
                       <div className="flex flex-col gap-2">
                         <Button variant="premium" fullWidth loading={busyPlan === plan.id} onClick={() => subscribe(plan)}>
@@ -275,6 +313,30 @@ export function BillingPage() {
           </Button>
         </CardBody>
       </Card>
+
+      {isPremiumPlan && hasRole('parent') && family.data && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Parental PIN</CardTitle>
+          </CardHeader>
+          <CardBody className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Icon name="shield" className="text-muted" />
+              <div>
+                <Badge variant={family.data.pin_set ? 'success' : 'warning'}>
+                  {family.data.pin_set ? 'PIN set' : 'No PIN yet'}
+                </Badge>
+                <p className="mt-1 text-sm text-muted">
+                  {entitlements.tier_name} includes a parental PIN to protect child profile switching.
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setPinOpen(true)}>
+              {family.data.pin_set ? 'Change PIN' : 'Set a PIN'}
+            </Button>
+          </CardBody>
+        </Card>
+      )}
 
       <section>
         <h2 className="mb-3 font-display text-lg font-bold text-foreground">Billing history</h2>
@@ -314,6 +376,7 @@ export function BillingPage() {
         <TelcoOptInModal plan={telcoPlan} open={telcoPlan != null} onClose={() => setTelcoPlan(null)} />
       )}
       <DataBundleModal open={bundleOpen} onClose={() => setBundleOpen(false)} />
+      {family.data && <SetPinModal open={pinOpen} onClose={() => setPinOpen(false)} hasPin={family.data.pin_set} />}
     </div>
   )
 }

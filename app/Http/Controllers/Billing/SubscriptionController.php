@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Billing;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Billing\ChangeSubscriptionRequest;
 use App\Http\Requests\Billing\StoreSubscriptionRequest;
 use App\Models\Plan;
 use App\Models\Subscription;
@@ -77,63 +78,57 @@ class SubscriptionController extends Controller
     public function store(StoreSubscriptionRequest $request): JsonResponse
     {
         $plan = Plan::findOrFail($request->integer('plan_id'));
-        $method = $request->string('method')->value();
 
-        // Optional promo code — validated up-front so an invalid code fails the
-        // whole request (422) before any subscription row is created.
-        $chargeMinor = (int) $plan->price_minor;
-        $outcome = null;
-        if ($code = $request->input('promo_code')) {
-            try {
-                $outcome = $this->promos->evaluate((string) $code, $plan, $request->user());
-                $chargeMinor = $outcome->finalMinor;
-            } catch (PromoException $e) {
-                return response()->json(['error' => ['code' => $e->reason, 'message' => $e->getMessage(), 'status' => 422]], 422);
-            }
-        }
-
-        $subscription = new Subscription([
-            'plan_id' => $plan->id,
-            'method' => $method,
-            'status' => $method === 'card' ? 'pending' : 'active',
-        ]);
-        $subscription->subscriber()->associate($request->user());
-
-        if ($method !== 'card') {
-            $subscription->started_at = now();
-            $subscription->renews_at = $this->renewsAt($plan);
-        }
-        $subscription->save();
-
-        if ($outcome !== null) {
-            $this->promos->redeem($outcome->promo, $request->user(), $subscription);
-        }
-
-        $data = ['subscription_id' => $subscription->id, 'status' => $subscription->status];
-        if ($outcome !== null) {
-            $data['discount_minor'] = $outcome->discountMinor;
-            $data['charged_minor'] = $chargeMinor;
-        }
-
-        if ($method === 'card') {
-            // Open the hosted checkout; the webhook activates it via this reference.
-            $reference = 'sub_'.$subscription->id;
-            $checkout = $this->gateways->driver()->initialize(
-                $reference,
-                $chargeMinor,
-                (string) $request->user()->email,
-                ['purpose' => 'subscription', 'subscription_id' => $subscription->id],
+        try {
+            $data = $this->createSubscription(
+                $request->user(),
+                $plan,
+                $request->string('method')->value(),
+                $request->input('promo_code'),
             );
-
-            // Record the gateway's own transaction id when it returns one, so a later
-            // refund that doesn't echo our `sub_<id>` reference (e.g. Monnify) correlates.
-            if ($checkout->providerReference !== null) {
-                $subscription->update(['gateway_txn_ref' => $checkout->providerReference]);
-            }
-
-            $data['payment_reference'] = $reference;
-            $data['checkout_url'] = $checkout->checkoutUrl;
+        } catch (PromoException $e) {
+            return response()->json(['error' => ['code' => $e->reason, 'message' => $e->getMessage(), 'status' => 422]], 422);
         }
+
+        return response()->json(['data' => $data], 201);
+    }
+
+    /**
+     * Switch the caller's own subscription to a different plan: cancels the
+     * current one and creates a fresh one for the target plan in a single call,
+     * so the SPA doesn't have to drive cancel + subscribe as two separate steps.
+     * Card subscriptions still go through the normal checkout/webhook activation.
+     */
+    public function change(Subscription $subscription, ChangeSubscriptionRequest $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless(
+            $subscription->subscriber_type === User::class && (int) $subscription->subscriber_id === (int) $user->id,
+            403,
+            'Not your subscription.',
+        );
+
+        if ($subscription->status === 'cancelled') {
+            return response()->json([
+                'error' => ['code' => 'subscription_cancelled', 'message' => 'This subscription is already cancelled.', 'status' => 422],
+            ], 422);
+        }
+
+        $plan = Plan::findOrFail($request->integer('plan_id'));
+
+        if ((int) $subscription->plan_id === $plan->id) {
+            return response()->json([
+                'error' => ['code' => 'same_plan', 'message' => 'You are already on this plan.', 'status' => 422],
+            ], 422);
+        }
+
+        try {
+            $data = $this->createSubscription($user, $plan, $request->string('method')->value(), $request->input('promo_code'));
+        } catch (PromoException $e) {
+            return response()->json(['error' => ['code' => $e->reason, 'message' => $e->getMessage(), 'status' => 422]], 422);
+        }
+
+        $subscription->update(['status' => 'cancelled', 'cancelled_at' => now()]);
 
         return response()->json(['data' => $data], 201);
     }
@@ -154,6 +149,68 @@ class SubscriptionController extends Controller
             : 'Subscription cancelled.';
 
         return response()->json(['data' => ['status' => 'cancelled', 'message' => $message]]);
+    }
+
+    /**
+     * Shared subscription-creation logic used by both a brand-new subscribe and
+     * a plan change. Returns the response payload; throws PromoException on an
+     * invalid code so callers can render a consistent 422.
+     *
+     * @return array<string, mixed>
+     */
+    private function createSubscription(User $user, Plan $plan, string $method, ?string $promoCode): array
+    {
+        $chargeMinor = (int) $plan->price_minor;
+        $outcome = null;
+        if ($promoCode) {
+            $outcome = $this->promos->evaluate($promoCode, $plan, $user);
+            $chargeMinor = $outcome->finalMinor;
+        }
+
+        $subscription = new Subscription([
+            'plan_id' => $plan->id,
+            'method' => $method,
+            'status' => $method === 'card' ? 'pending' : 'active',
+        ]);
+        $subscription->subscriber()->associate($user);
+
+        if ($method !== 'card') {
+            $subscription->started_at = now();
+            $subscription->renews_at = $this->renewsAt($plan);
+        }
+        $subscription->save();
+
+        if ($outcome !== null) {
+            $this->promos->redeem($outcome->promo, $user, $subscription);
+        }
+
+        $data = ['subscription_id' => $subscription->id, 'status' => $subscription->status];
+        if ($outcome !== null) {
+            $data['discount_minor'] = $outcome->discountMinor;
+            $data['charged_minor'] = $chargeMinor;
+        }
+
+        if ($method === 'card') {
+            // Open the hosted checkout; the webhook activates it via this reference.
+            $reference = 'sub_'.$subscription->id;
+            $checkout = $this->gateways->driver()->initialize(
+                $reference,
+                $chargeMinor,
+                (string) $user->email,
+                ['purpose' => 'subscription', 'subscription_id' => $subscription->id],
+            );
+
+            // Record the gateway's own transaction id when it returns one, so a later
+            // refund that doesn't echo our `sub_<id>` reference (e.g. Monnify) correlates.
+            if ($checkout->providerReference !== null) {
+                $subscription->update(['gateway_txn_ref' => $checkout->providerReference]);
+            }
+
+            $data['payment_reference'] = $reference;
+            $data['checkout_url'] = $checkout->checkoutUrl;
+        }
+
+        return $data;
     }
 
     private function renewsAt(Plan $plan)

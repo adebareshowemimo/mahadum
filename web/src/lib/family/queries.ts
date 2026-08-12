@@ -14,8 +14,8 @@ export const familyKeys = {
   reviews: ['reviews', 'pending'] as const,
 }
 
-export function useFamily() {
-  return useQuery({ queryKey: familyKeys.family, queryFn: familyApi.overview })
+export function useFamily(enabled = true) {
+  return useQuery({ queryKey: familyKeys.family, queryFn: familyApi.overview, enabled })
 }
 
 export function useWallet() {
