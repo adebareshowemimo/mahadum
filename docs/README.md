@@ -28,6 +28,9 @@ Drop into a Laravel 12/13 app: copy `database/migrations/*` and `app/Models/*`.
 - **[`openapi.yaml`](openapi.yaml)** — OpenAPI 3.1 spec for the full v1 API (~80 operations,
   all tags). Validated against the 3.1 schema. Render with Swagger UI / Redoc, or import into
   Postman/Insomnia. Prose companion: [Mobile API Spec](Mahadum360_Mobile_API_Spec.md).
+- **[Student & Child Login](Mahadum360_Student_Child_Login.md)** — how a `student`-role
+  user logs in vs. how a child `learner_profile` (no credential of its own) is accessed
+  through the parent's token + the PIN-gated "switch profile" flow.
 
 ## Required packages (provide their OWN migrations — not duplicated here)
 ```bash
