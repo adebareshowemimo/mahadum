@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Plan;
 use App\Models\TelcoOtp;
+use App\Services\Settings;
 use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -21,6 +22,18 @@ class TelcoOtpTest extends TestCase
         $this->seedRbac();
         $this->seed(PlanSeeder::class);
         $this->actingAsUser($this->userWithRole('parent'));
+        // New airtime enrolment is deprecated (off by default) — these tests cover
+        // the mechanics that still run for anyone re-enabling the flag.
+        app(Settings::class)->set(['feature.telco_billing' => true]);
+    }
+
+    public function test_enrolment_is_blocked_platform_wide_when_the_feature_flag_is_off(): void
+    {
+        app(Settings::class)->set(['feature.telco_billing' => false]);
+
+        $this->postJson('/api/v1/telco/otp/request', ['msisdn' => self::MSISDN, 'operator' => 'mtn'])
+            ->assertStatus(403)
+            ->assertJsonPath('message', 'Airtime billing is no longer available. Please choose a card or bank plan.');
     }
 
     private function plan(): Plan

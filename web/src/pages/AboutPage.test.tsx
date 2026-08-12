@@ -5,6 +5,10 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { AboutPage } from './AboutPage'
 
+vi.mock('@/lib/auth/AuthProvider', () => ({
+  useAuth: () => ({ status: 'unauthenticated', user: null, hasRole: () => false, logout: async () => {} }),
+}))
+
 beforeAll(() => {
   class MockIO {
     constructor(private cb: IntersectionObserverCallback) {}

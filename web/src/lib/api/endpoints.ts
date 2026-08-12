@@ -11,6 +11,7 @@ import type {
   ChoreDecision,
   BadgesInfo,
   CompleteResult,
+  CoursePerformance,
   CourseSummary,
   CreateChoreInput,
   FamilyOverview,
@@ -527,6 +528,12 @@ export const contentApi = {
   /** Drop-off funnel + per-question accuracy for the authoring "Insights" view. */
   async lessonAnalytics(lessonId: number): Promise<LessonAnalytics> {
     const { data } = await api.get(`/lessons/${lessonId}/analytics`)
+    return data.data
+  },
+
+  /** Per-course engagement (enrollments, lesson completions, quiz accuracy) — the caller's own courses, or every course for super_admin. */
+  async coursesPerformance(): Promise<CoursePerformance[]> {
+    const { data } = await api.get('/courses-performance')
     return data.data
   },
 

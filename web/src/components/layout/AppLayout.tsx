@@ -64,7 +64,7 @@ function SidebarContent({
   return (
     <>
       <div className="flex h-16 items-center justify-between border-b border-border px-5">
-        <NavLink to="/home" aria-label="Home">
+        <NavLink to="/" aria-label="Go to the Mahadum.360 homepage" end>
           <Logo className="h-8" />
         </NavLink>
         {onClose && (
@@ -119,9 +119,9 @@ function Topbar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
         <Icon name="menu" />
       </IconButton>
 
-      <div className="lg:hidden">
+      <NavLink to="/" aria-label="Go to the Mahadum.360 homepage" end className="lg:hidden">
         <Logo className="h-7" />
-      </div>
+      </NavLink>
 
       <div className="flex-1" />
 

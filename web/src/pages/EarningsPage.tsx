@@ -127,7 +127,7 @@ function ReferralEarningsSection() {
         </Card>
       </div>
 
-      <RequestPayoutModal open={payoutOpen} onClose={() => setPayoutOpen(false)} />
+      <RequestPayoutModal open={payoutOpen} onClose={() => setPayoutOpen(false)} availableMinor={cleared} />
     </section>
   )
 }

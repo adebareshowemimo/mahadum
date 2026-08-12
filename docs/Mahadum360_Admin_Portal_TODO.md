@@ -426,6 +426,89 @@ schema/permission but had no working flow:
 
 Reports hub now: Income · Growth · Subscriptions · Referrals · Organizations & schools.
 
+## 15. Test-pass fixes ⭐ `[MVP]` `[BE]` *(review 2026-08-02)*
+
+From a live click-through with the `DevSeeder` demo accounts (super_admin, content_owner,
+school_admin, teacher, parent), covering multiple roles — not just admin. Kept here since
+§14 already tracks cross-role polish found during portal review. Screenshots on file.
+
+**Bugs (break a flow)**
+- [ ] ⬜ **Word-doc quiz import returns "No questions found"** even against the shipped
+  template. `docx` parsing *is* implemented in
+  [`app/Services/Content/QuizImportParser.php`](../app/Services/Content/QuizImportParser.php)
+  (`docxTableRows`/`docxParagraphs`/`parseProse`) and
+  [`SpreadsheetReader.php`](../app/Services/Content/SpreadsheetReader.php) — the error fires
+  when `parseProse()` extracts zero rows, so this is a template/regex mismatch, not a missing
+  feature. Repro with the actual "Word template" download and fix the parser (or the
+  template) so they agree.
+- [ ] ⬜ **Teacher can't create an assignment for their own class** — `abort_unless($class->
+  teacher_user_id === $request->user()->id, 403, "Only this class's teacher can create
+  assignments.")` in
+  [`app/Http/Controllers/School/ClassAssignmentController.php:92`](../app/Http/Controllers/School/ClassAssignmentController.php)
+  (same pattern at :184 for grading, and in `ClassBadgeController.php:25`). Reproduced live
+  with a seeded teacher who *is* the class teacher — check whether `teacher_user_id` is set
+  correctly on the class, whether the authenticated user id matches, or whether the check
+  needs to also allow a co-teacher/supervisor path.
+- [ ] ⬜ **`/components` (design-system) nav item has no role restriction** — in
+  [`web/src/lib/nav/navigation.ts:107`](../web/src/lib/nav/navigation.ts), unlike every
+  `Admin` section item it carries no `roles: [...]`, so it renders for every signed-in role
+  incl. `parent` and `school_admin`. Add `roles: ['super_admin', 'content_owner']` (matching
+  who actually owns the design system) — one-line fix.
+
+**Missing / requested — Billing & pricing**
+- [ ] ⬜ Pricing page: message "2 months free" on the annual plans; **remove "pay with
+  airtime"** entirely (`web/src/pages/BillingPage.tsx`, `PricingPage.tsx`,
+  `web/src/components/billing/TelcoOptInModal.tsx`). Removing airtime pay is a product
+  decision with backend surface area too (`TelcoGatewayManager`, `/telco/*` routes) — confirm
+  scope (hide the option vs. deprecate the telco-billing feature) before deleting.
+- [ ] ⬜ Family chore/task daily pay rate should read **₦200/day** — audit copy against
+  `web/src/pages/BillingPage.tsx` / wherever the airtime "~₦X/day" estimate is computed
+  (moot if airtime pay is removed above; otherwise fix the rate).
+
+**Missing / requested — School operations**
+- [ ] ⬜ `[BE]` **Split invoice line items** — `resources/views/invoices/pdf.blade.php:59`
+  hard-codes a single `"{Type} — Mahadum.360 school licence"` line from `Invoice::
+  amount_minor`. Needs an `invoice_lines` (or similar) child table so an invoice can carry
+  **Student School Fees** + **Registration fees** as separate rows, and the Blade template
+  updated to render them. Touches `app/Models/Invoice.php`, whatever computes seat pricing
+  (`Admin`/`School` invoice generation), and `InvoiceResource`.
+- [ ] ⬜ `[BLOCK]` **VAT on school invoices** — confirmed **no VAT handling exists anywhere**
+  in `app/`. Needs a product decision (does Mahadum.360 charge VAT on school-linked
+  transactions per Nigerian tax rules?) before implementing; add to
+  `Mahadum360_Open_Decisions.md` if unresolved.
+- [ ] ⬜ **Downloadable CSV roster template** — `web/src/pages/RosterPage.tsx` /
+  `app/Http/Controllers/School/RosterController.php` only show inline format text
+  (`display_name,level` header) with no template file to download. Add a static `roster-
+  template.csv` (or a `GET /roster/template` streamed response) + a "Download template" link
+  next to "Upload CSV".
+- [ ] ⬜ **Show available balance before requesting a payout.** Two payout modals exist:
+  `web/src/components/school/RequestTeachingPayoutModal.tsx` already shows
+  `` `Available: ${formatMoney(availableMinor, 'NGN')}` `` — use it as the reference pattern.
+  `web/src/components/referral/RequestPayoutModal.tsx` (used for school-referral payouts,
+  the one screenshotted) does **not** show a balance. Bring it in line with the teaching-
+  payout modal.
+
+**Missing / requested — Content owner**
+- [ ] ⬜ `[BE]` **Content-owner performance dashboard.** Confirmed nothing exists today —
+  `content_owner` only appears as a role gate on `UsersPage.tsx`/`EmailCampaignsPage.tsx`,
+  no dashboard. At minimum, per course: users/subscribers, revenue, subscription status mix
+  (active/cancelled/pending), referral counts — reuse the stat-card + `MonthlyTable`
+  patterns already built for `/admin/reports` (§5). Needs a new `GET /content-owner/courses/
+  {course}/performance`-style endpoint (or extend `CourseController`) scoped to courses the
+  requesting content_owner actually owns.
+
+**Missing / requested — Marketing & auth pages**
+- [ ] ⬜ Login page: add a copyright footer line. `web/src/pages/LoginPage.tsx` /
+  `web/src/components/auth/AuthLayout.tsx` currently has none (copyright only exists on
+  `LandingPage.tsx`/`LandingVariantsPage.tsx`).
+- [ ] ⬜ **"Try a lesson" doesn't go anywhere real** — both occurrences in
+  `web/src/pages/LandingPage.tsx` (hero CTA line ~179, footer link ~890) point to `#try`,
+  an in-page anchor, not an actual playable sample lesson. Decide the real destination (a
+  public/unauthenticated demo lesson route, or straight to `/register`) and wire the link
+  to it instead of the anchor.
+
+---
+
 ## Suggested order
 
 1. **§0 portal hardening** (guard + shared `DataTable`) — unblocks everything.

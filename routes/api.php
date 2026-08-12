@@ -50,6 +50,7 @@ use App\Http\Controllers\Competition\VoteController as CompetitionVoteController
 use App\Http\Controllers\ConfigController;
 use App\Http\Controllers\Content\CourseController;
 use App\Http\Controllers\Content\CourseLevelController;
+use App\Http\Controllers\Content\CoursePerformanceController;
 use App\Http\Controllers\Content\LessonAnalyticsController;
 use App\Http\Controllers\Content\LessonComponentController;
 use App\Http\Controllers\Content\LessonController;
@@ -191,6 +192,8 @@ Route::prefix('v1')->group(function () {
         Route::post('lessons/{lesson}/publish', [LessonController::class, 'publish'])
             ->middleware('can:content.courses.publish');
         Route::get('lessons/{lesson}/analytics', [LessonAnalyticsController::class, 'show'])
+            ->middleware('can:analytics.lesson.view');
+        Route::get('courses-performance', [CoursePerformanceController::class, 'index'])
             ->middleware('can:analytics.lesson.view');
 
         // Simple local-disk media upload (video/audio/image) → MediaAsset.

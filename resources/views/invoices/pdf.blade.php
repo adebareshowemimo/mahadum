@@ -55,10 +55,18 @@
             <tr><th>Description</th><th class="right">Amount</th></tr>
         </thead>
         <tbody>
+            @forelse (($invoice->lines ?? []) as $line)
+            <tr>
+                <td>{{ $line['description'] }}</td>
+                <td class="right">&#8358;{{ number_format($line['amount_minor'] / 100, 2) }}</td>
+            </tr>
+            @empty
+            {{-- Pre-itemization invoices have no stored lines --}}
             <tr>
                 <td>{{ ucfirst($invoice->type) }} — Mahadum.360 school licence</td>
                 <td class="right">&#8358;{{ number_format($invoice->amount_minor / 100, 2) }}</td>
             </tr>
+            @endforelse
             <tr class="total-row">
                 <td class="right">Total</td>
                 <td class="right">&#8358;{{ number_format($invoice->amount_minor / 100, 2) }}</td>

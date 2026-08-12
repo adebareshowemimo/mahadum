@@ -4,6 +4,18 @@ import { ApiError, type RosterImportResult } from '@/lib/api'
 import { SchoolGate } from '@/components/school/SchoolGate'
 import { useImportRoster } from '@/lib/school/queries'
 
+const ROSTER_TEMPLATE = ['display_name,level', 'Amara Okafor,A1', 'Bello Musa,A2', 'Chinwe Eze,'].join('\n')
+
+function downloadRosterTemplate() {
+  const blob = new Blob([ROSTER_TEMPLATE], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'roster-import-template.csv'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export function RosterPage() {
   return <SchoolGate>{(orgId) => <Roster orgId={orgId} />}</SchoolGate>
 }
@@ -42,7 +54,16 @@ function Roster({ orgId }: { orgId: number }) {
         </CardHeader>
         <CardBody className="flex flex-col gap-4">
           <Alert variant="info" title="CSV format">
-            One student per row with a header: <code>display_name,level</code>. The <code>level</code> column is optional.
+            <p>
+              One student per row with a header: <code>display_name,level</code>. The <code>level</code> column is optional.
+            </p>
+            <button
+              type="button"
+              className="mt-2 text-sm font-medium text-primary hover:underline"
+              onClick={downloadRosterTemplate}
+            >
+              Download template
+            </button>
           </Alert>
 
           {error && <Alert variant="danger">{error}</Alert>}

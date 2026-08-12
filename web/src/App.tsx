@@ -5,7 +5,6 @@ import { AdminLayout } from '@/components/admin'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { PaywallGate } from '@/components/billing/PaywallGate'
 import { Spinner } from '@/components/ui/Spinner'
-import { useAuth } from '@/lib/auth/AuthProvider'
 // ComingSoon stays static: it backs every not-yet-built nav destination in the
 // .map() below, so lazy-loading it would mean one chunk request per placeholder.
 import { ComingSoon } from '@/pages/ComingSoon'
@@ -86,6 +85,7 @@ const SeatsPage = lazy(() => import('@/pages/SeatsPage').then((m) => ({ default:
 const CompetitionsPage = lazy(() => import('@/pages/CompetitionsPage').then((m) => ({ default: m.CompetitionsPage })))
 const CompetitionDetailPage = lazy(() => import('@/pages/CompetitionDetailPage').then((m) => ({ default: m.CompetitionDetailPage })))
 const CompetitionsAdminPage = lazy(() => import('@/pages/CompetitionsAdminPage').then((m) => ({ default: m.CompetitionsAdminPage })))
+const CoursePerformancePage = lazy(() => import('@/pages/content/CoursePerformancePage').then((m) => ({ default: m.CoursePerformancePage })))
 const WalletPage = lazy(() => import('@/pages/WalletPage').then((m) => ({ default: m.WalletPage })))
 const LoginPage = lazy(() => import('@/pages/LoginPage').then((m) => ({ default: m.LoginPage })))
 const RegisterPage = lazy(() => import('@/pages/RegisterPage').then((m) => ({ default: m.RegisterPage })))
@@ -98,14 +98,6 @@ function RouteFallback() {
       <Spinner className="size-8 opacity-60" />
     </div>
   )
-}
-
-// V1 is the selected home page; keep the same authenticated-user redirect the
-// previous canonical LandingPage enforced at "/".
-function HomePage() {
-  const { status } = useAuth()
-  if (status === 'authenticated') return <Navigate to="/home" replace />
-  return <LandingV1Page />
 }
 
 // Nested boundary used *inside* AppLayout, so a page chunk loading swaps only the
@@ -143,6 +135,7 @@ const REAL_PAGES = new Set([
   '/school/referrals',
   '/competitions',
   '/competitions/manage',
+  '/content/performance',
   '/admin',
   '/admin/settlements',
   '/admin/payouts',
@@ -186,7 +179,7 @@ export function App() {
     <Suspense fallback={<RouteFallback />}>
       <Routes>
       {/* Public marketing (redirects signed-in users away). V1 is the selected home page. */}
-      <Route path="/" element={<HomePage />} />
+      <Route path="/" element={<LandingV1Page />} />
       <Route path="/v1" element={<Navigate to="/" replace />} />
       <Route path="/v2" element={<LandingV2Page />} />
       <Route path="/v3" element={<LandingV3Page />} />
@@ -270,6 +263,7 @@ export function App() {
           <Route path="/competitions" element={<CompetitionsPage />} />
           <Route element={<RoleRoute roles={['super_admin', 'content_owner']} />}>
             <Route path="/competitions/manage" element={<CompetitionsAdminPage />} />
+            <Route path="/content/performance" element={<CoursePerformancePage />} />
           </Route>
           <Route path="/competitions/:competitionId" element={<CompetitionDetailPage />} />
           {/* Global-admin portal — super_admin only; grouped sub-nav via AdminLayout. */}
@@ -308,7 +302,9 @@ export function App() {
             </Route>
           </Route>
           <Route path="/support" element={<ContactSupportPage />} />
-          <Route path="/components" element={<ComponentsPage />} />
+          <Route element={<RoleRoute roles={['super_admin', 'content_owner']} />}>
+            <Route path="/components" element={<ComponentsPage />} />
+          </Route>
           {allNavItems()
             .filter((item) => !REAL_PAGES.has(item.to))
             .map((item) => (

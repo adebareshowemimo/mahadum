@@ -63,9 +63,11 @@ export function DashboardPage() {
           </LinkButton>
         )}
         {hasRole('student') && <LinkButton to="/learn">Continue learning</LinkButton>}
-        <LinkButton to="/components" variant="secondary">
-          Browse the design system
-        </LinkButton>
+        {hasRole('super_admin', 'content_owner') && (
+          <LinkButton to="/components" variant="secondary">
+            Browse the design system
+          </LinkButton>
+        )}
       </div>
     </div>
   )

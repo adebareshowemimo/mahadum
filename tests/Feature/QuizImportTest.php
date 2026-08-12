@@ -271,6 +271,54 @@ class QuizImportTest extends TestCase
         $this->assertArrayNotHasKey('is_correct', $byType['word_bank']['options'][0]);
     }
 
+    public function test_reader_recovers_options_word_autoformatted_into_a_list(): void
+    {
+        // Word's "AutoFormat As You Type" turns a typed "- " or "A. " prefix into
+        // a real bulleted/numbered list and strips the typed prefix from the run
+        // text — so a re-saved copy of our template can lose the very markers our
+        // regex-based option parsing looks for. The reader should still recover
+        // the options (as a <w:numPr> list item) and letter them A, B, C… so
+        // "ANSWER: A" keeps resolving.
+        $lines = [
+            ['text' => 'Capital of Nigeria?', 'list' => false],
+            ['text' => 'Abuja', 'list' => true],   // Word stripped "A. "
+            ['text' => 'Lagos', 'list' => true],   // Word stripped "B. "
+            ['text' => 'Kano', 'list' => true],    // Word stripped "C. "
+            ['text' => 'ANSWER: A', 'list' => false],
+        ];
+
+        $rows = app(SpreadsheetReader::class)->rows($this->docxFromEntries($lines), 'docx');
+        $result = app(QuizImportParser::class)->parse($rows);
+
+        $this->assertCount(0, $result['errors']);
+        $this->assertCount(1, $result['questions']);
+        $this->assertSame('mcq_single', $result['questions'][0]['type']);
+        $this->assertSame('Abuja', $result['questions'][0]['options'][0]['label']);
+        $this->assertTrue($result['questions'][0]['options'][0]['is_correct']);
+        $this->assertFalse($result['questions'][0]['options'][1]['is_correct']);
+    }
+
+    public function test_reader_does_not_mistake_a_numbered_question_for_an_option(): void
+    {
+        // The question stem itself may also be a Word auto-numbered list item
+        // (e.g. a numbered list of questions) — that must still become the
+        // prompt, not a stray option.
+        $lines = [
+            ['text' => 'Capital of Nigeria?', 'list' => true], // numbered question, no options text stripped
+            ['text' => 'A. Abuja', 'list' => false],
+            ['text' => 'B. Lagos', 'list' => false],
+            ['text' => 'ANSWER: A', 'list' => false],
+        ];
+
+        $rows = app(SpreadsheetReader::class)->rows($this->docxFromEntries($lines), 'docx');
+        $result = app(QuizImportParser::class)->parse($rows);
+
+        $this->assertCount(0, $result['errors']);
+        $this->assertCount(1, $result['questions']);
+        $this->assertSame('Capital of Nigeria?', $result['questions'][0]['prompt']);
+        $this->assertCount(2, $result['questions'][0]['options']);
+    }
+
     public function test_reader_rejects_a_docx_with_no_table(): void
     {
         $ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
@@ -305,6 +353,33 @@ class QuizImportTest extends TestCase
         foreach ($lines as $line) {
             $run = $line === '' ? '' : '<w:r><w:t xml:space="preserve">'.htmlspecialchars($line, ENT_QUOTES | ENT_XML1).'</w:t></w:r>';
             $body .= "<w:p>$run</w:p>";
+        }
+        $document = "<?xml version=\"1.0\"?><w:document xmlns:w=\"$ns\"><w:body>$body</w:body></w:document>";
+
+        $path = tempnam(sys_get_temp_dir(), 'docx').'.docx';
+        $zip = new ZipArchive;
+        $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        $zip->addFromString('word/document.xml', $document);
+        $zip->close();
+
+        return $path;
+    }
+
+    /**
+     * Like {@see docxFromLines()}, but each entry can also be marked as a
+     * Word-auto-list paragraph (`<w:numPr>` in its `<w:pPr>`, no literal
+     * "- "/"A. " prefix in the text — Word strips it on AutoFormat).
+     *
+     * @param  array<int, array{text: string, list: bool}>  $entries
+     */
+    private function docxFromEntries(array $entries): string
+    {
+        $ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+        $body = '';
+        foreach ($entries as $entry) {
+            $pPr = $entry['list'] ? '<w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr>' : '';
+            $run = $entry['text'] === '' ? '' : '<w:r><w:t xml:space="preserve">'.htmlspecialchars($entry['text'], ENT_QUOTES | ENT_XML1).'</w:t></w:r>';
+            $body .= "<w:p>$pPr$run</w:p>";
         }
         $document = "<?xml version=\"1.0\"?><w:document xmlns:w=\"$ns\"><w:body>$body</w:body></w:document>";
 

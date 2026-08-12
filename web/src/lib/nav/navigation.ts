@@ -71,6 +71,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Courses', to: '/courses', icon: 'layers', roles: ['super_admin', 'content_owner', 'school_admin'] },
       { label: 'Media', to: '/media', icon: 'book', roles: ['super_admin', 'content_owner'] },
+      { label: 'Performance', to: '/content/performance', icon: 'sparkles', roles: ['super_admin', 'content_owner'] },
       { label: 'Competitions', to: '/competitions/manage', icon: 'trophy', roles: ['super_admin', 'content_owner'] },
     ],
   },
@@ -104,7 +105,12 @@ export const NAV_SECTIONS: NavSection[] = [
     title: 'System',
     items: [
       { label: 'Help & support', to: '/support', icon: 'bell' },
-      { label: 'Design system', to: '/components', icon: 'sparkles' },
+      {
+        label: 'Design system',
+        to: '/components',
+        icon: 'sparkles',
+        roles: ['super_admin', 'content_owner'],
+      },
     ],
   },
 ]

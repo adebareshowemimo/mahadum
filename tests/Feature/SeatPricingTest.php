@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Organization;
+use App\Services\Billing\InvoiceLineBuilder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -10,6 +11,12 @@ use Tests\TestCase;
 class SeatPricingTest extends TestCase
 {
     use RefreshDatabase;
+
+    /** Pre-tax amount → total after the 7.5% VAT line, matching InvoiceLineBuilder. */
+    private static function withVat(int $preTaxMinor): int
+    {
+        return $preTaxMinor + (int) round($preTaxMinor * InvoiceLineBuilder::VAT_RATE);
+    }
 
     private function schoolAdmin(): array
     {
@@ -30,7 +37,7 @@ class SeatPricingTest extends TestCase
     public static function bands(): array
     {
         return [
-            // qty, band label, registration_minor, total amount_minor
+            // qty, band label, registration_minor, pre-tax amount (seats + registration)
             '1–99' => [50, '1–99 students', 5_000_000, 5_000_000 + 50 * 700_000],
             '100–249' => [150, '100–249 students', 10_000_000, 10_000_000 + 150 * 600_000],
             '250–500' => [300, '250–500 students', 15_000_000, 15_000_000 + 300 * 550_000],
@@ -39,7 +46,7 @@ class SeatPricingTest extends TestCase
     }
 
     #[DataProvider('bands')]
-    public function test_seat_purchase_prices_each_band(int $qty, string $label, int $registration, int $total): void
+    public function test_seat_purchase_prices_each_band(int $qty, string $label, int $registration, int $preTax): void
     {
         [$org] = $this->schoolAdmin();
 
@@ -47,7 +54,8 @@ class SeatPricingTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.band', $label)
             ->assertJsonPath('data.registration_minor', $registration)
-            ->assertJsonPath('data.amount_minor', $total);
+            ->assertJsonPath('data.vat_minor', self::withVat($preTax) - $preTax)
+            ->assertJsonPath('data.amount_minor', self::withVat($preTax));
     }
 
     public function test_band_boundaries_are_inclusive(): void
@@ -73,6 +81,6 @@ class SeatPricingTest extends TestCase
         $this->postJson("/api/v1/schools/{$org->id}/seats/purchase", ['quantity' => 50, 'include_registration' => false])
             ->assertCreated()
             ->assertJsonPath('data.registration_minor', 0)
-            ->assertJsonPath('data.amount_minor', 50 * 700_000);
+            ->assertJsonPath('data.amount_minor', self::withVat(50 * 700_000));
     }
 }

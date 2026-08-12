@@ -7,13 +7,13 @@ import {
   useClassAssignmentDetail,
   useClassAssignments,
   useClassCompletion,
-  useClasses,
   useCreateClassAssignment,
   useGradeSubmission,
+  useMyClasses,
 } from '@/lib/school/queries'
 
 export function AssignmentsPage() {
-  const { data: classes, isLoading, isError } = useClasses()
+  const { data: classes, isLoading, isError } = useMyClasses()
   const [classId, setClassId] = useState<number | null>(null)
   const [openAssignmentId, setOpenAssignmentId] = useState<number | null>(null)
   const [showCreate, setShowCreate] = useState(false)

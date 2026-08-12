@@ -6,6 +6,10 @@ import { expectNoA11yViolations } from '@/test/a11y'
 import { LandingV4Page, LandingV5Page } from './LandingExtendedVariantsPage'
 import { LandingV1Page, LandingV2Page, LandingV3Page } from './LandingVariantsPage'
 
+vi.mock('@/lib/auth/AuthProvider', () => ({
+  useAuth: () => ({ status: 'unauthenticated', user: null, hasRole: () => false, logout: async () => {} }),
+}))
+
 beforeAll(() => {
   class MockIO {
     constructor(private cb: IntersectionObserverCallback) {}

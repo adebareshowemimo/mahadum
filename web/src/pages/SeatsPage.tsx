@@ -131,6 +131,7 @@ function BuySeatsModal({ orgId, open, onClose }: { orgId: number; open: boolean;
               {result.registration_minor > 0 && (
                 <Row label="Annual registration" value={formatMoney(result.registration_minor, 'NGN')} />
               )}
+              <Row label="VAT (7.5%)" value={formatMoney(result.vat_minor, 'NGN')} />
               <div className="mt-1 border-t border-border pt-1.5">
                 <Row label="Total" value={formatMoney(result.amount_minor, 'NGN')} strong />
               </div>

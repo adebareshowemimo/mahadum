@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Alert, Avatar, Badge, Card, CardBody, Modal, Skeleton } from '@/components/ui'
 import { schoolApi } from '@/lib/api'
-import { useClasses } from '@/lib/school/queries'
+import { useMyClasses } from '@/lib/school/queries'
 
 export function ClassesPage() {
-  const { data, isLoading, isError } = useClasses()
+  const { data, isLoading, isError } = useMyClasses()
   const [openId, setOpenId] = useState<number | null>(null)
 
   if (isLoading) return <Skeleton className="h-48" />

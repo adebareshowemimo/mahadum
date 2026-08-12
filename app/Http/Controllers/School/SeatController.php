@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\ResolvesOrganization;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\School\PurchaseSeatsRequest;
 use App\Models\Organization;
+use App\Services\Billing\InvoiceLineBuilder;
 use App\Support\SeatPricing;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -54,7 +55,13 @@ class SeatController extends Controller
 
         $seatsSubtotal = $qty * $band['per_student_minor'];
         $registration = $includeRegistration ? $band['registration_minor'] : 0;
-        $amount = $seatsSubtotal + $registration;
+
+        $lines = [['description' => 'Student school fees', 'amount_minor' => $seatsSubtotal]];
+        if ($registration > 0) {
+            $lines[] = ['description' => 'Registration fee', 'amount_minor' => $registration];
+        }
+        $billed = InvoiceLineBuilder::withVat($lines);
+        $vat = $billed['total_minor'] - $seatsSubtotal - $registration;
 
         $allocation = $organization->seatAllocations()->create([
             'total_purchased' => $qty,
@@ -65,7 +72,8 @@ class SeatController extends Controller
 
         $invoice = $organization->invoices()->create([
             'type' => 'proforma',
-            'amount_minor' => $amount,
+            'amount_minor' => $billed['total_minor'],
+            'lines' => $billed['lines'],
             'status' => 'unpaid',
             'issued_at' => now(),
         ]);
@@ -77,7 +85,8 @@ class SeatController extends Controller
             'per_student_minor' => $band['per_student_minor'],
             'seats_subtotal_minor' => $seatsSubtotal,
             'registration_minor' => $registration,
-            'amount_minor' => $amount,
+            'vat_minor' => $vat,
+            'amount_minor' => $billed['total_minor'],
             'invoice_id' => $invoice->id,
         ]], 201);
     }

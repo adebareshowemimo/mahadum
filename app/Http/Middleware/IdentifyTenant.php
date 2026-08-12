@@ -18,8 +18,10 @@ use Symfony\Component\HttpFoundation\Response;
  * Resolution order:
  *   1. super_admin               → no tenant (global, unscoped)
  *   2. X-Organization-Id header  → validated against active memberships
- *   3. single org membership     → derived automatically
- *   4. none                      → direct-consumer (family) context
+ *   3. any org membership(s)     → first active membership derived automatically
+ *                                  (deterministic default; the client's org switcher
+ *                                  can send the header to pick a different one)
+ *   4. no membership             → direct-consumer (family) context
  *
  * Register after `auth:sanctum`:
  *   ->middleware(['auth:sanctum', 'identify.tenant'])
@@ -55,6 +57,7 @@ class IdentifyTenant
 
         $membershipIds = $user->organizations()
             ->wherePivot('status', 'active')
+            ->orderBy('organizations.id')
             ->pluck('organizations.id');
 
         // 2) Explicit header — must be one the user actually belongs to.
@@ -66,12 +69,14 @@ class IdentifyTenant
             return $requested;
         }
 
-        // 3) Exactly one membership → derive it.
-        if ($membershipIds->count() === 1) {
+        // 3) One or more memberships, no header → default to the first (deterministic;
+        // avoids leaving multi-org staff in a null-tenant limbo where tenant-scoped
+        // reads run unscoped and tenant-scoped writes fail a NOT NULL constraint).
+        if ($membershipIds->isNotEmpty()) {
             return (int) $membershipIds->first();
         }
 
-        // 4) No org (direct consumer) or ambiguous (force header) → direct-consumer context.
+        // 4) No membership at all → direct-consumer (family) context.
         return null;
     }
 }

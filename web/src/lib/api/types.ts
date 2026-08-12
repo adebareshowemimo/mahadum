@@ -522,6 +522,18 @@ export interface LessonAnalytics {
   questions: { question_id: number; prompt: string; type: string; answered: number; correct: number; accuracy: number | null }[]
 }
 
+export interface CoursePerformance {
+  id: number
+  title: string
+  language: string
+  is_published: boolean
+  levels_count: number
+  lessons_count: number
+  enrollments: number
+  lesson_completions: number
+  quiz_accuracy: number | null
+}
+
 export interface CompleteResult {
   lesson_score: number
   xp_total: number
@@ -763,6 +775,7 @@ export interface PurchaseSeatsResult {
   per_student_minor: number
   seats_subtotal_minor: number
   registration_minor: number
+  vat_minor: number
   amount_minor: number
   invoice_id: number
 }

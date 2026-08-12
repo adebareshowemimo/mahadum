@@ -21,6 +21,7 @@ export const contentKeys = {
   mediaLibraryInfinite: (params: MediaQuery) => ['content', 'media', 'library-infinite', params] as const,
   mediaOrphans: (params: MediaQuery = {}) => ['content', 'media', 'orphans', params] as const,
   analytics: (lessonId: number) => ['content', 'lesson-analytics', lessonId] as const,
+  coursesPerformance: ['content', 'courses-performance'] as const,
 }
 
 /** Lesson drop-off + quiz-item analytics (authoring "Insights"). */
@@ -30,6 +31,11 @@ export function useLessonAnalytics(lessonId: number, enabled = true) {
     queryFn: () => contentApi.lessonAnalytics(lessonId),
     enabled,
   })
+}
+
+/** Per-course engagement dashboard (content_owner: own courses; super_admin: every course). */
+export function useCoursesPerformance() {
+  return useQuery({ queryKey: contentKeys.coursesPerformance, queryFn: contentApi.coursesPerformance })
 }
 
 /** Lightweight list (first page) — for the video picker. */

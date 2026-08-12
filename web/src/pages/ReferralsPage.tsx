@@ -33,6 +33,8 @@ const STATUS_TONE: Record<string, 'success' | 'gold' | 'danger' | 'neutral'> = {
 
 export function ReferralsPage() {
   const [payoutOpen, setPayoutOpen] = useState(false)
+  const summary = useReferralSummary()
+  const cleared = Object.values(summary.data?.commissions ?? {}).find((c) => c.status === 'cleared')?.total ?? 0
 
   return (
     <div className="flex flex-col gap-8">
@@ -51,7 +53,7 @@ export function ReferralsPage() {
       <SummarySection />
       <PayoutsSection />
 
-      <RequestPayoutModal open={payoutOpen} onClose={() => setPayoutOpen(false)} />
+      <RequestPayoutModal open={payoutOpen} onClose={() => setPayoutOpen(false)} availableMinor={cleared} />
     </div>
   )
 }

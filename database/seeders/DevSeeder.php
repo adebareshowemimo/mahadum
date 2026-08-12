@@ -35,6 +35,7 @@ use App\Models\WalletFundingTransaction;
 use App\Models\XpLedger;
 use App\Notifications\PayoutApproved;
 use App\Notifications\SubscriptionActivated;
+use App\Services\Billing\InvoiceLineBuilder;
 use App\Services\Family\WalletService;
 use App\Services\Learning\PathBuilder;
 use App\Services\Learning\XapiRecorder;
@@ -342,9 +343,17 @@ class DevSeeder extends Seeder
                 SeatAllocation::create(['organization_id' => $org->id, 'total_purchased' => $purchased, 'active_filled' => fake()->numberBetween(20, $purchased), 'term_label' => 'Term 1', 'expires_at' => now()->addMonths(4), 'auto_renew' => fake()->boolean()]);
 
                 foreach (range(1, fake()->numberBetween(1, 3)) as $inv) {
+                    $fees = fake()->numberBetween(50, 400) * 1000;
+                    $registration = fake()->numberBetween(20, 100) * 1000;
+                    $billed = InvoiceLineBuilder::withVat([
+                        ['description' => 'Student school fees', 'amount_minor' => $fees],
+                        ['description' => 'Registration fee', 'amount_minor' => $registration],
+                    ]);
+
                     $org->invoices()->create([
                         'type' => fake()->randomElement(['proforma', 'final']),
-                        'amount_minor' => fake()->numberBetween(50, 500) * 1000,
+                        'amount_minor' => $billed['total_minor'],
+                        'lines' => $billed['lines'],
                         'status' => fake()->randomElement(['unpaid', 'paid']),
                         'issued_at' => now()->subDays(fake()->numberBetween(1, 90)),
                         'paid_at' => fake()->boolean() ? now()->subDays(fake()->numberBetween(1, 30)) : null,

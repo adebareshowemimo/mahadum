@@ -11,6 +11,10 @@ import {
   TermsPage,
 } from './PublicTrustPages'
 
+vi.mock('@/lib/auth/AuthProvider', () => ({
+  useAuth: () => ({ status: 'unauthenticated', user: null, hasRole: () => false, logout: async () => {} }),
+}))
+
 beforeAll(() => {
   class MockIO {
     constructor(private cb: IntersectionObserverCallback) {}

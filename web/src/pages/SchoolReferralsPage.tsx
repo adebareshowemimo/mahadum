@@ -54,6 +54,7 @@ function SchoolReferrals({ orgId }: { orgId: number }) {
   const referralEntries = Object.entries(data.referrals ?? {})
   const totalReferrals = referralEntries.reduce((sum, [, count]) => sum + count, 0)
   const commissionEntries = Object.values(data.commissions ?? {})
+  const clearedMinor = commissionEntries.find((c) => c.status === 'cleared')?.total ?? 0
 
   return (
     <div className="flex flex-col gap-8">
@@ -167,12 +168,27 @@ function SchoolReferrals({ orgId }: { orgId: number }) {
         )}
       </section>
 
-      <RequestSchoolPayoutModal orgId={orgId} open={payoutOpen} onClose={() => setPayoutOpen(false)} />
+      <RequestSchoolPayoutModal
+        orgId={orgId}
+        open={payoutOpen}
+        onClose={() => setPayoutOpen(false)}
+        availableMinor={clearedMinor}
+      />
     </div>
   )
 }
 
-function RequestSchoolPayoutModal({ orgId, open, onClose }: { orgId: number; open: boolean; onClose: () => void }) {
+function RequestSchoolPayoutModal({
+  orgId,
+  open,
+  onClose,
+  availableMinor,
+}: {
+  orgId: number
+  open: boolean
+  onClose: () => void
+  availableMinor: number
+}) {
   const requestPayout = useRequestSchoolReferralPayout(orgId)
   const [amount, setAmount] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -206,7 +222,7 @@ function RequestSchoolPayoutModal({ orgId, open, onClose }: { orgId: number; ope
       open={open}
       onClose={onClose}
       title="Request a payout"
-      description={`Minimum ₦${SCHOOL_PAYOUT_FLOOR_NAIRA.toLocaleString()}. Paid to the school's bank account.`}
+      description={`Available: ${formatMoney(availableMinor, 'NGN')}. Minimum ₦${SCHOOL_PAYOUT_FLOOR_NAIRA.toLocaleString()}. Paid to the school's bank account.`}
     >
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         {formError && <Alert variant="danger">{formError}</Alert>}

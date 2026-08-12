@@ -27,12 +27,13 @@ class SchoolAndAdminTest extends TestCase
 
         $this->postJson('/api/v1/classes', ['name' => 'JSS1', 'level' => 'JSS1'])->assertCreated();
 
-        // 100 students → 100–249 band: ₦100,000 registration + 100 × ₦6,000 = ₦700,000.
+        // 100 students → 100–249 band: ₦100,000 registration + 100 × ₦6,000 = ₦700,000
+        // pre-tax, +7.5% VAT = ₦752,500.
         $this->postJson("/api/v1/schools/{$org->id}/seats/purchase", ['quantity' => 100, 'term_label' => 'T1'])
             ->assertCreated()
             ->assertJsonPath('data.band', '100–249 students')
             ->assertJsonPath('data.registration_minor', 10_000_000)
-            ->assertJsonPath('data.amount_minor', 70_000_000);
+            ->assertJsonPath('data.amount_minor', 75_250_000);
 
         $this->getJson("/api/v1/schools/{$org->id}/dashboard")->assertOk()
             ->assertJsonPath('data.classes', 1)

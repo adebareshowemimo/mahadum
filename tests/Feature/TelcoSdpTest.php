@@ -6,6 +6,7 @@ use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\TelcoSubscription;
 use App\Models\User;
+use App\Services\Settings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
@@ -75,6 +76,7 @@ class TelcoSdpTest extends TestCase
 
         $this->seedRbac();
         $this->actingAsUser($this->userWithRole('parent'));
+        app(Settings::class)->set(['feature.telco_billing' => true]);
 
         $this->postJson('/api/v1/telco/otp/request', ['msisdn' => '08031234567', 'operator' => 'mtn'])
             ->assertStatus(202);

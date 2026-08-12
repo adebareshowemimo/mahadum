@@ -11,16 +11,26 @@ use App\Models\Subscription;
 use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\Billing\TelcoOtpService;
+use App\Services\Settings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * New airtime-subscription enrolment (OTP + subscribe) is deprecated platform-wide,
+ * gated off by the `feature.telco_billing` setting (admin-editable, defaults off —
+ * see config/settings.php). `status` stays open and the daily billing/grace jobs
+ * keep running so any pre-existing airtime subscriptions wind down normally
+ * instead of breaking outright.
+ */
 class TelcoController extends Controller
 {
-    public function __construct(private TelcoOtpService $otp, private AuditLogger $audit) {}
+    public function __construct(private TelcoOtpService $otp, private AuditLogger $audit, private Settings $settings) {}
 
     /** Step 1: send a one-time code to the MSISDN the caller wants to enrol. */
     public function requestOtp(TelcoOtpRequest $request): JsonResponse
     {
+        $this->abortUnlessEnabled();
+
         $otp = $this->otp->request(
             $request->user(),
             (string) $request->string('msisdn'),
@@ -36,6 +46,8 @@ class TelcoController extends Controller
     /** Step 2: confirm the code, marking the MSISDN verified for enrolment. */
     public function verifyOtp(TelcoOtpVerifyRequest $request): JsonResponse
     {
+        $this->abortUnlessEnabled();
+
         $ok = $this->otp->verify(
             $request->user(),
             (string) $request->string('msisdn'),
@@ -55,6 +67,8 @@ class TelcoController extends Controller
      */
     public function subscribe(TelcoSubscribeRequest $request): JsonResponse
     {
+        $this->abortUnlessEnabled();
+
         abort_unless(
             $this->otp->consumeVerified($request->user(), (string) $request->string('msisdn')),
             403,
@@ -98,6 +112,15 @@ class TelcoController extends Controller
             'msisdn' => $telco->msisdn,
             'next_attempt_at' => $telco->next_attempt_at,
         ]], 201);
+    }
+
+    private function abortUnlessEnabled(): void
+    {
+        abort_unless(
+            (bool) $this->settings->get('feature.telco_billing'),
+            403,
+            'Airtime billing is no longer available. Please choose a card or bank plan.',
+        );
     }
 
     public function status(Request $request): JsonResponse

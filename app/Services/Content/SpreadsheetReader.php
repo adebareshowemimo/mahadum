@@ -180,8 +180,14 @@ class SpreadsheetReader
 
     /**
      * Body paragraphs in document order (blank ones kept — they separate questions).
+     * Each paragraph also reports whether Word auto-formatted it as a list item
+     * (`<w:numPr>` in its `<w:pPr>`) — Word's "AutoFormat As You Type" silently
+     * converts a typed "- " or "1." prefix into a real list and strips the typed
+     * prefix from the text runs, so a re-saved template can lose the leading
+     * marker our regex-based option/bullet matching relies on. We fall back to
+     * treating any such paragraph as a list item in {@see proseBlock()}.
      *
-     * @return array<int, string>
+     * @return array<int, array{text: string, list: bool}>
      */
     private function docxParagraphs(SimpleXMLElement $xml): array
     {
@@ -194,7 +200,8 @@ class SpreadsheetReader
             foreach ($paragraph->xpath('.//w:t') ?: [] as $node) {
                 $text .= (string) $node;
             }
-            $out[] = $text;
+            $isList = ($paragraph->xpath('./w:pPr/w:numPr') ?: []) !== [];
+            $out[] = ['text' => $text, 'list' => $isList];
         }
 
         return $out;
@@ -212,7 +219,7 @@ class SpreadsheetReader
      *   [POINTS: <n>] [EXPLANATION: <text>]   optional
      *   ANSWER: <letters | True/False | text>  required except word_bank/match_pairs
      *
-     * @param  array<int, string>  $paragraphs
+     * @param  array<int, array{text: string, list: bool}>  $paragraphs
      * @return array<int, array<int, string>>
      */
     private function parseProse(array $paragraphs): array
@@ -233,16 +240,16 @@ class SpreadsheetReader
      * "ANSWER:" line also closes one (so back-to-back questions work); a "TYPE:"
      * line starts a fresh block even without a blank separator.
      *
-     * @param  array<int, string>  $paragraphs
-     * @return array<int, array<int, string>>
+     * @param  array<int, array{text: string, list: bool}>  $paragraphs
+     * @return array<int, array<int, array{text: string, list: bool}>>
      */
     private function splitBlocks(array $paragraphs): array
     {
         $blocks = [];
         $current = [];
 
-        foreach ($paragraphs as $raw) {
-            $line = trim((string) preg_replace('/\s+/', ' ', $raw));
+        foreach ($paragraphs as $p) {
+            $line = trim((string) preg_replace('/\s+/', ' ', $p['text']));
             if ($line === '') {
                 if ($current !== []) {
                     $blocks[] = $current;
@@ -255,7 +262,7 @@ class SpreadsheetReader
                 $blocks[] = $current;
                 $current = [];
             }
-            $current[] = $line;
+            $current[] = ['text' => $line, 'list' => $p['list']];
             if (preg_match('/^(?:answer|ans)\s*[:\-]/i', $line)) {
                 $blocks[] = $current;
                 $current = [];
@@ -271,7 +278,7 @@ class SpreadsheetReader
     /**
      * Parse one prose block into a grid row, or null if it isn't a question.
      *
-     * @param  array<int, string>  $lines
+     * @param  array<int, array{text: string, list: bool}>  $lines
      * @return array<int, string>|null
      */
     private function proseBlock(array $lines): ?array
@@ -283,7 +290,8 @@ class SpreadsheetReader
         /** @var array<int, array{letter: ?string, text: string}> $items */
         $items = [];
 
-        foreach ($lines as $line) {
+        foreach ($lines as $entry) {
+            $line = $entry['text'];
             if (preg_match('/^type\s*[:\-]\s*(.+)$/i', $line, $m)) {
                 $type = strtolower(str_replace([' ', '-'], '_', trim($m[1])));
             } elseif (preg_match('/^audio\s*[:\-]\s*(.+)$/i', $line, $m)) {
@@ -298,8 +306,23 @@ class SpreadsheetReader
                 $items[] = ['letter' => strtoupper($m[1]), 'text' => trim($m[2])];
             } elseif (preg_match('/^[-*•]\s+(.+)$/u', $line, $m)) {
                 $items[] = ['letter' => null, 'text' => trim($m[1])];
+            } elseif ($entry['list'] && ($items !== [] || $promptParts !== [])) {
+                // Word auto-formatted this as a list item and stripped the typed
+                // "- "/"1." prefix from the text — still an option, just unlettered.
+                // (Only once the question stem is already captured, so a numbered
+                // *question* line isn't mistaken for an option.)
+                $items[] = ['letter' => null, 'text' => $line];
             } elseif ($items === []) {
                 $promptParts[] = $line; // still building the question text
+            }
+        }
+
+        // If every item came in unlettered (bullets, or Word auto-list stripping
+        // the typed prefix), assign sequential A/B/C… so an "ANSWER: A" line can
+        // still resolve. Pair/word-bank types ignore the letter entirely.
+        if ($items !== [] && ! array_filter($items, fn ($i) => $i['letter'] !== null)) {
+            foreach ($items as $i => $item) {
+                $items[$i]['letter'] = chr(65 + $i);
             }
         }
 

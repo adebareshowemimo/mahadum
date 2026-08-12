@@ -13,6 +13,7 @@ use Illuminate\Support\Carbon;
  * @property int $organization_id
  * @property string $type
  * @property int $amount_minor
+ * @property list<array{description: string, amount_minor: int}>|null $lines
  * @property string $status
  * @property string|null $gateway_txn_ref
  * @property int|null $pdf_asset_id
@@ -49,6 +50,7 @@ class Invoice extends Model
     protected $casts = [
         'issued_at' => 'datetime',
         'paid_at' => 'datetime',
+        'lines' => 'array',
     ];
 
     /**

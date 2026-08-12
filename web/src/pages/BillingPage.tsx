@@ -13,6 +13,7 @@ import { ApiError, billingApi, type Plan, type PromoPreview } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { formatMoney } from '@/lib/format'
 import { useAuth } from '@/lib/auth/AuthProvider'
+import { useConfig } from '@/lib/config/useConfig'
 import { useEntitlements } from '@/lib/billing/entitlements'
 import {
   useCancelSubscription,
@@ -42,6 +43,8 @@ function planFeatures(plan: Plan): string[] {
 export function BillingPage() {
   const { user } = useAuth()
   const entitlements = useEntitlements()
+  const config = useConfig()
+  const telcoBillingEnabled = config.data?.feature_flags.telco_billing === true
   const plans = usePlans()
   const history = useSubscriptions()
   const createSub = useCreateSubscription()
@@ -122,6 +125,15 @@ export function BillingPage() {
     (p) => p.audience !== 'school' && p.audience !== 'teacher' && !p.code.startsWith('school'),
   )
 
+  /** Months saved vs. the equivalent monthly plan, for an annual plan's "N months free" badge. */
+  function annualMonthsFree(plan: Plan): number | null {
+    if (plan.interval !== 'year' || !plan.code.endsWith('_annual')) return null
+    const monthly = personalPlans.find((p) => p.code === plan.code.replace(/_annual$/, '') && p.interval === 'month')
+    if (!monthly || monthly.price_minor <= 0) return null
+    const monthsFree = Math.round(12 - plan.price_minor / monthly.price_minor)
+    return monthsFree > 0 ? monthsFree : null
+  }
+
   return (
     <div className="flex flex-col gap-8">
       <div>
@@ -174,13 +186,17 @@ export function BillingPage() {
             const isCurrent = plan.code === entitlements.tier
             const isFree = plan.price_minor === 0
             const applied = promo?.byPlan[plan.id]
+            const monthsFree = annualMonthsFree(plan)
             return (
               <Card key={plan.id} className={cn(isCurrent && 'border-primary ring-1 ring-primary')}>
                 <CardBody className="flex flex-col gap-4">
                   <div>
                     <div className="flex items-center justify-between">
                       <h2 className="font-display text-lg font-bold text-foreground">{plan.name}</h2>
-                      {isCurrent && <Badge variant="primary">Current</Badge>}
+                      <div className="flex items-center gap-1.5">
+                        {monthsFree != null && <Badge variant="gold">Get {monthsFree} months free</Badge>}
+                        {isCurrent && <Badge variant="primary">Current</Badge>}
+                      </div>
                     </div>
                     <p className="mt-1 font-display text-2xl font-extrabold text-foreground">
                       {isFree ? (
@@ -233,9 +249,11 @@ export function BillingPage() {
                         <Button variant="premium" fullWidth loading={busyPlan === plan.id} onClick={() => subscribe(plan)}>
                           Choose {plan.name}
                         </Button>
-                        <Button variant="ghost" size="sm" fullWidth onClick={() => setTelcoPlan(plan)}>
-                          or pay with airtime
-                        </Button>
+                        {telcoBillingEnabled && (
+                          <Button variant="ghost" size="sm" fullWidth onClick={() => setTelcoPlan(plan)}>
+                            or pay with airtime
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -292,7 +310,9 @@ export function BillingPage() {
         )}
       </section>
 
-      <TelcoOptInModal plan={telcoPlan} open={telcoPlan != null} onClose={() => setTelcoPlan(null)} />
+      {telcoBillingEnabled && (
+        <TelcoOptInModal plan={telcoPlan} open={telcoPlan != null} onClose={() => setTelcoPlan(null)} />
+      )}
       <DataBundleModal open={bundleOpen} onClose={() => setBundleOpen(false)} />
     </div>
   )

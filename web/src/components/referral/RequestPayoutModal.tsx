@@ -1,12 +1,22 @@
 import { useState, type FormEvent } from 'react'
 import { Alert, Button, Input, Modal } from '@/components/ui'
 import { ApiError } from '@/lib/api'
+import { formatMoney } from '@/lib/format'
 import { useRequestPayout } from '@/lib/referral/queries'
 
 export const PAYOUT_FLOOR_NAIRA = 5000
 
 /** Shared payout-request modal (floor ₦5,000, cap ₦50k/mo enforced server-side). */
-export function RequestPayoutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function RequestPayoutModal({
+  open,
+  onClose,
+  availableMinor,
+}: {
+  open: boolean
+  onClose: () => void
+  /** Cleared/available balance to show before the amount input; omit if unknown. */
+  availableMinor?: number
+}) {
   const requestPayout = useRequestPayout()
   const [amount, setAmount] = useState('')
   const [method, setMethod] = useState<'bank' | 'coins'>('bank')
@@ -37,7 +47,16 @@ export function RequestPayoutModal({ open, onClose }: { open: boolean; onClose: 
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Request a payout" description={`Minimum ₦${PAYOUT_FLOOR_NAIRA.toLocaleString()}. Cap ₦50,000 / month.`}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Request a payout"
+      description={
+        availableMinor === undefined
+          ? `Minimum ₦${PAYOUT_FLOOR_NAIRA.toLocaleString()}. Cap ₦50,000 / month.`
+          : `Available: ${formatMoney(availableMinor, 'NGN')}. Minimum ₦${PAYOUT_FLOOR_NAIRA.toLocaleString()}. Cap ₦50,000 / month.`
+      }
+    >
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         {formError && <Alert variant="danger">{formError}</Alert>}
         <Input
