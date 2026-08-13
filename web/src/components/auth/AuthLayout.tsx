@@ -102,7 +102,7 @@ export function AuthLayout({
                 {TAGLINE}
               </p>
               <p className="mt-2 text-center text-xs text-navy-400">
-                © {WORDMARK} · {new Date().getFullYear()}
+                © {WORDMARK} · {new Date().getFullYear()} · Lagos, Nigeria
               </p>
             </div>
           </section>

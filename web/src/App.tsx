@@ -1,9 +1,8 @@
-import { Suspense, lazy } from 'react'
-import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import { Suspense, lazy, useEffect } from 'react'
+import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { AdminRoute, GuestRoute, ProtectedRoute, RoleRoute, TeacherRoute } from '@/components/auth/ProtectedRoute'
 import { AdminLayout } from '@/components/admin'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { PaywallGate } from '@/components/billing/PaywallGate'
 import { Spinner } from '@/components/ui/Spinner'
 // ComingSoon stays static: it backs every not-yet-built nav destination in the
 // .map() below, so lazy-loading it would mean one chunk request per placeholder.
@@ -63,6 +62,9 @@ const PlansPage = lazy(() => import('@/pages/PlansPage').then((m) => ({ default:
 const SettingsPage = lazy(() => import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 const SupportPage = lazy(() => import('@/pages/SupportPage').then((m) => ({ default: m.SupportPage })))
 const ContactSupportPage = lazy(() => import('@/pages/ContactSupportPage').then((m) => ({ default: m.ContactSupportPage })))
+const AdvertsPage = lazy(() => import('@/pages/AdvertsPage').then((m) => ({ default: m.AdvertsPage })))
+const AdvertCreatePage = lazy(() => import('@/pages/AdvertCreatePage').then((m) => ({ default: m.AdvertCreatePage })))
+const AdvertDetailPage = lazy(() => import('@/pages/AdvertDetailPage').then((m) => ({ default: m.AdvertDetailPage })))
 const OrganizationsPage = lazy(() => import('@/pages/OrganizationsPage').then((m) => ({ default: m.OrganizationsPage })))
 const OrganizationCreatePage = lazy(() => import('@/pages/OrganizationCreatePage').then((m) => ({ default: m.OrganizationCreatePage })))
 const OrganizationDetailPage = lazy(() => import('@/pages/OrganizationDetailPage').then((m) => ({ default: m.OrganizationDetailPage })))
@@ -90,6 +92,40 @@ const WalletPage = lazy(() => import('@/pages/WalletPage').then((m) => ({ defaul
 const LoginPage = lazy(() => import('@/pages/LoginPage').then((m) => ({ default: m.LoginPage })))
 const RegisterPage = lazy(() => import('@/pages/RegisterPage').then((m) => ({ default: m.RegisterPage })))
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })))
+
+// A link to "/#some-id" from a route OTHER than the target page (e.g. the
+// Families page linking to the "#try" section on "/") triggers a real
+// full-page navigation. The browser's native scroll-to-fragment fires before
+// the lazy-loaded target section has mounted, so it silently no-ops and the
+// visitor just lands at the top of the page. Retry the scroll for a couple of
+// seconds after each route change so it catches up once the section exists.
+function HashScrollRestoration() {
+  const { hash } = useLocation()
+
+  useEffect(() => {
+    if (!hash) return
+    const id = decodeURIComponent(hash.slice(1))
+
+    let cancelled = false
+    let attempts = 0
+    const tryScroll = () => {
+      if (cancelled) return
+      const el = document.getElementById(id)
+      if (el) {
+        el.scrollIntoView({ block: 'start' })
+        return
+      }
+      if (++attempts < 40) setTimeout(tryScroll, 100) // up to ~4s for lazy chunks
+    }
+    tryScroll()
+
+    return () => {
+      cancelled = true
+    }
+  }, [hash])
+
+  return null
+}
 
 // Full-viewport fallback for chunks loaded before any shell exists.
 function RouteFallback() {
@@ -160,6 +196,8 @@ const REAL_PAGES = new Set([
   '/admin/plans',
   '/admin/orgs',
   '/admin/orgs/new',
+  '/admin/adverts',
+  '/admin/adverts/new',
   '/admin/leads',
   '/admin/users',
   '/admin/roles',
@@ -177,6 +215,7 @@ const REAL_PAGES = new Set([
 export function App() {
   return (
     <Suspense fallback={<RouteFallback />}>
+      <HashScrollRestoration />
       <Routes>
       {/* Public marketing (redirects signed-in users away). V1 is the selected home page. */}
       <Route path="/" element={<LandingV1Page />} />
@@ -217,30 +256,9 @@ export function App() {
           <Route path="/learn" element={<LearnPage />} />
           <Route path="/achievements" element={<AchievementsPage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
-          <Route
-            path="/family"
-            element={
-              <PaywallGate feature="family_dashboard">
-                <FamilyPage />
-              </PaywallGate>
-            }
-          />
-          <Route
-            path="/wallet"
-            element={
-              <PaywallGate feature="family_dashboard">
-                <WalletPage />
-              </PaywallGate>
-            }
-          />
-          <Route
-            path="/reviews"
-            element={
-              <PaywallGate feature="family_dashboard">
-                <ReviewsPage />
-              </PaywallGate>
-            }
-          />
+          <Route path="/family" element={<FamilyPage />} />
+          <Route path="/wallet" element={<WalletPage />} />
+          <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/billing" element={<BillingPage />} />
           <Route element={<TeacherRoute />}>
             <Route path="/classes" element={<ClassesPage />} />
@@ -294,6 +312,9 @@ export function App() {
             <Route path="/admin/orgs" element={<OrganizationsPage />} />
             <Route path="/admin/orgs/new" element={<OrganizationCreatePage />} />
             <Route path="/admin/orgs/:orgId" element={<OrganizationDetailPage />} />
+            <Route path="/admin/adverts" element={<AdvertsPage />} />
+            <Route path="/admin/adverts/new" element={<AdvertCreatePage />} />
+            <Route path="/admin/adverts/:advertId" element={<AdvertDetailPage />} />
             <Route path="/admin/leads" element={<SchoolLeadsPage />} />
             <Route path="/admin/users" element={<UsersPage />} />
             <Route path="/admin/roles" element={<RolesMatrixPage />} />
@@ -302,7 +323,7 @@ export function App() {
             </Route>
           </Route>
           <Route path="/support" element={<ContactSupportPage />} />
-          <Route element={<RoleRoute roles={['super_admin', 'content_owner']} />}>
+          <Route element={<RoleRoute roles={['super_admin']} />}>
             <Route path="/components" element={<ComponentsPage />} />
           </Route>
           {allNavItems()

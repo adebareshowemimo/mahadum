@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { LandingV4Page, LandingV5Page } from './LandingExtendedVariantsPage'
@@ -23,7 +24,12 @@ beforeAll(() => {
 })
 
 function renderConcept(component: React.ReactNode) {
-  return render(<MemoryRouter>{component}</MemoryRouter>)
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>{component}</MemoryRouter>
+    </QueryClientProvider>,
+  )
 }
 
 describe('landing concepts', () => {

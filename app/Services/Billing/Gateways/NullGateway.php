@@ -13,4 +13,9 @@ class NullGateway implements PaymentGateway
     {
         return new GatewayCheckout($reference, null);
     }
+
+    public function verify(string $reference): GatewayTransactionStatus
+    {
+        return new GatewayTransactionStatus('pending');
+    }
 }

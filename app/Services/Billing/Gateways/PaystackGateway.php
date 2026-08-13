@@ -35,4 +35,29 @@ class PaystackGateway implements PaymentGateway
             is_array($response) ? $response : [],
         );
     }
+
+    public function verify(string $reference): GatewayTransactionStatus
+    {
+        $response = Http::withToken($this->secret)
+            ->acceptJson()
+            ->get(rtrim($this->baseUrl, '/').'/transaction/verify/'.rawurlencode($reference));
+
+        // A reference the gateway has never seen a checkout for (e.g. one only
+        // ever created locally, never initialized) 404s — not paid, not a fault.
+        if ($response->status() === 404) {
+            return new GatewayTransactionStatus('pending');
+        }
+
+        $decoded = $response->throw()->json();
+        $data = $decoded['data'] ?? [];
+        $status = match ($data['status'] ?? null) {
+            'success' => 'success',
+            'failed', 'abandoned' => 'failed',
+            default => 'pending',
+        };
+
+        $amountMinor = isset($data['amount']) ? (int) $data['amount'] : null;
+
+        return new GatewayTransactionStatus($status, $amountMinor, is_array($decoded) ? $decoded : []);
+    }
 }

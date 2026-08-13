@@ -139,6 +139,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'organizations.leads.view',
         ],
 
+        // ── Adverts (banner-ad placements; super-admin-only monetization config) ──
+        'adverts' => [
+            'adverts.view',
+            'adverts.manage',
+        ],
+
         // ── Users & access control ─────────────────────────────────────────
         'users' => [
             'users.view',

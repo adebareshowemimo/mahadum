@@ -181,9 +181,9 @@ export interface FamilyOverview {
   id: number
   name: string
   child_limit: number
-  pin_set: boolean
   wallet: WalletBalance
-  learners: { id: number; display_name: string; is_child: boolean }[]
+  parent: { id: number; name: string; email: string }
+  learners: { id: number; display_name: string; is_child: boolean; pin_protected: boolean }[]
 }
 
 export type ChoreStatus = 'active' | 'pending_review' | 'approved' | 'rejected'
@@ -890,6 +890,57 @@ export interface AdminOrgQuery {
   status?: string
   page?: number
 }
+
+// ---- Adverts (banner-ad placements) ----
+
+export type AdvertPosition = 'leaderboard' | 'inline'
+
+/** Publicly-served creative for a position — null when nothing is active. */
+export interface ActiveAdvert {
+  id: number
+  image_url: string
+  target_url: string
+  position: AdvertPosition
+  size: string | null
+}
+
+export interface AdvertPlacement {
+  id: number
+  name: string
+  position: AdvertPosition
+  size: string | null
+  media_asset_id: number
+  image_url: string
+  target_url: string
+  is_active: boolean
+  activated_at: string | null
+  starts_at: string | null
+  ends_at: string | null
+  impressions_count: number
+  clicks_count: number
+  created_at: string | null
+}
+
+export type AdminAdvertPlacementList = Paginated<AdvertPlacement>
+
+export interface AdminAdvertPlacementQuery {
+  position?: AdvertPosition
+  is_active?: boolean
+  page?: number
+}
+
+export interface CreateAdvertPlacementInput {
+  name: string
+  position: AdvertPosition
+  size?: string
+  media_asset_id: number
+  target_url: string
+  is_active?: boolean
+  starts_at?: string
+  ends_at?: string
+}
+
+export type UpdateAdvertPlacementInput = Partial<CreateAdvertPlacementInput>
 
 export interface AdminOrgMember {
   id: number

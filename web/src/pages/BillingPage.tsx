@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
   Badge,
@@ -9,6 +10,7 @@ import {
   CardTitle,
   Icon,
   Input,
+  LinkButton,
   Skeleton,
 } from '@/components/ui'
 import { ApiError, billingApi, type Plan, type PromoPreview } from '@/lib/api'
@@ -22,11 +24,11 @@ import {
   useChangeSubscription,
   useCreateSubscription,
   usePlans,
+  useRetrySubscription,
   useSubscriptions,
   useTelcoStatus,
 } from '@/lib/billing/queries'
 import { useFamily } from '@/lib/family/queries'
-import { SetPinModal } from '@/components/family/SetPinModal'
 import { TelcoOptInModal } from '@/components/billing/TelcoOptInModal'
 import { DataBundleModal } from '@/components/billing/DataBundleModal'
 
@@ -45,8 +47,23 @@ function planFeatures(plan: Plan): string[] {
   return out
 }
 
+/**
+ * A subscription id the SPA has cached (via /me) can go stale if it was acted
+ * on elsewhere (e.g. an admin/ops action) — the row itself is never hard-deleted
+ * in normal use, only cancelled, but defend against a dangling reference anyway
+ * rather than surfacing the raw "No query results for model [...]" 404 text.
+ */
+function friendlyBillingError(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) {
+    if (err.status === 404) return 'Your subscription info was out of date — we’ve refreshed it. Please try again.'
+    return err.message
+  }
+  return fallback
+}
+
 export function BillingPage() {
   const { user, hasRole } = useAuth()
+  const queryClient = useQueryClient()
   const entitlements = useEntitlements()
   const config = useConfig()
   const telcoBillingEnabled = config.data?.feature_flags.telco_billing === true
@@ -55,14 +72,15 @@ export function BillingPage() {
   const createSub = useCreateSubscription()
   const cancelSub = useCancelSubscription()
   const changeSub = useChangeSubscription()
+  const retrySub = useRetrySubscription()
 
   const telco = useTelcoStatus()
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busyPlan, setBusyPlan] = useState<number | null>(null)
+  const [retryingId, setRetryingId] = useState<number | null>(null)
   const [telcoPlan, setTelcoPlan] = useState<Plan | null>(null)
   const [bundleOpen, setBundleOpen] = useState(false)
-  const [pinOpen, setPinOpen] = useState(false)
   const [promoInput, setPromoInput] = useState('')
   const [promo, setPromo] = useState<{ code: string; byPlan: Record<number, PromoPreview> } | null>(null)
   const [promoError, setPromoError] = useState<string | null>(null)
@@ -129,7 +147,8 @@ export function BillingPage() {
       const res = await cancelSub.mutateAsync(sub.id)
       setNotice(res.message)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not cancel the subscription.')
+      setError(friendlyBillingError(err, 'Could not cancel the subscription.'))
+      if (err instanceof ApiError && err.status === 404) void queryClient.invalidateQueries({ queryKey: ['me'] })
     }
   }
 
@@ -148,9 +167,37 @@ export function BillingPage() {
         setNotice('Plan changed. Complete payment at checkout to activate — your new plan unlocks once payment is confirmed.')
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not change your plan.')
+      setError(friendlyBillingError(err, 'Could not change your plan.'))
+      if (err instanceof ApiError && err.status === 404) void queryClient.invalidateQueries({ queryKey: ['me'] })
     } finally {
       setBusyPlan(null)
+    }
+  }
+
+  /**
+   * Resume a still-pending card subscription. The server checks the gateway
+   * directly first — covers a completed payment whose webhook hasn't arrived
+   * (e.g. it can't reach this environment) — and activates right away, or
+   * opens a fresh checkout so the subscriber can pay again.
+   */
+  async function retryPayment(subscriptionId: number) {
+    setRetryingId(subscriptionId)
+    setError(null)
+    setNotice(null)
+    try {
+      const res = await retrySub.mutateAsync(subscriptionId)
+      if (res.checkout_url) {
+        window.location.href = res.checkout_url
+      } else if (res.status === 'active') {
+        setNotice('Payment confirmed — your plan is now active.')
+      } else {
+        setNotice('Still waiting on payment confirmation. Please try again shortly.')
+      }
+    } catch (err) {
+      setError(friendlyBillingError(err, 'Could not retry the payment.'))
+      if (err instanceof ApiError && err.status === 404) void queryClient.invalidateQueries({ queryKey: ['me'] })
+    } finally {
+      setRetryingId(null)
     }
   }
 
@@ -323,17 +370,17 @@ export function BillingPage() {
             <div className="flex items-center gap-2">
               <Icon name="shield" className="text-muted" />
               <div>
-                <Badge variant={family.data.pin_set ? 'success' : 'warning'}>
-                  {family.data.pin_set ? 'PIN set' : 'No PIN yet'}
+                <Badge variant={family.data.learners.some((l) => l.pin_protected) ? 'success' : 'warning'}>
+                  {family.data.learners.filter((l) => l.pin_protected).length} of {family.data.learners.length} profiles PIN'd
                 </Badge>
                 <p className="mt-1 text-sm text-muted">
-                  {entitlements.tier_name} includes a parental PIN to protect child profile switching.
+                  {entitlements.tier_name} includes a unique parental PIN per child to protect profile switching.
                 </p>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={() => setPinOpen(true)}>
-              {family.data.pin_set ? 'Change PIN' : 'Set a PIN'}
-            </Button>
+            <LinkButton to="/family" variant="outline" size="sm">
+              Manage on Family page
+            </LinkButton>
           </CardBody>
         </Card>
       )}
@@ -364,6 +411,16 @@ export function BillingPage() {
                     <Badge variant={s.status === 'active' ? 'success' : s.status === 'cancelled' ? 'neutral' : 'gold'}>
                       {s.status}
                     </Badge>
+                    {s.status === 'pending' && s.method === 'card' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        loading={retryingId === s.id}
+                        onClick={() => retryPayment(s.id)}
+                      >
+                        Retry payment
+                      </Button>
+                    )}
                   </div>
                 </CardBody>
               </Card>
@@ -376,7 +433,6 @@ export function BillingPage() {
         <TelcoOptInModal plan={telcoPlan} open={telcoPlan != null} onClose={() => setTelcoPlan(null)} />
       )}
       <DataBundleModal open={bundleOpen} onClose={() => setBundleOpen(false)} />
-      {family.data && <SetPinModal open={pinOpen} onClose={() => setPinOpen(false)} hasPin={family.data.pin_set} />}
     </div>
   )
 }

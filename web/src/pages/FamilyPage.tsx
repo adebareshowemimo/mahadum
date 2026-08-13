@@ -23,7 +23,7 @@ import { useAddChild, useFamily } from '@/lib/family/queries'
 export function FamilyPage() {
   const { data: family, isLoading, isError } = useFamily()
   const [addOpen, setAddOpen] = useState(false)
-  const [pinOpen, setPinOpen] = useState(false)
+  const [pinLearner, setPinLearner] = useState<{ id: number; display_name: string; pin_protected: boolean } | null>(null)
 
   if (isLoading) return <PageSkeleton />
   if (isError || !family) {
@@ -70,29 +70,62 @@ export function FamilyPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Parental PIN</CardTitle>
+            <CardTitle>Parental PINs</CardTitle>
           </CardHeader>
           <CardBody className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <Icon name="shield" className="text-muted" />
-              <Badge variant={family.pin_set ? 'success' : 'warning'}>
-                {family.pin_set ? 'PIN set' : 'No PIN yet'}
+              <Badge variant={family.learners.some((l) => l.pin_protected) ? 'success' : 'warning'}>
+                {family.learners.filter((l) => l.pin_protected).length} of{' '}
+                {family.learners.filter((l) => l.is_child).length} protected
               </Badge>
             </div>
             <p className="text-sm text-muted">
-              A PIN protects child profiles when switching from a parent device.
+              Each child gets their own unique PIN — set it below to stop siblings switching into their profile.
             </p>
-            <Button variant="outline" size="sm" onClick={() => setPinOpen(true)}>
-              {family.pin_set ? 'Change PIN' : 'Set a PIN'}
-            </Button>
           </CardBody>
         </Card>
       </div>
 
       <section>
-        <h2 className="mb-3 font-display text-lg font-bold text-foreground">Children</h2>
-        {family.learners.length === 0 ? (
+        <h2 className="mb-3 font-display text-lg font-bold text-foreground">Family members</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Card>
+            <CardBody className="flex items-center gap-3">
+              <Avatar name={family.parent.name} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold text-foreground">{family.parent.name}</p>
+                <p className="truncate text-xs text-muted">{family.parent.email}</p>
+              </div>
+              <Badge variant="primary">Parent</Badge>
+            </CardBody>
+          </Card>
+
+          {family.learners.map((l) => (
+            <Card key={l.id}>
+              <CardBody className="flex items-center gap-3">
+                <Avatar name={l.display_name} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-foreground">{l.display_name}</p>
+                  {l.is_child && <Badge variant="info">Child</Badge>}
+                </div>
+                {l.is_child && (
+                  <Button
+                    variant={l.pin_protected ? 'outline' : 'secondary'}
+                    size="sm"
+                    leftIcon={l.pin_protected ? <Icon name="shield" className="size-4" /> : undefined}
+                    onClick={() => setPinLearner(l)}
+                  >
+                    {l.pin_protected ? 'Change PIN' : 'Set PIN'}
+                  </Button>
+                )}
+              </CardBody>
+            </Card>
+          ))}
+        </div>
+
+        {family.learners.length === 0 && (
+          <Card className="mt-3">
             <CardBody className="flex flex-col items-center gap-3 py-10 text-center">
               <span className="text-4xl" aria-hidden="true">
                 🧒
@@ -105,25 +138,19 @@ export function FamilyPage() {
               </Button>
             </CardBody>
           </Card>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {family.learners.map((l) => (
-              <Card key={l.id}>
-                <CardBody className="flex items-center gap-3">
-                  <Avatar name={l.display_name} />
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-foreground">{l.display_name}</p>
-                    {l.is_child && <Badge variant="info">Child</Badge>}
-                  </div>
-                </CardBody>
-              </Card>
-            ))}
-          </div>
         )}
       </section>
 
       <AddChildModal open={addOpen} onClose={() => setAddOpen(false)} />
-      <SetPinModal open={pinOpen} onClose={() => setPinOpen(false)} hasPin={family.pin_set} />
+      {pinLearner && (
+        <SetPinModal
+          open
+          onClose={() => setPinLearner(null)}
+          learnerId={pinLearner.id}
+          learnerName={pinLearner.display_name}
+          hasPin={pinLearner.pin_protected}
+        />
+      )}
     </div>
   )
 }

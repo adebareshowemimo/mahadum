@@ -29,8 +29,8 @@ export default defineConfig({
     // Honor PORT when set (e.g. preview tooling), else default to 5173.
     port: Number(process.env.PORT) || 5173,
     proxy: {
-      '/api': { target: 'http://localhost:8000', changeOrigin: true },
-      '/sanctum': { target: 'http://localhost:8000', changeOrigin: true },
+      '/api': { target: 'http://localhost:8010', changeOrigin: true },
+      '/sanctum': { target: 'http://localhost:8010', changeOrigin: true },
     },
   },
 })

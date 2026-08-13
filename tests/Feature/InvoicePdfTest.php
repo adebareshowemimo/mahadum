@@ -51,6 +51,28 @@ class InvoicePdfTest extends TestCase
         $this->assertSame(1, MediaAsset::where('type', 'pdf')->count());
     }
 
+    public function test_pdf_is_regenerated_if_the_stored_file_went_missing(): void
+    {
+        // Reproduces the live-review report: "Could not download that invoice" —
+        // the DB still had pdf_asset_id set from an earlier render, but the file
+        // itself was gone from disk (e.g. an ephemeral deploy wiped local storage).
+        $this->seedRbac();
+        Storage::fake('local');
+        $org = $this->orgWithAdmin();
+        $invoice = $org->invoices()->create(['type' => 'final', 'amount_minor' => 500000, 'status' => 'unpaid']);
+
+        $this->get("/api/v1/schools/{$org->id}/invoices/{$invoice->id}/pdf")->assertOk();
+        $staleAssetId = $invoice->fresh()->pdf_asset_id;
+        Storage::disk('local')->delete("invoices/invoice-{$invoice->id}.pdf");
+
+        $this->get("/api/v1/schools/{$org->id}/invoices/{$invoice->id}/pdf")
+            ->assertOk()
+            ->assertDownload("invoice-{$invoice->id}.pdf");
+
+        Storage::disk('local')->assertExists("invoices/invoice-{$invoice->id}.pdf");
+        $this->assertNotSame($staleAssetId, $invoice->fresh()->pdf_asset_id);
+    }
+
     public function test_non_member_cannot_download_invoice(): void
     {
         $this->seedRbac();

@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth/AuthProvider'
 import { useTheme } from '@/lib/theme'
 import { visibleSections } from '@/lib/nav/navigation'
 import { ProfileSwitcher } from '@/components/layout/ProfileSwitcher'
+import { AdvertLeaderboard } from '@/components/adverts/AdvertLeaderboard'
 
 /** Persistent authenticated frame: sidebar + topbar with a routed content area. */
 export function AppLayout() {
@@ -114,29 +115,32 @@ function Topbar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
   const { theme, toggle } = useTheme()
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border bg-surface/80 px-4 backdrop-blur sm:px-6 lg:px-8">
-      <IconButton onClick={onOpenDrawer} className="lg:hidden" aria-label="Open menu">
-        <Icon name="menu" />
-      </IconButton>
+    <header className="sticky top-0 z-20 border-b border-border bg-surface/80 backdrop-blur">
+      <AdvertLeaderboard />
+      <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
+        <IconButton onClick={onOpenDrawer} className="lg:hidden" aria-label="Open menu">
+          <Icon name="menu" />
+        </IconButton>
 
-      <NavLink to="/" aria-label="Go to the Mahadum.360 homepage" end className="lg:hidden">
-        <Logo className="h-7" />
-      </NavLink>
+        <NavLink to="/" aria-label="Go to the Mahadum.360 homepage" end className="lg:hidden">
+          <Logo className="h-7" />
+        </NavLink>
 
-      <div className="flex-1" />
+        <div className="flex-1" />
 
-      <ProfileSwitcher />
+        <ProfileSwitcher />
 
-      <OrgSwitcher />
+        <OrgSwitcher />
 
-      <IconButton
-        onClick={toggle}
-        aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-      >
-        <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
-      </IconButton>
+        <IconButton
+          onClick={toggle}
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
+        </IconButton>
 
-      <UserMenu />
+        <UserMenu />
+      </div>
     </header>
   )
 }

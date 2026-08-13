@@ -55,7 +55,7 @@ export function AdminSubNav() {
   }
 
   return (
-    <nav aria-label="Admin sections" className="-mx-1 mb-6 overflow-x-auto border-b border-border">
+    <nav aria-label="Admin sections" className="-mx-1 mb-6 overflow-x-auto overflow-y-hidden border-b border-border">
       <ul className="flex min-w-max gap-1 px-1">
         {GROUPS.map((g) => {
           const active = g.label === activeLabel

@@ -16,26 +16,34 @@ class ProfileController extends Controller
      */
     public function switch(SwitchProfileRequest $request, LearnerProfile $learner): JsonResponse
     {
-        // PIN gate: only enforced for pin-protected child profiles.
-        if ($learner->parental_pin_protected && ! $this->pinMatches($request, $learner)) {
+        $fromLearnerId = $request->integer('from_learner_id') ?: null;
+
+        // A PIN is required to enter a profile the parent gave one to, and
+        // always when hopping from one already-active child profile to a
+        // different one — otherwise an un-PIN'd sibling profile is a free
+        // door between kids sharing the device.
+        $switchingBetweenChildren = $fromLearnerId !== null && $fromLearnerId !== $learner->id;
+
+        if ($learner->parental_pin === null) {
+            if ($switchingBetweenChildren) {
+                return response()->json([
+                    'error' => [
+                        'code' => 'pin_not_set',
+                        'message' => "Ask a parent to set a PIN for {$learner->display_name} before switching to it from another profile.",
+                        'status' => 422,
+                    ],
+                ], 422);
+            }
+
+            return response()->json(['data' => ['active_learner_id' => $learner->id]]);
+        }
+
+        if (! filled($request->input('pin')) || ! Hash::check((string) $request->input('pin'), $learner->parental_pin)) {
             return response()->json([
-                'error' => ['code' => 'invalid_pin', 'message' => 'Incorrect parental PIN.', 'status' => 403],
+                'error' => ['code' => 'invalid_pin', 'message' => 'Incorrect PIN.', 'status' => 403],
             ], 403);
         }
 
         return response()->json(['data' => ['active_learner_id' => $learner->id]]);
-    }
-
-    private function pinMatches(SwitchProfileRequest $request, LearnerProfile $learner): bool
-    {
-        $hash = $learner->family?->parental_pin;
-
-        // No PIN configured on the family → fall back to requiring any PIN.
-        if (! $hash) {
-            return filled($request->input('pin'));
-        }
-
-        return filled($request->input('pin'))
-            && Hash::check((string) $request->input('pin'), $hash);
     }
 }

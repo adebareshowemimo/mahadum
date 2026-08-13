@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminMetricsController;
+use App\Http\Controllers\Admin\AdvertPlacementController;
 use App\Http\Controllers\Admin\AuditController;
 use App\Http\Controllers\Admin\CompetitionAdminController;
 use App\Http\Controllers\Admin\ContactListController;
@@ -20,6 +21,7 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SettlementController;
 use App\Http\Controllers\Admin\SupportController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\AdvertController;
 /*
 |--------------------------------------------------------------------------
 | Mahadum.360 API (v1)
@@ -104,6 +106,11 @@ Route::prefix('v1')->group(function () {
     /* ---------------------------------------------------------------- public */
     Route::get('config', [ConfigController::class, 'show']);
     Route::get('pricing', [PricingController::class, 'index']);
+    Route::get('adverts/active', [AdvertController::class, 'active']);
+    Route::middleware('throttle:60,1')->group(function () {
+        Route::post('adverts/{advertPlacement}/impression', [AdvertController::class, 'impression']);
+        Route::post('adverts/{advertPlacement}/click', [AdvertController::class, 'click']);
+    });
 
     Route::middleware('throttle:auth')->group(function () {
         Route::post('auth/register', [AuthController::class, 'register']);
@@ -235,7 +242,8 @@ Route::prefix('v1')->group(function () {
         /* ---- Family & wallet (parent) ---- */
         Route::get('family', [FamilyController::class, 'show'])->middleware('can:family.manage');
         Route::post('family/children', [FamilyController::class, 'addChild'])->middleware('can:family.manage');
-        Route::put('family/pin', [FamilyController::class, 'setPin'])->middleware('can:family.manage');
+        Route::put('family/children/{learner}/pin', [FamilyController::class, 'setChildPin'])
+            ->middleware('can:family.manage');
         Route::get('wallet', [WalletController::class, 'show'])->middleware('can:family.wallet.view');
         Route::get('chores', [ChoreController::class, 'index'])->middleware('can:family.chores.manage');
         Route::post('chores', [ChoreController::class, 'store'])->middleware('can:family.chores.manage');
@@ -271,6 +279,8 @@ Route::prefix('v1')->group(function () {
             Route::post('subscriptions', [SubscriptionController::class, 'store'])
                 ->middleware('can:billing.subscriptions.manage');
             Route::post('subscriptions/{subscription}/change', [SubscriptionController::class, 'change'])
+                ->middleware('can:billing.subscriptions.manage');
+            Route::post('subscriptions/{subscription}/retry', [SubscriptionController::class, 'retry'])
                 ->middleware('can:billing.subscriptions.manage');
             Route::post('data-bundles/purchase', [DataBundleController::class, 'purchase'])
                 ->middleware('can:billing.databundles.manage');
@@ -364,6 +374,17 @@ Route::prefix('v1')->group(function () {
                 ->middleware('can:organizations.activate');
             Route::post('organizations/{organization}/status', [OrganizationController::class, 'setStatus'])
                 ->middleware('can:organizations.manage');
+
+            // Adverts (banner-ad placements)
+            Route::get('adverts', [AdvertPlacementController::class, 'index'])->middleware('can:adverts.view');
+            Route::get('adverts/{advertPlacement}', [AdvertPlacementController::class, 'show'])->middleware('can:adverts.view');
+            Route::post('adverts', [AdvertPlacementController::class, 'store'])->middleware('can:adverts.manage');
+            Route::match(['put', 'patch'], 'adverts/{advertPlacement}', [AdvertPlacementController::class, 'update'])
+                ->middleware('can:adverts.manage');
+            Route::post('adverts/{advertPlacement}/toggle', [AdvertPlacementController::class, 'toggleActive'])
+                ->middleware('can:adverts.manage');
+            Route::delete('adverts/{advertPlacement}', [AdvertPlacementController::class, 'destroy'])
+                ->middleware('can:adverts.manage');
 
             // Users & access control
             Route::get('users', [UserController::class, 'index'])->middleware('can:users.view');

@@ -22,7 +22,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $age_band
  * @property int|null $target_language_id
  * @property int $current_level
- * @property bool $parental_pin_protected
+ * @property string|null $parental_pin
  * @property Carbon|null $deleted_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -55,7 +55,7 @@ use Illuminate\Support\Carbon;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|LearnerProfile whereFamilyId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|LearnerProfile whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|LearnerProfile whereOrganizationId($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|LearnerProfile whereParentalPinProtected($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|LearnerProfile whereParentalPin($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|LearnerProfile whereTargetLanguageId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|LearnerProfile whereUpdatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|LearnerProfile whereUserId($value)
@@ -72,7 +72,6 @@ class LearnerProfile extends Model
 
     protected $casts = [
         'date_of_birth' => 'date',
-        'parental_pin_protected' => 'boolean',
     ];
 
     /**

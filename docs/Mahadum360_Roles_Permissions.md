@@ -66,6 +66,7 @@ Naming convention: `aspect.subject.action`.
 | **Referrals** | `referrals.{view,manage}` · `referrals.fraud.review` · `promocodes.manage` |
 | **School ops** | `schools.dashboard.view` · `schools.roster.{view,import}` · `schools.classes.{view,manage}` · `schools.seats.{view,purchase}` · `schools.assignments.{create,review}` · `schools.analytics.view` · `schools.badges.award` (teacher; manual recognition alongside `gamification.badges.manage`'s automatic conditions) |
 | **Organizations** | `organizations.{view,manage,activate}` · `organizations.leads.view` (super_admin only — prospective-school "Get Quote" contacts) |
+| **Adverts** | `adverts.{view,manage}` (super_admin only — banner-ad placements: leaderboard/inline creative, targeting, active window) |
 | **Users & access** | `users.{view,manage}` · `roles.{view,assign}` |
 | **Analytics** | `analytics.{platform,lesson}.view` |
 | **System** | `audit.view` · `support.handle` · `system.settings.manage` |
@@ -90,6 +91,7 @@ Naming convention: `aspect.subject.action`.
 | organizations.view | | ● | | ● | |
 | organizations.{manage,activate} | | | | | |
 | organizations.leads.view | | | | | |
+| adverts.{view,manage} | | | | | |
 | users.{view,manage} / roles.{view,assign} | | ● | | | |
 | billing.subscriptions.view | | ● | | | ● |
 | billing.subscriptions.manage | | | | | ● |

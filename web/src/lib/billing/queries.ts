@@ -51,6 +51,17 @@ export function useChangeSubscription() {
   })
 }
 
+export function useRetrySubscription() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => billingApi.retrySubscription(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: billingKeys.subscriptions })
+      void qc.invalidateQueries({ queryKey: ['me'] })
+    },
+  })
+}
+
 export function useTelcoStatus() {
   return useQuery({
     queryKey: billingKeys.telcoStatus,

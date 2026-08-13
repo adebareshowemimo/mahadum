@@ -1,5 +1,6 @@
 import { Badge, Card, CardBody, CardHeader, CardTitle, LinkButton } from '@/components/ui'
 import { useAuth } from '@/lib/auth/AuthProvider'
+import { InlineAdvert } from '@/components/adverts/InlineAdvert'
 
 /** Authenticated landing. Rendered inside the app shell (AppLayout). */
 export function DashboardPage() {
@@ -56,6 +57,8 @@ export function DashboardPage() {
         </Card>
       </div>
 
+      <InlineAdvert />
+
       <div className="flex flex-wrap gap-3">
         {hasRole('parent', 'supervisor') && (
           <LinkButton to="/family" variant="parent">
@@ -63,7 +66,7 @@ export function DashboardPage() {
           </LinkButton>
         )}
         {hasRole('student') && <LinkButton to="/learn">Continue learning</LinkButton>}
-        {hasRole('super_admin', 'content_owner') && (
+        {hasRole('super_admin') && (
           <LinkButton to="/components" variant="secondary">
             Browse the design system
           </LinkButton>

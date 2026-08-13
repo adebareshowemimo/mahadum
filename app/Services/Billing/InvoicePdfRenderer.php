@@ -19,7 +19,12 @@ class InvoicePdfRenderer
     public function render(Invoice $invoice): MediaAsset
     {
         if ($invoice->pdf_asset_id !== null && ($existing = $invoice->pdfAsset) !== null) {
-            return $existing;
+            // The DB row can outlive the file (e.g. an ephemeral disk wiped on
+            // deploy) — regenerate rather than streaming a 404, so a previously
+            // "successful" download doesn't start erroring forever.
+            if (Storage::disk(self::DISK)->exists($existing->url)) {
+                return $existing;
+            }
         }
 
         $invoice->loadMissing('organization');

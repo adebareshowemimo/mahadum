@@ -9,6 +9,7 @@ use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Services\Billing\PaymentGatewayManager;
+use App\Services\Billing\PaymentService;
 use App\Services\Billing\PromoException;
 use App\Services\Billing\PromoService;
 use Illuminate\Http\JsonResponse;
@@ -16,7 +17,11 @@ use Illuminate\Http\Request;
 
 class SubscriptionController extends Controller
 {
-    public function __construct(private PaymentGatewayManager $gateways, private PromoService $promos) {}
+    public function __construct(
+        private PaymentGatewayManager $gateways,
+        private PromoService $promos,
+        private PaymentService $payments,
+    ) {}
 
     /**
      * Preview a promo code against a plan before checkout: returns the discount +
@@ -149,6 +154,75 @@ class SubscriptionController extends Controller
             : 'Subscription cancelled.';
 
         return response()->json(['data' => ['status' => 'cancelled', 'message' => $message]]);
+    }
+
+    /**
+     * Resume a still-`pending` card subscription: first ask the gateway directly
+     * whether it was actually paid (covers the webhook not having arrived yet, or
+     * being unable to reach this environment), and activate immediately if so.
+     * Otherwise open a fresh checkout on the same `sub_<id>` reference so the
+     * subscriber can pay again without a duplicate subscription row.
+     */
+    public function retry(Subscription $subscription, Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless(
+            $subscription->subscriber_type === User::class && (int) $subscription->subscriber_id === (int) $user->id,
+            403,
+            'Not your subscription.',
+        );
+
+        if ($subscription->method !== 'card') {
+            return response()->json([
+                'error' => ['code' => 'not_retryable', 'message' => 'Only card payments can be retried.', 'status' => 422],
+            ], 422);
+        }
+
+        if ($subscription->status === 'active') {
+            return response()->json(['data' => ['status' => 'active']]);
+        }
+
+        if (in_array($subscription->status, ['cancelled', 'refunded'], true)) {
+            return response()->json([
+                'error' => ['code' => 'subscription_cancelled', 'message' => 'This subscription is no longer active.', 'status' => 422],
+            ], 422);
+        }
+
+        $reference = 'sub_'.$subscription->id;
+        $gateway = $this->gateways->driver();
+
+        $verified = $gateway->verify($reference);
+        if ($verified->status === 'success') {
+            $outcome = $this->payments->process(
+                (string) config('services.payments.default', 'monnify'),
+                'manual_verify_'.$subscription->id.'_'.now()->getTimestamp(),
+                $reference,
+                'success',
+                $verified->amountMinor,
+                $verified->raw,
+            );
+
+            return response()->json(['data' => ['status' => $subscription->fresh()->status, 'outcome' => $outcome]]);
+        }
+
+        // Not paid (or failed) — reopen checkout on the same reference so a retried
+        // payment still correlates to this subscription rather than creating a new one.
+        $checkout = $gateway->initialize(
+            $reference,
+            (int) $subscription->plan->price_minor,
+            (string) $user->email,
+            ['purpose' => 'subscription', 'subscription_id' => $subscription->id],
+        );
+
+        if ($checkout->providerReference !== null) {
+            $subscription->update(['gateway_txn_ref' => $checkout->providerReference]);
+        }
+
+        return response()->json(['data' => [
+            'status' => $subscription->status,
+            'payment_reference' => $reference,
+            'checkout_url' => $checkout->checkoutUrl,
+        ]]);
     }
 
     /**

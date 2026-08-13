@@ -21,7 +21,7 @@ class LearnerProfileResource extends JsonResource
             'current_level' => $this->current_level,
             'target_language' => $this->whenLoaded('targetLanguage', fn () => $this->targetLanguage?->code),
             'is_child' => $this->user_id === null,
-            'pin_protected' => (bool) $this->parental_pin_protected,
+            'pin_protected' => $this->parental_pin !== null,
         ];
     }
 }

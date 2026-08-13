@@ -32,6 +32,7 @@ class MediaController extends Controller
         'chore_submissions' => ['evidence_media_id'],
         'invoices' => ['pdf_asset_id'],
         'competition_entries' => ['media_asset_id'],
+        'advert_placements' => ['media_asset_id'],
     ];
 
     public function __construct(private AuditLogger $audit) {}

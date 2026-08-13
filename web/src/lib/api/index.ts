@@ -1,6 +1,7 @@
 export { api, ensureCsrfCookie, setUnauthorizedHandler } from './client'
 export {
   adminApi,
+  advertsApi,
   authApi,
   billingApi,
   competitionApi,

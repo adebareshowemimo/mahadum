@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { FamiliesPage, InstitutionsPage } from './PublicAudiencePages'
@@ -28,7 +29,12 @@ beforeAll(() => {
 })
 
 function renderPage(page: React.ReactNode, route = '/') {
-  return render(<MemoryRouter initialEntries={[route]}>{page}</MemoryRouter>)
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[route]}>{page}</MemoryRouter>
+    </QueryClientProvider>,
+  )
 }
 
 describe('public information pages', () => {

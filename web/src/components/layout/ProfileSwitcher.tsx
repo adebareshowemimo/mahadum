@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { Avatar, Button, CodeInput, Icon } from '@/components/ui'
 import { cn } from '@/lib/cn'
@@ -27,7 +28,7 @@ export function ProfileSwitcher() {
   if (learners.length === 0) return null
 
   async function enter(learner: LearnerProfile, pin?: string) {
-    await profileApi.switch(learner.id, pin)
+    await profileApi.switch(learner.id, pin, activeLearner?.id)
     setActiveLearner(learner.id)
     setOpen(false)
     setPending(null)
@@ -39,7 +40,11 @@ export function ProfileSwitcher() {
       setOpen(false)
       return
     }
-    if (learner.pin_protected) setPending(learner)
+    // A PIN is required for profiles the parent marked protected, and always
+    // when hopping from one already-active child profile to another sibling
+    // — otherwise an unprotected profile is a free door between kids sharing
+    // the device.
+    if (learner.pin_protected || activeLearner) setPending(learner)
     else void enter(learner).catch(() => undefined)
   }
 
@@ -163,24 +168,28 @@ function PinModal({
     }
   }
 
-  return (
+  // Portaled to <body>: the topbar header uses `backdrop-blur`, and any ancestor
+  // with a filter/backdrop-filter/transform creates a new containing block for
+  // `position: fixed` descendants — without the portal this modal ends up pinned
+  // to the header's small bounding box instead of centered on the viewport.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-charcoal-900/50" onClick={onCancel} aria-hidden="true" />
+      <div className="absolute inset-0 bg-charcoal-900/60" onClick={onCancel} aria-hidden="true" />
       <div
         role="dialog"
         aria-modal="true"
         aria-label={`Enter PIN for ${learner.display_name}`}
-        className="relative w-full max-w-xs rounded-2xl border border-border bg-surface p-6 shadow-lg animate-step-in"
+        className="relative w-full max-w-sm rounded-2xl border border-border bg-surface p-8 shadow-xl animate-step-in"
       >
-        <div className="flex flex-col items-center gap-3 text-center">
+        <div className="flex flex-col items-center gap-4 text-center">
           <Avatar name={learner.display_name} size="lg" />
           <div>
-            <h2 className="font-display text-lg font-bold text-foreground">{learner.display_name}</h2>
-            <p className="mt-0.5 text-sm text-muted">Enter the parental PIN to continue.</p>
+            <h2 className="font-display text-xl font-bold text-foreground">{learner.display_name}</h2>
+            <p className="mt-1 text-sm text-muted">Enter the parental PIN to continue.</p>
           </div>
 
           <form
-            className="mt-2 flex flex-col items-center gap-3"
+            className="mt-2 flex flex-col items-center gap-4"
             onSubmit={(e) => {
               e.preventDefault()
               void submit()
@@ -209,6 +218,7 @@ function PinModal({
           </form>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

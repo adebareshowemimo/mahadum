@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Family;
 use App\Http\Controllers\Concerns\ResolvesFamily;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Family\AddChildRequest;
-use App\Http\Requests\Family\SetPinRequest;
+use App\Http\Requests\Family\SetChildPinRequest;
 use App\Models\FamilyMember;
 use App\Models\LearnerProfile;
 use App\Models\ParentalConsent;
@@ -25,23 +25,28 @@ class FamilyController extends Controller
 
     public function show(Request $request): JsonResponse
     {
-        $family = $this->family($request->user())->load(['learnerProfiles.targetLanguage', 'members.user']);
+        $family = $this->family($request->user())->load(['learnerProfiles.targetLanguage', 'owner']);
         $wallet = $this->wallets->walletFor($family);
 
         return response()->json(['data' => [
             'id' => $family->id,
             'name' => $family->name,
             'child_limit' => $family->child_limit,
-            'pin_set' => $family->parental_pin !== null,
             'wallet' => [
                 'coin_balance' => $wallet->coin_balance,
                 'currency_minor' => $wallet->currency_balance_minor,
                 'currency' => $wallet->currency,
             ],
+            'parent' => [
+                'id' => $family->owner->id,
+                'name' => $family->owner->name,
+                'email' => $family->owner->email,
+            ],
             'learners' => $family->learnerProfiles->map(fn ($l) => [
                 'id' => $l->id,
                 'display_name' => $l->display_name,
                 'is_child' => $l->user_id === null,
+                'pin_protected' => $l->parental_pin !== null,
             ])->values(),
         ]]);
     }
@@ -62,7 +67,6 @@ class FamilyController extends Controller
             'date_of_birth' => $request->input('date_of_birth'),
             'age_band' => $request->input('age_band'),
             'target_language_id' => $request->input('target_language_id'),
-            'parental_pin_protected' => $family->parental_pin !== null,
         ]);
 
         FamilyMember::create([
@@ -87,18 +91,24 @@ class FamilyController extends Controller
         return response()->json(['data' => ['id' => $learner->id, 'display_name' => $learner->display_name]], 201);
     }
 
-    public function setPin(SetPinRequest $request): JsonResponse
+    /** Set, change, or clear one child's own PIN — each child has a distinct code. */
+    public function setChildPin(LearnerProfile $learner, SetChildPinRequest $request): JsonResponse
     {
         $family = $this->family($request->user());
-        $hadPin = $family->parental_pin !== null;
-        $family->update(['parental_pin' => Hash::make($request->string('pin'))]);
+        abort_unless((int) $learner->family_id === $family->id, 403, 'Not your family.');
 
-        // Existing child profiles become PIN-protected once a PIN exists.
-        $family->learnerProfiles()->whereNull('user_id')->update(['parental_pin_protected' => true]);
+        $pin = $request->input('pin');
+        $wasProtected = $learner->parental_pin !== null;
+        $learner->update(['parental_pin' => $pin === null ? null : Hash::make($pin)]);
 
-        $this->audit->record('family.pin_set', $family, ['pin_set' => $hadPin], ['pin_set' => true]);
+        $this->audit->record(
+            'family.child_pin_set',
+            $learner,
+            ['pin_protected' => $wasProtected],
+            ['pin_protected' => $pin !== null],
+        );
 
-        return response()->json(['data' => ['pin_set' => true]]);
+        return response()->json(['data' => ['id' => $learner->id, 'pin_protected' => $pin !== null]]);
     }
 
     /** COPPA applies under the configured minor age; otherwise general data-processing consent. */

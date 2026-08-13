@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   adminApi,
+  type AdminAdvertPlacementQuery,
   type AdminOrgQuery,
   type AdminPayoutsQuery,
   type AdminTicketsQuery,
@@ -9,6 +10,7 @@ import {
   type AssignRoleInput,
   type AuditLogQuery,
   type CreateCampaignInput,
+  type CreateAdvertPlacementInput,
   type CreateOrgInput,
   type CreatePromoInput,
   type EmailLogQuery,
@@ -18,6 +20,7 @@ import {
   type OrgStatus,
   type CreatePlanInput,
   type SettingValue,
+  type UpdateAdvertPlacementInput,
   type UpdateOrgInput,
   type UpdatePlanInput,
   type UserStatus,
@@ -56,6 +59,9 @@ export const adminKeys = {
   plans: ['admin-plans'] as const,
   promos: ['admin-promos'] as const,
   schoolLeads: ['admin-school-leads'] as const,
+  adverts: ['admin-adverts'] as const,
+  advertsList: (params: AdminAdvertPlacementQuery) => ['admin-adverts', params] as const,
+  advert: (id: number) => ['admin-advert', id] as const,
 }
 
 export function useAdminMetrics() {
@@ -144,6 +150,65 @@ export function useInviteOrgAdmin() {
       adminApi.inviteOrgAdmin(orgId, input),
     onSuccess: (_res, { orgId }) => {
       void qc.invalidateQueries({ queryKey: adminKeys.organization(orgId) })
+    },
+  })
+}
+
+export function useAdminAdvertPlacements(params: AdminAdvertPlacementQuery = {}) {
+  return useQuery({
+    queryKey: adminKeys.advertsList(params),
+    queryFn: () => adminApi.advertPlacements(params),
+    placeholderData: (prev) => prev,
+  })
+}
+
+export function useAdminAdvertPlacement(id: number) {
+  return useQuery({
+    queryKey: adminKeys.advert(id),
+    queryFn: () => adminApi.advertPlacement(id),
+    enabled: Number.isFinite(id),
+  })
+}
+
+export function useCreateAdvertPlacement() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateAdvertPlacementInput) => adminApi.createAdvertPlacement(input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: adminKeys.adverts })
+    },
+  })
+}
+
+export function useUpdateAdvertPlacement() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, input }: { id: number; input: UpdateAdvertPlacementInput }) =>
+      adminApi.updateAdvertPlacement(id, input),
+    onSuccess: (_res, { id }) => {
+      void qc.invalidateQueries({ queryKey: adminKeys.adverts })
+      void qc.invalidateQueries({ queryKey: adminKeys.advert(id) })
+    },
+  })
+}
+
+export function useToggleAdvertPlacement() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => adminApi.toggleAdvertPlacement(id),
+    onSuccess: (_res, id) => {
+      void qc.invalidateQueries({ queryKey: adminKeys.adverts })
+      void qc.invalidateQueries({ queryKey: adminKeys.advert(id) })
+    },
+  })
+}
+
+export function useDeleteAdvertPlacement() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => adminApi.deleteAdvertPlacement(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: adminKeys.adverts })
     },
   })
 }

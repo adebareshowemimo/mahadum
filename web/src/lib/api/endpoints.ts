@@ -48,6 +48,13 @@ import type {
   AdminOrgDetail,
   AdminOrgList,
   AdminOrgQuery,
+  ActiveAdvert,
+  AdminAdvertPlacementList,
+  AdminAdvertPlacementQuery,
+  AdvertPlacement,
+  AdvertPosition,
+  CreateAdvertPlacementInput,
+  UpdateAdvertPlacementInput,
   AdminPlan,
   AdminTicketsPage,
   AdminTicketsQuery,
@@ -222,6 +229,22 @@ export const pricingApi = {
   },
 }
 
+/** Public advert delivery — no auth required; works for logged-out visitors too. */
+export const advertsApi = {
+  async active(position: AdvertPosition): Promise<ActiveAdvert | null> {
+    const { data } = await api.get('/adverts/active', { params: { position } })
+    return data.data
+  },
+
+  async impression(id: number): Promise<void> {
+    await api.post(`/adverts/${id}/impression`)
+  },
+
+  async click(id: number): Promise<void> {
+    await api.post(`/adverts/${id}/click`)
+  },
+}
+
 export const familyApi = {
   async overview(): Promise<FamilyOverview> {
     const { data } = await api.get('/family')
@@ -233,8 +256,9 @@ export const familyApi = {
     return data.data
   },
 
-  async setPin(pin: string): Promise<{ pin_set: boolean }> {
-    const { data } = await api.put('/family/pin', { pin })
+  /** Set, change, or (with `pin: null`) clear one child's own PIN. */
+  async setChildPin(learnerId: number, pin: string | null): Promise<{ id: number; pin_protected: boolean }> {
+    const { data } = await api.put(`/family/children/${learnerId}/pin`, { pin })
     return data.data
   },
 
@@ -627,6 +651,23 @@ export const billingApi = {
     return data.data
   },
 
+  /**
+   * Resume a still-pending card subscription: the server checks the gateway
+   * directly first (in case payment already went through but the webhook
+   * hasn't arrived) and activates immediately, or opens a fresh checkout on
+   * the same reference so the subscriber can pay again.
+   */
+  async retrySubscription(id: number): Promise<{
+    status: string
+    payment_reference?: string
+    checkout_url?: string | null
+  }> {
+    const { data } = await api.post(`/subscriptions/${id}/retry`, undefined, {
+      headers: { 'Idempotency-Key': idempotencyKey() },
+    })
+    return data.data
+  },
+
   // --- Telco (airtime VAS) ---
   async telcoStatus(): Promise<TelcoStatus> {
     const { data } = await api.get('/telco/status')
@@ -725,6 +766,35 @@ export const adminApi = {
   async inviteOrgAdmin(orgId: number, input: InviteOrgAdminInput): Promise<{ id: number; name: string; email: string }> {
     const { data } = await api.post(`/admin/organizations/${orgId}/invite-admin`, input)
     return data.data
+  },
+
+  async advertPlacements(params: AdminAdvertPlacementQuery = {}): Promise<AdminAdvertPlacementList> {
+    const { data } = await api.get('/admin/adverts', { params })
+    return data
+  },
+
+  async advertPlacement(id: number): Promise<AdvertPlacement> {
+    const { data } = await api.get(`/admin/adverts/${id}`)
+    return data.data
+  },
+
+  async createAdvertPlacement(input: CreateAdvertPlacementInput): Promise<AdvertPlacement> {
+    const { data } = await api.post('/admin/adverts', input)
+    return data.data
+  },
+
+  async updateAdvertPlacement(id: number, input: UpdateAdvertPlacementInput): Promise<AdvertPlacement> {
+    const { data } = await api.patch(`/admin/adverts/${id}`, input)
+    return data.data
+  },
+
+  async toggleAdvertPlacement(id: number): Promise<AdvertPlacement> {
+    const { data } = await api.post(`/admin/adverts/${id}/toggle`)
+    return data.data
+  },
+
+  async deleteAdvertPlacement(id: number): Promise<void> {
+    await api.delete(`/admin/adverts/${id}`)
   },
 
   async createPromo(input: CreatePromoInput): Promise<{ id: number; code: string }> {
@@ -1276,10 +1346,14 @@ export const gamificationApi = {
 export const profileApi = {
   /**
    * Switch the active child learner profile. `pin` is required for pin-protected
-   * profiles (the API answers 403 `invalid_pin` otherwise).
+   * profiles, and whenever `fromLearnerId` names a different, already-active
+   * child (the API answers 403 `invalid_pin` otherwise).
    */
-  async switch(learnerId: number, pin?: string): Promise<{ active_learner_id: number }> {
-    const { data } = await api.post(`/profiles/${learnerId}/switch`, pin ? { pin } : {})
+  async switch(learnerId: number, pin?: string, fromLearnerId?: number | null): Promise<{ active_learner_id: number }> {
+    const { data } = await api.post(`/profiles/${learnerId}/switch`, {
+      ...(pin ? { pin } : {}),
+      ...(fromLearnerId ? { from_learner_id: fromLearnerId } : {}),
+    })
     return data.data
   },
 }

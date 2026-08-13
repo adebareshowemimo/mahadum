@@ -32,5 +32,9 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- Outbound gateways must never depend on a developer's local .env — tests
+             that need a "live" gateway opt in explicitly per-test (see PaymentGatewayTest). -->
+        <env name="PAYMENT_GATEWAY_LIVE" value="false"/>
+        <env name="MESSAGING_LIVE" value="false"/>
     </php>
 </phpunit>

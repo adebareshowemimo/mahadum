@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Family;
+use App\Models\LearnerProfile;
 use App\Models\Payout;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -31,19 +32,20 @@ class AuditTrailTest extends TestCase
         ]);
     }
 
-    public function test_setting_family_pin_is_audited(): void
+    public function test_setting_a_childs_pin_is_audited(): void
     {
         $this->seedRbac();
         $parent = $this->actingAsUser($this->userWithRole('parent'));
         $family = Family::create(['owner_user_id' => $parent->id, 'name' => 'Fam']);
+        $child = LearnerProfile::create(['family_id' => $family->id, 'display_name' => 'Kid', 'current_level' => 1]);
 
-        $this->putJson('/api/v1/family/pin', ['pin' => '4321'])->assertOk();
+        $this->putJson("/api/v1/family/children/{$child->id}/pin", ['pin' => '4321'])->assertOk();
 
         $this->assertDatabaseHas('audit_logs', [
             'actor_user_id' => $parent->id,
-            'action' => 'family.pin_set',
-            'subject_type' => Family::class,
-            'subject_id' => $family->id,
+            'action' => 'family.child_pin_set',
+            'subject_type' => LearnerProfile::class,
+            'subject_id' => $child->id,
         ]);
     }
 }

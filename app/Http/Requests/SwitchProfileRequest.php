@@ -16,6 +16,7 @@ class SwitchProfileRequest extends FormRequest
     {
         return [
             'pin' => ['nullable', 'string', 'min:4', 'max:8'],
+            'from_learner_id' => ['nullable', 'integer'],
         ];
     }
 }

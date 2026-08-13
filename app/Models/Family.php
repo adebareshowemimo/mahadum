@@ -16,7 +16,6 @@ use Illuminate\Support\Carbon;
  * @property int $owner_user_id
  * @property int|null $organization_id
  * @property string $name
- * @property string|null $parental_pin
  * @property string|null $referral_source_code
  * @property int $child_limit
  * @property Carbon|null $deleted_at
@@ -44,7 +43,6 @@ use Illuminate\Support\Carbon;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Family whereName($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Family whereOrganizationId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Family whereOwnerUserId($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Family whereParentalPin($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Family whereReferralSourceCode($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Family whereUpdatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Family withTrashed(bool $withTrashed = true)

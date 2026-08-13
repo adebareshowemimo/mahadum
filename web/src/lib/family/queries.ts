@@ -42,12 +42,14 @@ export function useAddChild() {
   })
 }
 
-export function useSetPin() {
+export function useSetChildPin() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (pin: string) => familyApi.setPin(pin),
+    mutationFn: ({ learnerId, pin }: { learnerId: number; pin: string | null }) =>
+      familyApi.setChildPin(learnerId, pin),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: familyKeys.family })
+      // The profile switcher's shield icon reads this via /me.
       void qc.invalidateQueries({ queryKey: ['me'] })
     },
   })

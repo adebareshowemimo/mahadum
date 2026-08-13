@@ -316,16 +316,28 @@ class DevSeeder extends Seeder
                 }
 
                 $teachers = User::where('email', 'like', 'teacher%@dev.mahadum360')->inRandomOrder()->limit(3)->get();
+                // The documented demo login (teacher1@dev.mahadum360) must own a class
+                // somewhere so it's a usable manual-QA account, not just a school member.
+                if ($s === 1) {
+                    $teacher1 = User::where('email', 'teacher1@dev.mahadum360')->first();
+                    if ($teacher1 && ! $teachers->contains('id', $teacher1->id)) {
+                        $teachers->push($teacher1);
+                    }
+                }
                 foreach ($teachers as $t) {
                     $org->members()->syncWithoutDetaching([$t->id => ['role' => 'teacher', 'status' => 'active']]);
                 }
 
                 foreach (range(1, fake()->numberBetween(2, 4)) as $c) {
+                    // Round-robin across the sampled teachers so each one actually owns
+                    // classes (all-classes-to-one-teacher previously left the other demo
+                    // teacher accounts with zero classes and no way to test assignments).
+                    $classTeacher = $teachers->isNotEmpty() ? $teachers[($c - 1) % $teachers->count()] : null;
                     $class = SchoolClass::create([
                         'organization_id' => $org->id,
                         'name' => 'Class '.fake()->randomElement(['JSS1', 'JSS2', 'Primary 4', 'Primary 5', 'SS1']).$c,
                         'level' => fake()->randomElement(['A1', 'A2', 'B1']),
-                        'teacher_user_id' => $teachers->first()?->id,
+                        'teacher_user_id' => $classTeacher?->id,
                     ]);
 
                     foreach (range(1, fake()->numberBetween(10, 18)) as $st) {

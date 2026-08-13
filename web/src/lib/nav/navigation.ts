@@ -80,6 +80,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Overview', to: '/admin', icon: 'shield', roles: ['super_admin'], end: true },
       { label: 'Organizations', to: '/admin/orgs', icon: 'building', roles: ['super_admin'] },
+      { label: 'Adverts', to: '/admin/adverts', icon: 'sparkles', roles: ['super_admin'] },
       { label: 'School leads', to: '/admin/leads', icon: 'building', roles: ['super_admin'] },
       { label: 'Users', to: '/admin/users', icon: 'users', roles: ['super_admin'] },
       { label: 'Roles', to: '/admin/roles', icon: 'shield', roles: ['super_admin'] },
@@ -109,7 +110,7 @@ export const NAV_SECTIONS: NavSection[] = [
         label: 'Design system',
         to: '/components',
         icon: 'sparkles',
-        roles: ['super_admin', 'content_owner'],
+        roles: ['super_admin'],
       },
     ],
   },
