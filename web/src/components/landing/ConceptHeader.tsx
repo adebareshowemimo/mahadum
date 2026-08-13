@@ -23,17 +23,18 @@ export function ConceptHeader({ tone = 'light', overlay = false }: { tone?: Conc
   const dark = tone !== 'light'
   const [menuOpen, setMenuOpen] = useState(false)
   return (
-    <header
-      className={cn(
-        overlay ? 'absolute inset-x-0 top-0 z-30 border-transparent bg-transparent' : 'sticky top-0 z-30 border-b',
-        !overlay && tone === 'light' && 'border-chore-100 bg-white',
-        !overlay && tone === 'blue' && 'border-white/20 bg-[#0757bd] text-white',
-        !overlay && tone === 'navy' && 'border-white/15 bg-[#061a3c] text-white',
-      )}
-    >
+    <>
       {/* Adverts don't render on overlay-style headers (transparent, sitting on a hero image). */}
       {!overlay && <AdvertLeaderboard />}
-      <div className="mx-auto flex min-h-[4.75rem] max-w-[90rem] flex-wrap items-center justify-between gap-x-3 px-4 py-2 sm:h-[4.75rem] sm:flex-nowrap sm:px-6 sm:py-0 lg:px-10">
+      <header
+        className={cn(
+          overlay ? 'absolute inset-x-0 top-0 z-30 border-transparent bg-transparent' : 'sticky top-0 z-30 border-b',
+          !overlay && tone === 'light' && 'border-chore-100 bg-white',
+          !overlay && tone === 'blue' && 'border-white/20 bg-[#0757bd] text-white',
+          !overlay && tone === 'navy' && 'border-white/15 bg-[#061a3c] text-white',
+        )}
+      >
+        <div className="mx-auto flex min-h-[4.75rem] max-w-[90rem] flex-wrap items-center justify-between gap-x-3 px-4 py-2 sm:h-[4.75rem] sm:flex-nowrap sm:px-6 sm:py-0 lg:px-10">
         <Link
           to="/"
           aria-label={`${WORDMARK} home`}
@@ -93,8 +94,9 @@ export function ConceptHeader({ tone = 'light', overlay = false }: { tone?: Conc
             <Icon name={menuOpen ? 'close' : 'menu'} />
           </button>
         </div>
-      </div>
-    </header>
+        </div>
+      </header>
+    </>
   )
 }
 

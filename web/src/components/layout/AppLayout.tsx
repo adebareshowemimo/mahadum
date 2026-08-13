@@ -46,6 +46,7 @@ export function AppLayout() {
 
       {/* Main column */}
       <div className="lg:pl-64">
+        <AdvertLeaderboard />
         <Topbar onOpenDrawer={() => setDrawerOpen(true)} />
         <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
           <Outlet />
@@ -116,7 +117,6 @@ function Topbar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
 
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-surface/80 backdrop-blur">
-      <AdvertLeaderboard />
       <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
         <IconButton onClick={onOpenDrawer} className="lg:hidden" aria-label="Open menu">
           <Icon name="menu" />
