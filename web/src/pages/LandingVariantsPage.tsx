@@ -9,6 +9,7 @@ import { Logo } from '@/components/Logo'
 import { Icon, LinkButton } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { TAGLINE, WORDMARK } from '@/lib/brand'
+import { useAuth } from '@/lib/auth/AuthProvider'
 
 export { ConceptHeader } from '@/components/landing/ConceptHeader'
 
@@ -16,6 +17,13 @@ type ConceptTone = 'light' | 'blue' | 'navy'
 
 export function ConceptFooter({ tone = 'light' }: { tone?: ConceptTone }) {
   const dark = tone !== 'light'
+  const { status } = useAuth()
+  // A loading auth state means a stored token is being verified. Keep the
+  // account destination visible instead of flashing a misleading sign-in CTA.
+  const accountLink = status === 'unauthenticated'
+    ? { to: '/login', label: 'Sign in' }
+    : { to: '/home', label: 'Dashboard' }
+
   return (
     <footer className={cn('border-t', dark ? 'border-white/15 bg-[#061a3c] text-white' : 'border-chore-100 bg-white')}>
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
@@ -34,7 +42,9 @@ export function ConceptFooter({ tone = 'light' }: { tone?: ConceptTone }) {
               <Link className="inline-flex min-h-11 items-center hover:underline" to="/institutions">Institutions</Link>
               <Link className="inline-flex min-h-11 items-center hover:underline" to="/about">About us</Link>
               <Link className="inline-flex min-h-11 items-center hover:underline" to="/pricing">Pricing</Link>
-              <Link className="inline-flex min-h-11 items-center hover:underline" to="/login">Sign in</Link>
+              <Link className="inline-flex min-h-11 items-center hover:underline" to={accountLink.to}>
+                {accountLink.label}
+              </Link>
             </div>
           </nav>
           <nav aria-label="Help and legal information">
