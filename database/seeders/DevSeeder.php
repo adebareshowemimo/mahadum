@@ -69,6 +69,10 @@ class DevSeeder extends Seeder
 
     public function run(): void
     {
+        // This dedicated seeder is idempotent, so existing development
+        // databases can pick up the sample placements without being reset.
+        $this->call(AdvertPlacementSeeder::class);
+
         if (User::where('email', 'super@dev.mahadum360')->exists()) {
             $this->command?->warn('DevSeeder already run — skipping. Drop the database to reseed.');
 

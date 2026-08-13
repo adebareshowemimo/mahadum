@@ -17,7 +17,10 @@ class DatabaseSeeder extends Seeder
 
         // Demo fixtures for local/QA only — never in production.
         if (app()->environment('local', 'demo')) {
-            $this->call(DemoSeeder::class);
+            $this->call([
+                DemoSeeder::class,
+                AdvertPlacementSeeder::class,
+            ]);
         }
     }
 }
