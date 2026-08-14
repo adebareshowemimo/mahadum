@@ -242,6 +242,8 @@ Route::prefix('v1')->group(function () {
         /* ---- Family & wallet (parent) ---- */
         Route::get('family', [FamilyController::class, 'show'])->middleware('can:family.manage');
         Route::post('family/children', [FamilyController::class, 'addChild'])->middleware('can:family.manage');
+        Route::get('family/children/{learner}', [FamilyController::class, 'child'])
+            ->middleware('can:family.manage');
         Route::put('family/children/{learner}/pin', [FamilyController::class, 'setChildPin'])
             ->middleware('can:family.manage');
         Route::get('wallet', [WalletController::class, 'show'])->middleware('can:family.wallet.view');

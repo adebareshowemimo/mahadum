@@ -8,11 +8,13 @@ use App\Http\Requests\Content\UpdateCourseRequest;
 use App\Http\Resources\CourseLevelResource;
 use App\Http\Resources\CourseResource;
 use App\Models\Course;
+use App\Models\LearnerProfile;
 use App\Models\Lesson;
 use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Gate;
 
 class CourseController extends Controller
 {
@@ -29,6 +31,17 @@ class CourseController extends Controller
         // Learners only see published courses; CMS roles see drafts too.
         if (! $request->user()->can('content.courses.view')) {
             $query->where('is_published', true);
+        }
+
+        // Learner-facing catalogues need enrollment state so the UI can show
+        // genuinely available courses instead of offering the same course
+        // again. Authorize the requested profile before using it in the query.
+        if ($request->filled('learner_id')) {
+            $learner = LearnerProfile::findOrFail($request->integer('learner_id'));
+            Gate::authorize('view', $learner);
+            $query->withExists([
+                'enrollments as is_enrolled' => fn ($q) => $q->where('learner_profile_id', $learner->id),
+            ]);
         }
 
         if ($request->filled('language')) {

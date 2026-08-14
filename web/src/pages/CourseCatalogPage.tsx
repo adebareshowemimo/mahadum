@@ -14,7 +14,7 @@ import { useCourses, useEnroll } from '@/lib/learning/queries'
  */
 export function CourseCatalogPage() {
   const { activeLearner } = useActiveProfile()
-  const { data: courses, isLoading, isError } = useCourses()
+  const { data: courses, isLoading, isError } = useCourses(activeLearner?.id)
   const enroll = useEnroll(activeLearner?.id ?? 0)
   const navigate = useNavigate()
 
@@ -80,14 +80,17 @@ export function CourseCatalogPage() {
                 <Button
                   size="sm"
                   className="mt-auto"
-                  loading={enroll.isPending && enroll.variables === course.id}
+                  variant={course.is_enrolled ? 'secondary' : 'primary'}
+                  loading={!course.is_enrolled && enroll.isPending && enroll.variables === course.id}
                   onClick={() =>
-                    enroll.mutate(course.id, {
-                      onSuccess: () => navigate('/learn'),
-                    })
+                    course.is_enrolled
+                      ? navigate('/learn')
+                      : enroll.mutate(course.id, {
+                          onSuccess: () => navigate('/learn'),
+                        })
                   }
                 >
-                  Start course
+                  {course.is_enrolled ? 'Continue learning' : 'Start course'}
                 </Button>
               </CardBody>
             </Card>

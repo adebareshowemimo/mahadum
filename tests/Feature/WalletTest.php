@@ -35,6 +35,28 @@ class WalletTest extends TestCase
         $this->assertDatabaseHas('coin_transactions', [
             'learner_profile_id' => $learner->id, 'source' => 'transfer', 'amount' => 30, 'balance_after' => 30,
         ]);
+
+        // Child detail reads the learner-owned wallet and its actual ledger,
+        // not the family's remaining balance or a UI-only value.
+        $this->getJson("/api/v1/family/children/{$learner->id}")
+            ->assertOk()
+            ->assertJsonPath('data.coin_balance', 30)
+            ->assertJsonPath('data.coin_transactions.0.source', 'transfer')
+            ->assertJsonPath('data.coin_transactions.0.amount', 30)
+            ->assertJsonPath('data.coin_transactions.0.balance_after', 30);
+    }
+
+    public function test_parent_cannot_open_a_child_from_another_family(): void
+    {
+        $this->seedRbac();
+        $owner = $this->userWithRole('parent');
+        $otherParent = $this->userWithRole('parent');
+        $otherChild = $this->parentWithChild($otherParent);
+
+        $this->actingAsUser($owner);
+        $this->parentWithChild($owner);
+
+        $this->getJson("/api/v1/family/children/{$otherChild->id}")->assertForbidden();
     }
 
     public function test_chore_approval_releases_coins_only_on_approve(): void

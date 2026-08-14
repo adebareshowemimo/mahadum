@@ -189,6 +189,27 @@ export interface FamilyOverview {
   learners: { id: number; display_name: string; is_child: boolean; pin_protected: boolean; coin_balance: number }[]
 }
 
+export interface ChildCoinTransaction {
+  id: number
+  type: 'credit' | 'debit'
+  source: string
+  amount: number
+  balance_after: number | null
+  created_at: string
+}
+
+export interface ChildDetail {
+  id: number
+  display_name: string
+  age_band: string | null
+  current_level: number | null
+  target_language: string | null
+  pin_protected: boolean
+  /** Balance of this child's learner-owned, ledger-backed wallet. */
+  coin_balance: number
+  coin_transactions: ChildCoinTransaction[]
+}
+
 export type ChoreStatus = 'active' | 'pending_review' | 'approved' | 'rejected'
 
 export interface Chore {
@@ -265,6 +286,8 @@ export interface CourseSummary {
   level_band: string | null
   status: string
   is_published: boolean
+  /** Present when the catalogue is requested for a specific learner. */
+  is_enrolled?: boolean
   language?: string | null
   /** Present on admin/CMS listings (course owner name, level count). */
   owner?: string | null

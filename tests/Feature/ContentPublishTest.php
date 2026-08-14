@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Course;
+use App\Models\Enrollment;
 use App\Models\Language;
+use App\Models\LearnerProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -97,5 +99,36 @@ class ContentPublishTest extends TestCase
         $this->getJson('/api/v1/courses?per_page=100')
             ->assertOk()
             ->assertJsonCount(25, 'data');
+    }
+
+    public function test_learner_catalog_marks_real_enrollment_state_and_rejects_another_profile(): void
+    {
+        $this->seedRbac();
+        $language = Language::create(['code' => 'yo', 'name' => 'Yoruba', 'script' => 'latin', 'is_active' => true]);
+        $enrolledCourse = Course::create([
+            'language_id' => $language->id, 'title' => 'Already started', 'status' => 'published', 'is_published' => true,
+        ]);
+        $availableCourse = Course::create([
+            'language_id' => $language->id, 'title' => 'Available', 'status' => 'published', 'is_published' => true,
+        ]);
+
+        $student = $this->actingAsUser($this->userWithRole('student'));
+        $learner = LearnerProfile::create(['user_id' => $student->id, 'display_name' => 'Learner']);
+        Enrollment::create([
+            'learner_profile_id' => $learner->id,
+            'course_id' => $enrolledCourse->id,
+            'status' => 'active',
+            'started_at' => now(),
+        ]);
+
+        $response = $this->getJson("/api/v1/courses?learner_id={$learner->id}&per_page=100")
+            ->assertOk();
+
+        $courses = collect($response->json('data'))->keyBy('id');
+        $this->assertTrue($courses[$enrolledCourse->id]['is_enrolled']);
+        $this->assertFalse($courses[$availableCourse->id]['is_enrolled']);
+
+        $otherLearner = LearnerProfile::create(['display_name' => 'Not mine']);
+        $this->getJson("/api/v1/courses?learner_id={$otherLearner->id}")->assertForbidden();
     }
 }

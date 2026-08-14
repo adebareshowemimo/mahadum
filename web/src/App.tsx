@@ -32,6 +32,7 @@ const MediaPage = lazy(() => import('@/pages/content/MediaPage').then((m) => ({ 
 const EarningsPage = lazy(() => import('@/pages/EarningsPage').then((m) => ({ default: m.EarningsPage })))
 const DashboardPage = lazy(() => import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
 const FamilyPage = lazy(() => import('@/pages/FamilyPage').then((m) => ({ default: m.FamilyPage })))
+const ChildPage = lazy(() => import('@/pages/ChildPage').then((m) => ({ default: m.ChildPage })))
 const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })))
 const AchievementsPage = lazy(() => import('@/pages/AchievementsPage').then((m) => ({ default: m.AchievementsPage })))
 const AdminOverviewPage = lazy(() => import('@/pages/AdminOverviewPage').then((m) => ({ default: m.AdminOverviewPage })))
@@ -272,6 +273,7 @@ export function App() {
           <Route path="/achievements" element={<AchievementsPage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/family" element={<FamilyPage />} />
+          <Route path="/family/children/:learnerId" element={<ChildPage />} />
           <Route path="/wallet" element={<WalletPage />} />
           <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/billing" element={<BillingPage />} />

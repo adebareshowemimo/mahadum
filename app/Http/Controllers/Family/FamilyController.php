@@ -92,6 +92,40 @@ class FamilyController extends Controller
         return response()->json(['data' => ['id' => $learner->id, 'display_name' => $learner->display_name]], 201);
     }
 
+    /** Parent-only child detail, including the child's own ledger-backed coins. */
+    public function child(LearnerProfile $learner, Request $request): JsonResponse
+    {
+        $family = $this->family($request->user());
+        abort_unless((int) $learner->family_id === $family->id, 403, 'Not your family.');
+
+        $learner->load('targetLanguage');
+        $wallet = $this->wallets->walletFor($learner);
+
+        return response()->json(['data' => [
+            'id' => $learner->id,
+            'display_name' => $learner->display_name,
+            'age_band' => $learner->age_band,
+            'current_level' => $learner->current_level,
+            'target_language' => $learner->targetLanguage?->code,
+            'pin_protected' => $learner->parental_pin !== null,
+            // This is the learner-owned wallet balance maintained atomically
+            // alongside the append-only transactions returned below.
+            'coin_balance' => $wallet->coin_balance,
+            'coin_transactions' => $wallet->transactions()
+                ->latest()
+                ->limit(10)
+                ->get()
+                ->map(fn ($transaction) => [
+                    'id' => $transaction->id,
+                    'type' => $transaction->type,
+                    'source' => $transaction->source,
+                    'amount' => $transaction->amount,
+                    'balance_after' => $transaction->balance_after,
+                    'created_at' => $transaction->created_at,
+                ])->values(),
+        ]]);
+    }
+
     /** Set, change, or clear one child's own PIN — each child has a distinct code. */
     public function setChildPin(LearnerProfile $learner, SetChildPinRequest $request): JsonResponse
     {

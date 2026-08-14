@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Alert,
   Avatar,
@@ -104,16 +105,23 @@ export function FamilyPage() {
           {family.learners.map((l) => (
             <Card key={l.id}>
               <CardBody className="flex items-center gap-3">
-                <Avatar name={l.display_name} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-foreground">{l.display_name}</p>
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                    {l.is_child && <Badge variant="info">Child</Badge>}
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-muted">
-                      🪙 {l.coin_balance.toLocaleString()}
-                    </span>
+                <Link
+                  to={`/family/children/${l.id}`}
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                  aria-label={`View ${l.display_name}'s profile`}
+                >
+                  <Avatar name={l.display_name} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-foreground hover:text-primary">{l.display_name}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      {l.is_child && <Badge variant="info">Child</Badge>}
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-muted">
+                        🪙 {l.coin_balance.toLocaleString()}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                  <Icon name="chevron" className="size-4 -rotate-90 text-subtle" />
+                </Link>
                 {l.is_child && (
                   <Button
                     variant={l.pin_protected ? 'outline' : 'secondary'}

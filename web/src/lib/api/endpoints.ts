@@ -11,6 +11,7 @@ import type {
   ChoreDecision,
   BadgesInfo,
   CompleteResult,
+  ChildDetail,
   CoursePerformance,
   CourseSummary,
   CreateChoreInput,
@@ -257,6 +258,11 @@ export const familyApi = {
     return data.data
   },
 
+  async child(learnerId: number): Promise<ChildDetail> {
+    const { data } = await api.get(`/family/children/${learnerId}`)
+    return data.data
+  },
+
   /** Set, change, or (with `pin: null`) clear one child's own PIN. */
   async setChildPin(learnerId: number, pin: string | null): Promise<{ id: number; pin_protected: boolean }> {
     const { data } = await api.put(`/family/children/${learnerId}/pin`, { pin })
@@ -331,8 +337,8 @@ export const learningApi = {
   },
 
   /** Published courses available to enroll into. */
-  async courses(): Promise<CourseSummary[]> {
-    const { data } = await api.get('/courses', { params: { per_page: 100 } })
+  async courses(learnerId: number): Promise<CourseSummary[]> {
+    const { data } = await api.get('/courses', { params: { per_page: 100, learner_id: learnerId } })
     return data.data
   },
 

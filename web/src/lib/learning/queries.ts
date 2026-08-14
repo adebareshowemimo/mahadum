@@ -3,7 +3,7 @@ import { learningApi } from '@/lib/api'
 
 export const learningKeys = {
   path: (learnerId: number) => ['learner-path', learnerId] as const,
-  courses: ['courses', 'published'] as const,
+  courses: (learnerId: number) => ['courses', 'published', learnerId] as const,
 }
 
 export function usePath(learnerId: number | null | undefined) {
@@ -14,8 +14,12 @@ export function usePath(learnerId: number | null | undefined) {
   })
 }
 
-export function useCourses() {
-  return useQuery({ queryKey: learningKeys.courses, queryFn: learningApi.courses })
+export function useCourses(learnerId: number | null | undefined) {
+  return useQuery({
+    queryKey: learningKeys.courses(learnerId ?? 0),
+    queryFn: () => learningApi.courses(learnerId as number),
+    enabled: !!learnerId,
+  })
 }
 
 export function useEnroll(learnerId: number) {
@@ -24,6 +28,7 @@ export function useEnroll(learnerId: number) {
     mutationFn: (courseId: number) => learningApi.enroll(learnerId, courseId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: learningKeys.path(learnerId) })
+      void qc.invalidateQueries({ queryKey: learningKeys.courses(learnerId) })
     },
   })
 }

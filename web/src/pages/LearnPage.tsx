@@ -58,7 +58,7 @@ export function LearnPage() {
         <StatsBar learnerId={activeLearner.id} coinBalance={activeLearner.coin_balance} />
       </div>
 
-      {hasPath ? (
+      {hasPath && (
         <div className="flex flex-col gap-10">
           {path.units.map((unit, ui) => (
             <section key={`${unit.title}-${ui}`}>
@@ -73,9 +73,9 @@ export function LearnPage() {
             </section>
           ))}
         </div>
-      ) : (
-        <EnrollCard learnerId={activeLearner.id} />
       )}
+
+      <EnrollCard learnerId={activeLearner.id} hasPath={hasPath} />
     </div>
   )
 }
@@ -116,13 +116,15 @@ function NodeRow({ node, learnerId: _learnerId }: { node: PathNode; learnerId: n
   )
 }
 
-function EnrollCard({ learnerId }: { learnerId: number }) {
-  const { data: courses, isLoading } = useCourses()
+function EnrollCard({ learnerId, hasPath }: { learnerId: number; hasPath: boolean }) {
+  const { data: courses, isLoading, isError } = useCourses(learnerId)
   const enroll = useEnroll(learnerId)
 
   if (isLoading) return <Skeleton className="h-40" />
 
-  const available = (courses ?? []).filter((c: CourseSummary) => c.is_published)
+  if (isError) return <Alert variant="danger">We couldn’t load the available courses. Please refresh and try again.</Alert>
+
+  const available = (courses ?? []).filter((c: CourseSummary) => c.is_published && !c.is_enrolled)
 
   return (
     <Card>
@@ -131,9 +133,11 @@ function EnrollCard({ learnerId }: { learnerId: number }) {
           <span className="text-4xl" aria-hidden="true">
             🚀
           </span>
-          <h2 className="mt-2 font-display text-xl font-bold text-foreground">Start a course</h2>
+          <h2 className="mt-2 font-display text-xl font-bold text-foreground">
+            {hasPath ? 'Available courses' : 'Start a course'}
+          </h2>
           <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
-            Choose a course to begin the learning journey.
+            {hasPath ? 'Add another published course to this learner’s journey.' : 'Choose a course to begin the learning journey.'}
           </p>
         </div>
 
@@ -144,7 +148,9 @@ function EnrollCard({ learnerId }: { learnerId: number }) {
         )}
 
         {available.length === 0 ? (
-          <p className="text-center text-sm text-muted">No courses are available yet.</p>
+          <p className="text-center text-sm text-muted">
+            {hasPath ? 'This learner is enrolled in every available course.' : 'No courses are available yet.'}
+          </p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {available.map((course) => (

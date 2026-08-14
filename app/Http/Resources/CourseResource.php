@@ -20,6 +20,10 @@ class CourseResource extends JsonResource
             'level_band' => $this->level_band,
             'status' => $this->status,
             'is_published' => (bool) $this->is_published,
+            'is_enrolled' => $this->when(
+                $this->getAttribute('is_enrolled') !== null,
+                fn () => (bool) $this->getAttribute('is_enrolled'),
+            ),
             'language' => $this->whenLoaded('language', fn () => $this->language->code),
             'owner' => $this->whenLoaded('ownerUser', fn () => $this->ownerUser?->name),
             'levels_count' => $this->whenCounted('levels'),

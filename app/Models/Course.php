@@ -24,6 +24,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read Language $language
  * @property-read Collection<int, CourseLevel> $levels
+ * @property-read Collection<int, Enrollment> $enrollments
  * @property-read int|null $levels_count
  * @property-read User|null $ownerUser
  *
@@ -79,5 +80,13 @@ class Course extends Model
     public function levels(): HasMany
     {
         return $this->hasMany(CourseLevel::class);
+    }
+
+    /**
+     * @return HasMany<Enrollment, $this>
+     */
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(Enrollment::class);
     }
 }
