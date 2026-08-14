@@ -22,6 +22,7 @@ const AccessibilityPage = lazy(() => import('@/pages/PublicTrustPages').then((m)
 const AssignmentsPage = lazy(() => import('@/pages/AssignmentsPage').then((m) => ({ default: m.AssignmentsPage })))
 const BillingPage = lazy(() => import('@/pages/BillingPage').then((m) => ({ default: m.BillingPage })))
 const ClassesPage = lazy(() => import('@/pages/ClassesPage').then((m) => ({ default: m.ClassesPage })))
+const ClassPage = lazy(() => import('@/pages/ClassPage').then((m) => ({ default: m.ClassPage })))
 const InviteClassLearnerPage = lazy(() => import('@/pages/InviteClassLearnerPage').then((m) => ({ default: m.InviteClassLearnerPage })))
 const ClassInvitationPage = lazy(() => import('@/pages/ClassInvitationPage').then((m) => ({ default: m.ClassInvitationPage })))
 const TeacherProfilePage = lazy(() => import('@/pages/TeacherProfilePage').then((m) => ({ default: m.TeacherProfilePage })))
@@ -96,6 +97,35 @@ const WalletPage = lazy(() => import('@/pages/WalletPage').then((m) => ({ defaul
 const LoginPage = lazy(() => import('@/pages/LoginPage').then((m) => ({ default: m.LoginPage })))
 const RegisterPage = lazy(() => import('@/pages/RegisterPage').then((m) => ({ default: m.RegisterPage })))
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })))
+const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
+
+const PAGE_TITLES: Record<string, string> = {
+  '/': 'Learn Nigerian Languages',
+  '/home': 'Dashboard',
+  '/learn': 'My Learning',
+  '/learn/courses': 'Courses',
+  '/family': 'Family',
+  '/classes': 'Classes',
+  '/assignments': 'Assignments',
+  '/school': 'School Dashboard',
+  '/admin': 'Admin Overview',
+  '/login': 'Sign In',
+  '/register': 'Create Account',
+}
+
+function PageTitleManager() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    let title = PAGE_TITLES[pathname]
+    if (!title && /^\/classes\/\d+/.test(pathname)) title = pathname.endsWith('/invite') ? 'Invite Learner' : 'Class Workspace'
+    if (!title && pathname.startsWith('/admin/')) title = 'Administration'
+    if (!title && pathname.startsWith('/courses/')) title = 'Course'
+    document.title = `${title ?? 'MAHADUM.360'} · MAHADUM.360`
+  }, [pathname])
+
+  return null
+}
 
 // A link to "/#some-id" from a route OTHER than the target page (e.g. the
 // Families page linking to the "#try" section on "/") triggers a real
@@ -233,6 +263,7 @@ export function App() {
   return (
     <Suspense fallback={<RouteFallback />}>
       <HashScrollRestoration />
+      <PageTitleManager />
       <Routes>
       {/* Public marketing (redirects signed-in users away). V1 is the selected home page. */}
       <Route path="/" element={<LandingV1Page />} />
@@ -280,9 +311,12 @@ export function App() {
           <Route path="/wallet" element={<WalletPage />} />
           <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/billing" element={<BillingPage />} />
-          <Route element={<TeacherRoute />}>
+          <Route element={<RoleRoute roles={['teacher', 'school_admin']} />}>
             <Route path="/classes" element={<ClassesPage />} />
+            <Route path="/classes/:classId" element={<ClassPage />} />
             <Route path="/classes/:classId/invite" element={<InviteClassLearnerPage />} />
+          </Route>
+          <Route element={<TeacherRoute />}>
             <Route path="/assignments" element={<AssignmentsPage />} />
             <Route path="/earnings" element={<EarningsPage />} />
             <Route path="/teacher/profile" element={<TeacherProfilePage />} />
@@ -360,7 +394,7 @@ export function App() {
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Suspense>
   )

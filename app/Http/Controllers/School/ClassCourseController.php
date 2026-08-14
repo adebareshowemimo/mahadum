@@ -19,13 +19,18 @@ class ClassCourseController extends Controller
         private AuditLogger $audit,
     ) {}
 
-    /** Published course catalogue plus assignment state for this class. */
+    /** Published catalogue plus every course already assigned to this class. */
     public function index(SchoolClass $class): JsonResponse
     {
         $assigned = $class->courseAssignments()->pluck('course_id')->all();
 
         $courses = Course::query()
-            ->where('is_published', true)
+            ->where(function ($query) use ($assigned) {
+                $query->where('is_published', true);
+                if ($assigned !== []) {
+                    $query->orWhereIn('id', $assigned);
+                }
+            })
             ->with('language')
             ->orderBy('title')
             ->get()
@@ -36,6 +41,7 @@ class ClassCourseController extends Controller
                 'level_band' => $course->level_band,
                 'language' => $course->language->code,
                 'assigned' => in_array($course->id, $assigned, true),
+                'is_published' => $course->is_published,
             ]);
 
         return response()->json(['data' => $courses]);

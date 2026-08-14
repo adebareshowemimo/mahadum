@@ -762,6 +762,7 @@ export interface ClassCourseRow {
   level_band: string | null
   language: string | null
   assigned: boolean
+  is_published: boolean
 }
 
 export interface AddClassLearnerInput {

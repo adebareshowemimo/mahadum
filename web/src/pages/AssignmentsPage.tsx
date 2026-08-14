@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Alert, Avatar, Badge, Button, Card, CardBody, Input, Modal, Skeleton, Textarea } from '@/components/ui'
 import { ApiError, type ClassAssignmentRosterEntry } from '@/lib/api'
 import { useBadges } from '@/lib/gamification/queries'
@@ -14,11 +15,14 @@ import {
 
 export function AssignmentsPage() {
   const { data: classes, isLoading, isError } = useMyClasses()
+  const [searchParams] = useSearchParams()
   const [classId, setClassId] = useState<number | null>(null)
   const [openAssignmentId, setOpenAssignmentId] = useState<number | null>(null)
   const [showCreate, setShowCreate] = useState(false)
 
-  const activeClassId = classId ?? classes?.[0]?.id ?? null
+  const requestedClassId = Number(searchParams.get('class'))
+  const linkedClassId = Number.isInteger(requestedClassId) && classes?.some((item) => item.id === requestedClassId) ? requestedClassId : null
+  const activeClassId = classId ?? linkedClassId ?? classes?.[0]?.id ?? null
 
   if (isLoading) return <Skeleton className="h-48" />
   if (isError || !classes) return <Alert variant="danger">We couldn’t load your classes. Please refresh and try again.</Alert>
@@ -193,7 +197,7 @@ function CreateAssignmentModal({ classId, open, onClose }: { classId: number; op
           onChange={(e) => update('instructions', e.target.value)}
           error={fieldErrors.instructions}
         />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Input
             label="Due date (optional)"
             type="date"
@@ -326,7 +330,7 @@ function RosterRow({
       {grading && (
         <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
           {error && <Alert variant="danger">{error}</Alert>}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid gap-2 sm:grid-cols-2">
             <Input label="Score (optional)" type="number" min={0} max={100} value={score} onChange={(e) => setScore(e.target.value)} />
             <div className="flex flex-col justify-end text-xs text-muted">
               {coinReward > 0 ? `${coinReward} coins release on pass` : 'No coin reward set'}

@@ -269,7 +269,7 @@ function NewChoreModal({ open, onClose }: { open: boolean; onClose: () => void }
               <p className="text-xs font-medium text-danger">{fieldErrors.assignee_learner_profile_id}</p>
             )}
           </label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <Input
               label="Coin reward"
               type="number"

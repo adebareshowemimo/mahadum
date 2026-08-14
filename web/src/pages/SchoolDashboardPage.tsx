@@ -9,6 +9,7 @@ import {
   Icon,
   Input,
   Modal,
+  LinkButton,
   Skeleton,
 } from '@/components/ui'
 import { ApiError, type SchoolTeacher } from '@/lib/api'
@@ -96,6 +97,7 @@ function Dashboard({ orgId }: { orgId: number }) {
                   </div>
                   <p className="text-sm text-muted">{c.teacher ?? 'No teacher'} · {c.students} students</p>
                   <AssignTeacher classId={c.id} teachers={teachers.data} />
+                  <LinkButton to={`/classes/${c.id}`} variant="outline" size="sm" className="mt-1 self-start">Open class</LinkButton>
                 </CardBody>
               </Card>
             ))}

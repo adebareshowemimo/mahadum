@@ -54,6 +54,17 @@ export function useMyClasses() {
   return useQuery({ queryKey: schoolKeys.myClasses(orgId), queryFn: () => schoolApi.classes({ mine: true }) })
 }
 
+/** Teacher sees own classes; school admin sees every class in the active school. */
+export function useManageableClasses() {
+  const orgId = useSchoolOrgId()
+  const { hasRole } = useAuth()
+  const mine = hasRole('teacher') && !hasRole('school_admin')
+  return useQuery({
+    queryKey: ['school-classes', 'manageable', orgId, mine],
+    queryFn: () => schoolApi.classes({ mine }),
+  })
+}
+
 export function useSeats(orgId: number | null) {
   return useQuery({
     queryKey: schoolKeys.seats(orgId ?? 0),

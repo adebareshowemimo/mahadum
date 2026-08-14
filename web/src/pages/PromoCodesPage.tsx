@@ -110,7 +110,7 @@ export function PromoCodesPage() {
               autoFocus
               required
             />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <label className="flex flex-col gap-1.5">
                 <span className="text-sm font-semibold text-foreground">Discount type</span>
                 <select
@@ -139,7 +139,7 @@ export function PromoCodesPage() {
               error={fieldErrors.applicable_tier}
               placeholder="e.g. school"
             />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <Input
                 label="Valid until (optional)"
                 type="date"

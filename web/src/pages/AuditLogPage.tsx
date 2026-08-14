@@ -111,7 +111,7 @@ function AuditDetailModal({ log, onClose }: { log: AuditLogRow; onClose: () => v
   return (
     <Modal open onClose={onClose} title={log.action} description={log.created_at ? new Date(log.created_at).toLocaleString() : undefined}>
       <div className="flex flex-col gap-4 text-sm">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Actor" value={log.actor ? `${log.actor.name} (${log.actor.email})` : 'system'} />
           <Field label="IP" value={log.ip ?? '—'} />
           <Field label="Subject" value={log.subject ? `${log.subject.type} #${log.subject.id}` : '—'} />

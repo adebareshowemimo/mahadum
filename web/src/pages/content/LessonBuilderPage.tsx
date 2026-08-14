@@ -326,7 +326,7 @@ function LessonAnalyticsModal({ lessonId, open, onClose }: { lessonId: number; o
         <p className="py-8 text-center text-sm text-muted">No learner activity yet — insights appear once learners start this lesson.</p>
       ) : (
         <div className="flex flex-col gap-6">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <Stat label="Learners started" value={data.learners_started} />
             <Stat label="Completed" value={`${data.learners_completed} · ${pct(data.learners_completed, data.learners_started)}%`} />
           </div>

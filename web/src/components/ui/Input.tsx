@@ -14,6 +14,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
 ) {
   const autoId = useId()
   const inputId = id ?? autoId
+  const messageId = `${inputId}-message`
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -28,6 +29,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           ref={ref}
           id={inputId}
           aria-invalid={error ? true : undefined}
+          aria-describedby={error || hint ? messageId : undefined}
           className={cn(
             'h-11 w-full rounded-xl border bg-surface px-3.5 text-sm text-foreground placeholder:text-subtle',
             'transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-background',
@@ -39,9 +41,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         />
       </div>
       {error ? (
-        <p className="text-xs font-medium text-danger">{error}</p>
+        <p id={messageId} role="alert" className="text-xs font-medium text-danger">{error}</p>
       ) : hint ? (
-        <p className="text-xs text-muted">{hint}</p>
+        <p id={messageId} className="text-xs text-muted">{hint}</p>
       ) : null}
     </div>
   )

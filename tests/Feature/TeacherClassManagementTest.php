@@ -98,6 +98,14 @@ class TeacherClassManagementTest extends TestCase
             'learner_profile_id' => $existing->id,
             'course_id' => $course->id,
         ]);
+
+        $course->update(['is_published' => false]);
+        $this->getJson("/api/v1/classes/{$class->id}/courses")
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $course->id)
+            ->assertJsonPath('data.0.assigned', true)
+            ->assertJsonPath('data.0.is_published', false);
+        $course->update(['is_published' => true]);
         $existingEnrollmentId = Enrollment::where('learner_profile_id', $existing->id)
             ->where('course_id', $course->id)
             ->value('id');

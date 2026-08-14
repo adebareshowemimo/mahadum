@@ -46,7 +46,7 @@ export const BUTTON_SIZE_CLASSES: Record<ButtonSize, string> = {
 }
 
 export const BUTTON_BASE_CLASSES =
-  'inline-flex items-center justify-center font-display font-semibold transition-colors ' +
+  'inline-flex items-center justify-center font-semibold transition-colors ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
