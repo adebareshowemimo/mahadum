@@ -4,6 +4,7 @@ export {
   advertsApi,
   authApi,
   billingApi,
+  classInvitationApi,
   competitionApi,
   configApi,
   contentApi,

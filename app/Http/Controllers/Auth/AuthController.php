@@ -13,11 +13,13 @@ use App\Models\LearnerProfile;
 use App\Models\User;
 use App\Notifications\NewDeviceAlert;
 use App\Services\Referral\ReferralService;
+use App\Services\School\ClassLearnerInvitationService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\AbstractProvider;
 
@@ -25,11 +27,24 @@ class AuthController extends Controller
 {
     private const TOKEN_TTL_DAYS = 30;
 
-    public function register(RegisterRequest $request, ReferralService $referrals): JsonResponse
-    {
-        $role = $request->accountType() === 'learner' ? 'student' : 'parent';
+    public function register(
+        RegisterRequest $request,
+        ReferralService $referrals,
+        ClassLearnerInvitationService $classInvitations,
+    ): JsonResponse {
+        $invitationToken = $request->string('class_invitation_token')->toString();
+        $invitation = $invitationToken !== '' ? $classInvitations->findByToken($invitationToken) : null;
+        abort_if($invitation?->accepted_at !== null, 409, 'This invitation has already been used.');
+        abort_if($invitation?->expires_at?->isPast(), 410, 'This invitation has expired.');
+        if ($invitation && strcasecmp($invitation->email, $request->string('email')->toString()) !== 0) {
+            throw ValidationException::withMessages([
+                'email' => 'Register with the email address that received this invitation.',
+            ]);
+        }
 
-        $user = DB::transaction(function () use ($request, $role) {
+        $role = $invitation || $request->accountType() === 'learner' ? 'student' : 'parent';
+
+        $user = DB::transaction(function () use ($request, $role, $invitationToken, $classInvitations) {
             $user = User::create([
                 'first_name' => $request->string('first_name'),
                 'last_name' => $request->string('last_name'),
@@ -61,6 +76,10 @@ class AuthController extends Controller
                 ]);
             }
 
+            if ($invitationToken !== '') {
+                $classInvitations->accept($invitationToken, $user);
+            }
+
             return $user;
         });
 
@@ -73,7 +92,7 @@ class AuthController extends Controller
         return $this->tokenResponse($user, $request->string('device_name'), 201);
     }
 
-    public function login(LoginRequest $request): JsonResponse
+    public function login(LoginRequest $request, ClassLearnerInvitationService $classInvitations): JsonResponse
     {
         $login = $request->string('login');
 
@@ -87,6 +106,10 @@ class AuthController extends Controller
 
         if ($user->status !== 'active') {
             return $this->error('account_disabled', 'This account is not active.', 403);
+        }
+
+        if ($request->filled('class_invitation_token')) {
+            $classInvitations->accept($request->string('class_invitation_token')->toString(), $user);
         }
 
         $this->alertOnNewDevice($user, $request);

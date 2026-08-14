@@ -1,10 +1,11 @@
-import { useMemo, useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Alert, Button, Icon, Input } from '@/components/ui'
 import { AuthLayout } from '@/components/auth/AuthLayout'
 import { GoogleButton, OrDivider } from '@/components/auth/GoogleButton'
 import { cn } from '@/lib/cn'
-import { ApiError, type RegisterInput } from '@/lib/api'
+import { ApiError, classInvitationApi, type RegisterInput } from '@/lib/api'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useDigitalAge } from '@/lib/config/useConfig'
 
@@ -27,6 +28,14 @@ function ageFromDob(dob: string): number | null {
 export function RegisterPage() {
   const { register } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const invitationToken = searchParams.get('class_invitation') ?? ''
+  const invitation = useQuery({
+    queryKey: ['class-invitation', invitationToken],
+    queryFn: () => classInvitationApi.show(invitationToken),
+    enabled: invitationToken.length === 64,
+    retry: false,
+  })
   const digitalAge = useDigitalAge()
 
   const [step, setStep] = useState<Step>('age')
@@ -49,6 +58,17 @@ export function RegisterPage() {
 
   const age = useMemo(() => ageFromDob(dob), [dob])
 
+  useEffect(() => {
+    if (!invitation.data) return
+    const parts = invitation.data.name.trim().split(/\s+/)
+    setValues((value) => ({
+      ...value,
+      first_name: value.first_name || parts[0] || '',
+      last_name: value.last_name || parts.slice(1).join(' '),
+      email: invitation.data.email,
+    }))
+  }, [invitation.data])
+
   function update(field: keyof typeof values) {
     return (e: React.ChangeEvent<HTMLInputElement>) =>
       setValues((v) => ({ ...v, [field]: e.target.value }))
@@ -69,6 +89,10 @@ export function RegisterPage() {
       return
     }
     if (age < digitalAge) {
+      if (invitationToken) {
+        setAgeError(`Learners under ${digitalAge} cannot create their own login. Ask a parent or school administrator to create a managed learner profile, then your teacher can add it.`)
+        return
+      }
       setIsGuardianFlow(true)
       setStep('guardian')
     } else {
@@ -94,13 +118,14 @@ export function RegisterPage() {
         phone: values.phone,
         password: values.password,
         password_confirmation: values.password_confirmation,
-        account_type: 'parent',
+        account_type: invitationToken ? 'learner' : 'parent',
+        ...(invitationToken ? { class_invitation_token: invitationToken } : {}),
         // Adult owner: send their own DOB. Guardian flow's DOB belongs to the
         // child, so it's captured later when the child profile is added.
         ...(!isGuardianFlow && dob ? { date_of_birth: dob } : {}),
       }
       await register(payload)
-      navigate('/home', { replace: true })
+      navigate(invitationToken ? '/learn' : '/home', { replace: true })
     } catch (err) {
       if (err instanceof ApiError) {
         setFieldErrors(err.fieldErrors)
@@ -134,7 +159,7 @@ export function RegisterPage() {
       footer={
         <>
           Already have an account?{' '}
-          <Link to="/login" className="inline-flex min-h-11 items-center font-bold text-chore-700 hover:underline">
+          <Link to={invitationToken ? `/login?class_invitation=${invitationToken}` : '/login'} className="inline-flex min-h-11 items-center font-bold text-chore-700 hover:underline">
             Sign in
           </Link>
         </>
@@ -238,6 +263,7 @@ export function RegisterPage() {
               autoComplete="email"
               value={values.email}
               onChange={update('email')}
+              readOnly={!!invitationToken}
               error={fieldErrors.email}
               required
             />
@@ -293,12 +319,7 @@ export function RegisterPage() {
               Create account
             </Button>
 
-            <OrDivider />
-            <GoogleButton
-              label="Sign up with Google"
-              onSuccess={() => navigate('/home', { replace: true })}
-              onError={(msg) => setFormError(msg)}
-            />
+            {!invitationToken && <><OrDivider /><GoogleButton label="Sign up with Google" onSuccess={() => navigate('/home', { replace: true })} onError={(msg) => setFormError(msg)} /></>}
 
             <Button
               type="button"

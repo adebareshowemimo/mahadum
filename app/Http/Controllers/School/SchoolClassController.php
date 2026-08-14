@@ -169,44 +169,45 @@ class SchoolClassController extends Controller
     }
 
     /** School learners who are not already members of this class. */
-    public function availableLearners(SchoolClass $class): JsonResponse
+    public function availableLearners(Request $request, SchoolClass $class): JsonResponse
     {
+        $search = trim((string) $request->query('q', ''));
+
         $learners = LearnerProfile::query()
+            ->with('user:id,email')
             ->where('organization_id', $class->organization_id)
             ->whereDoesntHave('classEnrollments', fn ($query) => $query->where('school_class_id', $class->id))
+            ->when($search !== '', function ($query) use ($search) {
+                $like = '%'.str_replace(['%', '_'], ['\\%', '\\_'], $search).'%';
+                $query->where(function ($query) use ($like) {
+                    $query->where('display_name', 'like', $like)
+                        ->orWhereHas('user', fn ($query) => $query->where('email', 'like', $like));
+                });
+            })
             ->orderBy('display_name')
-            ->get(['id', 'display_name', 'age_band'])
+            ->limit(20)
+            ->get(['id', 'user_id', 'display_name', 'age_band'])
             ->map(fn (LearnerProfile $learner) => [
                 'id' => $learner->id,
                 'display_name' => $learner->display_name,
                 'level' => $learner->age_band,
+                'email' => $learner->user?->email,
             ]);
 
         return response()->json(['data' => $learners]);
     }
 
-    /** Add an existing school learner or create a school-managed learner. */
+    /** Add an existing learner from this school. New learners use invitations. */
     public function addLearner(StoreClassLearnerRequest $request, SchoolClass $class): JsonResponse
     {
         [$learner, $coursesEnrolled] = DB::transaction(function () use ($request, $class) {
-            $isNew = ! $request->filled('learner_id');
-            $learner = $isNew
-                ? LearnerProfile::create([
-                    'organization_id' => $class->organization_id,
-                    'display_name' => $request->string('display_name')->trim()->toString(),
-                    'age_band' => $request->input('level'),
-                ])
-                : LearnerProfile::where('organization_id', $class->organization_id)
-                    ->findOrFail($request->integer('learner_id'));
+            $learner = LearnerProfile::where('organization_id', $class->organization_id)
+                ->findOrFail($request->integer('learner_id'));
 
             ClassEnrollment::firstOrCreate([
                 'school_class_id' => $class->id,
                 'learner_profile_id' => $learner->id,
             ]);
-
-            if ($isNew && $allocation = $class->organization?->seatAllocations()->latest()->first()) {
-                $allocation->increment('active_filled');
-            }
 
             return [$learner, $this->courseEnrollments->syncLearner($class, $learner)];
         });

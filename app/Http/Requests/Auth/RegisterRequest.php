@@ -27,6 +27,7 @@ class RegisterRequest extends FormRequest
             'family_name' => ['nullable', 'string', 'max:255'],
             'date_of_birth' => ['nullable', 'date', 'before:today'],
             'referral_code' => ['nullable', 'string', 'max:50'],
+            'class_invitation_token' => ['nullable', 'string', 'size:64'],
         ];
     }
 

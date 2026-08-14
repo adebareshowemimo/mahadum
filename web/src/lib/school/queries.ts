@@ -5,6 +5,7 @@ import {
   type CreateClassAssignmentInput,
   type CreateClassInput,
   type GradeSubmissionInput,
+  type InviteClassLearnerInput,
   type PurchaseSeatsInput,
   type RequestPayoutInput,
   type RequestTeacherCompensationPayoutInput,
@@ -29,7 +30,7 @@ export const schoolKeys = {
   assignmentDetail: (classId: number, assignmentId: number) =>
     ['class-assignments', classId, assignmentId] as const,
   classCourses: (classId: number) => ['school-classes', classId, 'courses'] as const,
-  availableLearners: (classId: number) => ['school-classes', classId, 'available-learners'] as const,
+  availableLearners: (classId: number, query = '') => ['school-classes', classId, 'available-learners', query] as const,
   teacherCompensation: ['teacher-compensation'] as const,
   referrals: (org: number) => ['school-referrals', org] as const,
 }
@@ -139,10 +140,17 @@ export function useAddClassLearner(classId: number) {
   })
 }
 
-export function useAvailableClassLearners(classId: number) {
+export function useAvailableClassLearners(classId: number, query: string) {
   return useQuery({
-    queryKey: schoolKeys.availableLearners(classId),
-    queryFn: () => schoolApi.availableClassLearners(classId),
+    queryKey: schoolKeys.availableLearners(classId, query),
+    queryFn: () => schoolApi.availableClassLearners(classId, query),
+    enabled: query.trim().length >= 2,
+  })
+}
+
+export function useInviteClassLearner(classId: number) {
+  return useMutation({
+    mutationFn: (input: InviteClassLearnerInput) => schoolApi.inviteClassLearner(classId, input),
   })
 }
 

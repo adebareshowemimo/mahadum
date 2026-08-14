@@ -765,15 +765,32 @@ export interface ClassCourseRow {
 }
 
 export interface AddClassLearnerInput {
-  learner_id?: number
-  display_name?: string
-  level?: string
+  learner_id: number
 }
 
 export interface AvailableClassLearner {
   id: number
   display_name: string
   level: string | null
+  email: string | null
+}
+
+export interface InviteClassLearnerInput { name: string; email: string }
+export interface InviteClassLearnerResult extends InviteClassLearnerInput { id: number; expires_at: string }
+export interface ClassLearnerInvitationInfo {
+  name: string
+  email: string
+  class_name: string
+  organization_name: string
+  expires_at: string
+  status: 'pending' | 'accepted' | 'expired'
+  existing_user: boolean
+}
+export interface AcceptClassLearnerInvitationResult {
+  class_id: number
+  class_name: string
+  organization_name: string
+  status: 'accepted'
 }
 
 export interface AddClassLearnerResult {
@@ -1639,6 +1656,7 @@ export interface LoginInput {
   /** Email OR username. */
   login: string
   password: string
+  class_invitation_token?: string
 }
 
 export interface RegisterInput {
@@ -1654,6 +1672,7 @@ export interface RegisterInput {
   family_name?: string
   date_of_birth?: string
   referral_code?: string
+  class_invitation_token?: string
 }
 
 /* ── Language & Culture competition ─────────────────────────────────────── */

@@ -52,7 +52,11 @@ import type {
   ActiveAdvert,
   AddClassLearnerInput,
   AddClassLearnerResult,
+  AcceptClassLearnerInvitationResult,
   AvailableClassLearner,
+  ClassLearnerInvitationInfo,
+  InviteClassLearnerInput,
+  InviteClassLearnerResult,
   AdminAdvertPlacementList,
   AdminAdvertPlacementQuery,
   AdvertPlacement,
@@ -213,6 +217,17 @@ export const authApi = {
     password_confirmation: string
   }): Promise<void> {
     await api.post('/auth/password/reset', input)
+  },
+}
+
+export const classInvitationApi = {
+  async show(token: string): Promise<ClassLearnerInvitationInfo> {
+    const { data } = await api.get(`/class-invitations/${token}`)
+    return data.data
+  },
+  async accept(token: string): Promise<AcceptClassLearnerInvitationResult> {
+    const { data } = await api.post(`/class-invitations/${token}/accept`)
+    return data.data
   },
 }
 
@@ -1160,8 +1175,13 @@ export const schoolApi = {
     return data.data
   },
 
-  async availableClassLearners(classId: number): Promise<AvailableClassLearner[]> {
-    const { data } = await api.get(`/classes/${classId}/available-learners`)
+  async availableClassLearners(classId: number, query: string): Promise<AvailableClassLearner[]> {
+    const { data } = await api.get(`/classes/${classId}/available-learners`, { params: { q: query } })
+    return data.data
+  },
+
+  async inviteClassLearner(classId: number, input: InviteClassLearnerInput): Promise<InviteClassLearnerResult> {
+    const { data } = await api.post(`/classes/${classId}/invitations`, input)
     return data.data
   },
 

@@ -86,6 +86,7 @@ use App\Http\Controllers\Referral\ReferralController;
 use App\Http\Controllers\School\ClassAssignmentController;
 use App\Http\Controllers\School\ClassBadgeController;
 use App\Http\Controllers\School\ClassCourseController;
+use App\Http\Controllers\School\ClassLearnerInvitationController;
 use App\Http\Controllers\School\RosterController;
 use App\Http\Controllers\School\SchoolClassController;
 use App\Http\Controllers\School\SchoolDashboardController;
@@ -121,6 +122,8 @@ Route::prefix('v1')->group(function () {
         Route::post('auth/password/reset', [PasswordController::class, 'reset']);
         Route::post('leads/school', [SchoolLeadController::class, 'store']);
     });
+    Route::get('class-invitations/{token}', [ClassLearnerInvitationController::class, 'show'])
+        ->middleware('throttle:60,1');
 
     // Email verification link (clicked from the inbox; proven by the signature
     // + hash, so no bearer token is required).
@@ -145,6 +148,8 @@ Route::prefix('v1')->group(function () {
         Route::delete('auth/token', [AuthController::class, 'logout']);
         Route::post('profiles/{learner}/switch', [ProfileController::class, 'switch'])
             ->can('view', 'learner');
+        Route::post('class-invitations/{token}/accept', [ClassLearnerInvitationController::class, 'accept'])
+            ->middleware('throttle:20,1');
 
         // In-app notifications (database channel).
         Route::get('me/notifications', [NotificationController::class, 'index']);
@@ -332,6 +337,7 @@ Route::prefix('v1')->group(function () {
         Route::match(['put', 'patch'], 'classes/{class}', [SchoolClassController::class, 'update'])->can('update', 'class');
         Route::get('classes/{class}/available-learners', [SchoolClassController::class, 'availableLearners'])->can('update', 'class');
         Route::post('classes/{class}/learners', [SchoolClassController::class, 'addLearner'])->can('update', 'class');
+        Route::post('classes/{class}/invitations', [ClassLearnerInvitationController::class, 'store'])->can('update', 'class');
 
         /* ---- Teacher course assignment (own class; current + future learners) ---- */
         Route::get('classes/{class}/courses', [ClassCourseController::class, 'index'])->can('view', 'class');

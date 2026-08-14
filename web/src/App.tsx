@@ -22,6 +22,8 @@ const AccessibilityPage = lazy(() => import('@/pages/PublicTrustPages').then((m)
 const AssignmentsPage = lazy(() => import('@/pages/AssignmentsPage').then((m) => ({ default: m.AssignmentsPage })))
 const BillingPage = lazy(() => import('@/pages/BillingPage').then((m) => ({ default: m.BillingPage })))
 const ClassesPage = lazy(() => import('@/pages/ClassesPage').then((m) => ({ default: m.ClassesPage })))
+const InviteClassLearnerPage = lazy(() => import('@/pages/InviteClassLearnerPage').then((m) => ({ default: m.InviteClassLearnerPage })))
+const ClassInvitationPage = lazy(() => import('@/pages/ClassInvitationPage').then((m) => ({ default: m.ClassInvitationPage })))
 const TeacherProfilePage = lazy(() => import('@/pages/TeacherProfilePage').then((m) => ({ default: m.TeacherProfilePage })))
 const ComponentsPage = lazy(() => import('@/pages/ComponentsPage').then((m) => ({ default: m.ComponentsPage })))
 const CoursesPage = lazy(() => import('@/pages/content/CoursesPage').then((m) => ({ default: m.CoursesPage })))
@@ -249,6 +251,7 @@ export function App() {
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/child-safety" element={<ChildSafetyPage />} />
       <Route path="/accessibility" element={<AccessibilityPage />} />
+      <Route path="/class-invitations/:token" element={<ClassInvitationPage />} />
 
       {/* Public auth screens — redirect away if already signed in. */}
       <Route element={<GuestRoute />}>
@@ -279,6 +282,7 @@ export function App() {
           <Route path="/billing" element={<BillingPage />} />
           <Route element={<TeacherRoute />}>
             <Route path="/classes" element={<ClassesPage />} />
+            <Route path="/classes/:classId/invite" element={<InviteClassLearnerPage />} />
             <Route path="/assignments" element={<AssignmentsPage />} />
             <Route path="/earnings" element={<EarningsPage />} />
             <Route path="/teacher/profile" element={<TeacherProfilePage />} />

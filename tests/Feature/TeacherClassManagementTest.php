@@ -118,9 +118,13 @@ class TeacherClassManagementTest extends TestCase
             'course_id' => $course->id,
         ]);
 
-        $futureId = $this->postJson("/api/v1/classes/{$class->id}/learners", [
+        $future = LearnerProfile::create([
+            'organization_id' => $school->id,
             'display_name' => 'Future learner',
-            'level' => 'JSS1',
+            'age_band' => 'JSS1',
+        ]);
+        $futureId = $this->postJson("/api/v1/classes/{$class->id}/learners", [
+            'learner_id' => $future->id,
         ])->assertCreated()
             ->assertJsonPath('data.courses_enrolled', 1)
             ->json('data.learner_id');

@@ -1,21 +1,33 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Alert, Button, Input } from '@/components/ui'
 import { AuthLayout } from '@/components/auth/AuthLayout'
 import { GoogleButton, OrDivider } from '@/components/auth/GoogleButton'
-import { ApiError } from '@/lib/api'
+import { ApiError, classInvitationApi } from '@/lib/api'
 import { useAuth } from '@/lib/auth/AuthProvider'
 
 export function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const invitationToken = new URLSearchParams(location.search).get('class_invitation') ?? ''
+  const invitation = useQuery({
+    queryKey: ['class-invitation', invitationToken],
+    queryFn: () => classInvitationApi.show(invitationToken),
+    enabled: invitationToken.length === 64,
+    retry: false,
+  })
   const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/home'
 
   const [values, setValues] = useState({ login: '', password: '' })
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (invitation.data?.email) setValues((value) => ({ ...value, login: invitation.data.email }))
+  }, [invitation.data?.email])
 
   function update(field: keyof typeof values) {
     return (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -28,8 +40,8 @@ export function LoginPage() {
     setFormError(null)
     setFieldErrors({})
     try {
-      await login(values)
-      navigate(from, { replace: true })
+      await login({ ...values, ...(invitationToken ? { class_invitation_token: invitationToken } : {}) })
+      navigate(invitationToken ? '/learn' : from, { replace: true })
     } catch (err) {
       if (err instanceof ApiError) {
         setFieldErrors(err.fieldErrors)
@@ -56,7 +68,7 @@ export function LoginPage() {
       footer={
         <>
           New to Mahadum.360?{' '}
-          <Link to="/register" className="inline-flex min-h-11 items-center font-bold text-chore-700 hover:underline">
+          <Link to={invitationToken ? `/register?class_invitation=${invitationToken}` : '/register'} className="inline-flex min-h-11 items-center font-bold text-chore-700 hover:underline">
             Create an account
           </Link>
         </>
@@ -98,12 +110,7 @@ export function LoginPage() {
           Sign in
         </Button>
 
-        <OrDivider />
-
-        <GoogleButton
-          onSuccess={() => navigate(from, { replace: true })}
-          onError={(msg) => setFormError(msg)}
-        />
+        {!invitationToken && <><OrDivider /><GoogleButton onSuccess={() => navigate(from, { replace: true })} onError={(msg) => setFormError(msg)} /></>}
       </form>
     </AuthLayout>
   )

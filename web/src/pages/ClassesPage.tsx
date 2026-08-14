@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { Alert, Avatar, Badge, Button, Card, CardBody, Input, Modal, Skeleton } from '@/components/ui'
 import { ApiError, schoolApi } from '@/lib/api'
 import {
@@ -61,6 +62,7 @@ export function ClassesPage() {
 }
 
 function ClassDetailModal({ classId, onClose }: { classId: number | null; onClose: () => void }) {
+  const navigate = useNavigate()
   const [tab, setTab] = useState<'students' | 'courses' | 'analytics'>('students')
   const [addingLearner, setAddingLearner] = useState(false)
   const detail = useQuery({
@@ -89,8 +91,9 @@ function ClassDetailModal({ classId, onClose }: { classId: number | null; onClos
 
       {tab === 'students' ? (
         <div className="flex flex-col gap-3">
-          <div className="flex justify-end">
-            <Button size="sm" onClick={() => setAddingLearner(true)}>Invite learner</Button>
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="outline" onClick={() => setAddingLearner(true)}>Add learner</Button>
+            <Button size="sm" onClick={() => { onClose(); navigate(`/classes/${classId}/invite`) }}>Invite learner</Button>
           </div>
           {detail.isLoading ? (
             <Skeleton className="h-32" />
@@ -152,61 +155,50 @@ function CreateClassModal({ open, onClose }: { open: boolean; onClose: () => voi
 
 function AddLearnerForm({ classId, onDone }: { classId: number; onDone: () => void }) {
   const addLearner = useAddClassLearner(classId)
-  const available = useAvailableClassLearners(classId)
-  const [learnerId, setLearnerId] = useState('')
-  const [name, setName] = useState('')
-  const [level, setLevel] = useState('')
+  const [search, setSearch] = useState('')
+  const available = useAvailableClassLearners(classId, search)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  async function submit(e: FormEvent) {
-    e.preventDefault()
+  async function add(learnerId: number) {
     setError(null)
     try {
-      const result = await addLearner.mutateAsync(learnerId
-        ? { learner_id: Number(learnerId) }
-        : { display_name: name.trim(), level: level.trim() || undefined })
+      const result = await addLearner.mutateAsync({ learner_id: learnerId })
       setMessage(`${result.display_name} was added${result.courses_enrolled ? ` and enrolled in ${result.courses_enrolled} assigned course${result.courses_enrolled === 1 ? '' : 's'}` : ''}.`)
-      setName('')
-      setLevel('')
-      setLearnerId('')
+      setSearch('')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not add this learner.')
     }
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-3 rounded-xl border border-border bg-surface-muted p-4">
+    <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface-muted p-4">
       <p className="font-semibold text-foreground">Add a learner</p>
-      <p className="text-xs text-muted">Choose an existing school learner or create a new school-managed profile.</p>
+      <p className="text-xs text-muted">Search learners in your school by name or email. Learners outside your school are never shown.</p>
       {message && <Alert variant="success">{message}</Alert>}
       {error && <Alert variant="danger">{error}</Alert>}
-      {available.data && available.data.length > 0 && (
-        <label className="flex flex-col gap-1.5 text-sm font-medium text-foreground">
-          Existing school learner
-          <select
-            value={learnerId}
-            onChange={(e) => setLearnerId(e.target.value)}
-            className="h-11 rounded-xl border border-border-strong bg-surface px-3 text-sm text-foreground"
-          >
-            <option value="">Create a new learner…</option>
-            {available.data.map((learner) => (
-              <option key={learner.id} value={learner.id}>{learner.display_name}{learner.level ? ` · ${learner.level}` : ''}</option>
-            ))}
-          </select>
-        </label>
+      <Input label="Search school learners" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Enter at least 2 characters" autoFocus />
+      {available.isFetching && <p className="text-sm text-muted">Searching…</p>}
+      {search.trim().length >= 2 && !available.isFetching && available.data?.length === 0 && (
+        <p className="text-sm text-muted">No available learner in this school matches your search.</p>
       )}
-      {!learnerId && (
-        <>
-          <Input label="Learner name" value={name} onChange={(e) => setName(e.target.value)} required />
-          <Input label="Level (optional)" value={level} onChange={(e) => setLevel(e.target.value)} />
-        </>
+      {available.data && available.data.length > 0 && (
+        <ul className="flex max-h-52 flex-col gap-2 overflow-y-auto">
+          {available.data.map((learner) => (
+            <li key={learner.id} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3">
+              <div className="min-w-0">
+                <p className="font-medium text-foreground">{learner.display_name}</p>
+                <p className="truncate text-xs text-muted">{learner.email ?? learner.level ?? 'School learner'}</p>
+              </div>
+              <Button size="sm" loading={addLearner.isPending && addLearner.variables?.learner_id === learner.id} onClick={() => void add(learner.id)}>Add</Button>
+            </li>
+          ))}
+        </ul>
       )}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onDone}>Close</Button>
-        <Button type="submit" loading={addLearner.isPending} disabled={!learnerId && !name.trim()}>Add learner</Button>
       </div>
-    </form>
+    </div>
   )
 }
 
