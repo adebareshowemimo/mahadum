@@ -4,16 +4,21 @@ namespace App\Http\Controllers\School;
 
 use App\Http\Controllers\Concerns\ResolvesOrganization;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\School\StoreClassLearnerRequest;
 use App\Http\Requests\School\StoreSchoolClassRequest;
 use App\Models\ClassAssignmentSubmission;
+use App\Models\ClassEnrollment;
+use App\Models\LearnerProfile;
 use App\Models\LessonProgress;
 use App\Models\Organization;
 use App\Models\OrganizationUser;
 use App\Models\QuestionResponse;
 use App\Models\SchoolClass;
 use App\Models\SpeakingSubmission;
+use App\Services\School\ClassCourseEnrollmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Org-scoped via the BelongsToTenant global scope (auto-filters + auto-fills
@@ -23,6 +28,8 @@ use Illuminate\Http\Request;
 class SchoolClassController extends Controller
 {
     use ResolvesOrganization;
+
+    public function __construct(private ClassCourseEnrollmentService $courseEnrollments) {}
 
     /** Teachers a school admin can assign to a class (dropdown source). */
     public function teachers(Request $request, Organization $organization): JsonResponse
@@ -136,15 +143,78 @@ class SchoolClassController extends Controller
 
     public function store(StoreSchoolClassRequest $request): JsonResponse
     {
-        $class = SchoolClass::create($request->validated()); // organization_id auto-filled
+        $values = $request->validated();
+
+        // A teacher creates a classroom for themselves. They cannot use the
+        // request payload to assign it to another teacher.
+        if ($request->user()->hasRole('teacher') && ! $request->user()->hasRole('school_admin')) {
+            $values['teacher_user_id'] = $request->user()->id;
+        }
+
+        $class = SchoolClass::create($values); // organization_id auto-filled
 
         return response()->json(['data' => ['id' => $class->id, 'name' => $class->name]], 201);
     }
 
     public function update(StoreSchoolClassRequest $request, SchoolClass $class): JsonResponse
     {
-        $class->update($request->validated());
+        $values = $request->validated();
+        if ($request->user()->hasRole('teacher') && ! $request->user()->hasRole('school_admin')) {
+            unset($values['teacher_user_id']);
+        }
+
+        $class->update($values);
 
         return response()->json(['data' => ['id' => $class->id, 'name' => $class->name]]);
+    }
+
+    /** School learners who are not already members of this class. */
+    public function availableLearners(SchoolClass $class): JsonResponse
+    {
+        $learners = LearnerProfile::query()
+            ->where('organization_id', $class->organization_id)
+            ->whereDoesntHave('classEnrollments', fn ($query) => $query->where('school_class_id', $class->id))
+            ->orderBy('display_name')
+            ->get(['id', 'display_name', 'age_band'])
+            ->map(fn (LearnerProfile $learner) => [
+                'id' => $learner->id,
+                'display_name' => $learner->display_name,
+                'level' => $learner->age_band,
+            ]);
+
+        return response()->json(['data' => $learners]);
+    }
+
+    /** Add an existing school learner or create a school-managed learner. */
+    public function addLearner(StoreClassLearnerRequest $request, SchoolClass $class): JsonResponse
+    {
+        [$learner, $coursesEnrolled] = DB::transaction(function () use ($request, $class) {
+            $isNew = ! $request->filled('learner_id');
+            $learner = $isNew
+                ? LearnerProfile::create([
+                    'organization_id' => $class->organization_id,
+                    'display_name' => $request->string('display_name')->trim()->toString(),
+                    'age_band' => $request->input('level'),
+                ])
+                : LearnerProfile::where('organization_id', $class->organization_id)
+                    ->findOrFail($request->integer('learner_id'));
+
+            ClassEnrollment::firstOrCreate([
+                'school_class_id' => $class->id,
+                'learner_profile_id' => $learner->id,
+            ]);
+
+            if ($isNew && $allocation = $class->organization?->seatAllocations()->latest()->first()) {
+                $allocation->increment('active_filled');
+            }
+
+            return [$learner, $this->courseEnrollments->syncLearner($class, $learner)];
+        });
+
+        return response()->json(['data' => [
+            'learner_id' => $learner->id,
+            'display_name' => $learner->display_name,
+            'courses_enrolled' => $coursesEnrolled,
+        ]], 201);
     }
 }

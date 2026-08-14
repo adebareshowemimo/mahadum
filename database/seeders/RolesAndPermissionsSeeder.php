@@ -238,6 +238,7 @@ class RolesAndPermissionsSeeder extends Seeder
             // Classroom: own classes, assignments, learner progress, commissions.
             'teacher' => [
                 'schools.classes.view',
+                'schools.classes.manage',
                 'schools.assignments.create',
                 'schools.assignments.review',
                 'schools.analytics.view',

@@ -76,4 +76,15 @@ class SchoolClass extends Model
     {
         return $this->hasMany(ClassAssignment::class);
     }
+
+    /**
+     * Courses assigned to the whole class. New class members inherit these
+     * assignments when they are added to the roster.
+     *
+     * @return HasMany<ClassCourseAssignment, $this>
+     */
+    public function courseAssignments(): HasMany
+    {
+        return $this->hasMany(ClassCourseAssignment::class);
+    }
 }

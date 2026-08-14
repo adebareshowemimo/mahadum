@@ -33,12 +33,22 @@ class SchoolClassPolicy
 
     public function update(User $user, SchoolClass $class): bool
     {
-        return $user->can('schools.classes.manage') && $this->sameTenant($class);
+        if (! $user->can('schools.classes.manage') || ! $this->sameTenant($class)) {
+            return false;
+        }
+
+        // Teachers operate their own classrooms. School admins retain
+        // organization-wide class management.
+        if ($user->hasRole('teacher') && ! $user->hasRole('school_admin')) {
+            return (int) $class->teacher_user_id === (int) $user->id;
+        }
+
+        return true;
     }
 
     public function delete(User $user, SchoolClass $class): bool
     {
-        return $user->can('schools.classes.manage') && $this->sameTenant($class);
+        return $this->update($user, $class);
     }
 
     private function sameTenant(SchoolClass $class): bool

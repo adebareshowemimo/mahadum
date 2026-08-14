@@ -1,21 +1,33 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, Avatar, Badge, Card, CardBody, Modal, Skeleton } from '@/components/ui'
-import { schoolApi } from '@/lib/api'
-import { useMyClasses } from '@/lib/school/queries'
+import { Alert, Avatar, Badge, Button, Card, CardBody, Input, Modal, Skeleton } from '@/components/ui'
+import { ApiError, schoolApi } from '@/lib/api'
+import {
+  useAddClassLearner,
+  useAssignClassCourse,
+  useAvailableClassLearners,
+  useClassCourses,
+  useCreateClass,
+  useMyClasses,
+  useUnassignClassCourse,
+} from '@/lib/school/queries'
 
 export function ClassesPage() {
   const { data, isLoading, isError } = useMyClasses()
   const [openId, setOpenId] = useState<number | null>(null)
+  const [showCreate, setShowCreate] = useState(false)
 
   if (isLoading) return <Skeleton className="h-48" />
   if (isError || !data) return <Alert variant="danger">We couldn’t load your classes. Please refresh and try again.</Alert>
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold text-foreground">My classes</h1>
-        <p className="mt-1 text-muted">Tap a class to see its students.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-foreground">My classes</h1>
+          <p className="mt-1 text-muted">Create classes, add learners, and assign courses.</p>
+        </div>
+        <Button onClick={() => setShowCreate(true)}>New class</Button>
       </div>
 
       {data.length === 0 ? (
@@ -43,12 +55,14 @@ export function ClassesPage() {
       )}
 
       <ClassDetailModal classId={openId} onClose={() => setOpenId(null)} />
+      <CreateClassModal open={showCreate} onClose={() => setShowCreate(false)} />
     </div>
   )
 }
 
 function ClassDetailModal({ classId, onClose }: { classId: number | null; onClose: () => void }) {
-  const [tab, setTab] = useState<'students' | 'analytics'>('students')
+  const [tab, setTab] = useState<'students' | 'courses' | 'analytics'>('students')
+  const [addingLearner, setAddingLearner] = useState(false)
   const detail = useQuery({
     queryKey: ['school-classes', 'detail', classId],
     queryFn: () => schoolApi.classDetail(classId as number),
@@ -58,7 +72,7 @@ function ClassDetailModal({ classId, onClose }: { classId: number | null; onClos
   return (
     <Modal open={classId != null} onClose={onClose} title={detail.data?.name ?? 'Class'} description={detail.data?.level ?? undefined} className="sm:max-w-2xl">
       <div className="mb-4 flex gap-1 rounded-xl bg-surface-muted p-1">
-        {(['students', 'analytics'] as const).map((t) => (
+        {(['students', 'courses', 'analytics'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -74,26 +88,156 @@ function ClassDetailModal({ classId, onClose }: { classId: number | null; onClos
       </div>
 
       {tab === 'students' ? (
-        detail.isLoading ? (
-          <Skeleton className="h-32" />
-        ) : detail.isError || !detail.data ? (
-          <Alert variant="danger">Couldn’t load this class.</Alert>
-        ) : detail.data.students.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted">No students enrolled yet.</p>
-        ) : (
-          <ul className="flex max-h-80 flex-col gap-2 overflow-y-auto">
-            {detail.data.students.map((s) => (
-              <li key={s.learner_id} className="flex items-center gap-3 rounded-xl border border-border p-2.5">
-                <Avatar name={s.display_name ?? 'Student'} size="sm" />
-                <span className="font-medium text-foreground">{s.display_name ?? 'Student'}</span>
-              </li>
-            ))}
-          </ul>
-        )
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-end">
+            <Button size="sm" onClick={() => setAddingLearner(true)}>Invite learner</Button>
+          </div>
+          {detail.isLoading ? (
+            <Skeleton className="h-32" />
+          ) : detail.isError || !detail.data ? (
+            <Alert variant="danger">Couldn’t load this class.</Alert>
+          ) : detail.data.students.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted">No learners in this class yet.</p>
+          ) : (
+            <ul className="flex max-h-80 flex-col gap-2 overflow-y-auto">
+              {detail.data.students.map((s) => (
+                <li key={s.learner_id} className="flex items-center gap-3 rounded-xl border border-border p-2.5">
+                  <Avatar name={s.display_name ?? 'Learner'} size="sm" />
+                  <span className="font-medium text-foreground">{s.display_name ?? 'Learner'}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {classId && addingLearner && <AddLearnerForm classId={classId} onDone={() => setAddingLearner(false)} />}
+        </div>
+      ) : tab === 'courses' ? (
+        <ClassCoursesTab classId={classId} />
       ) : (
         <ClassAnalyticsTab classId={classId} />
       )}
     </Modal>
+  )
+}
+
+function CreateClassModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const createClass = useCreateClass()
+  const [name, setName] = useState('')
+  const [level, setLevel] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    setError(null)
+    try {
+      await createClass.mutateAsync({ name: name.trim(), level: level.trim() || undefined })
+      setName('')
+      setLevel('')
+      onClose()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not create the class.')
+    }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Create class" description="You will be assigned as this class’s teacher.">
+      <form className="flex flex-col gap-4" onSubmit={submit}>
+        {error && <Alert variant="danger">{error}</Alert>}
+        <Input label="Class name" value={name} onChange={(e) => setName(e.target.value)} required />
+        <Input label="Level (optional)" value={level} onChange={(e) => setLevel(e.target.value)} />
+        <Button type="submit" loading={createClass.isPending} disabled={!name.trim()}>Create class</Button>
+      </form>
+    </Modal>
+  )
+}
+
+function AddLearnerForm({ classId, onDone }: { classId: number; onDone: () => void }) {
+  const addLearner = useAddClassLearner(classId)
+  const available = useAvailableClassLearners(classId)
+  const [learnerId, setLearnerId] = useState('')
+  const [name, setName] = useState('')
+  const [level, setLevel] = useState('')
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    setError(null)
+    try {
+      const result = await addLearner.mutateAsync(learnerId
+        ? { learner_id: Number(learnerId) }
+        : { display_name: name.trim(), level: level.trim() || undefined })
+      setMessage(`${result.display_name} was added${result.courses_enrolled ? ` and enrolled in ${result.courses_enrolled} assigned course${result.courses_enrolled === 1 ? '' : 's'}` : ''}.`)
+      setName('')
+      setLevel('')
+      setLearnerId('')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not add this learner.')
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="flex flex-col gap-3 rounded-xl border border-border bg-surface-muted p-4">
+      <p className="font-semibold text-foreground">Add a learner</p>
+      <p className="text-xs text-muted">Choose an existing school learner or create a new school-managed profile.</p>
+      {message && <Alert variant="success">{message}</Alert>}
+      {error && <Alert variant="danger">{error}</Alert>}
+      {available.data && available.data.length > 0 && (
+        <label className="flex flex-col gap-1.5 text-sm font-medium text-foreground">
+          Existing school learner
+          <select
+            value={learnerId}
+            onChange={(e) => setLearnerId(e.target.value)}
+            className="h-11 rounded-xl border border-border-strong bg-surface px-3 text-sm text-foreground"
+          >
+            <option value="">Create a new learner…</option>
+            {available.data.map((learner) => (
+              <option key={learner.id} value={learner.id}>{learner.display_name}{learner.level ? ` · ${learner.level}` : ''}</option>
+            ))}
+          </select>
+        </label>
+      )}
+      {!learnerId && (
+        <>
+          <Input label="Learner name" value={name} onChange={(e) => setName(e.target.value)} required />
+          <Input label="Level (optional)" value={level} onChange={(e) => setLevel(e.target.value)} />
+        </>
+      )}
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="ghost" onClick={onDone}>Close</Button>
+        <Button type="submit" loading={addLearner.isPending} disabled={!learnerId && !name.trim()}>Add learner</Button>
+      </div>
+    </form>
+  )
+}
+
+function ClassCoursesTab({ classId }: { classId: number | null }) {
+  const courses = useClassCourses(classId)
+  const assign = useAssignClassCourse(classId as number)
+  const unassign = useUnassignClassCourse(classId as number)
+
+  if (courses.isLoading) return <Skeleton className="h-32" />
+  if (courses.isError || !courses.data) return <Alert variant="danger">Couldn’t load available courses.</Alert>
+  if (courses.data.length === 0) return <p className="py-6 text-center text-sm text-muted">No published courses are available yet.</p>
+
+  return (
+    <ul className="flex max-h-96 flex-col gap-2 overflow-y-auto">
+      {courses.data.map((course) => (
+        <li key={course.id} className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
+          <div className="min-w-0">
+            <p className="font-semibold text-foreground">{course.title}</p>
+            <p className="text-xs text-muted">{[course.language?.toUpperCase(), course.level_band].filter(Boolean).join(' · ') || 'All levels'}</p>
+          </div>
+          <Button
+            size="sm"
+            variant={course.assigned ? 'outline' : 'primary'}
+            loading={(assign.isPending && assign.variables === course.id) || (unassign.isPending && unassign.variables === course.id)}
+            onClick={() => course.assigned ? unassign.mutate(course.id) : assign.mutate(course.id)}
+          >
+            {course.assigned ? 'Assigned' : 'Assign course'}
+          </Button>
+        </li>
+      ))}
+    </ul>
   )
 }
 

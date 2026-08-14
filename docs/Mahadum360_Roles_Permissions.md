@@ -83,9 +83,10 @@ Naming convention: `aspect.subject.action`.
 | gamification.* | ● | | | | |
 | schools.* | | ● | partial | partial | |
 | schools.classes.view | | ● | ● | ● | |
+| schools.classes.manage | | ● | own classes | | |
 | schools.assignments.{create,review} | | | ● | | |
 | schools.badges.award | | | ● | | |
-| schools.roster.{view,import} | | ● | | view | |
+| schools.roster.{view,import} | | ● | own-class learner invites | view | |
 | schools.seats.{view,purchase} | | ● | | | |
 | schools.analytics.view | | ● | ● | ● | |
 | organizations.view | | ● | | ● | |

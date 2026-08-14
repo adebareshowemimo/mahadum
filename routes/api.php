@@ -85,6 +85,7 @@ use App\Http\Controllers\Referral\PayoutController;
 use App\Http\Controllers\Referral\ReferralController;
 use App\Http\Controllers\School\ClassAssignmentController;
 use App\Http\Controllers\School\ClassBadgeController;
+use App\Http\Controllers\School\ClassCourseController;
 use App\Http\Controllers\School\RosterController;
 use App\Http\Controllers\School\SchoolClassController;
 use App\Http\Controllers\School\SchoolDashboardController;
@@ -329,6 +330,13 @@ Route::prefix('v1')->group(function () {
             ->middleware('can:schools.analytics.view');
         Route::post('classes', [SchoolClassController::class, 'store'])->can('create', SchoolClass::class);
         Route::match(['put', 'patch'], 'classes/{class}', [SchoolClassController::class, 'update'])->can('update', 'class');
+        Route::get('classes/{class}/available-learners', [SchoolClassController::class, 'availableLearners'])->can('update', 'class');
+        Route::post('classes/{class}/learners', [SchoolClassController::class, 'addLearner'])->can('update', 'class');
+
+        /* ---- Teacher course assignment (own class; current + future learners) ---- */
+        Route::get('classes/{class}/courses', [ClassCourseController::class, 'index'])->can('view', 'class');
+        Route::post('classes/{class}/courses/{course}', [ClassCourseController::class, 'store'])->can('update', 'class');
+        Route::delete('classes/{class}/courses/{course}', [ClassCourseController::class, 'destroy'])->can('update', 'class');
 
         /* ---- Class assignments (teacher → own class; schools.assignments.{create,review}) ---- */
         Route::get('classes/{class}/assignments', [ClassAssignmentController::class, 'index'])->can('view', 'class');

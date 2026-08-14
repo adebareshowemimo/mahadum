@@ -50,6 +50,9 @@ import type {
   AdminOrgList,
   AdminOrgQuery,
   ActiveAdvert,
+  AddClassLearnerInput,
+  AddClassLearnerResult,
+  AvailableClassLearner,
   AdminAdvertPlacementList,
   AdminAdvertPlacementQuery,
   AdvertPlacement,
@@ -96,6 +99,7 @@ import type {
   ClassAssignmentDetail,
   ClassAssignmentRow,
   ClassCompletionRow,
+  ClassCourseRow,
   CreateClassAssignmentInput,
   CreateClassInput,
   GradeSubmissionInput,
@@ -1148,6 +1152,31 @@ export const schoolApi = {
 
   async classAnalytics(classId: number): Promise<ClassAnalytics> {
     const { data } = await api.get(`/classes/${classId}/analytics`)
+    return data.data
+  },
+
+  async addClassLearner(classId: number, input: AddClassLearnerInput): Promise<AddClassLearnerResult> {
+    const { data } = await api.post(`/classes/${classId}/learners`, input)
+    return data.data
+  },
+
+  async availableClassLearners(classId: number): Promise<AvailableClassLearner[]> {
+    const { data } = await api.get(`/classes/${classId}/available-learners`)
+    return data.data
+  },
+
+  async classCourses(classId: number): Promise<ClassCourseRow[]> {
+    const { data } = await api.get(`/classes/${classId}/courses`)
+    return data.data
+  },
+
+  async assignClassCourse(classId: number, courseId: number): Promise<{ enrolled_count: number }> {
+    const { data } = await api.post(`/classes/${classId}/courses/${courseId}`)
+    return data.data
+  },
+
+  async unassignClassCourse(classId: number, courseId: number): Promise<{ assigned: false }> {
+    const { data } = await api.delete(`/classes/${classId}/courses/${courseId}`)
     return data.data
   },
 

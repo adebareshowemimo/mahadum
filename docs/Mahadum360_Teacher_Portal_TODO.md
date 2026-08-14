@@ -21,7 +21,7 @@ all.
 
 | Page | Route | Component | Backend |
 |---|---|---|---|
-| Classes | `/classes` | `ClassesPage` | `GET /classes`, `GET /classes/{id}`, `GET /classes/{id}/analytics` ✅ (view-only: teacher lacks `schools.classes.manage`, correctly so — class creation is `school_admin`'s job) |
+| Classes | `/classes` | `ClassesPage` | `GET/POST /classes`, `GET /classes/{id}`, `POST /classes/{id}/learners`, `GET/POST/DELETE /classes/{id}/courses`, and analytics ✅. Teachers manage only their own classes; school admins retain organization-wide control. Assigned courses enroll current learners and are inherited by future class members. |
 | Assignments | `/assignments` | `AssignmentsPage` | `GET/POST /classes/{class}/assignments`, `GET /classes/{class}/assignments/{assignment}`, `POST /class-assignments/{assignment}/submissions`, `POST …/submissions/{submission}/grade` ✅ — teacher-owned, tenant-scoped, coin release on pass. *(§1 shipped 2026-07-04; verified live incl. cross-teacher 403 and full create→submit→grade→wallet-credit flow.)* |
 | Earnings | `/earnings` | `EarningsPage` | Two distinct sections: **referral earnings** (`GET /payouts`, `POST /payouts/request`, unchanged) and **teaching compensation** (`GET /teacher-compensation/summary`, `POST /teacher-compensation/payouts/request`, new, §3) — draw down separate balances via `payouts.source`. |
 

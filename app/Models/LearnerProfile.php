@@ -114,6 +114,12 @@ class LearnerProfile extends Model
         return $this->hasMany(Enrollment::class);
     }
 
+    /** @return HasMany<ClassEnrollment, $this> */
+    public function classEnrollments(): HasMany
+    {
+        return $this->hasMany(ClassEnrollment::class);
+    }
+
     /**
      * @return HasMany<LessonProgress, $this>
      */

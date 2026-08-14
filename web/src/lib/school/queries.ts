@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   schoolApi,
+  type AddClassLearnerInput,
   type CreateClassAssignmentInput,
   type CreateClassInput,
   type GradeSubmissionInput,
@@ -27,6 +28,8 @@ export const schoolKeys = {
   completion: (classId: number) => ['class-completion', classId] as const,
   assignmentDetail: (classId: number, assignmentId: number) =>
     ['class-assignments', classId, assignmentId] as const,
+  classCourses: (classId: number) => ['school-classes', classId, 'courses'] as const,
+  availableLearners: (classId: number) => ['school-classes', classId, 'available-learners'] as const,
   teacherCompensation: ['teacher-compensation'] as const,
   referrals: (org: number) => ['school-referrals', org] as const,
 }
@@ -120,6 +123,53 @@ export function useUpdateClass() {
       void qc.invalidateQueries({ queryKey: ['school-classes'] })
       void qc.invalidateQueries({ queryKey: ['school-dashboard'] })
     },
+  })
+}
+
+export function useAddClassLearner(classId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: AddClassLearnerInput) => schoolApi.addClassLearner(classId, input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['school-classes'] })
+      void qc.invalidateQueries({ queryKey: schoolKeys.classCourses(classId) })
+      void qc.invalidateQueries({ queryKey: schoolKeys.availableLearners(classId) })
+      void qc.invalidateQueries({ queryKey: schoolKeys.completion(classId) })
+    },
+  })
+}
+
+export function useAvailableClassLearners(classId: number) {
+  return useQuery({
+    queryKey: schoolKeys.availableLearners(classId),
+    queryFn: () => schoolApi.availableClassLearners(classId),
+  })
+}
+
+export function useClassCourses(classId: number | null) {
+  return useQuery({
+    queryKey: schoolKeys.classCourses(classId ?? 0),
+    queryFn: () => schoolApi.classCourses(classId as number),
+    enabled: !!classId,
+  })
+}
+
+export function useAssignClassCourse(classId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (courseId: number) => schoolApi.assignClassCourse(classId, courseId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: schoolKeys.classCourses(classId) })
+      void qc.invalidateQueries({ queryKey: ['learning-courses'] })
+    },
+  })
+}
+
+export function useUnassignClassCourse(classId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (courseId: number) => schoolApi.unassignClassCourse(classId, courseId),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: schoolKeys.classCourses(classId) }),
   })
 }
 

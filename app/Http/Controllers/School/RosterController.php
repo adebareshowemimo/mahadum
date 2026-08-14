@@ -9,6 +9,7 @@ use App\Models\ClassEnrollment;
 use App\Models\LearnerProfile;
 use App\Models\Organization;
 use App\Models\SchoolClass;
+use App\Services\School\ClassCourseEnrollmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -20,6 +21,8 @@ use Illuminate\Support\Facades\DB;
 class RosterController extends Controller
 {
     use ResolvesOrganization;
+
+    public function __construct(private ClassCourseEnrollmentService $courseEnrollments) {}
 
     public function import(ImportRosterRequest $request, Organization $organization): JsonResponse
     {
@@ -53,6 +56,8 @@ class RosterController extends Controller
                     $belongs = SchoolClass::where('organization_id', $organization->id)->whereKey($classId)->exists();
                     if ($belongs) {
                         ClassEnrollment::create(['school_class_id' => $classId, 'learner_profile_id' => $learner->id]);
+                        $class = SchoolClass::findOrFail($classId);
+                        $this->courseEnrollments->syncLearner($class, $learner);
                     } else {
                         $errors[] = ['row' => $i + 1, 'error' => "Class {$classId} not in this organization"];
                     }

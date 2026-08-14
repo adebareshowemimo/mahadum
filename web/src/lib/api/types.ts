@@ -755,6 +755,33 @@ export interface SchoolClassDetail {
   students: { learner_id: number; display_name: string | null }[]
 }
 
+export interface ClassCourseRow {
+  id: number
+  title: string
+  description: string | null
+  level_band: string | null
+  language: string | null
+  assigned: boolean
+}
+
+export interface AddClassLearnerInput {
+  learner_id?: number
+  display_name?: string
+  level?: string
+}
+
+export interface AvailableClassLearner {
+  id: number
+  display_name: string
+  level: string | null
+}
+
+export interface AddClassLearnerResult {
+  learner_id: number
+  display_name: string
+  courses_enrolled: number
+}
+
 export interface ClassAnalyticsStudent {
   learner_id: number
   display_name: string | null
