@@ -55,6 +55,18 @@ class TeacherClassManagementTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_teacher_without_an_active_school_membership_cannot_read_or_create_classes(): void
+    {
+        $this->seedRbac();
+        $teacher = $this->userWithRole('teacher');
+        $this->actingAsUser($teacher);
+
+        $this->getJson('/api/v1/classes')->assertForbidden();
+        $this->postJson('/api/v1/classes', ['name' => 'Orphaned class'])->assertForbidden();
+
+        $this->assertDatabaseMissing('school_classes', ['name' => 'Orphaned class']);
+    }
+
     public function test_teacher_assigns_course_to_current_and_future_class_learners(): void
     {
         $this->seedRbac();

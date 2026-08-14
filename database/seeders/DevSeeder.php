@@ -74,6 +74,7 @@ class DevSeeder extends Seeder
         $this->call(AdvertPlacementSeeder::class);
 
         if (User::where('email', 'super@dev.mahadum360')->exists()) {
+            $this->repairDocumentedTeacherLogin();
             $this->command?->warn('DevSeeder already run — skipping. Drop the database to reseed.');
 
             return;
@@ -85,6 +86,7 @@ class DevSeeder extends Seeder
         $this->families($courses);
         $this->leaderboard();
         $this->schools();
+        $this->repairDocumentedTeacherLogin();
         $this->billing();
         $this->referralsAndPayouts();
         $this->promoCodes();
@@ -383,6 +385,25 @@ class DevSeeder extends Seeder
                 }
             });
         }
+    }
+
+    /**
+     * Keep the documented teacher QA login usable even on databases seeded by
+     * an older DevSeeder that randomly omitted teacher1 from every school.
+     */
+    private function repairDocumentedTeacherLogin(): void
+    {
+        $teacher = User::where('email', 'teacher1@dev.mahadum360')->first();
+        $organization = Organization::where('slug', 'like', 'dev-school-1-%')->orderBy('id')->first();
+
+        if (! $teacher || ! $organization) {
+            return;
+        }
+
+        DB::table('organization_user')->updateOrInsert(
+            ['organization_id' => $organization->id, 'user_id' => $teacher->id],
+            ['role' => 'teacher', 'status' => 'active', 'updated_at' => now(), 'created_at' => now()],
+        );
     }
 
     private function billing(): void

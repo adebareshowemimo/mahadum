@@ -14,7 +14,7 @@ class SchoolClassPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('schools.classes.view');
+        return $user->can('schools.classes.view') && $this->hasTenant();
     }
 
     public function view(User $user, SchoolClass $class): bool
@@ -28,7 +28,7 @@ class SchoolClassPolicy
 
     public function create(User $user): bool
     {
-        return $user->can('schools.classes.manage');
+        return $user->can('schools.classes.manage') && $this->hasTenant();
     }
 
     public function update(User $user, SchoolClass $class): bool
@@ -56,5 +56,10 @@ class SchoolClassPolicy
         $tenantId = app()->bound('currentTenantId') ? app('currentTenantId') : null;
 
         return $tenantId !== null && (int) $class->organization_id === (int) $tenantId;
+    }
+
+    private function hasTenant(): bool
+    {
+        return app()->bound('currentTenantId') && app('currentTenantId') !== null;
     }
 }
