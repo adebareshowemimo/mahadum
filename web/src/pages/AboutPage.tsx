@@ -47,7 +47,7 @@ const LEARNING_PATHS = [
   { language: 'Igbo', title: 'Mụta Igbo!', line: 'Build everyday speaking confidence and reconnect words to home.' },
   { language: 'Hausa', title: 'Koyi Hausa', line: 'Hear, repeat and use practical Hausa in familiar situations.' },
   { language: 'Yorùbá', title: 'Àlà Yorùbá', line: 'Learn with accurate diacritics, native voices and living culture.' },
-  { language: 'Pidgin', title: 'Naija Voices', line: 'Understand the rhythm, humour and connection inside Nigerian Pidgin.' },
+  { language: 'English', title: 'Everyday English', line: 'Build confident speaking, listening and connection through everyday English.' },
 ]
 
 const ARCHIVE_MOMENTS = [
@@ -307,7 +307,7 @@ function AboutHero() {
             />
             <div className="rounded-[1rem] bg-navy-950 p-4 text-white sm:p-6">
               <p className="font-display text-2xl font-extrabold text-[#ffb277]">4 languages</p>
-              <p className="mt-1 text-sm font-semibold text-navy-100">Yorùbá, Igbo, Hausa and Pidgin—one growing home.</p>
+              <p className="mt-1 text-sm font-semibold text-navy-100">Yorùbá, Igbo, Hausa and English—one growing home.</p>
             </div>
           </div>
         </Reveal>

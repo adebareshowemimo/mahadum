@@ -13,6 +13,7 @@ use App\Services\Family\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class ReviewController extends Controller
 {
@@ -59,7 +60,7 @@ class ReviewController extends Controller
                 'prompt' => $s->lessonComponent->assignment?->prompt,
                 'expected_media' => $s->lessonComponent->assignment?->expected_media,
                 'coin_reward' => $s->coins_locked,
-                'media_url' => $s->mediaAsset ? url('storage/'.$s->mediaAsset->url) : null,
+                'media_url' => $s->mediaAsset ? Storage::disk('public')->url($s->mediaAsset->url) : null,
             ]);
 
         return response()->json(['data' => [

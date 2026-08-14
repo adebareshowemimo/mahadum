@@ -11,7 +11,7 @@ Web-first responsive product: a public marketing site and authenticated React SP
 ## Users
 
 - Primary buyers: Nigerian and African diaspora parents who want their children to speak a family language and connect with relatives and culture.
-- Primary learners: children and adults beginning or rebuilding Yorùbá, Igbo, Hausa, or Nigerian Pidgin.
+- Primary learners: children and adults beginning or rebuilding Yorùbá, Igbo, Hausa, or English.
 - Institutional buyers: Nigerian schools, head teachers, and school administrators who need curriculum, teacher tools, rosters, reporting, and predictable seat pricing.
 - Supporting users: parents, teachers, supervisors, and content owners who guide, review, and approve learner activity.
 

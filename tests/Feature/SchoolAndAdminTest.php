@@ -6,6 +6,7 @@ use App\Models\Organization;
 use App\Models\Payout;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class SchoolAndAdminTest extends TestCase
@@ -38,6 +39,57 @@ class SchoolAndAdminTest extends TestCase
         $this->getJson("/api/v1/schools/{$org->id}/dashboard")->assertOk()
             ->assertJsonPath('data.classes', 1)
             ->assertJsonPath('data.seats.purchased', 100);
+    }
+
+    public function test_roster_csv_uses_firstname_lastname_level_columns(): void
+    {
+        $this->seedRbac();
+        $org = $this->org('roster-school', 'active');
+        $admin = $this->userWithRole('school_admin');
+        $org->members()->attach($admin->id, ['role' => 'school_admin', 'status' => 'active']);
+        $this->actingAsUser($admin);
+
+        $file = UploadedFile::fake()->createWithContent(
+            'roster.csv',
+            "Firstname,Lastname,Level\nAmara,Okafor,A1\nBello,Musa,A2\n",
+        );
+
+        $this->post('/api/v1/schools/'.$org->id.'/students/import', ['file' => $file], ['Accept' => 'application/json'])
+            ->assertCreated()
+            ->assertJsonPath('data.created', 2);
+
+        $this->assertDatabaseHas('learner_profiles', ['organization_id' => $org->id, 'display_name' => 'Amara Okafor']);
+        $this->assertDatabaseHas('learner_profiles', ['organization_id' => $org->id, 'display_name' => 'Bello Musa']);
+    }
+
+    public function test_school_admin_can_only_assign_active_teachers_from_the_same_school(): void
+    {
+        $this->seedRbac();
+        $org = $this->org('teacher-school', 'active');
+        $foreign = $this->org('foreign-teacher-school', 'active');
+        $admin = $this->userWithRole('school_admin');
+        $teacher = $this->userWithRole('teacher');
+        $foreignTeacher = $this->userWithRole('teacher');
+        $org->members()->attach($admin->id, ['role' => 'school_admin', 'status' => 'active']);
+        $org->members()->attach($teacher->id, ['role' => 'teacher', 'status' => 'active']);
+        $foreign->members()->attach($foreignTeacher->id, ['role' => 'teacher', 'status' => 'active']);
+        $this->actingAsUser($admin);
+
+        $this->getJson("/api/v1/schools/{$org->id}/teachers")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $teacher->id);
+
+        $classId = $this->postJson('/api/v1/classes', ['name' => 'JSS1', 'teacher_user_id' => $teacher->id])
+            ->assertCreated()
+            ->json('data.id');
+        $this->postJson('/api/v1/classes', ['name' => 'JSS2', 'teacher_user_id' => $foreignTeacher->id])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('teacher_user_id');
+
+        $this->actingAsUser($teacher);
+        $this->postJson("/api/v1/classes/{$classId}/assignments", ['title' => 'Spellings'])
+            ->assertCreated();
     }
 
     public function test_school_admin_blocked_from_foreign_org(): void

@@ -41,7 +41,14 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            // Root-relative by default so uploaded media (video/audio/images)
+            // always resolves against the current origin — an absolute
+            // APP_URL-based URL breaks whenever the dev port or a reverse
+            // proxy's scheme doesn't match APP_URL exactly (e.g. video src
+            // 404s/mixed-content-blocks while proxied JSON API calls,
+            // which are already relative, keep working). Override with
+            // ASSET_URL for an absolute CDN origin in production if needed.
+            'url' => env('ASSET_URL', '/storage'),
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

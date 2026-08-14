@@ -50,6 +50,7 @@ export interface LearnerProfile {
   is_child: boolean
   /** Requires a parental PIN to switch into. */
   pin_protected: boolean
+  coin_balance: number
 }
 
 export interface Family {
@@ -103,6 +104,8 @@ export interface Me {
     roles: Role[]
   }
   families: Family[]
+  /** Direct/adult learner profiles owned by the signed-in user. */
+  learner_profiles: LearnerProfile[]
   organizations: OrganizationMembership[]
   active_organization_id: number | null
   subscription: SubscriptionInfo | null
@@ -183,7 +186,7 @@ export interface FamilyOverview {
   child_limit: number
   wallet: WalletBalance
   parent: { id: number; name: string; email: string }
-  learners: { id: number; display_name: string; is_child: boolean; pin_protected: boolean }[]
+  learners: { id: number; display_name: string; is_child: boolean; pin_protected: boolean; coin_balance: number }[]
 }
 
 export type ChoreStatus = 'active' | 'pending_review' | 'approved' | 'rejected'
@@ -530,6 +533,10 @@ export interface CoursePerformance {
   levels_count: number
   lessons_count: number
   enrollments: number
+  /** Enrollment count grouped by status, e.g. `{ active: 18, completed: 3 }`. */
+  enrollments_by_status: Record<string, number>
+  /** Approximation: enrollments belonging to a referred family — not a revenue figure. */
+  referred_enrollments: number
   lesson_completions: number
   quiz_accuracy: number | null
 }
@@ -628,6 +635,8 @@ export interface ReferralSummary {
   referrals: Record<string, number>
   /** Commission totals keyed by status. */
   commissions: Record<string, CommissionStat>
+  /** Cleared commissions less requested, approved, and paid payouts. */
+  available_minor: number
 }
 
 export type PayoutMethod = 'bank' | 'coins'
@@ -656,6 +665,7 @@ export interface SchoolReferralSummary {
   share_text: string
   referrals: Record<string, number>
   commissions: Record<string, CommissionStat>
+  available_minor: number
   payouts: Payout[]
 }
 
@@ -744,6 +754,7 @@ export interface SchoolInvoice {
   id: number
   type: string
   amount_minor: number
+  lines?: { description: string; amount_minor: number }[] | null
   status: string
   issued_at: string | null
   paid_at: string | null
@@ -784,6 +795,11 @@ export interface CreateClassInput {
   name: string
   level?: string
   teacher_user_id?: number
+}
+
+export interface SchoolTeacher {
+  id: number
+  name: string
 }
 
 export interface ClassAssignmentRow {

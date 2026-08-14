@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Notifications\DatabaseNotificationCollection;
@@ -47,6 +48,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read int|null $organizations_count
  * @property-read Collection<int, Family> $ownedFamilies
  * @property-read int|null $owned_families_count
+ * @property-read LearnerProfile|null $learnerProfile
  * @property-read Collection<int, Permission> $permissions
  * @property-read int|null $permissions_count
  * @property-read Collection<int, Role> $roles
@@ -128,6 +130,12 @@ class User extends Authenticatable implements MustVerifyEmail
     public function ownedFamilies(): HasMany
     {
         return $this->hasMany(Family::class, 'owner_user_id');
+    }
+
+    /** The signed-in learner identity for an adult/direct learner account. */
+    public function learnerProfile(): HasOne
+    {
+        return $this->hasOne(LearnerProfile::class, 'user_id');
     }
 
     /**

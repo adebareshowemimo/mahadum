@@ -173,17 +173,18 @@ class MediaController extends Controller
         return array_values(array_unique(array_map('intval', array_merge(...$ids))));
     }
 
-    /** Absolute URL for a stored path (already-absolute URLs pass through). */
+    /** URL for a stored path (already-absolute URLs pass through). */
     private function resolveUrl(string $url): string
     {
-        return str_starts_with($url, 'http') ? $url : url('storage/'.ltrim($url, '/'));
+        return str_starts_with($url, 'http') ? $url : Storage::disk('public')->url($url);
     }
 
     /**
      * Store an uploaded file on the local `public` disk and record a MediaAsset.
-     * Returns an absolute URL (request-host based) so it works behind the dev
-     * proxy and in production. Swap this for a managed video vendor later — the
-     * MediaAsset contract (id/type/url) stays the same.
+     * Returns a root-relative URL so it resolves against whatever origin served
+     * the page (dev proxy or production), instead of baking in APP_URL. Swap
+     * this for a managed video vendor later — the MediaAsset contract
+     * (id/type/url) stays the same.
      */
     public function upload(UploadMediaRequest $request): JsonResponse
     {
@@ -203,7 +204,7 @@ class MediaController extends Controller
         return response()->json(['data' => [
             'id' => $asset->id,
             'type' => $asset->type,
-            'url' => url('storage/'.$path),
+            'url' => Storage::disk('public')->url($path),
             'original_name' => $asset->original_name,
         ]], 201);
     }

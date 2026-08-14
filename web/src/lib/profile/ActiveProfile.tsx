@@ -30,7 +30,10 @@ export function ActiveProfileProvider({ children }: { children: ReactNode }) {
   })
 
   const learners = useMemo(
-    () => (user?.families ?? []).flatMap((f) => f.learners ?? []),
+    () => [
+      ...(user?.learner_profiles ?? []),
+      ...(user?.families ?? []).flatMap((f) => f.learners ?? []),
+    ],
     [user],
   )
 

@@ -11,10 +11,10 @@ import {
   Modal,
   Skeleton,
 } from '@/components/ui'
-import { ApiError } from '@/lib/api'
+import { ApiError, type SchoolTeacher } from '@/lib/api'
 import { formatMoney } from '@/lib/format'
 import { SchoolGate } from '@/components/school/SchoolGate'
-import { useClasses, useCreateClass, useSchoolDashboard } from '@/lib/school/queries'
+import { useClasses, useCreateClass, useSchoolDashboard, useTeachers, useUpdateClass } from '@/lib/school/queries'
 
 export function SchoolDashboardPage() {
   return <SchoolGate>{(orgId) => <Dashboard orgId={orgId} />}</SchoolGate>
@@ -23,6 +23,7 @@ export function SchoolDashboardPage() {
 function Dashboard({ orgId }: { orgId: number }) {
   const { data, isLoading, isError } = useSchoolDashboard(orgId)
   const classes = useClasses()
+  const teachers = useTeachers(orgId)
   const [newOpen, setNewOpen] = useState(false)
 
   if (isLoading) return <Skeleton className="h-40" />
@@ -88,12 +89,13 @@ function Dashboard({ orgId }: { orgId: number }) {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {classes.data?.map((c) => (
               <Card key={c.id}>
-                <CardBody className="flex flex-col gap-1">
+                <CardBody className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <p className="font-semibold text-foreground">{c.name}</p>
                     {c.level && <Badge variant="info">{c.level}</Badge>}
                   </div>
                   <p className="text-sm text-muted">{c.teacher ?? 'No teacher'} · {c.students} students</p>
+                  <AssignTeacher classId={c.id} teachers={teachers.data} />
                 </CardBody>
               </Card>
             ))}
@@ -101,7 +103,7 @@ function Dashboard({ orgId }: { orgId: number }) {
         )}
       </section>
 
-      <NewClassModal open={newOpen} onClose={() => setNewOpen(false)} />
+      <NewClassModal open={newOpen} onClose={() => setNewOpen(false)} orgId={orgId} />
     </div>
   )
 }
@@ -123,9 +125,47 @@ function Kpi({ icon, label, value, sub }: { icon: 'cap' | 'users' | 'layers' | '
   )
 }
 
-function NewClassModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+/** Inline "assign a teacher" control shown on each class card so a school
+ * admin can hook up a teacher after the fact — without this, classes created
+ * without a teacher never appear in that teacher's `useMyClasses()`, and
+ * they see "no classes assigned" with no way to fix it themselves. */
+function AssignTeacher({ classId, teachers }: { classId: number; teachers: SchoolTeacher[] | undefined }) {
+  const updateClass = useUpdateClass()
+  const [teacherId, setTeacherId] = useState('')
+
+  if (!teachers || teachers.length === 0) return null
+
+  return (
+    <div className="flex items-center gap-2">
+      <select
+        value={teacherId}
+        onChange={(e) => setTeacherId(e.target.value)}
+        className="h-9 flex-1 rounded-lg border border-border-strong bg-surface px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+      >
+        <option value="">Assign teacher…</option>
+        {teachers.map((t) => (
+          <option key={t.id} value={t.id}>
+            {t.name}
+          </option>
+        ))}
+      </select>
+      <Button
+        variant="secondary"
+        size="sm"
+        disabled={!teacherId}
+        loading={updateClass.isPending}
+        onClick={() => updateClass.mutate({ classId, input: { teacher_user_id: Number(teacherId) } })}
+      >
+        Assign
+      </Button>
+    </div>
+  )
+}
+
+function NewClassModal({ open, onClose, orgId }: { open: boolean; onClose: () => void; orgId: number }) {
   const createClass = useCreateClass()
-  const [values, setValues] = useState({ name: '', level: '' })
+  const teachers = useTeachers(orgId)
+  const [values, setValues] = useState({ name: '', level: '', teacher_user_id: '' })
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -134,8 +174,12 @@ function NewClassModal({ open, onClose }: { open: boolean; onClose: () => void }
     setFieldErrors({})
     setFormError(null)
     try {
-      await createClass.mutateAsync({ name: values.name, level: values.level || undefined })
-      setValues({ name: '', level: '' })
+      await createClass.mutateAsync({
+        name: values.name,
+        level: values.level || undefined,
+        teacher_user_id: values.teacher_user_id ? Number(values.teacher_user_id) : undefined,
+      })
+      setValues({ name: '', level: '', teacher_user_id: '' })
       onClose()
     } catch (err) {
       if (err instanceof ApiError) {
@@ -165,6 +209,22 @@ function NewClassModal({ open, onClose }: { open: boolean; onClose: () => void }
           onChange={(e) => setValues((v) => ({ ...v, level: e.target.value }))}
           error={fieldErrors.level}
         />
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-semibold text-foreground">Teacher (optional)</span>
+          <select
+            value={values.teacher_user_id}
+            onChange={(e) => setValues((v) => ({ ...v, teacher_user_id: e.target.value }))}
+            className="h-11 rounded-xl border border-border-strong bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">Assign later</option>
+            {teachers.data?.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          {fieldErrors.teacher_user_id && <p className="text-xs font-medium text-danger">{fieldErrors.teacher_user_id}</p>}
+        </label>
         <div className="flex gap-2">
           <Button type="button" variant="secondary" fullWidth onClick={onClose}>
             Cancel

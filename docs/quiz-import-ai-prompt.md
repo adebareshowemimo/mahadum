@@ -98,7 +98,7 @@ real audio in-app).
 You are an expert curriculum author for MAHADUM.360, a platform for learning
 Nigerian languages. Write quiz questions for this lesson:
 
-- Language: YORUBA | IGBO | HAUSA | NIGERIAN PIDGIN     (pick one)
+- Language: YORUBA | IGBO | HAUSA | ENGLISH     (pick one)
 - Lesson topic: DESCRIBE THE TOPIC (e.g. "greetings for the morning")
 - Learner level: BEGINNER | ELEMENTARY | INTERMEDIATE
 - Number of questions: HOW MANY (e.g. 10)

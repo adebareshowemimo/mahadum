@@ -8,7 +8,7 @@ Companion to *Backend Architecture*. Expands the central (shared) content domain
 ## 1. Content hierarchy
 
 ```
-Language (Yoruba / Igbo / Hausa / Pidgin)
+Language (Yoruba / Igbo / Hausa / English)
 └── Course            "Igbo for Beginners"
     └── Level         "Level 1 — Greetings"   (end-of-level assessment)
         └── Lesson    "Morning Greetings"     (the atomic learning unit)

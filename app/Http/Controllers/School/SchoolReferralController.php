@@ -43,6 +43,14 @@ class SchoolReferralController extends Controller
         $payouts = $this->payoutsQuery($organization)->latest()
             ->get(['id', 'amount_minor', 'method', 'status', 'requested_at', 'paid_at']);
 
+        $clearedMinor = (int) Commission::where('beneficiary_type', Organization::class)
+            ->where('beneficiary_id', $organization->id)
+            ->where('status', 'cleared')
+            ->sum('amount_minor');
+        $committedMinor = (int) $payouts
+            ->whereIn('status', ['requested', 'approved', 'paid'])
+            ->sum('amount_minor');
+
         return response()->json(['data' => [
             'code' => $code->code,
             'status' => $code->status,
@@ -50,6 +58,7 @@ class SchoolReferralController extends Controller
             'share_text' => "Join {$organization->name} on Mahadum.360 with our school code {$code->code}.",
             'referrals' => $referralsByStatus,
             'commissions' => $commissions,
+            'available_minor' => max(0, $clearedMinor - $committedMinor),
             'payouts' => $payouts,
         ]]);
     }
@@ -57,6 +66,23 @@ class SchoolReferralController extends Controller
     public function requestPayout(RequestPayoutRequest $request, Organization $organization): JsonResponse
     {
         $this->authorizeOrg($request->user(), $organization);
+
+        $clearedMinor = Commission::where('beneficiary_type', Organization::class)
+            ->where('beneficiary_id', $organization->id)
+            ->where('status', 'cleared')
+            ->sum('amount_minor');
+
+        $outstandingMinor = $this->payoutsQuery($organization)
+            ->whereIn('status', ['requested', 'approved', 'paid'])
+            ->sum('amount_minor');
+
+        $availableMinor = $clearedMinor - $outstandingMinor;
+
+        if ($request->integer('amount_minor') > $availableMinor) {
+            return response()->json([
+                'error' => ['code' => 'insufficient_balance', 'message' => 'Requested amount exceeds your available balance (₦'.number_format(max($availableMinor, 0) / 100).').', 'status' => 422],
+            ], 422);
+        }
 
         $thisMonth = $this->payoutsQuery($organization)
             ->whereIn('status', ['requested', 'approved', 'paid'])

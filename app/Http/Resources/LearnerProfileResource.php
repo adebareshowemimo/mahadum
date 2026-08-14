@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\LearnerProfile;
+use App\Services\Family\WalletService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -22,6 +23,7 @@ class LearnerProfileResource extends JsonResource
             'target_language' => $this->whenLoaded('targetLanguage', fn () => $this->targetLanguage?->code),
             'is_child' => $this->user_id === null,
             'pin_protected' => $this->parental_pin !== null,
+            'coin_balance' => app(WalletService::class)->walletFor($this->resource)->coin_balance,
         ];
     }
 }

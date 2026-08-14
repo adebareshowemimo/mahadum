@@ -54,7 +54,7 @@ function SchoolReferrals({ orgId }: { orgId: number }) {
   const referralEntries = Object.entries(data.referrals ?? {})
   const totalReferrals = referralEntries.reduce((sum, [, count]) => sum + count, 0)
   const commissionEntries = Object.values(data.commissions ?? {})
-  const clearedMinor = commissionEntries.find((c) => c.status === 'cleared')?.total ?? 0
+  const availableMinor = data.available_minor
 
   return (
     <div className="flex flex-col gap-8">
@@ -63,9 +63,15 @@ function SchoolReferrals({ orgId }: { orgId: number }) {
           <h1 className="font-display text-2xl font-bold text-foreground">School referrals</h1>
           <p className="mt-1 text-muted">Your school’s own code — commission accrues to the school, not an individual.</p>
         </div>
-        <Button variant="reward" leftIcon={<Icon name="wallet" className="size-[18px]" />} onClick={() => setPayoutOpen(true)}>
-          Request payout
-        </Button>
+        <div className="flex flex-col items-end gap-2">
+          <div className="text-right">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">Available balance</p>
+            <p className="font-display text-2xl font-extrabold text-foreground">{formatMoney(availableMinor, 'NGN')}</p>
+          </div>
+          <Button variant="reward" leftIcon={<Icon name="wallet" className="size-[18px]" />} onClick={() => setPayoutOpen(true)}>
+            Request payout
+          </Button>
+        </div>
       </div>
 
       {(data.status === 'flagged' || data.status === 'frozen') && (
@@ -172,7 +178,7 @@ function SchoolReferrals({ orgId }: { orgId: number }) {
         orgId={orgId}
         open={payoutOpen}
         onClose={() => setPayoutOpen(false)}
-        availableMinor={clearedMinor}
+        availableMinor={availableMinor}
       />
     </div>
   )

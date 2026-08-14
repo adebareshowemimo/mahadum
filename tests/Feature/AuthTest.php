@@ -29,6 +29,29 @@ class AuthTest extends TestCase
         $this->assertDatabaseHas('families', ['name' => "Funmi's Family"]);
     }
 
+    public function test_learner_registration_creates_a_direct_profile_exposed_by_me(): void
+    {
+        $this->seedRbac();
+
+        $response = $this->postJson('/api/v1/auth/register', [
+            'first_name' => 'Ada', 'last_name' => 'Okafor',
+            'email' => 'ada.learner@test.local', 'phone' => '+2348012345688',
+            'password' => 'Password123!', 'password_confirmation' => 'Password123!',
+            'device_name' => 'Laptop', 'account_type' => 'learner',
+        ])->assertCreated()->assertJsonPath('data.abilities', ['student']);
+
+        $this->assertDatabaseHas('learner_profiles', [
+            'user_id' => $response->json('data.user.id'),
+            'display_name' => 'Ada Okafor',
+        ]);
+
+        $token = $response->json('data.token');
+        $this->withToken($token)->getJson('/api/v1/me')
+            ->assertOk()
+            ->assertJsonPath('data.learner_profiles.0.display_name', 'Ada Okafor')
+            ->assertJsonPath('data.learner_profiles.0.coin_balance', 0);
+    }
+
     public function test_register_requires_last_name(): void
     {
         $this->seedRbac();

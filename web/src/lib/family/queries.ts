@@ -62,6 +62,8 @@ export function useTransfer() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: familyKeys.wallet })
       void qc.invalidateQueries({ queryKey: familyKeys.family })
+      // The active learner's own coin_balance (shown in LearnPage's stats bar) comes from /me.
+      void qc.invalidateQueries({ queryKey: ['me'] })
     },
   })
 }

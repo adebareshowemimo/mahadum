@@ -124,7 +124,7 @@ export const LANDING_LANGUAGES: LandingLanguage[] = [
   },
   {
     code: 'pcm',
-    name: 'Pidgin',
+    name: 'English',
     endonym: 'Naijá',
     greeting: 'How you dey?',
     greetingMeaning: 'How are you?',

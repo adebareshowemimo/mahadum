@@ -4,7 +4,7 @@ import { ApiError, type RosterImportResult } from '@/lib/api'
 import { SchoolGate } from '@/components/school/SchoolGate'
 import { useImportRoster } from '@/lib/school/queries'
 
-const ROSTER_TEMPLATE = ['display_name,level', 'Amara Okafor,A1', 'Bello Musa,A2', 'Chinwe Eze,'].join('\n')
+const ROSTER_TEMPLATE = ['Firstname,Lastname,Level', 'Amara,Okafor,A1', 'Bello,Musa,A2', 'Chinwe,Eze,'].join('\n')
 
 function downloadRosterTemplate() {
   const blob = new Blob([ROSTER_TEMPLATE], { type: 'text/csv;charset=utf-8' })
@@ -55,7 +55,7 @@ function Roster({ orgId }: { orgId: number }) {
         <CardBody className="flex flex-col gap-4">
           <Alert variant="info" title="CSV format">
             <p>
-              One student per row with a header: <code>display_name,level</code>. The <code>level</code> column is optional.
+              One student per row with a header: <code>Firstname,Lastname,Level</code>. The <code>Level</code> column is optional.
             </p>
             <button
               type="button"

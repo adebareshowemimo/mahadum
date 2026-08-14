@@ -305,7 +305,7 @@ Ongoing in parallel: **Design**, **Content production**, **Integrations**, **Com
 ### Content production ⬜
 - [ ] Native-speaker audio + video recording per language; tone-mark review of all in-app copy.
 - [ ] Caption authoring (en + target); cultural content (proverbs/folktales).
-- [ ] Curriculum sequencing (levels/lessons) for Yoruba, Igbo, Hausa, Pidgin.
+- [ ] Curriculum sequencing (levels/lessons) for Yoruba, Igbo, Hausa, English.
 
 ### Integrations ⬜
 - [ ] Flutterwave + Paystack (cards/transfers/webhooks).

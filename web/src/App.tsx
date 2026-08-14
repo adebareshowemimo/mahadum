@@ -76,6 +76,7 @@ const SettlementsPage = lazy(() => import('@/pages/SettlementsPage').then((m) =>
 const UsersPage = lazy(() => import('@/pages/UsersPage').then((m) => ({ default: m.UsersPage })))
 const LeaderboardPage = lazy(() => import('@/pages/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })))
 const LearnPage = lazy(() => import('@/pages/LearnPage').then((m) => ({ default: m.LearnPage })))
+const CourseCatalogPage = lazy(() => import('@/pages/CourseCatalogPage').then((m) => ({ default: m.CourseCatalogPage })))
 const LessonPlayerPage = lazy(() => import('@/pages/LessonPlayerPage').then((m) => ({ default: m.LessonPlayerPage })))
 const InvoicesPage = lazy(() => import('@/pages/InvoicesPage').then((m) => ({ default: m.InvoicesPage })))
 const ReferralsPage = lazy(() => import('@/pages/ReferralsPage').then((m) => ({ default: m.ReferralsPage })))
@@ -108,11 +109,23 @@ function HashScrollRestoration() {
 
     let cancelled = false
     let attempts = 0
+    let settleChecks = 0
+    // Images above the target section keep loading after it first mounts,
+    // shifting layout and drifting the target back out of view — so once
+    // found, keep correcting the scroll position for a bit longer instead
+    // of scrolling once and walking away.
+    const settle = () => {
+      if (cancelled) return
+      const el = document.getElementById(id)
+      if (el && Math.abs(el.getBoundingClientRect().top) > 4) el.scrollIntoView({ block: 'start' })
+      if (++settleChecks < 10) setTimeout(settle, 200) // ~2s of drift correction
+    }
     const tryScroll = () => {
       if (cancelled) return
       const el = document.getElementById(id)
       if (el) {
         el.scrollIntoView({ block: 'start' })
+        settle()
         return
       }
       if (++attempts < 40) setTimeout(tryScroll, 100) // up to ~4s for lazy chunks
@@ -161,6 +174,7 @@ const REAL_PAGES = new Set([
   '/wallet',
   '/reviews',
   '/learn',
+  '/learn/courses',
   '/achievements',
   '/leaderboard',
   '/referrals',
@@ -254,6 +268,7 @@ export function App() {
           <Route element={<ShellSuspense />}>
           <Route path="/home" element={<DashboardPage />} />
           <Route path="/learn" element={<LearnPage />} />
+          <Route path="/learn/courses" element={<CourseCatalogPage />} />
           <Route path="/achievements" element={<AchievementsPage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/family" element={<FamilyPage />} />

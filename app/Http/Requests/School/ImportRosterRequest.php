@@ -14,7 +14,7 @@ class ImportRosterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Provide rows inline OR upload a CSV (display_name[,level]).
+            // Provide rows inline OR upload a CSV (Firstname,Lastname,Level).
             'students' => ['required_without:file', 'array'],
             'students.*.display_name' => ['required_with:students', 'string', 'max:255'],
             'students.*.level' => ['nullable', 'string', 'max:100'],

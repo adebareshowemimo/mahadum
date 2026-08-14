@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\MediaAsset;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class MediaOrphanTest extends TestCase
@@ -56,5 +58,18 @@ class MediaOrphanTest extends TestCase
         $this->actingAsUser($this->userWithRole('student'));
 
         $this->getJson('/api/v1/media/orphans')->assertStatus(403);
+    }
+
+    public function test_uploaded_video_returns_a_same_origin_playable_url(): void
+    {
+        $this->seedRbac();
+        Storage::fake('public');
+        $this->actingAsUser($this->userWithRole('content_owner'));
+
+        $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->create('lesson.mp4', 128, 'video/mp4'),
+        ])->assertCreated()
+            ->assertJsonPath('data.type', 'video')
+            ->assertJsonPath('data.url', fn ($url) => str_starts_with($url, '/storage/media/'));
     }
 }

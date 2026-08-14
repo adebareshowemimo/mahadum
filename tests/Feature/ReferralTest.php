@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Commission;
+use App\Models\Payout;
 use App\Models\Plan;
 use App\Models\Referral;
 use App\Models\ReferralCode;
@@ -159,5 +160,35 @@ class ReferralTest extends TestCase
         }
         Artisan::call('referrals:flag-velocity');
         $this->assertEquals('flagged', ReferralCode::find($code->id)->status);
+    }
+
+    public function test_summary_reports_cleared_balance_net_of_committed_payouts(): void
+    {
+        $this->seedRbac();
+        $user = $this->userWithRole('parent');
+        $code = app(ReferralService::class)->codeFor($user);
+        $referral = Referral::create([
+            'referral_code_id' => $code->id,
+            'status' => 'qualified',
+            'signed_up_at' => now(),
+        ]);
+        $commission = new Commission(['amount_minor' => 500_000, 'status' => 'cleared']);
+        $commission->referral()->associate($referral);
+        $commission->beneficiary()->associate($user);
+        $commission->save();
+
+        $payout = new Payout([
+            'amount_minor' => 125_000,
+            'method' => 'bank',
+            'status' => 'requested',
+            'requested_at' => now(),
+        ]);
+        $payout->beneficiary()->associate($user);
+        $payout->save();
+
+        $this->actingAsUser($user);
+        $this->getJson('/api/v1/referrals/summary')
+            ->assertOk()
+            ->assertJsonPath('data.available_minor', 375_000);
     }
 }

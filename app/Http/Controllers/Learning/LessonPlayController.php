@@ -14,6 +14,7 @@ use App\Models\QuizAttempt;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 
 class LessonPlayController extends Controller
 {
@@ -111,7 +112,7 @@ class LessonPlayController extends Controller
                 // Direct file URL from the local-disk upload (MP4/WebM). A managed
                 // vendor would populate `hls` instead. Null for source_type=youtube.
                 'src' => $component->video->sourceAsset
-                    ? url('storage/'.$component->video->sourceAsset->url)
+                    ? Storage::disk('public')->url($component->video->sourceAsset->url)
                     : null,
                 'external_url' => $component->video->external_url,
                 'hls' => null,
@@ -213,9 +214,9 @@ class LessonPlayController extends Controller
             ->all();
     }
 
-    /** Absolute URL for a local-disk media asset (null when unset). */
+    /** URL for a local-disk media asset (null when unset). */
     private function assetUrl(?MediaAsset $asset): ?string
     {
-        return $asset ? url('storage/'.$asset->url) : null;
+        return $asset ? Storage::disk('public')->url($asset->url) : null;
     }
 }

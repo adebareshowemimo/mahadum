@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-**MAHADUM.360** — a web-first platform for learning Nigerian languages (Yoruba, Igbo, Hausa, Pidgin) built for both **B2C families/diaspora** and **B2B schools**. Tagline (locked, single source `web/src/lib/brand.ts`): *"Learn the language. Live the culture. Connect the generations."*
+**MAHADUM.360** — a web-first platform for learning Yoruba, Igbo, Hausa, and English, built for both **B2C families/diaspora** and **B2B schools**. Tagline (locked, single source `web/src/lib/brand.ts`): *"Learn the language. Live the culture. Connect the generations."*
 
 Two apps in one repo:
 - **Laravel 13 API** (PHP 8.3) at the repo root — `app/`, `routes/api.php`, `database/`.

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AdvertPlacement;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 /**
@@ -50,9 +51,9 @@ class AdvertController extends Controller
         return response()->json(null, 204);
     }
 
-    /** Absolute URL for a stored path (already-absolute URLs pass through). */
+    /** URL for a stored path (already-absolute URLs pass through). */
     private function resolveUrl(string $url): string
     {
-        return str_starts_with($url, 'http') ? $url : url('storage/'.ltrim($url, '/'));
+        return str_starts_with($url, 'http') ? $url : Storage::disk('public')->url($url);
     }
 }

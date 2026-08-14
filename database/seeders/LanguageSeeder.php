@@ -13,7 +13,7 @@ class LanguageSeeder extends Seeder
             ['code' => 'yo',  'name' => 'Yoruba',          'script' => 'latin', 'rtl' => false, 'is_active' => true],
             ['code' => 'ig',  'name' => 'Igbo',            'script' => 'latin', 'rtl' => false, 'is_active' => true],
             ['code' => 'ha',  'name' => 'Hausa',           'script' => 'latin', 'rtl' => false, 'is_active' => true],
-            ['code' => 'pcm', 'name' => 'Nigerian Pidgin', 'script' => 'latin', 'rtl' => false, 'is_active' => true],
+            ['code' => 'en', 'name' => 'English', 'script' => 'latin', 'rtl' => false, 'is_active' => true],
         ];
 
         foreach ($languages as $language) {

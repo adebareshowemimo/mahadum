@@ -9,6 +9,7 @@ use App\Models\AdvertPlacement;
 use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class AdvertPlacementController extends Controller
 {
@@ -144,9 +145,9 @@ class AdvertPlacementController extends Controller
         ];
     }
 
-    /** Absolute URL for a stored path (already-absolute URLs pass through). */
+    /** URL for a stored path (already-absolute URLs pass through). */
     private function resolveUrl(string $url): string
     {
-        return str_starts_with($url, 'http') ? $url : url('storage/'.ltrim($url, '/'));
+        return str_starts_with($url, 'http') ? $url : Storage::disk('public')->url($url);
     }
 }

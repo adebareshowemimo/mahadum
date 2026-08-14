@@ -104,6 +104,10 @@ class SchoolReferralTest extends TestCase
         $this->assertDatabaseHas('payouts', [
             'beneficiary_type' => Organization::class, 'beneficiary_id' => $org->id, 'amount_minor' => 150_000,
         ]);
+
+        $this->getJson("/api/v1/schools/{$org->id}/referrals/summary")
+            ->assertOk()
+            ->assertJsonPath('data.available_minor', 50_000);
     }
 
     public function test_school_admin_cannot_view_a_foreign_org_referral_summary(): void

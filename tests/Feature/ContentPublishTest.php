@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Course;
 use App\Models\Language;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -70,5 +71,31 @@ class ContentPublishTest extends TestCase
         $options = $play['components'][0]['quiz']['questions'][0]['options'];
 
         $this->assertArrayNotHasKey('is_correct', $options[0]);
+    }
+
+    public function test_student_catalog_returns_all_published_courses_and_hides_drafts(): void
+    {
+        $this->seedRbac();
+        $language = Language::create(['code' => 'en', 'name' => 'English', 'script' => 'latin', 'is_active' => true]);
+
+        foreach (range(1, 25) as $number) {
+            Course::create([
+                'language_id' => $language->id,
+                'title' => "Published {$number}",
+                'status' => 'published',
+                'is_published' => true,
+            ]);
+        }
+        Course::create([
+            'language_id' => $language->id,
+            'title' => 'Draft course',
+            'status' => 'draft',
+            'is_published' => false,
+        ]);
+
+        $this->actingAsUser($this->userWithRole('student'));
+        $this->getJson('/api/v1/courses?per_page=100')
+            ->assertOk()
+            ->assertJsonCount(25, 'data');
     }
 }

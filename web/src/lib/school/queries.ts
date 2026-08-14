@@ -103,6 +103,26 @@ export function useCreateClass() {
   })
 }
 
+export function useTeachers(orgId: number | null) {
+  return useQuery({
+    queryKey: ['school-teachers', orgId ?? 0],
+    queryFn: () => schoolApi.teachers(orgId as number),
+    enabled: !!orgId,
+  })
+}
+
+export function useUpdateClass() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ classId, input }: { classId: number; input: Partial<CreateClassInput> }) =>
+      schoolApi.updateClass(classId, input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['school-classes'] })
+      void qc.invalidateQueries({ queryKey: ['school-dashboard'] })
+    },
+  })
+}
+
 export function usePurchaseSeats(orgId: number) {
   const qc = useQueryClient()
   return useMutation({

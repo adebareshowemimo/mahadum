@@ -16,6 +16,7 @@ use App\Services\AuditLogger;
 use App\Services\Family\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Teacher-authored class assignments (schools.assignments.{create,review}),
@@ -120,7 +121,7 @@ class ClassAssignmentController extends Controller
                 'feedback' => $s?->feedback,
                 'submitted_at' => $s?->submitted_at,
                 'graded_at' => $s?->graded_at,
-                'media_url' => $s?->mediaAsset ? url('storage/'.$s->mediaAsset->url) : null,
+                'media_url' => $s?->mediaAsset ? Storage::disk('public')->url($s->mediaAsset->url) : null,
             ];
         });
 

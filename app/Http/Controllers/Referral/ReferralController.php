@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Referral;
 
 use App\Http\Controllers\Controller;
 use App\Models\Commission;
+use App\Models\Payout;
 use App\Models\User;
 use App\Services\Referral\ReferralService;
 use Illuminate\Http\JsonResponse;
@@ -21,7 +22,7 @@ class ReferralController extends Controller
             'code' => $code->code,
             'status' => $code->status,
             'share_url' => rtrim(config('app.url'), '/').'/r/'.$code->code,
-            'share_text' => "Learn Yoruba, Igbo, Hausa & Pidgin on Mahadum.360 — join with my code {$code->code}.",
+            'share_text' => "Learn Yoruba, Igbo, Hausa & English on Mahadum.360 — join with my code {$code->code}.",
         ]]);
     }
 
@@ -38,10 +39,20 @@ class ReferralController extends Controller
             ->selectRaw('status, COUNT(*) c, COALESCE(SUM(amount_minor),0) total')
             ->groupBy('status')->get()->keyBy('status');
 
+        $clearedMinor = (int) Commission::where('beneficiary_type', User::class)
+            ->where('beneficiary_id', $user->id)
+            ->where('status', 'cleared')
+            ->sum('amount_minor');
+        $committedMinor = (int) Payout::where('beneficiary_type', User::class)
+            ->where('beneficiary_id', $user->id)
+            ->whereIn('status', ['requested', 'approved', 'paid'])
+            ->sum('amount_minor');
+
         return response()->json(['data' => [
             'code' => $code->code,
             'referrals' => $referralsByStatus,
             'commissions' => $commissions,
+            'available_minor' => max(0, $clearedMinor - $committedMinor),
         ]]);
     }
 }

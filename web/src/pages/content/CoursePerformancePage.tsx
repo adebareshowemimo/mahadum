@@ -32,7 +32,24 @@ export function CoursePerformancePage() {
     {
       key: 'enrollments',
       header: 'Enrollments',
-      render: (c) => <span className="font-semibold">{c.enrollments}</span>,
+      render: (c) => (
+        <div>
+          <span className="font-semibold">{c.enrollments}</span>
+          {Object.keys(c.enrollments_by_status).length > 0 && (
+            <p className="text-xs text-muted">
+              {Object.entries(c.enrollments_by_status)
+                .map(([status, count]) => `${count} ${status}`)
+                .join(' · ')}
+            </p>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'referred',
+      header: 'Referred users',
+      render: (c) => c.referred_enrollments,
+      hideOnMobile: true,
     },
     {
       key: 'completions',
@@ -54,9 +71,9 @@ export function CoursePerformancePage() {
       </div>
 
       <Alert variant="info" icon={<Icon name="sparkles" className="size-4" />}>
-        MAHADUM.360 sells platform subscriptions, not individual courses, so revenue and subscription counts aren’t
-        attributed per course — that view stays with platform-wide reporting. This shows the engagement data that is
-        genuinely tracked per course.
+        MAHADUM.360 sells platform subscriptions, not individual courses, so exact revenue isn’t attributed per
+        course — that figure stays with platform-wide reporting. Enrollment status and “Referred users” below are
+        approximations built from enrollment and referral records, not billing data.
       </Alert>
 
       {isError && <Alert variant="danger">Couldn’t load course performance.</Alert>}

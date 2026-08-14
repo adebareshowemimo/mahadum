@@ -47,6 +47,7 @@ class FamilyController extends Controller
                 'display_name' => $l->display_name,
                 'is_child' => $l->user_id === null,
                 'pin_protected' => $l->parental_pin !== null,
+                'coin_balance' => $this->wallets->walletFor($l)->coin_balance,
             ])->values(),
         ]]);
     }

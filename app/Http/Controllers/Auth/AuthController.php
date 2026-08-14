@@ -9,6 +9,7 @@ use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Models\Family;
 use App\Models\FamilyMember;
+use App\Models\LearnerProfile;
 use App\Models\User;
 use App\Notifications\NewDeviceAlert;
 use App\Services\Referral\ReferralService;
@@ -52,6 +53,11 @@ class AuthController extends Controller
                     'user_id' => $user->id,
                     'relationship' => 'parent',
                     'is_account_owner' => true,
+                ]);
+            } else {
+                LearnerProfile::create([
+                    'user_id' => $user->id,
+                    'display_name' => $user->name,
                 ]);
             }
 

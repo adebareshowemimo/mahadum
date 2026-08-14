@@ -55,7 +55,7 @@ export function LearnPage() {
             )}
           </div>
         </div>
-        <StatsBar learnerId={activeLearner.id} />
+        <StatsBar learnerId={activeLearner.id} coinBalance={activeLearner.coin_balance} />
       </div>
 
       {hasPath ? (
@@ -172,7 +172,7 @@ function EnrollCard({ learnerId }: { learnerId: number }) {
   )
 }
 
-function StatsBar({ learnerId }: { learnerId: number }) {
+function StatsBar({ learnerId, coinBalance }: { learnerId: number; coinBalance: number }) {
   const streak = useStreak(learnerId)
   const hearts = useHearts(learnerId)
   return (
@@ -182,6 +182,9 @@ function StatsBar({ learnerId }: { learnerId: number }) {
       </span>
       <span className="flex items-center gap-1.5 rounded-full bg-surface-muted px-3 py-1.5 text-sm font-bold text-foreground">
         ❤️ {hearts.data?.current ?? 0}
+      </span>
+      <span className="flex items-center gap-1.5 rounded-full bg-surface-muted px-3 py-1.5 text-sm font-bold text-foreground">
+        🪙 {coinBalance.toLocaleString()}
       </span>
     </div>
   )

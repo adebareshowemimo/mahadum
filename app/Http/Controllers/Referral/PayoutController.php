@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Referral;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Referral\RequestPayoutRequest;
+use App\Models\Commission;
 use App\Models\Payout;
 use App\Models\User;
 use App\Notifications\PayoutApproved;
@@ -75,6 +76,24 @@ class PayoutController extends Controller
     public function store(RequestPayoutRequest $request): JsonResponse
     {
         $user = $request->user();
+
+        $clearedMinor = Commission::where('beneficiary_type', User::class)
+            ->where('beneficiary_id', $user->id)
+            ->where('status', 'cleared')
+            ->sum('amount_minor');
+
+        $outstandingMinor = Payout::where('beneficiary_type', User::class)
+            ->where('beneficiary_id', $user->id)
+            ->whereIn('status', ['requested', 'approved', 'paid'])
+            ->sum('amount_minor');
+
+        $availableMinor = $clearedMinor - $outstandingMinor;
+
+        if ($request->integer('amount_minor') > $availableMinor) {
+            return response()->json([
+                'error' => ['code' => 'insufficient_balance', 'message' => 'Requested amount exceeds your available balance (₦'.number_format(max($availableMinor, 0) / 100).').', 'status' => 422],
+            ], 422);
+        }
 
         $thisMonth = Payout::where('beneficiary_type', User::class)
             ->where('beneficiary_id', $user->id)

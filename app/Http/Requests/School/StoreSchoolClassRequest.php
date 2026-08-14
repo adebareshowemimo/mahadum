@@ -3,6 +3,7 @@
 namespace App\Http\Requests\School;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreSchoolClassRequest extends FormRequest
 {
@@ -16,7 +17,14 @@ class StoreSchoolClassRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'level' => ['nullable', 'string', 'max:100'],
-            'teacher_user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'teacher_user_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('organization_user', 'user_id')->where(fn ($query) => $query
+                    ->where('organization_id', app('currentTenantId'))
+                    ->where('role', 'teacher')
+                    ->where('status', 'active')),
+            ],
         ];
     }
 }

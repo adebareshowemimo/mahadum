@@ -28,8 +28,10 @@ function Invoices({ orgId }: { orgId: number }) {
     setError(null)
     try {
       await schoolApi.downloadInvoice(orgId, id)
-    } catch {
-      setError('Could not download that invoice. Please try again.')
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : 'Could not download that invoice. Please try again.',
+      )
     } finally {
       setDownloading(null)
     }
@@ -85,6 +87,16 @@ function Invoices({ orgId }: { orgId: number }) {
                   <p className="text-xs text-muted">
                     Issued {inv.issued_at ? new Date(inv.issued_at).toLocaleDateString() : '—'}
                   </p>
+                  {inv.lines && inv.lines.length > 0 && (
+                    <ul className="mt-2 flex flex-col gap-0.5 border-l-2 border-border pl-2 text-xs text-muted">
+                      {inv.lines.map((line, idx) => (
+                        <li key={idx} className="flex items-center justify-between gap-4">
+                          <span>{line.description}</span>
+                          <span>{formatMoney(line.amount_minor, 'NGN')}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   <Badge variant={STATUS_TONE[inv.status] ?? 'neutral'}>{inv.status}</Badge>

@@ -305,6 +305,7 @@ Route::prefix('v1')->group(function () {
         /* ---- School operations (org-scoped) ---- */
         Route::prefix('schools/{organization}')->group(function () {
             Route::get('dashboard', [SchoolDashboardController::class, 'show'])->middleware('can:schools.dashboard.view');
+            Route::get('teachers', [SchoolClassController::class, 'teachers'])->middleware('can:schools.classes.manage');
             Route::post('students/import', [RosterController::class, 'import'])->middleware('can:schools.roster.import');
             Route::get('seats', [SeatController::class, 'index'])->middleware('can:schools.seats.view');
             Route::post('seats/purchase', [SeatController::class, 'purchase'])->middleware('can:schools.seats.purchase');

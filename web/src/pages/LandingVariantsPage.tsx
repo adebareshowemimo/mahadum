@@ -68,7 +68,7 @@ export function ConceptFooter({ tone = 'light' }: { tone?: ConceptTone }) {
             © {WORDMARK} · {new Date().getFullYear()} · Lagos, Nigeria
           </p>
           <p className={cn('text-xs font-semibold', dark ? 'text-white/60' : 'text-navy-500')}>
-            Yorùbá · Igbo · Hausa · Pidgin
+            Yorùbá · Igbo · Hausa · English
           </p>
           <button
             type="button"
@@ -371,7 +371,7 @@ export function LandingV1Page() {
                 <ul className="mt-7 space-y-3">
                   <CheckLine inverse>Native-speaker audio and speaking practice</CheckLine>
                   <CheckLine inverse>Stories that explain when and why words are used</CheckLine>
-                  <CheckLine inverse>Yorùbá, Igbo, Hausa and Nigerian Pidgin</CheckLine>
+                  <CheckLine inverse>Yorùbá, Igbo, Hausa and English</CheckLine>
                 </ul>
               </div>
             </div>
@@ -515,7 +515,7 @@ export function LandingV2Page() {
                 Every new word opens a bigger world.
               </h1>
               <p className="mt-6 max-w-xl text-lg font-bold leading-relaxed text-white/88 sm:text-xl">
-                Stories, market missions, speaking games and friendly challenges make Yorùbá, Igbo, Hausa and Pidgin feel like play with a purpose.
+                Stories, market missions, speaking games and friendly challenges make Yorùbá, Igbo, Hausa and English feel like play with a purpose.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <a href="#v2-play" className="inline-flex h-12 items-center justify-center rounded-xl bg-[#ff650f] px-6 font-display font-extrabold text-white hover:bg-[#d94d00]">Play a one-minute lesson</a>

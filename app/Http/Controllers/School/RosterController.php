@@ -70,7 +70,13 @@ class RosterController extends Controller
         return response()->json(['data' => ['created' => $created, 'errors' => $errors]], 201);
     }
 
-    /** @return array<int, array{display_name:string, level?:string}> */
+    /**
+     * Header-driven so column order in the file doesn't matter. Accepts the
+     * current template (firstname,lastname,level) as well as the legacy
+     * display_name,level format for files exported before that change.
+     *
+     * @return array<int, array{display_name:string, level?:string}>
+     */
     private function parseCsv(string $path): array
     {
         $rows = [];
@@ -79,19 +85,31 @@ class RosterController extends Controller
             while (($cols = fgetcsv($handle)) !== false) {
                 if ($header === null) {
                     $header = array_map(fn ($h) => strtolower(trim($h)), $cols);
-                    // Headerless file: treat first row as data.
-                    if (! in_array('display_name', $header, true)) {
-                        $rows[] = ['display_name' => $cols[0] ?? '', 'level' => $cols[1] ?? null];
-                        $header = ['display_name', 'level'];
+                    // Headerless file: assume the current template's column order.
+                    if (! in_array('firstname', $header, true) && ! in_array('display_name', $header, true)) {
+                        $rows[] = $this->rowFromCols(['firstname', 'lastname', 'level'], $cols);
+                        $header = ['firstname', 'lastname', 'level'];
                     }
 
                     continue;
                 }
-                $rows[] = ['display_name' => $cols[0] ?? '', 'level' => $cols[1] ?? null];
+                $rows[] = $this->rowFromCols($header, $cols);
             }
             fclose($handle);
         }
 
         return $rows;
+    }
+
+    /** @param array<int, string> $header @param array<int, string|null> $cols */
+    private function rowFromCols(array $header, array $cols): array
+    {
+        $byKey = array_combine($header, array_slice(array_pad($cols, count($header), null), 0, count($header)));
+
+        $displayName = array_key_exists('display_name', $byKey) && trim((string) $byKey['display_name']) !== ''
+            ? trim((string) $byKey['display_name'])
+            : trim(($byKey['firstname'] ?? '').' '.($byKey['lastname'] ?? ''));
+
+        return ['display_name' => $displayName, 'level' => $byKey['level'] ?? null];
     }
 }

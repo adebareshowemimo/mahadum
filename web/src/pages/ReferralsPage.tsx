@@ -34,7 +34,7 @@ const STATUS_TONE: Record<string, 'success' | 'gold' | 'danger' | 'neutral'> = {
 export function ReferralsPage() {
   const [payoutOpen, setPayoutOpen] = useState(false)
   const summary = useReferralSummary()
-  const cleared = Object.values(summary.data?.commissions ?? {}).find((c) => c.status === 'cleared')?.total ?? 0
+  const available = summary.data?.available_minor ?? 0
 
   return (
     <div className="flex flex-col gap-8">
@@ -43,9 +43,15 @@ export function ReferralsPage() {
           <h1 className="font-display text-2xl font-bold text-foreground">Refer & earn</h1>
           <p className="mt-1 text-muted">Share Mahadum.360 and earn commission when friends subscribe.</p>
         </div>
-        <Button variant="reward" leftIcon={<Icon name="wallet" className="size-[18px]" />} onClick={() => setPayoutOpen(true)}>
-          Request payout
-        </Button>
+        <div className="flex flex-col items-end gap-2">
+          <div className="text-right">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">Available balance</p>
+            <p className="font-display text-2xl font-extrabold text-foreground">{formatMoney(available, 'NGN')}</p>
+          </div>
+          <Button variant="reward" leftIcon={<Icon name="wallet" className="size-[18px]" />} onClick={() => setPayoutOpen(true)}>
+            Request payout
+          </Button>
+        </div>
       </div>
 
       <ReferralStatusAlert />
@@ -53,7 +59,7 @@ export function ReferralsPage() {
       <SummarySection />
       <PayoutsSection />
 
-      <RequestPayoutModal open={payoutOpen} onClose={() => setPayoutOpen(false)} availableMinor={cleared} />
+      <RequestPayoutModal open={payoutOpen} onClose={() => setPayoutOpen(false)} availableMinor={available} />
     </div>
   )
 }
@@ -196,4 +202,3 @@ function PayoutsSection() {
     </section>
   )
 }
-

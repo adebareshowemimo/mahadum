@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\FamilyResource;
+use App\Http\Resources\LearnerProfileResource;
 use App\Models\OrganizationUser;
 use App\Models\Plan;
 use App\Models\Subscription;
@@ -16,6 +17,7 @@ class MeController extends Controller
     {
         $user = $request->user()->load([
             'ownedFamilies.learnerProfiles.targetLanguage',
+            'learnerProfile.targetLanguage',
         ]);
 
         // Active personal subscription (drives premium entitlements). School
@@ -38,6 +40,9 @@ class MeController extends Controller
                 'roles' => $user->getRoleNames(),
             ],
             'families' => FamilyResource::collection($user->ownedFamilies),
+            'learner_profiles' => $user->learnerProfile
+                ? [new LearnerProfileResource($user->learnerProfile)]
+                : [],
             'organizations' => OrganizationUser::where('user_id', $user->id)->with('organization')->get()->map(fn ($m) => [
                 'id' => $m->organization_id,
                 'name' => $m->organization?->name,

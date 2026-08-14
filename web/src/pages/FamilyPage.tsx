@@ -107,7 +107,12 @@ export function FamilyPage() {
                 <Avatar name={l.display_name} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold text-foreground">{l.display_name}</p>
-                  {l.is_child && <Badge variant="info">Child</Badge>}
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    {l.is_child && <Badge variant="info">Child</Badge>}
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-muted">
+                      🪙 {l.coin_balance.toLocaleString()}
+                    </span>
+                  </div>
                 </div>
                 {l.is_child && (
                   <Button

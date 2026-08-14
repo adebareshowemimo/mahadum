@@ -127,7 +127,7 @@ export function AuthLayout({
 
         {footer && <div className="mt-6 text-center text-sm text-muted">{footer}</div>}
         <p className="mt-6 text-center text-xs text-muted">
-          © {WORDMARK} · {new Date().getFullYear()}
+          © {WORDMARK} · {new Date().getFullYear()} · Lagos, Nigeria
         </p>
       </div>
     </div>

@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers\School;
 
+use App\Http\Controllers\Concerns\ResolvesOrganization;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\School\StoreSchoolClassRequest;
 use App\Models\ClassAssignmentSubmission;
 use App\Models\LessonProgress;
+use App\Models\Organization;
+use App\Models\OrganizationUser;
 use App\Models\QuestionResponse;
 use App\Models\SchoolClass;
 use App\Models\SpeakingSubmission;
@@ -19,6 +22,25 @@ use Illuminate\Http\Request;
  */
 class SchoolClassController extends Controller
 {
+    use ResolvesOrganization;
+
+    /** Teachers a school admin can assign to a class (dropdown source). */
+    public function teachers(Request $request, Organization $organization): JsonResponse
+    {
+        $this->authorizeOrg($request->user(), $organization);
+
+        $teachers = OrganizationUser::with('user')
+            ->where('organization_id', $organization->id)
+            ->where('role', 'teacher')
+            ->where('status', 'active')
+            ->get()
+            ->map(fn ($m) => ['id' => $m->user?->id, 'name' => $m->user?->name])
+            ->filter(fn ($t) => $t['id'] !== null)
+            ->values();
+
+        return response()->json(['data' => $teachers]);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $query = SchoolClass::with('teacherUser')->withCount('enrollments');

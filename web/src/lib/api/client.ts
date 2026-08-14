@@ -37,10 +37,34 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
 }
 
 // Response: normalize every error into an ApiError.
+//
+// Requests made with `responseType: 'blob'` (e.g. PDF downloads) still get a
+// Blob body even when the server actually responded with a JSON error (403,
+// 404, 500, ...) — axios doesn't know to parse it differently. Unwrap that
+// blob back into JSON first so `toApiError` can read the real status/message
+// instead of always falling back to a generic one.
+async function unwrapBlobErrorBody(error: unknown): Promise<unknown> {
+  const data: unknown = (error as { response?: { data?: unknown } })?.response?.data
+  if (
+    typeof Blob !== 'undefined' &&
+    data instanceof Blob &&
+    (data.type.includes('json') || data.type === '')
+  ) {
+    try {
+      const text = await data.text()
+      ;(error as { response: { data: unknown } }).response.data = JSON.parse(text)
+    } catch {
+      // Not actually JSON (a real PDF, or empty body) — leave the error as-is
+      // so toApiError falls back to its generic status-based message.
+    }
+  }
+  return error
+}
+
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    const apiError = toApiError(error)
+  async (error) => {
+    const apiError = toApiError(await unwrapBlobErrorBody(error))
     if (apiError.isUnauthorized && tokenStore.get()) {
       tokenStore.clear()
       onUnauthorized?.()

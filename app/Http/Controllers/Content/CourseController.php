@@ -23,6 +23,7 @@ class CourseController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
+        $perPage = min(max($request->integer('per_page', 20), 1), 100);
         $query = Course::query()->with(['language', 'ownerUser'])->withCount('levels');
 
         // Learners only see published courses; CMS roles see drafts too.
@@ -43,7 +44,7 @@ class CourseController extends Controller
             $query->where('title', 'like', "%{$q}%");
         }
 
-        return CourseResource::collection($query->latest()->paginate(20));
+        return CourseResource::collection($query->latest()->paginate($perPage));
     }
 
     public function show(Course $course): CourseResource

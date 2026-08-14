@@ -57,7 +57,7 @@ export function NativeSpeakerCard({ name, region, language }: { name: string; re
 /* ------------------------------------------------------ language selection card */
 
 const LANG_COLOR: Record<string, string> = {
-  Yorùbá: 'bg-rainbow-green', Igbo: 'bg-rainbow-blue', Hausa: 'bg-rainbow-orange', Pidgin: 'bg-rainbow-purple',
+  Yorùbá: 'bg-rainbow-green', Igbo: 'bg-rainbow-blue', Hausa: 'bg-rainbow-orange', English: 'bg-rainbow-purple',
 }
 
 export function LanguageSelectionCard({ language, flag, learners, selected }: { language: string; flag: string; learners: string; selected?: boolean }) {

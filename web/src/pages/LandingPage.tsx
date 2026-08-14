@@ -165,7 +165,7 @@ function Hero({
             </h1>
 
             <p className="mt-5 max-w-xl text-lg font-medium leading-relaxed text-navy-700 sm:text-xl">
-              Joyful five-minute lessons in Yorùbá, Igbo, Hausa and Pidgin—made with
+              Joyful five-minute lessons in Yorùbá, Igbo, Hausa and English—made with
               native voices, living culture, and a family that learns together.
             </p>
           </Reveal>
@@ -928,7 +928,7 @@ function SiteFooter() {
           <p className="text-xs text-subtle">
             © {WORDMARK} · {new Date().getFullYear()} · Lagos, Nigeria
           </p>
-          <p className="text-xs text-subtle">Yorùbá · Igbo · Hausa · Pidgin</p>
+          <p className="text-xs text-subtle">Yorùbá · Igbo · Hausa · English</p>
         </div>
       </div>
     </footer>

@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Models\LessonComponent;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @mixin LessonComponent
@@ -42,7 +43,7 @@ class LessonComponentResource extends JsonResource
                 'external_url' => $this->video->external_url,
                 // Playable URL for the CMS preview (null until a source is attached).
                 'src' => $this->video->relationLoaded('sourceAsset') && $this->video->sourceAsset
-                    ? url('storage/'.$this->video->sourceAsset->url)
+                    ? Storage::disk('public')->url($this->video->sourceAsset->url)
                     : null,
             ] : null),
             'quiz' => $this->whenLoaded('quiz', fn () => $this->quiz ? [
@@ -57,10 +58,10 @@ class LessonComponentResource extends JsonResource
                         'prompt_audio_asset_id' => $q->prompt_audio_asset_id,
                         'prompt_image_asset_id' => $q->prompt_image_asset_id,
                         'prompt_audio' => $q->relationLoaded('promptAudioAsset') && $q->promptAudioAsset
-                            ? url('storage/'.$q->promptAudioAsset->url)
+                            ? Storage::disk('public')->url($q->promptAudioAsset->url)
                             : null,
                         'prompt_image' => $q->relationLoaded('promptImageAsset') && $q->promptImageAsset
-                            ? url('storage/'.$q->promptImageAsset->url)
+                            ? Storage::disk('public')->url($q->promptImageAsset->url)
                             : null,
                         'options' => $q->relationLoaded('options')
                             ? $q->options->map(fn ($o) => [
@@ -93,7 +94,7 @@ class LessonComponentResource extends JsonResource
                         'mnemonic' => $f->mnemonic,
                         'audio_asset_id' => $f->audio_asset_id,
                         'audio' => $f->relationLoaded('audioAsset') && $f->audioAsset
-                            ? url('storage/'.$f->audioAsset->url)
+                            ? Storage::disk('public')->url($f->audioAsset->url)
                             : null,
                     ])->values()
                     : [],

@@ -203,7 +203,7 @@ function PricingBody({ data, onOpenQuote }: { data: PricingInfo; onOpenQuote: ()
           Start with a word your family can use today.
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-lg font-semibold text-chore-50">
-          No card. No locked course. Just Yorùbá, Igbo, Hausa and Pidgin made joyful.
+          No card. No locked course. Just Yorùbá, Igbo, Hausa and English made joyful.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <LinkButton to="/register" size="lg" variant="accent">Create a free account</LinkButton>

@@ -199,7 +199,7 @@ export function ComponentsPage() {
               <LanguageSelectionCard language="Yorùbá" flag="🪘" learners="12.4k" selected />
               <LanguageSelectionCard language="Igbo" flag="🌍" learners="8.1k" />
               <LanguageSelectionCard language="Hausa" flag="🐪" learners="9.7k" />
-              <LanguageSelectionCard language="Pidgin" flag="🗣️" learners="15.2k" />
+              <LanguageSelectionCard language="English" flag="🗣️" learners="15.2k" />
             </Section>
           </>
         )}

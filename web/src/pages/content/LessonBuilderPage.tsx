@@ -928,10 +928,10 @@ function downloadImportTemplate() {
  * Word (prose) format the importer parses — every question type, upload-safe.
  * Kept verbatim; edits must stay in lock-step with the SpreadsheetReader parser.
  */
-const AI_PROMPT = `You are an expert curriculum author for MAHADUM.360, a platform for learning Nigerian languages (Yoruba, Igbo, Hausa, Nigerian Pidgin).
+const AI_PROMPT = `You are an expert curriculum author for MAHADUM.360, a platform for learning Yoruba, Igbo, Hausa and English.
 
 Write [NUMBER] quiz questions for this lesson:
-- Language: [YORUBA / IGBO / HAUSA / NIGERIAN PIDGIN]
+- Language: [YORUBA / IGBO / HAUSA / ENGLISH]
 - Topic: [DESCRIBE THE TOPIC, e.g. greetings for the morning]
 - Learner level: [BEGINNER / ELEMENTARY / INTERMEDIATE]
 - Question types to include: [LIST THE TYPES YOU WANT, or write: a mix of all types]

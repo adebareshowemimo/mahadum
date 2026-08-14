@@ -234,7 +234,7 @@ export function LandingV4Page() {
         <section className="bg-[#ffd44a] py-20 text-center text-navy-950 sm:py-24">
           <Reveal className="mx-auto max-w-4xl px-4 sm:px-6">
             <h2 className="font-display text-5xl font-extrabold leading-[1.02] sm:text-7xl">Start with one word they can use tonight.</h2>
-            <p className="mx-auto mt-5 max-w-2xl text-lg font-bold">Choose Yorùbá, Igbo, Hausa or Nigerian Pidgin. No card required.</p>
+            <p className="mx-auto mt-5 max-w-2xl text-lg font-bold">Choose Yorùbá, Igbo, Hausa or English. No card required.</p>
             <LinkButton to="/register" size="lg" variant="parent" className="mt-8">Create your family account</LinkButton>
           </Reveal>
         </section>

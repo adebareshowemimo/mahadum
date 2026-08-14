@@ -70,7 +70,7 @@ class AdvertPlacementSeeder extends Seeder
   <rect width="970" height="90" rx="16" fill="url(#bg)"/>
   <circle cx="58" cy="45" r="28" fill="#fbbf24"/><text x="58" y="53" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#064e3b">M360</text>
   <text x="105" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="white">Learn Nigerian languages together</text>
-  <text x="105" y="64" font-family="Arial, sans-serif" font-size="15" fill="#ccfbf1">Full learning for every generation — Yoruba, Igbo, Hausa and Pidgin.</text>
+  <text x="105" y="64" font-family="Arial, sans-serif" font-size="15" fill="#ccfbf1">Full learning for every generation — Yoruba, Igbo, Hausa and English.</text>
   <rect x="796" y="22" width="145" height="46" rx="23" fill="#fbbf24"/><text x="868.5" y="51" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#064e3b">Explore plans</text>
 </svg>
 SVG;

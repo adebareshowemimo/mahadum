@@ -101,6 +101,7 @@ import type {
   GradeSubmissionResult,
   RequestTeacherCompensationPayoutInput,
   SchoolReferralSummary,
+  SchoolTeacher,
   TeacherCompensationSummary,
   CreateCourseInput,
   CreateLessonInput,
@@ -331,7 +332,7 @@ export const learningApi = {
 
   /** Published courses available to enroll into. */
   async courses(): Promise<CourseSummary[]> {
-    const { data } = await api.get('/courses')
+    const { data } = await api.get('/courses', { params: { per_page: 100 } })
     return data.data
   },
 
@@ -1146,6 +1147,16 @@ export const schoolApi = {
 
   async createClass(input: CreateClassInput): Promise<{ id: number; name: string }> {
     const { data } = await api.post('/classes', input)
+    return data.data
+  },
+
+  async updateClass(classId: number, input: Partial<CreateClassInput>): Promise<{ id: number; name: string }> {
+    const { data } = await api.put(`/classes/${classId}`, input)
+    return data.data
+  },
+
+  async teachers(orgId: number): Promise<SchoolTeacher[]> {
+    const { data } = await api.get(`/schools/${orgId}/teachers`)
     return data.data
   },
 
