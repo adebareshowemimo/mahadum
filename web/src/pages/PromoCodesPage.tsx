@@ -5,8 +5,9 @@ import { ApiError, type CreatePromoInput, type PromoCode } from '@/lib/api'
 import { useCreatePromo, useDeletePromo, usePromos } from '@/lib/admin/queries'
 
 export function PromoCodesPage() {
+  const [page, setPage] = useState(1)
   const createPromo = useCreatePromo()
-  const promos = usePromos()
+  const promos = usePromos(page)
   const deletePromo = useDeletePromo()
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [values, setValues] = useState({
@@ -167,11 +168,20 @@ export function PromoCodesPage() {
         <h2 className="mb-3 font-display text-lg font-bold text-foreground">All codes</h2>
         <DataTable
           columns={columns}
-          rows={promos.data ?? []}
+          rows={promos.data?.data ?? []}
           getRowId={(p) => p.id}
           isLoading={promos.isLoading}
           empty="No promo codes yet."
         />
+        {promos.data?.meta && promos.data.meta.total > 0 && (
+          <div className="mt-3 flex items-center justify-between text-sm text-muted">
+            <span>Page {promos.data.meta.current_page} of {promos.data.meta.last_page} · {promos.data.meta.total} codes</span>
+            <div className="flex gap-2">
+              <Button size="sm" variant="ghost" disabled={page <= 1 || promos.isFetching} onClick={() => setPage((current) => current - 1)}>Previous</Button>
+              <Button size="sm" variant="ghost" disabled={page >= promos.data.meta.last_page || promos.isFetching} onClick={() => setPage((current) => current + 1)}>Next</Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

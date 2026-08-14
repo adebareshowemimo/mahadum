@@ -21,7 +21,8 @@ const STATUS_TONE: Record<string, 'success' | 'gold' | 'info' | 'neutral' | 'dan
 
 export function EmailCampaignsPage() {
   const navigate = useNavigate()
-  const { data, isLoading, isError } = useEmailCampaigns()
+  const [page, setPage] = useState(1)
+  const { data, isLoading, isError, isFetching } = useEmailCampaigns(page)
   const test = useTestEmailCampaign()
   const [composing, setComposing] = useState(false)
   const [sending, setSending] = useState<EmailCampaignRow | null>(null)
@@ -80,7 +81,17 @@ export function EmailCampaignsPage() {
 
       {flash && <Alert variant="info">{flash}</Alert>}
 
-      <DataTable columns={columns} rows={data ?? []} getRowId={(c) => c.id} isLoading={isLoading} onRowClick={(c) => navigate(`/admin/emails/${c.id}`)} empty="No campaigns yet." />
+      <DataTable columns={columns} rows={data?.data ?? []} getRowId={(c) => c.id} isLoading={isLoading} onRowClick={(c) => navigate(`/admin/emails/${c.id}`)} empty="No campaigns yet." />
+
+      {data?.meta && data.meta.total > 0 && (
+        <div className="flex items-center justify-between text-sm text-muted">
+          <span>Page {data.meta.current_page} of {data.meta.last_page} · {data.meta.total} campaigns</span>
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" disabled={page <= 1 || isFetching} onClick={() => setPage((current) => current - 1)}>Previous</Button>
+            <Button size="sm" variant="ghost" disabled={page >= data.meta.last_page || isFetching} onClick={() => setPage((current) => current + 1)}>Next</Button>
+          </div>
+        </div>
+      )}
 
       {composing && <ComposeModal onClose={() => setComposing(false)} />}
       {sending && <SendModal campaign={sending} onClose={() => setSending(null)} />}

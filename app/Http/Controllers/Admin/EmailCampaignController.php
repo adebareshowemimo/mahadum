@@ -23,9 +23,12 @@ class EmailCampaignController extends Controller
 
     public function index(): JsonResponse
     {
-        $campaigns = EmailCampaign::latest()->get()->map($this->row(...));
+        $page = EmailCampaign::latest()->paginate(20);
 
-        return response()->json(['data' => $campaigns]);
+        return response()->json([
+            'data' => collect($page->items())->map($this->row(...)),
+            'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'per_page' => $page->perPage(), 'total' => $page->total()],
+        ]);
     }
 
     public function store(Request $request): JsonResponse

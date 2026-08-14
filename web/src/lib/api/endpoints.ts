@@ -84,6 +84,7 @@ import type {
   EmailCampaignRow,
   EmailLogPage,
   EmailLogQuery,
+  EmailLogRow,
   EmailTemplateContent,
   EmailTemplateDetail,
   EmailTemplatePreview,
@@ -759,9 +760,9 @@ export const adminApi = {
     return data
   },
 
-  async schoolLeads(): Promise<SchoolLead[]> {
-    const { data } = await api.get('/admin/leads/school')
-    return data.data
+  async schoolLeads(page = 1): Promise<Paginated<SchoolLead>> {
+    const { data } = await api.get('/admin/leads/school', { params: { page } })
+    return data
   },
 
   async organization(orgId: number): Promise<AdminOrgDetail> {
@@ -828,9 +829,9 @@ export const adminApi = {
     return data.data
   },
 
-  async listPromos(): Promise<PromoCode[]> {
-    const { data } = await api.get('/admin/promo-codes')
-    return data.data
+  async listPromos(page = 1): Promise<Paginated<PromoCode>> {
+    const { data } = await api.get('/admin/promo-codes', { params: { page } })
+    return data
   },
 
   async deletePromo(id: number): Promise<{ id: number; status: string }> {
@@ -841,6 +842,11 @@ export const adminApi = {
   async users(params: AdminUsersQuery = {}): Promise<Paginated<AdminUserRow>> {
     const { data } = await api.get('/admin/users', { params })
     return data
+  },
+
+  async user(userId: number): Promise<AdminUserRow> {
+    const { data } = await api.get(`/admin/users/${userId}`)
+    return data.data
   },
 
   async assignUserRole(userId: number, input: AssignRoleInput): Promise<AdminUserRow> {
@@ -904,9 +910,9 @@ export const adminApi = {
   },
 
   // ── Email: campaigns ──
-  async emailCampaigns(): Promise<EmailCampaignRow[]> {
-    const { data } = await api.get('/admin/email-campaigns')
-    return data.data
+  async emailCampaigns(page = 1): Promise<Paginated<EmailCampaignRow>> {
+    const { data } = await api.get('/admin/email-campaigns', { params: { page } })
+    return data
   },
   async createEmailCampaign(input: CreateCampaignInput): Promise<EmailCampaignRow> {
     const { data } = await api.post('/admin/email-campaigns', input)
@@ -981,6 +987,11 @@ export const adminApi = {
   async emailLog(params: EmailLogQuery = {}): Promise<EmailLogPage> {
     const { data } = await api.get('/admin/email-log', { params })
     return data
+  },
+
+  async emailLogEntry(logId: number): Promise<EmailLogRow> {
+    const { data } = await api.get(`/admin/email-log/${logId}`)
+    return data.data
   },
 
   // ── Email: templates ──

@@ -183,4 +183,22 @@ class SchoolAndAdminTest extends TestCase
         $this->postJson("/api/v1/admin/payouts/{$payout->id}/approve")
             ->assertOk()->assertJsonPath('data.status', 'approved');
     }
+
+    public function test_super_admin_can_open_a_bookmarkable_user_detail(): void
+    {
+        $this->seedRbac();
+        $target = $this->userWithRole('teacher', [
+            'first_name' => 'Amina',
+            'last_name' => 'Bello',
+            'email' => 'amina@example.test',
+        ]);
+        $this->actingAsUser($this->userWithRole('super_admin'));
+
+        $this->getJson("/api/v1/admin/users/{$target->id}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $target->id)
+            ->assertJsonPath('data.email', 'amina@example.test')
+            ->assertJsonPath('data.roles.0', 'teacher')
+            ->assertJsonStructure(['data' => ['id', 'name', 'email', 'status', 'roles', 'organizations']]);
+    }
 }

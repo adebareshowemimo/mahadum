@@ -14,9 +14,12 @@ class PromoCodeController extends Controller
 
     public function index(): JsonResponse
     {
-        $promos = PromoCode::withCount('redemptions')->latest()->get();
+        $page = PromoCode::withCount('redemptions')->latest()->paginate(20);
 
-        return response()->json(['data' => $promos]);
+        return response()->json([
+            'data' => $page->items(),
+            'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'per_page' => $page->perPage(), 'total' => $page->total()],
+        ]);
     }
 
     public function store(StorePromoCodeRequest $request): JsonResponse

@@ -16,14 +16,14 @@ export function InviteClassLearnerPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [sentTo, setSentTo] = useState<string | null>(null)
+  const [result, setResult] = useState<{ email: string; deliveryStatus: 'queued' | 'not_configured' } | null>(null)
 
   async function submit(event: FormEvent) {
     event.preventDefault()
     setError(null)
     try {
       const result = await invite.mutateAsync({ name: name.trim(), email: email.trim() })
-      setSentTo(result.email)
+      setResult({ email: result.email, deliveryStatus: result.delivery_status })
       setName('')
       setEmail('')
     } catch (err) {
@@ -44,7 +44,10 @@ export function InviteClassLearnerPage() {
       <Card>
         <CardBody>
           <form className="flex flex-col gap-4" onSubmit={submit}>
-            {sentTo && <Alert variant="success">Invitation sent to {sentTo}. The link expires in 7 days.</Alert>}
+            {result?.deliveryStatus === 'queued' && <Alert variant="success">Invitation queued for {result.email}. The link expires in 7 days.</Alert>}
+            {result?.deliveryStatus === 'not_configured' && (
+              <Alert variant="warning">Invitation created for {result.email}, but email delivery is not configured. Ask a platform administrator to connect a mail provider before relying on inbox delivery.</Alert>
+            )}
             {error && <Alert variant="danger">{error}</Alert>}
             <Input label="Learner name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required autoFocus />
             <Input label="Learner email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />

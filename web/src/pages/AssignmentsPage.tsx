@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Alert, Avatar, Badge, Button, Card, CardBody, Input, Modal, Skeleton, Textarea } from '@/components/ui'
 import { ApiError, type ClassAssignmentRosterEntry } from '@/lib/api'
 import { useBadges } from '@/lib/gamification/queries'
@@ -17,7 +17,6 @@ export function AssignmentsPage() {
   const { data: classes, isLoading, isError } = useMyClasses()
   const [searchParams] = useSearchParams()
   const [classId, setClassId] = useState<number | null>(null)
-  const [openAssignmentId, setOpenAssignmentId] = useState<number | null>(null)
   const [showCreate, setShowCreate] = useState(false)
 
   const requestedClassId = Number(searchParams.get('class'))
@@ -61,26 +60,17 @@ export function AssignmentsPage() {
             </div>
           )}
 
-          <AssignmentList classId={activeClassId} onOpen={setOpenAssignmentId} />
+          <AssignmentList classId={activeClassId} />
           <CompletionPanel classId={activeClassId} />
         </>
       )}
 
-      {activeClassId && (
-        <>
-          <CreateAssignmentModal classId={activeClassId} open={showCreate} onClose={() => setShowCreate(false)} />
-          <AssignmentDetailModal
-            classId={activeClassId}
-            assignmentId={openAssignmentId}
-            onClose={() => setOpenAssignmentId(null)}
-          />
-        </>
-      )}
+      {activeClassId && <CreateAssignmentModal classId={activeClassId} open={showCreate} onClose={() => setShowCreate(false)} />}
     </div>
   )
 }
 
-function AssignmentList({ classId, onOpen }: { classId: number | null; onOpen: (id: number) => void }) {
+function AssignmentList({ classId }: { classId: number | null }) {
   const { data, isLoading, isError } = useClassAssignments(classId)
 
   if (isLoading) return <Skeleton className="h-32" />
@@ -96,7 +86,7 @@ function AssignmentList({ classId, onOpen }: { classId: number | null; onOpen: (
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {data.map((a) => (
-        <button key={a.id} onClick={() => onOpen(a.id)} className="text-left">
+        <Link key={a.id} to={`/assignments/${a.id}?class=${classId}`} className="block rounded-2xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
           <Card className="transition-colors hover:bg-surface-muted">
             <CardBody className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between gap-2">
@@ -109,7 +99,7 @@ function AssignmentList({ classId, onOpen }: { classId: number | null; onOpen: (
               </p>
             </CardBody>
           </Card>
-        </button>
+        </Link>
       ))}
     </div>
   )
@@ -222,45 +212,41 @@ function CreateAssignmentModal({ classId, open, onClose }: { classId: number; op
   )
 }
 
-function AssignmentDetailModal({
-  classId,
-  assignmentId,
-  onClose,
-}: {
-  classId: number
-  assignmentId: number | null
-  onClose: () => void
-}) {
+export function AssignmentDetailContent({ classId, assignmentId }: { classId: number; assignmentId: number }) {
   const detail = useClassAssignmentDetail(classId, assignmentId)
 
+  if (detail.isLoading) return <Skeleton className="h-64" />
+  if (detail.isError || !detail.data) return <Alert variant="danger">Couldn’t load this assignment.</Alert>
+
   return (
-    <Modal
-      open={assignmentId != null}
-      onClose={onClose}
-      title={detail.data?.title ?? 'Assignment'}
-      description={detail.data?.instructions ?? undefined}
-      className="sm:max-w-xl"
-    >
-      {detail.isLoading ? (
-        <Skeleton className="h-40" />
-      ) : detail.isError || !detail.data ? (
-        <Alert variant="danger">Couldn’t load this assignment.</Alert>
-      ) : detail.data.roster.length === 0 ? (
+    <div className="flex flex-col gap-6">
+      <div className="border-b border-border pb-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="font-display text-2xl font-bold text-foreground">{detail.data.title}</h1>
+          {detail.data.coin_reward > 0 && <Badge variant="gold">{detail.data.coin_reward} coins</Badge>}
+        </div>
+        {detail.data.instructions && <p className="mt-2 max-w-3xl text-muted">{detail.data.instructions}</p>}
+        {detail.data.due_at && <p className="mt-2 text-sm font-medium text-muted">Due {new Date(detail.data.due_at).toLocaleDateString()}</p>}
+      </div>
+      <section aria-labelledby="submissions-title">
+        <h2 id="submissions-title" className="mb-3 text-lg font-semibold text-foreground">Learner submissions</h2>
+        {detail.data.roster.length === 0 ? (
         <p className="py-6 text-center text-sm text-muted">No students enrolled yet.</p>
       ) : (
-        <ul className="flex max-h-96 flex-col gap-2 overflow-y-auto">
+        <ul className="flex flex-col gap-3">
           {detail.data.roster.map((entry) => (
             <RosterRow
               key={entry.learner_id}
               entry={entry}
               classId={classId}
-              assignmentId={assignmentId as number}
+              assignmentId={assignmentId}
               coinReward={detail.data!.coin_reward}
             />
           ))}
         </ul>
-      )}
-    </Modal>
+        )}
+      </section>
+    </div>
   )
 }
 

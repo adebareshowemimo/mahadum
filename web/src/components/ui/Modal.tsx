@@ -11,6 +11,7 @@ export function Modal({
   description,
   children,
   className,
+  variant = 'dialog',
 }: {
   open: boolean
   onClose: () => void
@@ -18,6 +19,8 @@ export function Modal({
   description?: string
   children: ReactNode
   className?: string
+  /** Full-height authoring surface for multi-step or content-heavy work. */
+  variant?: 'dialog' | 'workspace'
 }) {
   const dialogRef = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
@@ -78,6 +81,7 @@ export function Modal({
         tabIndex={-1}
         className={cn(
           'relative flex max-h-[calc(100dvh-1rem)] w-full max-w-md flex-col rounded-t-2xl border border-border bg-surface shadow-xl animate-step-in sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl',
+          variant === 'workspace' && 'h-dvh max-h-dvh max-w-none rounded-none sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)] sm:max-w-4xl sm:rounded-2xl',
           className,
         )}
       >

@@ -34,6 +34,7 @@ export const adminKeys = {
   organizationsList: (params: AdminOrgQuery) => ['admin-organizations', params] as const,
   organization: (id: number) => ['admin-organization', id] as const,
   users: (params: AdminUsersQuery) => ['admin-users', params] as const,
+  user: (id: number) => ['admin-user', id] as const,
   roles: ['admin-roles'] as const,
   payouts: (params: AdminPayoutsQuery) => ['admin-payouts', params] as const,
   incomeReport: (params: IncomeReportQuery) => ['admin-income', params] as const,
@@ -42,11 +43,12 @@ export const adminKeys = {
   referralsReport: (params: IncomeReportQuery) => ['admin-referrals-report', params] as const,
   orgActivityReport: (params: IncomeReportQuery) => ['admin-org-activity', params] as const,
   renewalsReport: (params: IncomeReportQuery) => ['admin-renewals', params] as const,
-  emailCampaigns: ['admin-email-campaigns'] as const,
+  emailCampaigns: (page: number) => ['admin-email-campaigns', page] as const,
   emailCampaign: (id: number) => ['admin-email-campaign', id] as const,
   contactLists: ['admin-contact-lists'] as const,
   contactList: (id: number, page: number) => ['admin-contact-list', id, page] as const,
   emailLog: (params: EmailLogQuery) => ['admin-email-log', params] as const,
+  emailLogEntry: (id: number) => ['admin-email-log-entry', id] as const,
   emailTemplates: ['admin-email-templates'] as const,
   emailTemplate: (key: string) => ['admin-email-template', key] as const,
   emailTemplatePreview: (key: string) => ['admin-email-template-preview', key] as const,
@@ -57,8 +59,8 @@ export const adminKeys = {
   flaggedReferrals: ['admin-flagged-referrals'] as const,
   languages: ['admin-languages'] as const,
   plans: ['admin-plans'] as const,
-  promos: ['admin-promos'] as const,
-  schoolLeads: ['admin-school-leads'] as const,
+  promos: (page: number) => ['admin-promos', page] as const,
+  schoolLeads: (page: number) => ['admin-school-leads', page] as const,
   adverts: ['admin-adverts'] as const,
   advertsList: (params: AdminAdvertPlacementQuery) => ['admin-adverts', params] as const,
   advert: (id: number) => ['admin-advert', id] as const,
@@ -76,8 +78,8 @@ export function useSettlements() {
   return useQuery({ queryKey: adminKeys.settlements, queryFn: adminApi.settlements })
 }
 
-export function useSchoolLeads() {
-  return useQuery({ queryKey: adminKeys.schoolLeads, queryFn: adminApi.schoolLeads })
+export function useSchoolLeads(page: number) {
+  return useQuery({ queryKey: adminKeys.schoolLeads(page), queryFn: () => adminApi.schoolLeads(page), placeholderData: (previous) => previous })
 }
 
 export function useAdminOrganizations(params: AdminOrgQuery = {}) {
@@ -213,8 +215,8 @@ export function useDeleteAdvertPlacement() {
   })
 }
 
-export function usePromos() {
-  return useQuery({ queryKey: adminKeys.promos, queryFn: adminApi.listPromos })
+export function usePromos(page: number) {
+  return useQuery({ queryKey: adminKeys.promos(page), queryFn: () => adminApi.listPromos(page), placeholderData: (previous) => previous })
 }
 
 export function useCreatePromo() {
@@ -222,7 +224,7 @@ export function useCreatePromo() {
   return useMutation({
     mutationFn: (input: CreatePromoInput) => adminApi.createPromo(input),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: adminKeys.promos })
+      void qc.invalidateQueries({ queryKey: ['admin-promos'] })
     },
   })
 }
@@ -232,7 +234,7 @@ export function useDeletePromo() {
   return useMutation({
     mutationFn: (id: number) => adminApi.deletePromo(id),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: adminKeys.promos })
+      void qc.invalidateQueries({ queryKey: ['admin-promos'] })
     },
   })
 }
@@ -245,12 +247,23 @@ export function useAdminUsers(params: AdminUsersQuery) {
   })
 }
 
+export function useAdminUser(userId: number) {
+  return useQuery({
+    queryKey: adminKeys.user(userId),
+    queryFn: () => adminApi.user(userId),
+    enabled: Number.isInteger(userId) && userId > 0,
+  })
+}
+
 export function useAssignUserRole() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ userId, input }: { userId: number; input: AssignRoleInput }) =>
       adminApi.assignUserRole(userId, input),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin-users'] }),
+    onSuccess: (user) => {
+      qc.setQueryData(adminKeys.user(user.id), user)
+      void qc.invalidateQueries({ queryKey: ['admin-users'] })
+    },
   })
 }
 
@@ -259,7 +272,10 @@ export function useSetUserStatus() {
   return useMutation({
     mutationFn: ({ userId, status }: { userId: number; status: UserStatus }) =>
       adminApi.setUserStatus(userId, status),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin-users'] }),
+    onSuccess: (user) => {
+      qc.setQueryData(adminKeys.user(user.id), user)
+      void qc.invalidateQueries({ queryKey: ['admin-users'] })
+    },
   })
 }
 
@@ -466,15 +482,15 @@ export function useUpdateSettings() {
 }
 
 // ── Email: campaigns ──
-export function useEmailCampaigns() {
-  return useQuery({ queryKey: adminKeys.emailCampaigns, queryFn: adminApi.emailCampaigns })
+export function useEmailCampaigns(page: number) {
+  return useQuery({ queryKey: adminKeys.emailCampaigns(page), queryFn: () => adminApi.emailCampaigns(page), placeholderData: (previous) => previous })
 }
 
 export function useCreateEmailCampaign() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: CreateCampaignInput) => adminApi.createEmailCampaign(input),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: adminKeys.emailCampaigns }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin-email-campaigns'] }),
   })
 }
 
@@ -494,7 +510,7 @@ export function useSendEmailCampaign() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, scheduledAt }: { id: number; scheduledAt?: string }) => adminApi.sendEmailCampaign(id, scheduledAt),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: adminKeys.emailCampaigns }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin-email-campaigns'] }),
   })
 }
 
@@ -503,7 +519,7 @@ export function useCancelEmailCampaign() {
   return useMutation({
     mutationFn: (id: number) => adminApi.cancelEmailCampaign(id),
     onSuccess: (_res, id) => {
-      void qc.invalidateQueries({ queryKey: adminKeys.emailCampaigns })
+      void qc.invalidateQueries({ queryKey: ['admin-email-campaigns'] })
       void qc.invalidateQueries({ queryKey: adminKeys.emailCampaign(id) })
     },
   })
@@ -608,6 +624,14 @@ export function useEmailLog(params: EmailLogQuery) {
     queryKey: adminKeys.emailLog(params),
     queryFn: () => adminApi.emailLog(params),
     placeholderData: (prev) => prev,
+  })
+}
+
+export function useEmailLogEntry(logId: number) {
+  return useQuery({
+    queryKey: adminKeys.emailLogEntry(logId),
+    queryFn: () => adminApi.emailLogEntry(logId),
+    enabled: Number.isInteger(logId) && logId > 0,
   })
 }
 

@@ -777,7 +777,11 @@ export interface AvailableClassLearner {
 }
 
 export interface InviteClassLearnerInput { name: string; email: string }
-export interface InviteClassLearnerResult extends InviteClassLearnerInput { id: number; expires_at: string }
+export interface InviteClassLearnerResult extends InviteClassLearnerInput {
+  id: number
+  expires_at: string
+  delivery_status: 'queued' | 'not_configured'
+}
 export interface ClassLearnerInvitationInfo {
   name: string
   email: string

@@ -44,7 +44,8 @@ class ClassLearnerInvitationTest extends TestCase
             'name' => 'Ada Learner',
             'email' => 'ADA@example.com',
         ])->assertCreated()
-            ->assertJsonPath('data.email', 'ada@example.com');
+            ->assertJsonPath('data.email', 'ada@example.com')
+            ->assertJsonPath('data.delivery_status', 'not_configured');
 
         $this->assertDatabaseHas('class_learner_invitations', [
             'school_class_id' => $class->id,

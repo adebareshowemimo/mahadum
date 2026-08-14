@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AdminPageHeader, AdminToolbar, DataTable, FilterSelect, type Column } from '@/components/admin'
-import { Alert, Badge, Button, Modal } from '@/components/ui'
-import { ApiError, type AdminUserRow, type AdminUsersQuery, type Role, type UserStatus } from '@/lib/api'
-import { useAdminUsers, useAssignUserRole, useSetUserStatus } from '@/lib/admin/queries'
+import { Alert, Badge, Button } from '@/components/ui'
+import { type AdminUserRow, type AdminUsersQuery, type Role } from '@/lib/api'
+import { useAdminUsers } from '@/lib/admin/queries'
 
 const ROLES: Role[] = ['super_admin', 'content_owner', 'school_admin', 'teacher', 'supervisor', 'parent', 'student']
 
@@ -16,12 +17,12 @@ function useDebounced<T>(value: T, ms = 300): T {
 }
 
 export function UsersPage() {
+  const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [role, setRole] = useState('')
   const [status, setStatus] = useState('')
   const [type, setType] = useState('')
   const [page, setPage] = useState(1)
-  const [selected, setSelected] = useState<AdminUserRow | null>(null)
 
   const q = useDebounced(search)
   const params: AdminUsersQuery = useMemo(
@@ -115,7 +116,7 @@ export function UsersPage() {
         rows={data?.data ?? []}
         getRowId={(u) => u.id}
         isLoading={isLoading}
-        onRowClick={setSelected}
+        onRowClick={(user) => navigate(`/admin/users/${user.id}`)}
         empty="No users match your filters."
         toolbar={
           <AdminToolbar search={search} onSearch={(v) => { setSearch(v); setPage(1) }} searchPlaceholder="Search name, email, phone…">
@@ -171,114 +172,6 @@ export function UsersPage() {
           </div>
         </div>
       )}
-
-      {selected && <UserModal user={selected} onClose={() => setSelected(null)} />}
     </div>
-  )
-}
-
-function UserModal({ user, onClose }: { user: AdminUserRow; onClose: () => void }) {
-  const assign = useAssignUserRole()
-  const setStatus = useSetUserStatus()
-  const [error, setError] = useState<string | null>(null)
-  // Local echo of the roles so the toggles reflect changes immediately.
-  const [roles, setRoles] = useState<Role[]>(user.roles)
-  const [status, setStatusLocal] = useState(user.status)
-
-  async function toggleRole(role: Role) {
-    setError(null)
-    const action = roles.includes(role) ? 'revoke' : 'assign'
-    try {
-      const updated = await assign.mutateAsync({ userId: user.id, input: { role, action } })
-      setRoles(updated.roles)
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not update role.')
-    }
-  }
-
-  async function changeStatus(next: UserStatus) {
-    setError(null)
-    try {
-      const updated = await setStatus.mutateAsync({ userId: user.id, status: next })
-      setStatusLocal(updated.status)
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not update status.')
-    }
-  }
-
-  return (
-    <Modal open onClose={onClose} title={user.name} description={user.email}>
-      <div className="flex flex-col gap-5">
-        {error && <Alert variant="danger">{error}</Alert>}
-
-        <div className="flex flex-wrap items-center gap-3 text-sm">
-          <Badge variant={status === 'active' ? 'success' : 'danger'}>{status}</Badge>
-          {user.phone && <span className="text-muted">{user.phone}</span>}
-          {user.email_verified && <span className="text-muted">· verified</span>}
-          {user.created_at && <span className="text-muted">· joined {new Date(user.created_at).toLocaleDateString()}</span>}
-          <span className="text-muted">
-            · {user.last_login_at ? `last seen ${new Date(user.last_login_at).toLocaleDateString()}` : 'never signed in'}
-          </span>
-        </div>
-
-        <div>
-          <p className="mb-2 text-sm font-semibold text-foreground">Organizations</p>
-          {user.organizations.length ? (
-            <ul className="flex flex-col gap-1.5">
-              {user.organizations.map((o) => (
-                <li key={o.id} className="flex items-center gap-2 text-sm">
-                  <span className="font-medium text-foreground">{o.name ?? `Organization #${o.id}`}</span>
-                  <Badge variant="neutral">{o.role}</Badge>
-                  <Badge variant={o.status === 'active' ? 'success' : 'neutral'}>{o.status}</Badge>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted">Not a member of any organization (direct consumer).</p>
-          )}
-        </div>
-
-        <div>
-          <p className="mb-2 text-sm font-semibold text-foreground">Roles</p>
-          <div className="flex flex-wrap gap-2">
-            {ROLES.map((r) => {
-              const on = roles.includes(r)
-              return (
-                <button
-                  key={r}
-                  type="button"
-                  disabled={assign.isPending}
-                  onClick={() => toggleRole(r)}
-                  className={
-                    on
-                      ? 'rounded-full border border-primary bg-primary/10 px-3 py-1 text-xs font-bold text-primary'
-                      : 'rounded-full border border-border-strong px-3 py-1 text-xs font-semibold text-muted hover:bg-surface-muted'
-                  }
-                >
-                  {on ? '✓ ' : '+ '}
-                  {r}
-                </button>
-              )
-            })}
-          </div>
-          <p className="mt-2 text-xs text-muted">Click a role to grant or revoke it. Changes are audited.</p>
-        </div>
-
-        <div className="flex justify-end gap-2 border-t border-border pt-4">
-          {status === 'active' ? (
-            <Button variant="ghost" loading={setStatus.isPending} onClick={() => changeStatus('suspended')}>
-              Suspend account
-            </Button>
-          ) : (
-            <Button variant="parent" loading={setStatus.isPending} onClick={() => changeStatus('active')}>
-              Reactivate account
-            </Button>
-          )}
-          <Button variant="ghost" onClick={onClose}>
-            Done
-          </Button>
-        </div>
-      </div>
-    </Modal>
   )
 }

@@ -488,6 +488,7 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
       onClose={onClose}
       title={isEdit ? 'Edit video' : 'Add video'}
       description={isEdit ? 'Update the details, or attach a new file to replace the current one.' : 'Upload a file or reuse one from your media library.'}
+      variant="workspace"
       className="max-w-2xl"
     >
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
@@ -653,7 +654,7 @@ function AddExerciseModal({ lessonId, editing, onClose }: { lessonId: number; ed
   }
 
   return (
-    <Modal open onClose={onClose} title={isEdit ? 'Edit flashcards' : 'Add flashcards'} description="Word ↔ meaning cards the learner flips through." className="max-w-2xl">
+    <Modal open onClose={onClose} title={isEdit ? 'Edit flashcards' : 'Add flashcards'} description="Word ↔ meaning cards the learner flips through." variant="workspace" className="max-w-2xl">
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         {error && <Alert variant="danger">{error}</Alert>}
         {localError && <Alert variant="danger">{localError}</Alert>}
@@ -755,7 +756,7 @@ function AddGameModal({ lessonId, editing, onClose }: { lessonId: number; editin
   }
 
   return (
-    <Modal open onClose={onClose} title={isEdit ? 'Edit game' : 'Add game'} description="A matching game built from your pairs." className="max-w-2xl">
+    <Modal open onClose={onClose} title={isEdit ? 'Edit game' : 'Add game'} description="A matching game built from your pairs." variant="workspace" className="max-w-2xl">
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         {error && <Alert variant="danger">{error}</Alert>}
         {localError && <Alert variant="danger">{localError}</Alert>}
@@ -1182,7 +1183,7 @@ function QuizBuilderModal({ lessonId, editing, onClose }: { lessonId: number; ed
   const readyCount = questions.filter(isValidDraft).length
 
   return (
-    <Modal open onClose={onClose} title={isEdit ? 'Edit quiz' : 'Build quiz'} description="Add questions; learners are graded server-side." className="max-w-2xl">
+    <Modal open onClose={onClose} title={isEdit ? 'Edit quiz' : 'Build quiz'} description="Add questions; learners are graded server-side." variant="workspace" className="max-w-2xl">
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         {error && <Alert variant="danger">{error}</Alert>}
         {localError && <Alert variant="danger">{localError}</Alert>}

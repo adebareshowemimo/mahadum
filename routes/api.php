@@ -407,6 +407,7 @@ Route::prefix('v1')->group(function () {
 
             // Users & access control
             Route::get('users', [UserController::class, 'index'])->middleware('can:users.view');
+            Route::get('users/{user}', [UserController::class, 'show'])->middleware('can:users.view');
             Route::post('users/{user}/roles', [UserController::class, 'assignRole'])->middleware('can:roles.assign');
             Route::post('users/{user}/status', [UserController::class, 'setStatus'])->middleware('can:users.manage');
             Route::get('roles', [RoleController::class, 'index'])->middleware('can:roles.view');
@@ -464,6 +465,7 @@ Route::prefix('v1')->group(function () {
 
             // Email — log of every outbound message (§7)
             Route::get('email-log', [EmailLogController::class, 'index'])->middleware('can:emails.log.view');
+            Route::get('email-log/{emailLog}', [EmailLogController::class, 'show'])->middleware('can:emails.log.view');
 
             // Email — transactional template registry, live preview, and customization
             Route::get('email-templates', [EmailTemplateController::class, 'index'])->middleware('can:emails.templates.view');

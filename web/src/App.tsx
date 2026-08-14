@@ -20,6 +20,7 @@ const TermsPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ d
 const ChildSafetyPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.ChildSafetyPage })))
 const AccessibilityPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.AccessibilityPage })))
 const AssignmentsPage = lazy(() => import('@/pages/AssignmentsPage').then((m) => ({ default: m.AssignmentsPage })))
+const AssignmentDetailPage = lazy(() => import('@/pages/AssignmentDetailPage').then((m) => ({ default: m.AssignmentDetailPage })))
 const BillingPage = lazy(() => import('@/pages/BillingPage').then((m) => ({ default: m.BillingPage })))
 const ClassesPage = lazy(() => import('@/pages/ClassesPage').then((m) => ({ default: m.ClassesPage })))
 const ClassPage = lazy(() => import('@/pages/ClassPage').then((m) => ({ default: m.ClassPage })))
@@ -57,7 +58,9 @@ const EmailCampaignsPage = lazy(() => import('@/pages/EmailCampaignsPage').then(
 const CampaignDetailPage = lazy(() => import('@/pages/CampaignDetailPage').then((m) => ({ default: m.CampaignDetailPage })))
 const ContactListsPage = lazy(() => import('@/pages/ContactListsPage').then((m) => ({ default: m.ContactListsPage })))
 const EmailLogPage = lazy(() => import('@/pages/EmailLogPage').then((m) => ({ default: m.EmailLogPage })))
+const EmailLogDetailPage = lazy(() => import('@/pages/EmailLogDetailPage').then((m) => ({ default: m.EmailLogDetailPage })))
 const EmailTemplatesPage = lazy(() => import('@/pages/EmailTemplatesPage').then((m) => ({ default: m.EmailTemplatesPage })))
+const EmailTemplateDetailPage = lazy(() => import('@/pages/EmailTemplateDetailPage').then((m) => ({ default: m.EmailTemplateDetailPage })))
 const AuditLogPage = lazy(() => import('@/pages/AuditLogPage').then((m) => ({ default: m.AuditLogPage })))
 const FraudReviewPage = lazy(() => import('@/pages/FraudReviewPage').then((m) => ({ default: m.FraudReviewPage })))
 const GatewaysPage = lazy(() => import('@/pages/GatewaysPage').then((m) => ({ default: m.GatewaysPage })))
@@ -78,6 +81,7 @@ const SchoolLeadsPage = lazy(() => import('@/pages/SchoolLeadsPage').then((m) =>
 const RolesMatrixPage = lazy(() => import('@/pages/RolesMatrixPage').then((m) => ({ default: m.RolesMatrixPage })))
 const SettlementsPage = lazy(() => import('@/pages/SettlementsPage').then((m) => ({ default: m.SettlementsPage })))
 const UsersPage = lazy(() => import('@/pages/UsersPage').then((m) => ({ default: m.UsersPage })))
+const UserDetailPage = lazy(() => import('@/pages/UserDetailPage').then((m) => ({ default: m.UserDetailPage })))
 const LeaderboardPage = lazy(() => import('@/pages/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })))
 const LearnPage = lazy(() => import('@/pages/LearnPage').then((m) => ({ default: m.LearnPage })))
 const CourseCatalogPage = lazy(() => import('@/pages/CourseCatalogPage').then((m) => ({ default: m.CourseCatalogPage })))
@@ -119,6 +123,7 @@ function PageTitleManager() {
   useEffect(() => {
     let title = PAGE_TITLES[pathname]
     if (!title && /^\/classes\/\d+/.test(pathname)) title = pathname.endsWith('/invite') ? 'Invite Learner' : 'Class Workspace'
+    if (!title && /^\/assignments\/\d+/.test(pathname)) title = 'Assignment Review'
     if (!title && pathname.startsWith('/admin/')) title = 'Administration'
     if (!title && pathname.startsWith('/courses/')) title = 'Course'
     document.title = `${title ?? 'MAHADUM.360'} · MAHADUM.360`
@@ -318,6 +323,7 @@ export function App() {
           </Route>
           <Route element={<TeacherRoute />}>
             <Route path="/assignments" element={<AssignmentsPage />} />
+            <Route path="/assignments/:assignmentId" element={<AssignmentDetailPage />} />
             <Route path="/earnings" element={<EarningsPage />} />
             <Route path="/teacher/profile" element={<TeacherProfilePage />} />
           </Route>
@@ -355,7 +361,9 @@ export function App() {
             <Route path="/admin/emails" element={<EmailCampaignsPage />} />
             <Route path="/admin/emails/contacts" element={<ContactListsPage />} />
             <Route path="/admin/emails/log" element={<EmailLogPage />} />
+            <Route path="/admin/emails/log/:logId" element={<EmailLogDetailPage />} />
             <Route path="/admin/emails/templates" element={<EmailTemplatesPage />} />
+            <Route path="/admin/emails/templates/:templateKey" element={<EmailTemplateDetailPage />} />
             <Route path="/admin/emails/:campaignId" element={<CampaignDetailPage />} />
             <Route path="/admin/settings/gateways" element={<GatewaysPage />} />
             <Route path="/admin/audit" element={<AuditLogPage />} />
@@ -372,6 +380,7 @@ export function App() {
             <Route path="/admin/adverts/:advertId" element={<AdvertDetailPage />} />
             <Route path="/admin/leads" element={<SchoolLeadsPage />} />
             <Route path="/admin/users" element={<UsersPage />} />
+            <Route path="/admin/users/:userId" element={<UserDetailPage />} />
             <Route path="/admin/roles" element={<RolesMatrixPage />} />
             <Route path="/admin/courses" element={<AdminCoursesPage />} />
             <Route path="/admin/promos" element={<PromoCodesPage />} />

@@ -71,6 +71,14 @@ class UserController extends Controller
         ]);
     }
 
+    /**
+     * Return one user with the same complete shape used by the directory.
+     */
+    public function show(User $user): JsonResponse
+    {
+        return response()->json(['data' => $this->row($user->load('roles'))]);
+    }
+
     public function assignRole(AssignRoleRequest $request, User $user): JsonResponse
     {
         $data = $request->validated();

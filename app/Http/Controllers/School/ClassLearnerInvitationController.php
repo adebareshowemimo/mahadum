@@ -57,6 +57,7 @@ class ClassLearnerInvitationController extends Controller
             'name' => $invitation->name,
             'email' => $invitation->email,
             'expires_at' => $invitation->expires_at,
+            'delivery_status' => in_array(config('mail.default'), ['log', 'array'], true) ? 'not_configured' : 'queued',
         ]], 201);
     }
 

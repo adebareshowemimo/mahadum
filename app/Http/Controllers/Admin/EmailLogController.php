@@ -39,16 +39,7 @@ class EmailLogController extends Controller
         $page = $query->paginate(50);
 
         return response()->json([
-            'data' => collect($page->items())->map(fn (EmailLog $l) => [
-                'id' => $l->id,
-                'to_email' => $l->to_email,
-                'type' => $l->type,
-                'source' => $l->source,
-                'subject' => $l->subject,
-                'status' => $l->status,
-                'sent_at' => $l->sent_at?->toIso8601String(),
-                'created_at' => $l->created_at?->toIso8601String(),
-            ]),
+            'data' => collect($page->items())->map(fn (EmailLog $log) => $this->row($log)),
             'meta' => [
                 'current_page' => $page->currentPage(),
                 'last_page' => $page->lastPage(),
@@ -58,5 +49,25 @@ class EmailLogController extends Controller
             // Distinct sources for the filter dropdown (small cardinality).
             'sources' => EmailLog::query()->whereNotNull('source')->distinct()->orderBy('source')->pluck('source'),
         ]);
+    }
+
+    public function show(EmailLog $emailLog): JsonResponse
+    {
+        return response()->json(['data' => $this->row($emailLog)]);
+    }
+
+    /** @return array<string, mixed> */
+    private function row(EmailLog $log): array
+    {
+        return [
+            'id' => $log->id,
+            'to_email' => $log->to_email,
+            'type' => $log->type,
+            'source' => $log->source,
+            'subject' => $log->subject,
+            'status' => $log->status,
+            'sent_at' => $log->sent_at?->toIso8601String(),
+            'created_at' => $log->created_at?->toIso8601String(),
+        ];
     }
 }

@@ -262,7 +262,13 @@ function AssignmentsPanel({ classId }: { classId: number }) {
           {assignments.data.map((assignment) => (
             <li key={assignment.id} className="flex flex-col justify-between gap-2 p-4 sm:flex-row sm:items-center">
               <div>
-                <p className="font-semibold text-foreground">{assignment.title}</p>
+                {canManageAssignments ? (
+                  <Link to={`/assignments/${assignment.id}?class=${classId}`} className="font-semibold text-foreground hover:text-primary hover:underline">
+                    {assignment.title}
+                  </Link>
+                ) : (
+                  <p className="font-semibold text-foreground">{assignment.title}</p>
+                )}
                 <p className="mt-1 text-sm text-muted">{assignment.submitted_count}/{assignment.total_students} submitted · {assignment.graded_count} graded</p>
               </div>
               <div className="flex items-center gap-2">
