@@ -55,6 +55,20 @@ export function ActiveProfileProvider({ children }: { children: ReactNode }) {
     }
   }, [user, learners, activeLearnerId, setActiveLearner])
 
+  // A student account owns exactly one direct learner profile. Enter it
+  // automatically so Courses and My learning work immediately after login;
+  // parents still choose among their children through the protected switcher.
+  useEffect(() => {
+    if (
+      user?.user.roles.includes('student')
+      && activeLearnerId == null
+      && learners.length === 1
+      && !learners[0].is_child
+    ) {
+      setActiveLearner(learners[0].id)
+    }
+  }, [user, learners, activeLearnerId, setActiveLearner])
+
   const value = useMemo<ActiveProfileValue>(
     () => ({
       learners,

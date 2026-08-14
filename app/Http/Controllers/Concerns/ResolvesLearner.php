@@ -21,6 +21,15 @@ trait ResolvesLearner
         return $learner;
     }
 
+    /** Resolve a learner for self/parent enrollment, excluding read-only staff. */
+    protected function learnerForEnrollment(int $id): LearnerProfile
+    {
+        $learner = LearnerProfile::findOrFail($id);
+        Gate::authorize('enroll', $learner);
+
+        return $learner;
+    }
+
     /**
      * Same as learner(), but for actions that redeem a reward on the
      * learner's behalf (ads, hearts refills) — self/parent only, deliberately

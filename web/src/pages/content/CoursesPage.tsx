@@ -16,6 +16,7 @@ import {
   useCreateCourse,
   useDeleteCourse,
   useSetCourseArchived,
+  useSetCoursePublished,
 } from '@/lib/content/queries'
 import { useCanManageContent } from '@/lib/content/permissions'
 
@@ -38,6 +39,7 @@ export function CoursesPage() {
   const { data, isLoading, isError, isFetching } = useAdminCourses(params)
   const { data: config } = useConfig()
   const setArchived = useSetCourseArchived()
+  const setPublished = useSetCoursePublished()
 
   const languageOptions = (config?.languages ?? []).map((l) => ({ label: l.name, value: l.code }))
 
@@ -53,6 +55,18 @@ export function CoursesPage() {
     setActingId(course.id)
     try {
       await setArchived.mutateAsync({ courseId: course.id, archive: course.status !== 'archived' })
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Could not update the course.')
+    } finally {
+      setActingId(null)
+    }
+  }
+
+  async function togglePublish(course: CourseSummary) {
+    setActionError(null)
+    setActingId(course.id)
+    try {
+      await setPublished.mutateAsync({ courseId: course.id, publish: !course.is_published })
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : 'Could not update the course.')
     } finally {
@@ -93,6 +107,16 @@ export function CoursesPage() {
             <Button size="sm" variant="ghost" onClick={() => navigate(`/courses/${c.id}`)}>
               Edit
             </Button>
+            {c.status !== 'archived' && (
+              <Button
+                size="sm"
+                variant={c.is_published ? 'ghost' : 'parent'}
+                loading={actingId === c.id && setPublished.isPending}
+                onClick={() => togglePublish(c)}
+              >
+                {c.is_published ? 'Unpublish' : 'Publish'}
+              </Button>
+            )}
             <Button
               size="sm"
               variant="ghost"

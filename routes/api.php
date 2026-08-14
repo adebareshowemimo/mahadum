@@ -217,8 +217,10 @@ Route::prefix('v1')->group(function () {
 
         /* ---- Learning loop (learner / parent) ---- */
         Route::post('assessments', [AssessmentController::class, 'store']);
-        Route::post('enrollments', [EnrollmentController::class, 'store'])
-            ->middleware('can:learning.enrollments.manage');
+        // Record-level policy permits a learner to enroll themselves and a
+        // parent to enroll only their own child. It deliberately excludes
+        // staff who merely have progress-view access.
+        Route::post('enrollments', [EnrollmentController::class, 'store']);
         Route::get('learners/{learner}/path', [PathController::class, 'show'])->can('view', 'learner');
         Route::get('learners/{learner}/progress', [ProgressController::class, 'show'])->can('view', 'learner');
         Route::get('lessons/{lesson}/play', [LessonPlayController::class, 'show']);

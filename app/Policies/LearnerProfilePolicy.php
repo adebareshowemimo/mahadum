@@ -29,6 +29,17 @@ class LearnerProfilePolicy
             || ($user->can('family.manage') && $this->isParentOwner($user, $profile));
     }
 
+    /**
+     * A learner may enroll themselves; a parent with enrollment-management
+     * capability may enroll only a child in their own family. School staff's
+     * read access to learner progress must not grant enrollment authority.
+     */
+    public function enroll(User $user, LearnerProfile $profile): bool
+    {
+        return $this->isSelf($user, $profile)
+            || ($user->can('learning.enrollments.manage') && $this->isParentOwner($user, $profile));
+    }
+
     public function reviewSubmissions(User $user, LearnerProfile $profile): bool
     {
         return $user->can('learning.submissions.review')

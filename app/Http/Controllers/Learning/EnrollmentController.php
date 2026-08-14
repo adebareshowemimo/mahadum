@@ -17,7 +17,7 @@ class EnrollmentController extends Controller
 
     public function store(StoreEnrollmentRequest $request, PathBuilder $pathBuilder, XapiRecorder $xapi): JsonResponse
     {
-        $learner = $this->learner($request->integer('learner_id'));
+        $learner = $this->learnerForEnrollment($request->integer('learner_id'));
         $course = Course::findOrFail($request->integer('course_id'));
 
         if (! $course->is_published) {
