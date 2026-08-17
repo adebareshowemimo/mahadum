@@ -117,16 +117,17 @@ class CourseController extends Controller
      * must contain at least one published lesson, else there is nothing to learn.
      */
     /**
-     * Publish a course *and* its draft lessons in one action, so an author
-     * doesn't have to walk the tree publishing each lesson first.
+     * Publish a course and everything in it. Publishing at course level is the
+     * author's "ship it" switch: every draft lesson goes live with the course,
+     * so nobody has to walk the tree publishing lessons one at a time.
      *
-     * A draft lesson is only skipped when it would be broken for learners —
-     * the Content Model §6 checks in LessonPublishService (no video/quiz
-     * component, a video still transcoding, a quiz question with no correct
-     * answer). Those lessons are reported back by name so the author can fix
-     * them; the course still goes live on whatever did publish. If nothing in
-     * the course can publish, the course stays draft and the response carries
-     * the per-lesson reasons instead of a generic "needs a published lesson".
+     * Deliberately unconditional — the per-lesson readiness checks in
+     * LessonPublishService still gate the *lesson-level* publish button
+     * (LessonController::publish), where an author is working on one lesson and
+     * wants to know what's missing. At course level the decision has already
+     * been made, so an incomplete lesson ships rather than silently staying
+     * behind; `meta.lessons_incomplete` names any that went out below the §6 bar
+     * so the author can follow up.
      */
     public function publish(Course $course, LessonPublishService $publisher): JsonResponse
     {
@@ -134,53 +135,36 @@ class CourseController extends Controller
             ->with(['components.video', 'components.quiz.questions.options'])
             ->get();
 
-        // Counted before the cascade — the loop mutates these models in place.
-        $alreadyLive = $lessons->whereNotNull('published_at')->count();
-
         $publishedNow = [];
-        $blocked = [];
+        $incomplete = [];
 
         foreach ($lessons->whereNull('published_at') as $lesson) {
+            // Recorded, not enforced: the author still gets told what's thin.
             $failures = $publisher->failures($lesson);
 
+            $lesson->forceFill(['published_at' => now(), 'is_locked_by_default' => false])->save();
+            $publishedNow[] = ['lesson_id' => $lesson->id, 'title' => $lesson->title];
+
             if ($failures !== []) {
-                $blocked[] = [
+                $incomplete[] = [
                     'lesson_id' => $lesson->id,
                     'title' => $lesson->title,
                     'reasons' => $failures,
                 ];
-
-                continue;
             }
-
-            $lesson->forceFill(['published_at' => now(), 'is_locked_by_default' => false])->save();
-            $publishedNow[] = ['lesson_id' => $lesson->id, 'title' => $lesson->title];
-        }
-
-        if ($alreadyLive === 0 && $publishedNow === []) {
-            return response()->json([
-                'error' => [
-                    'code' => 'not_publishable',
-                    'message' => $blocked === []
-                        ? 'This course has no lessons yet, so there is nothing to publish.'
-                        : 'None of this course’s lessons meet the publish requirements yet.',
-                    'status' => 422,
-                    'details' => $blocked,
-                ],
-            ], 422);
         }
 
         $course->update(['is_published' => true, 'status' => 'published']);
 
         $this->audit->record('course.published', $course, [], [
             'lessons_published' => count($publishedNow),
-            'lessons_blocked' => count($blocked),
+            'lessons_incomplete' => count($incomplete),
         ]);
 
         return (new CourseResource($course->load(['language', 'ownerUser'])->loadCount('levels')))
             ->additional(['meta' => [
                 'lessons_published' => $publishedNow,
-                'lessons_blocked' => $blocked,
+                'lessons_incomplete' => $incomplete,
             ]])
             ->response();
     }

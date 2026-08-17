@@ -469,22 +469,19 @@ export const contentApi = {
     return data
   },
 
-  /**
-   * Publishes the course *and* cascades to its draft lessons. Lessons that
-   * would be broken for learners are skipped and reported in `lessons_blocked`.
-   */
+  /** Publishes the course and every draft lesson in it. */
   async publishCourse(courseId: number): Promise<CoursePublishResult> {
     const { data } = await api.post(`/courses/${courseId}/publish`)
     return {
       course: data.data,
       lessons_published: data.meta?.lessons_published ?? [],
-      lessons_blocked: data.meta?.lessons_blocked ?? [],
+      lessons_incomplete: data.meta?.lessons_incomplete ?? [],
     }
   },
 
   async unpublishCourse(courseId: number): Promise<CoursePublishResult> {
     const { data } = await api.post(`/courses/${courseId}/unpublish`)
-    return { course: data.data, lessons_published: [], lessons_blocked: [] }
+    return { course: data.data, lessons_published: [], lessons_incomplete: [] }
   },
 
   async archiveCourse(courseId: number): Promise<CourseSummary> {

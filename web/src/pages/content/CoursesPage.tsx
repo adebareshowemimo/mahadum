@@ -175,7 +175,7 @@ export function CoursesPage() {
       )}
 
       {publishReport && (
-        <Alert variant={publishReport.lessons_blocked.length > 0 ? 'warning' : 'success'}>
+        <Alert variant={publishReport.lessons_incomplete.length > 0 ? 'warning' : 'success'}>
           <p>
             <strong>{publishReport.courseTitle}</strong> is published
             {publishReport.lessons_published.length > 0
@@ -184,12 +184,12 @@ export function CoursesPage() {
                 }.`
               : '.'}
           </p>
-          {publishReport.lessons_blocked.length > 0 && (
+          {publishReport.lessons_incomplete.length > 0 && (
             <>
               <p className="mt-2">
-                These lessons stayed in draft because they aren’t ready for learners yet:
+                These lessons are now live but still thin — learners will see them as they are:
               </p>
-              <LessonReasons lessons={publishReport.lessons_blocked} />
+              <LessonReasons lessons={publishReport.lessons_incomplete} />
             </>
           )}
         </Alert>
@@ -362,7 +362,7 @@ function blockedFrom(err: ApiError): PublishedLesson[] {
   return Array.isArray(err.details) ? (err.details as PublishedLesson[]) : []
 }
 
-/** Lesson-by-lesson list of why a publish was skipped. */
+/** Lesson-by-lesson list of what each published lesson is still missing. */
 function LessonReasons({ lessons }: { lessons: PublishedLesson[] }) {
   if (lessons.length === 0) return null
 
