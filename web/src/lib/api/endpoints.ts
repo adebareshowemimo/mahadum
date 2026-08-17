@@ -701,7 +701,12 @@ export const billingApi = {
     return data.data
   },
 
-  async telcoRequestOtp(input: { msisdn: string; operator: TelcoOperator }): Promise<{ expires_at: string; msisdn: string }> {
+  async telcoRequestOtp(input: { msisdn: string; operator: TelcoOperator }): Promise<{
+    expires_at: string
+    msisdn: string
+    /** True when no live operator SDP is configured — no SMS was actually sent. */
+    simulated: boolean
+  }> {
     const { data } = await api.post('/telco/otp/request', input)
     return data.data
   },
@@ -716,6 +721,8 @@ export const billingApi = {
     state: string
     msisdn: string
     next_attempt_at: string | null
+    /** True when no live operator SDP is configured — charges are simulated. */
+    simulated: boolean
   }> {
     const { data } = await api.post('/telco/subscribe', input)
     return data.data

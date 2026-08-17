@@ -558,10 +558,27 @@ export interface CoursePerformance {
   enrollments: number
   /** Enrollment count grouped by status, e.g. `{ active: 18, completed: 3 }`. */
   enrollments_by_status: Record<string, number>
-  /** Approximation: enrollments belonging to a referred family — not a revenue figure. */
-  referred_enrollments: number
   lesson_completions: number
   quiz_accuracy: number | null
+  /** Distinct paying users behind this course's enrolled learners. */
+  subscribers: number
+  /** Those subscribers' subscriptions grouped by status, e.g. `{ active: 18, cancelled: 2, pending: 3 }`. */
+  subscriptions_by_status: Record<string, number>
+  /** Subscribers who signed up through a referral code. */
+  referred_subscribers: number
+  /**
+   * Estimated, not billed. Each subscriber's plan price split evenly across the
+   * distinct courses their learners are enrolled in — see CoursePerformanceController.
+   */
+  attributed_revenue_minor: number
+  /** Attributed revenue from subscriptions not yet confirmed (status `pending`). */
+  pending_revenue_minor: number
+  /** The share of `attributed_revenue_minor` coming from referred subscribers. */
+  referral_revenue_minor: number
+  /** Referral commission already cleared, attributed to this course. */
+  referral_commission_minor: number
+  /** Referral commission still in 14-day escrow, attributed to this course. */
+  pending_commission_minor: number
 }
 
 export interface CompleteResult {
@@ -1300,11 +1317,25 @@ export interface GatewayProvider {
   requirements: GatewayRequirement[]
 }
 
+/**
+ * Airtime (VAS) billing via the operator SDP. Not a card gateway, so it has no
+ * `is_default` and no test-connection endpoint — only a live/simulated state.
+ */
+export interface TelcoGatewayStatus {
+  label: string
+  /** TELCO_SDP_LIVE — when false, charges are simulated and no OTP SMS is sent. */
+  live: boolean
+  configured: boolean
+  webhook_url: string
+  requirements: GatewayRequirement[]
+}
+
 export interface GatewayStatus {
   /** PAYMENT_GATEWAY_LIVE — whether outbound checkout calls are enabled. */
   live: boolean
   default: string
   providers: GatewayProvider[]
+  telco: TelcoGatewayStatus
 }
 
 export interface GatewayTestResult {

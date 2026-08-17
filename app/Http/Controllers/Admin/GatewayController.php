@@ -55,6 +55,24 @@ class GatewayController extends Controller
                     ],
                 ],
             ],
+            // Airtime (VAS) billing runs through the operator SDP, not a card
+            // gateway. Without live credentials TelcoGatewayManager serves a
+            // NullTelcoGateway that succeeds deterministically and sends no SMS,
+            // so report that plainly rather than letting it read as "working".
+            'telco' => [
+                'label' => 'Operator SDP (airtime billing)',
+                'live' => (bool) config('services.telco.live'),
+                'configured' => (bool) config('services.telco.live')
+                    && filled(config('services.telco.base_url'))
+                    && filled(config('services.telco.token')),
+                'webhook_url' => url('/api/v1/webhooks/telco'),
+                'requirements' => [
+                    ['label' => 'Live mode', 'env' => 'TELCO_SDP_LIVE', 'set' => (bool) config('services.telco.live')],
+                    ['label' => 'SDP base URL', 'env' => 'TELCO_SDP_BASE_URL', 'set' => filled(config('services.telco.base_url'))],
+                    ['label' => 'SDP token', 'env' => 'TELCO_SDP_TOKEN', 'set' => filled(config('services.telco.token'))],
+                    ['label' => 'Webhook secret', 'env' => 'TELCO_WEBHOOK_SECRET', 'set' => filled(config('services.telco.webhook_secret'))],
+                ],
+            ],
         ]]);
     }
 

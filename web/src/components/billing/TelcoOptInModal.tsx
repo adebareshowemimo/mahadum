@@ -21,18 +21,23 @@ export function TelcoOptInModal({ plan, open, onClose }: { plan: Plan | null; op
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+  // The API reports when no live operator SDP is configured: charges are
+  // simulated and no SMS goes out. Say so rather than claiming a real charge.
+  const [simulated, setSimulated] = useState(false)
 
   const dailyMinor = plan ? Math.max(1, Math.round(plan.price_minor / 30)) : 0
 
   function close() {
     setStep('phone'); setMsisdn(''); setOperator('mtn'); setCode(''); setError(null); setDone(false)
+    setSimulated(false)
     onClose()
   }
 
   async function sendCode() {
     setBusy(true); setError(null)
     try {
-      await billingApi.telcoRequestOtp({ msisdn, operator })
+      const otp = await billingApi.telcoRequestOtp({ msisdn, operator })
+      setSimulated(otp.simulated)
       setStep('code')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not send the code.')
@@ -64,9 +69,16 @@ export function TelcoOptInModal({ plan, open, onClose }: { plan: Plan | null; op
     >
       {done ? (
         <div className="flex flex-col gap-4">
-          <Alert variant="success" title="You're subscribed">
-            Daily airtime billing is active on {msisdn}. To stop, text STOP to 3600.
-          </Alert>
+          {simulated ? (
+            <Alert variant="warning" title="Subscribed in test mode">
+              Airtime billing is set up on {msisdn}, but no operator connection is configured on this environment — no
+              airtime will actually be charged and no SMS was sent.
+            </Alert>
+          ) : (
+            <Alert variant="success" title="You're subscribed">
+              Daily airtime billing is active on {msisdn}. To stop, text STOP to 3600.
+            </Alert>
+          )}
           <Button fullWidth onClick={close}>
             Done
           </Button>
@@ -100,7 +112,14 @@ export function TelcoOptInModal({ plan, open, onClose }: { plan: Plan | null; op
         </div>
       ) : (
         <div className="flex flex-col items-center gap-4">
-          <p className="text-sm text-muted">Enter the 6-digit code sent to {msisdn}.</p>
+          {simulated ? (
+            <Alert variant="warning">
+              No operator connection is configured here, so no SMS was sent. The code is written to the server logs for
+              testing.
+            </Alert>
+          ) : (
+            <p className="text-sm text-muted">Enter the 6-digit code sent to {msisdn}.</p>
+          )}
           <CodeInput value={code} onChange={(v) => { setCode(v); setError(null) }} length={6} error={!!error} aria-label="OTP code" />
           {error && <p className="text-xs font-medium text-danger">{error}</p>}
           <div className="flex w-full gap-2">

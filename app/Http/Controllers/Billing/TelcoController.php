@@ -40,6 +40,7 @@ class TelcoController extends Controller
         return response()->json(['data' => [
             'expires_at' => $otp->expires_at,
             'msisdn' => $otp->msisdn,
+            'simulated' => $this->isSimulated(),
         ]], 202);
     }
 
@@ -111,6 +112,7 @@ class TelcoController extends Controller
             'state' => $telco->state,
             'msisdn' => $telco->msisdn,
             'next_attempt_at' => $telco->next_attempt_at,
+            'simulated' => $this->isSimulated(),
         ]], 201);
     }
 
@@ -121,6 +123,18 @@ class TelcoController extends Controller
             403,
             'Airtime billing is no longer available. Please choose a card or bank plan.',
         );
+    }
+
+    /**
+     * True when no live operator SDP is configured, so TelcoGatewayManager is
+     * serving a NullTelcoGateway: charges succeed deterministically and no OTP
+     * SMS is actually sent. Surfaced to the client so the UI can say so rather
+     * than reporting a fake success — the same honesty rule the email layer
+     * applies when MAIL_MAILER is `log`.
+     */
+    private function isSimulated(): bool
+    {
+        return ! (bool) config('services.telco.live');
     }
 
     public function status(Request $request): JsonResponse
