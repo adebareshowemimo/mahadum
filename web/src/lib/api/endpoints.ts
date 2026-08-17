@@ -13,6 +13,7 @@ import type {
   CompleteResult,
   ChildDetail,
   CoursePerformance,
+  CoursePublishResult,
   CourseSummary,
   CreateChoreInput,
   FamilyOverview,
@@ -468,14 +469,22 @@ export const contentApi = {
     return data
   },
 
-  async publishCourse(courseId: number): Promise<CourseSummary> {
+  /**
+   * Publishes the course *and* cascades to its draft lessons. Lessons that
+   * would be broken for learners are skipped and reported in `lessons_blocked`.
+   */
+  async publishCourse(courseId: number): Promise<CoursePublishResult> {
     const { data } = await api.post(`/courses/${courseId}/publish`)
-    return data.data
+    return {
+      course: data.data,
+      lessons_published: data.meta?.lessons_published ?? [],
+      lessons_blocked: data.meta?.lessons_blocked ?? [],
+    }
   },
 
-  async unpublishCourse(courseId: number): Promise<CourseSummary> {
+  async unpublishCourse(courseId: number): Promise<CoursePublishResult> {
     const { data } = await api.post(`/courses/${courseId}/unpublish`)
-    return data.data
+    return { course: data.data, lessons_published: [], lessons_blocked: [] }
   },
 
   async archiveCourse(courseId: number): Promise<CourseSummary> {

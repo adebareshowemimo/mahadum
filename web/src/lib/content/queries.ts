@@ -122,6 +122,10 @@ export function useSetCoursePublished() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['content', 'courses-paged'] })
       void qc.invalidateQueries({ queryKey: contentKeys.courses })
+      // Publishing a course cascades to its draft lessons, so any lesson list
+      // or detail already in cache (the course builder) is now stale.
+      void qc.invalidateQueries({ queryKey: ['content', 'lessons'] })
+      void qc.invalidateQueries({ queryKey: ['content', 'lesson'] })
     },
   })
 }

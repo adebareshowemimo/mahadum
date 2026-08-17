@@ -294,6 +294,25 @@ export interface CourseSummary {
   levels_count?: number
 }
 
+/** A lesson touched by a course publish — either published or skipped. */
+export interface PublishedLesson {
+  lesson_id: number
+  title: string
+  /** Why the lesson could not publish. Absent on successfully published ones. */
+  reasons?: string[]
+}
+
+/**
+ * Publishing a course cascades to its draft lessons. Lessons that would be
+ * broken for learners (no video/quiz, a quiz question with no correct answer,
+ * a video still transcoding) are skipped and listed in `lessons_blocked`.
+ */
+export interface CoursePublishResult {
+  course: CourseSummary
+  lessons_published: PublishedLesson[]
+  lessons_blocked: PublishedLesson[]
+}
+
 export interface AdminCoursesQuery {
   q?: string
   language?: string

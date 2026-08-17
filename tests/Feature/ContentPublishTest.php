@@ -7,11 +7,12 @@ use App\Models\Enrollment;
 use App\Models\Language;
 use App\Models\LearnerProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\MakesContent;
 use Tests\TestCase;
 
 class ContentPublishTest extends TestCase
 {
-    use RefreshDatabase;
+    use MakesContent, RefreshDatabase;
 
     public function test_publish_requires_video_and_quiz(): void
     {
@@ -130,5 +131,69 @@ class ContentPublishTest extends TestCase
 
         $otherLearner = LearnerProfile::create(['display_name' => 'Not mine']);
         $this->getJson("/api/v1/courses?learner_id={$otherLearner->id}")->assertForbidden();
+    }
+
+    public function test_publishing_a_course_cascades_to_its_draft_lessons(): void
+    {
+        $this->seedRbac();
+        $lesson = $this->publishedLesson();
+        $course = $lesson->courseLevel->course;
+
+        // Put the whole course back to draft: the author has authored a full,
+        // valid lesson but never pressed publish on it.
+        $lesson->update(['published_at' => null]);
+        $course->update(['is_published' => false, 'status' => 'draft']);
+
+        $this->actingAsUser($this->userWithRole('content_owner'));
+        $response = $this->postJson("/api/v1/courses/{$course->id}/publish")->assertOk();
+
+        $response->assertJsonPath('data.is_published', true)
+            ->assertJsonCount(1, 'meta.lessons_published')
+            ->assertJsonCount(0, 'meta.lessons_blocked');
+
+        $this->assertNotNull($lesson->fresh()->published_at);
+        $this->assertFalse((bool) $lesson->fresh()->is_locked_by_default);
+    }
+
+    public function test_cascade_skips_lessons_that_would_be_broken_and_reports_why(): void
+    {
+        $this->seedRbac();
+        $good = $this->publishedLesson();
+        $course = $good->courseLevel->course;
+        $good->update(['published_at' => null]);
+        $course->update(['is_published' => false, 'status' => 'draft']);
+
+        // An empty second lesson — no video, no quiz — cannot serve a learner.
+        $broken = $good->courseLevel->lessons()->create(['title' => 'Empty lesson', 'position' => 2]);
+
+        $this->actingAsUser($this->userWithRole('content_owner'));
+        $response = $this->postJson("/api/v1/courses/{$course->id}/publish")->assertOk();
+
+        $response->assertJsonPath('data.is_published', true)
+            ->assertJsonCount(1, 'meta.lessons_published')
+            ->assertJsonPath('meta.lessons_blocked.0.lesson_id', $broken->id)
+            ->assertJsonPath('meta.lessons_blocked.0.title', 'Empty lesson');
+
+        $this->assertNotNull($good->fresh()->published_at);
+        $this->assertNull($broken->fresh()->published_at);
+    }
+
+    public function test_course_stays_draft_when_no_lesson_can_publish(): void
+    {
+        $this->seedRbac();
+        $lesson = $this->publishedLesson();
+        $course = $lesson->courseLevel->course;
+        $course->update(['is_published' => false, 'status' => 'draft']);
+        // Strip the lesson back to nothing so it fails every check.
+        $lesson->update(['published_at' => null]);
+        $lesson->components()->delete();
+
+        $this->actingAsUser($this->userWithRole('content_owner'));
+        $this->postJson("/api/v1/courses/{$course->id}/publish")
+            ->assertStatus(422)
+            ->assertJsonPath('error.code', 'not_publishable')
+            ->assertJsonPath('error.details.0.lesson_id', $lesson->id);
+
+        $this->assertFalse((bool) $course->fresh()->is_published);
     }
 }

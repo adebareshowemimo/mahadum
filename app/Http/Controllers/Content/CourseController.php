@@ -11,6 +11,7 @@ use App\Models\Course;
 use App\Models\LearnerProfile;
 use App\Models\Lesson;
 use App\Services\AuditLogger;
+use App\Services\Content\LessonPublishService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -115,24 +116,73 @@ class CourseController extends Controller
      * Publish a course (make it visible to learners). Publish-rule: the course
      * must contain at least one published lesson, else there is nothing to learn.
      */
-    public function publish(Course $course): JsonResponse
+    /**
+     * Publish a course *and* its draft lessons in one action, so an author
+     * doesn't have to walk the tree publishing each lesson first.
+     *
+     * A draft lesson is only skipped when it would be broken for learners —
+     * the Content Model §6 checks in LessonPublishService (no video/quiz
+     * component, a video still transcoding, a quiz question with no correct
+     * answer). Those lessons are reported back by name so the author can fix
+     * them; the course still goes live on whatever did publish. If nothing in
+     * the course can publish, the course stays draft and the response carries
+     * the per-lesson reasons instead of a generic "needs a published lesson".
+     */
+    public function publish(Course $course, LessonPublishService $publisher): JsonResponse
     {
-        $hasPublishedLesson = Lesson::whereNotNull('published_at')
-            ->whereHas('courseLevel', fn ($q) => $q->where('course_id', $course->id))
-            ->exists();
+        $lessons = Lesson::whereHas('courseLevel', fn ($q) => $q->where('course_id', $course->id))
+            ->with(['components.video', 'components.quiz.questions.options'])
+            ->get();
 
-        if (! $hasPublishedLesson) {
+        // Counted before the cascade — the loop mutates these models in place.
+        $alreadyLive = $lessons->whereNotNull('published_at')->count();
+
+        $publishedNow = [];
+        $blocked = [];
+
+        foreach ($lessons->whereNull('published_at') as $lesson) {
+            $failures = $publisher->failures($lesson);
+
+            if ($failures !== []) {
+                $blocked[] = [
+                    'lesson_id' => $lesson->id,
+                    'title' => $lesson->title,
+                    'reasons' => $failures,
+                ];
+
+                continue;
+            }
+
+            $lesson->forceFill(['published_at' => now(), 'is_locked_by_default' => false])->save();
+            $publishedNow[] = ['lesson_id' => $lesson->id, 'title' => $lesson->title];
+        }
+
+        if ($alreadyLive === 0 && $publishedNow === []) {
             return response()->json([
                 'error' => [
                     'code' => 'not_publishable',
-                    'message' => 'A course needs at least one published lesson before it can be published.',
+                    'message' => $blocked === []
+                        ? 'This course has no lessons yet, so there is nothing to publish.'
+                        : 'None of this course’s lessons meet the publish requirements yet.',
+                    'status' => 422,
+                    'details' => $blocked,
                 ],
             ], 422);
         }
 
         $course->update(['is_published' => true, 'status' => 'published']);
 
-        return (new CourseResource($course->load(['language', 'ownerUser'])->loadCount('levels')))->response();
+        $this->audit->record('course.published', $course, [], [
+            'lessons_published' => count($publishedNow),
+            'lessons_blocked' => count($blocked),
+        ]);
+
+        return (new CourseResource($course->load(['language', 'ownerUser'])->loadCount('levels')))
+            ->additional(['meta' => [
+                'lessons_published' => $publishedNow,
+                'lessons_blocked' => $blocked,
+            ]])
+            ->response();
     }
 
     public function unpublish(Course $course): JsonResponse

@@ -9,7 +9,14 @@ import {
   Input,
   Modal,
 } from '@/components/ui'
-import { ApiError, type AdminCoursesQuery, type CourseSummary, type CreateCourseInput } from '@/lib/api'
+import {
+  ApiError,
+  type AdminCoursesQuery,
+  type CoursePublishResult,
+  type CourseSummary,
+  type CreateCourseInput,
+  type PublishedLesson,
+} from '@/lib/api'
 import { useConfig } from '@/lib/config/useConfig'
 import {
   useAdminCourses,
@@ -31,6 +38,9 @@ export function CoursesPage() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [actingId, setActingId] = useState<number | null>(null)
   const [deleting, setDeleting] = useState<CourseSummary | null>(null)
+  // Outcome of the last cascade publish: what went live, and what was skipped.
+  const [publishReport, setPublishReport] = useState<(CoursePublishResult & { courseTitle: string }) | null>(null)
+  const [blockedDetails, setBlockedDetails] = useState<PublishedLesson[]>([])
 
   const params: AdminCoursesQuery = useMemo(
     () => ({ q: search || undefined, language: language || undefined, status: status || undefined, page }),
@@ -64,11 +74,17 @@ export function CoursesPage() {
 
   async function togglePublish(course: CourseSummary) {
     setActionError(null)
+    setPublishReport(null)
     setActingId(course.id)
     try {
-      await setPublished.mutateAsync({ courseId: course.id, publish: !course.is_published })
+      const result = await setPublished.mutateAsync({ courseId: course.id, publish: !course.is_published })
+      if (course.is_published) return // unpublishing cascades nothing to report
+      setPublishReport({ ...result, courseTitle: course.title })
     } catch (err) {
+      // A failed publish carries a per-lesson reason list; show it instead of
+      // the bare message so the author knows what to fix.
       setActionError(err instanceof ApiError ? err.message : 'Could not update the course.')
+      setBlockedDetails(err instanceof ApiError ? blockedFrom(err) : [])
     } finally {
       setActingId(null)
     }
@@ -151,7 +167,33 @@ export function CoursesPage() {
         )}
       </div>
 
-      {actionError && <Alert variant="danger">{actionError}</Alert>}
+      {actionError && (
+        <Alert variant="danger">
+          <p>{actionError}</p>
+          <LessonReasons lessons={blockedDetails} />
+        </Alert>
+      )}
+
+      {publishReport && (
+        <Alert variant={publishReport.lessons_blocked.length > 0 ? 'warning' : 'success'}>
+          <p>
+            <strong>{publishReport.courseTitle}</strong> is published
+            {publishReport.lessons_published.length > 0
+              ? `, along with ${publishReport.lessons_published.length} draft lesson${
+                  publishReport.lessons_published.length === 1 ? '' : 's'
+                }.`
+              : '.'}
+          </p>
+          {publishReport.lessons_blocked.length > 0 && (
+            <>
+              <p className="mt-2">
+                These lessons stayed in draft because they aren’t ready for learners yet:
+              </p>
+              <LessonReasons lessons={publishReport.lessons_blocked} />
+            </>
+          )}
+        </Alert>
+      )}
 
       <DataTable
         columns={columns}
@@ -309,5 +351,33 @@ function DeleteCourseModal({ course, onClose }: { course: CourseSummary | null; 
         </div>
       </div>
     </Modal>
+  )
+}
+
+/**
+ * Pulls the per-lesson publish failures out of a 422. The API sends them as
+ * `error.details`; anything else (network error, plain message) yields none.
+ */
+function blockedFrom(err: ApiError): PublishedLesson[] {
+  return Array.isArray(err.details) ? (err.details as PublishedLesson[]) : []
+}
+
+/** Lesson-by-lesson list of why a publish was skipped. */
+function LessonReasons({ lessons }: { lessons: PublishedLesson[] }) {
+  if (lessons.length === 0) return null
+
+  return (
+    <ul className="mt-2 flex flex-col gap-2 text-sm">
+      {lessons.map((lesson) => (
+        <li key={lesson.lesson_id}>
+          <span className="font-semibold">{lesson.title || `Lesson #${lesson.lesson_id}`}</span>
+          <ul className="ml-4 list-disc">
+            {(lesson.reasons ?? []).map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+        </li>
+      ))}
+    </ul>
   )
 }
