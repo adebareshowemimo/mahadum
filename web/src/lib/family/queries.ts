@@ -66,6 +66,19 @@ export function useSetChildPin() {
   })
 }
 
+export function useUpdateLearnerAvatar() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ learnerId, avatarId, photo }: { learnerId: number; avatarId?: number; photo?: File }) =>
+      familyApi.updateLearnerAvatar(learnerId, { avatarId, photo }),
+    onSuccess: (_, variables) => {
+      void qc.invalidateQueries({ queryKey: familyKeys.family })
+      void qc.invalidateQueries({ queryKey: familyKeys.child(variables.learnerId) })
+      void qc.invalidateQueries({ queryKey: ['me'] })
+    },
+  })
+}
+
 export function useTransfer() {
   const qc = useQueryClient()
   return useMutation({

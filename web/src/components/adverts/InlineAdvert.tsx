@@ -40,7 +40,7 @@ export function InlineAdvert({ position = 'inline' }: { position?: AdvertPositio
   return (
     <div
       ref={ref}
-      className={`flex flex-col items-center gap-1 rounded-2xl border border-border bg-surface p-3 transition-all duration-500 ease-out ${
+      className={`flex flex-col items-center gap-1 rounded-2xl border border-border bg-surface p-3 transition-[transform,opacity] duration-200 ease-out ${
         visible ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
       }`}
       data-testid="advert-inline"

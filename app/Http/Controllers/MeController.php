@@ -4,20 +4,24 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\FamilyResource;
 use App\Http\Resources\LearnerProfileResource;
+use App\Models\LearnerProfile;
 use App\Models\OrganizationUser;
-use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\AuditLogger;
+use App\Services\Billing\EntitlementResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class MeController extends Controller
 {
-    public function show(Request $request): JsonResponse
+    public function show(Request $request, EntitlementResolver $entitlements): JsonResponse
     {
         $user = $request->user()->load([
             'ownedFamilies.learnerProfiles.targetLanguage',
+            'ownedFamilies.learnerProfiles.profilePhoto',
             'learnerProfile.targetLanguage',
+            'learnerProfile.profilePhoto',
         ]);
 
         // Active personal subscription (drives premium entitlements). School
@@ -57,43 +61,37 @@ class MeController extends Controller
                 'plan_name' => $subscription->plan->name,
                 'renews_at' => $subscription->renews_at,
             ] : null,
-            'entitlements' => $this->entitlements($subscription?->plan),
+            'entitlements' => $entitlements->fromPlan($subscription?->plan),
         ]]);
     }
 
     /**
-     * Capability flags derived from the active plan (or Free defaults). Mirrors
-     * the approved subscription matrix: family features live in the Family tier;
-     * Free is full-learning + ads.
+     * Create (or return) the signed-in adult's own learner identity. Parents
+     * use this to learn alongside their children without impersonating a child.
      */
-    private function entitlements(?Plan $plan): array
+    public function ensureLearnerProfile(Request $request, AuditLogger $audit): JsonResponse
     {
-        // Free (no active plan): full learning, ads on, single profile.
-        if ($plan === null) {
-            return [
-                'tier' => 'free',
-                'tier_name' => 'Free',
-                'ads' => true,
-                'offline_download' => false,
-                'unlimited_hearts' => false,
-                'family_dashboard' => false,
-                'teacher_analytics' => false,
-                'max_profiles' => 1,
-            ];
+        $user = $request->user();
+        abort_unless($user->hasAnyRole(['parent', 'student']), 403, 'This account cannot create a personal learner profile.');
+
+        $learner = LearnerProfile::firstOrCreate(
+            ['user_id' => $user->id],
+            [
+                'display_name' => $user->name,
+                'date_of_birth' => $user->date_of_birth,
+                'age_band' => 'adult',
+            ],
+        );
+
+        if ($learner->wasRecentlyCreated) {
+            $audit->record('learner.self_profile_created', $learner, [], [
+                'user_id' => $user->id,
+                'display_name' => $learner->display_name,
+            ]);
         }
 
-        $features = $plan->features ?? [];
-
-        return [
-            'tier' => $plan->code,
-            'tier_name' => $plan->name,
-            // Any paid plan removes ads unless its feature map says otherwise.
-            'ads' => (bool) ($features['ads'] ?? false),
-            'offline_download' => (bool) ($features['offline_download'] ?? false),
-            'unlimited_hearts' => (bool) ($features['unlimited_hearts'] ?? false),
-            'family_dashboard' => (bool) ($features['family_dashboard'] ?? false),
-            'teacher_analytics' => (bool) ($features['teacher_analytics'] ?? false),
-            'max_profiles' => $plan->max_profiles ?? 1,
-        ];
+        return (new LearnerProfileResource($learner->load(['targetLanguage', 'profilePhoto'])))
+            ->response()
+            ->setStatusCode($learner->wasRecentlyCreated ? 201 : 200);
     }
 }

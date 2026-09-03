@@ -28,6 +28,15 @@ class AdvertPlacementSeeder extends Seeder
             targetUrl: '/learn',
             svg: $this->inlineSvg(),
         );
+
+        $this->seedAdvert(
+            name: 'Data top-up for parent and child profiles',
+            position: 'profile_data_topup',
+            size: '300x250',
+            path: 'adverts/profile-data-topup.svg',
+            targetUrl: '/billing',
+            svg: $this->dataTopupSvg(),
+        );
     }
 
     private function seedAdvert(
@@ -88,6 +97,23 @@ SVG;
   <text x="150" y="139" text-anchor="middle" font-family="Arial, sans-serif" font-size="25" font-weight="700" fill="#7c2d12">Live the culture.</text>
   <text x="150" y="168" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#7c2d12">Try a five-minute language lesson</text>
   <rect x="67" y="190" width="166" height="40" rx="20" fill="#0f766e"/><text x="150" y="216" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="white">Start learning</text>
+</svg>
+SVG;
+    }
+
+    private function dataTopupSvg(): string
+    {
+        return <<<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="250" viewBox="0 0 300 250" role="img" aria-labelledby="title description">
+  <title id="title">Top up data and keep learning</title>
+  <desc id="description">Buy a mobile data bundle from the Mahadum billing page.</desc>
+  <rect width="300" height="250" rx="20" fill="#ecfeff"/>
+  <circle cx="150" cy="76" r="43" fill="#0f766e"/>
+  <path d="M126 78c14-14 34-14 48 0M134 88c9-9 23-9 32 0M146 98c2-2 6-2 8 0" fill="none" stroke="#fbbf24" stroke-width="7" stroke-linecap="round"/>
+  <text x="150" y="143" text-anchor="middle" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#134e4a">Keep learning online</text>
+  <text x="150" y="169" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#115e59">Top up a mobile data bundle</text>
+  <rect x="72" y="190" width="156" height="40" rx="20" fill="#ea580c"/>
+  <text x="150" y="216" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="white">Buy data</text>
 </svg>
 SVG;
     }

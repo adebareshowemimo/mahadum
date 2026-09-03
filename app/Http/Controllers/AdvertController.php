@@ -19,7 +19,7 @@ class AdvertController extends Controller
     public function active(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'position' => ['required', Rule::in(['leaderboard', 'inline'])],
+            'position' => ['required', Rule::in(['leaderboard', 'inline', 'profile_data_topup'])],
         ]);
 
         $advert = AdvertPlacement::currentFor($validated['position']);

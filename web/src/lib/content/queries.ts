@@ -106,6 +106,18 @@ export function useCreateCourse() {
   })
 }
 
+export function useUpdateCourse() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ courseId, input }: { courseId: number; input: Partial<CreateCourseInput> }) =>
+      contentApi.updateCourse(courseId, input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: contentKeys.courses })
+      void qc.invalidateQueries({ queryKey: ['content', 'courses-paged'] })
+    },
+  })
+}
+
 export function useAdminCourses(params: AdminCoursesQuery) {
   return useQuery({
     queryKey: contentKeys.coursesPaged(params),

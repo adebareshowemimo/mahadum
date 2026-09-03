@@ -82,5 +82,28 @@ class SeatPricingTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.registration_minor', 0)
             ->assertJsonPath('data.amount_minor', self::withVat(50 * 700_000));
+
+        $this->getJson("/api/v1/schools/{$org->id}/invoices")
+            ->assertOk()
+            ->assertJsonPath('data.0.lines.0.description', InvoiceLineBuilder::STUDENT_SCHOOL_FEES)
+            ->assertJsonPath('data.0.lines.0.amount_minor', 50 * 700_000)
+            ->assertJsonPath('data.0.lines.1.description', InvoiceLineBuilder::REGISTRATION_FEES)
+            ->assertJsonPath('data.0.lines.1.amount_minor', 0);
+    }
+
+    public function test_invoice_api_exposes_student_and_registration_fees_separately(): void
+    {
+        [$org] = $this->schoolAdmin();
+
+        $this->postJson("/api/v1/schools/{$org->id}/seats/purchase", ['quantity' => 50])
+            ->assertCreated();
+
+        $this->getJson("/api/v1/schools/{$org->id}/invoices")
+            ->assertOk()
+            ->assertJsonPath('data.0.lines.0.description', InvoiceLineBuilder::STUDENT_SCHOOL_FEES)
+            ->assertJsonPath('data.0.lines.0.amount_minor', 50 * 700_000)
+            ->assertJsonPath('data.0.lines.1.description', InvoiceLineBuilder::REGISTRATION_FEES)
+            ->assertJsonPath('data.0.lines.1.amount_minor', 5_000_000)
+            ->assertJsonPath('data.0.lines.2.description', 'VAT (7.5%)');
     }
 }

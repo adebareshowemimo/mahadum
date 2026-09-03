@@ -19,7 +19,7 @@ class StoreAdvertPlacementRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'position' => ['required', Rule::in(['leaderboard', 'inline'])],
+            'position' => ['required', Rule::in(['leaderboard', 'inline', 'profile_data_topup'])],
             'size' => ['nullable', 'string', 'max:50'],
             'media_asset_id' => ['required', 'integer', 'exists:media_assets,id'],
             'target_url' => ['required', 'url', 'max:2048'],

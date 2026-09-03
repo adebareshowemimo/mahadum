@@ -15,6 +15,7 @@ Schedule::command('telco:expire-grace')->hourly();
 // Referrals & commissions.
 Schedule::command('commissions:clear-escrow')->hourly();
 Schedule::command('referrals:flag-velocity')->everyFifteenMinutes();
+Schedule::command('referrals:sync-activations')->hourly();
 
 // Teacher class compensation — accrue for the prior month on the 1st.
 Schedule::command('compensation:accrue-teachers')->monthlyOn(1, '03:00');

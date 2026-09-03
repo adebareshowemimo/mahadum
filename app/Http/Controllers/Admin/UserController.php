@@ -4,11 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AssignRoleRequest;
+use App\Http\Requests\Admin\StoreUserRequest;
 use App\Models\OrganizationUser;
 use App\Models\User;
 use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class UserController extends Controller
@@ -77,6 +81,54 @@ class UserController extends Controller
     public function show(User $user): JsonResponse
     {
         return response()->json(['data' => $this->row($user->load('roles'))]);
+    }
+
+    public function store(StoreUserRequest $request): JsonResponse
+    {
+        $data = $request->validated();
+        $organizationId = isset($data['organization_id']) ? (int) $data['organization_id'] : null;
+
+        $user = DB::transaction(function () use ($data, $organizationId): User {
+            $user = User::create([
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'],
+                'email' => strtolower($data['email']),
+                'username' => $data['username'] ?? null,
+                'phone' => $data['phone'] ?? null,
+                'locale' => $data['locale'] ?? 'en',
+                'status' => $data['status'] ?? 'active',
+                'organization_id' => $organizationId,
+                'password' => Str::password(32),
+            ]);
+
+            $user->assignRole($data['role']);
+
+            if ($organizationId !== null) {
+                OrganizationUser::create([
+                    'organization_id' => $organizationId,
+                    'user_id' => $user->id,
+                    'role' => $data['role'],
+                    'status' => 'active',
+                ]);
+            }
+
+            return $user;
+        });
+
+        $resetStatus = Password::broker()->sendResetLink(['email' => $user->email]);
+
+        $this->audit->record('user.created', $user, [], [
+            'email' => $user->email,
+            'role' => $data['role'],
+            'status' => $user->status,
+            'organization_id' => $organizationId,
+            'invitation_sent' => $resetStatus === Password::RESET_LINK_SENT,
+        ], $organizationId);
+
+        return response()->json([
+            'data' => $this->row($user->load('roles')),
+            'meta' => ['invitation_sent' => $resetStatus === Password::RESET_LINK_SENT],
+        ], 201);
     }
 
     public function assignRole(AssignRoleRequest $request, User $user): JsonResponse

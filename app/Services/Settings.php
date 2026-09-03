@@ -31,6 +31,18 @@ class Settings
         return $def['default'] ?? $fallback;
     }
 
+    /** Default XP for a newly-authored learning component. */
+    public function componentXp(string $type): int
+    {
+        $key = match ($type) {
+            'quiz' => 'learning.quiz_completion_xp',
+            'video' => 'learning.video_completion_xp',
+            default => null,
+        };
+
+        return $key === null ? 0 : (int) $this->get($key, 0);
+    }
+
     /**
      * Persist overrides for known keys only. Unknown keys are ignored.
      *

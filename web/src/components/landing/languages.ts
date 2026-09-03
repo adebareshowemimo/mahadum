@@ -13,7 +13,7 @@
 
 export interface LandingLanguage {
   /** ISO code used by the content model (LanguageSeeder). */
-  code: 'yo' | 'ig' | 'ha' | 'pcm'
+  code: 'yo' | 'ig' | 'ha' | 'en'
   /** Endonym-correct display name, with diacritics. */
   name: string
   /** How the language names itself, shown as a subtitle. */
@@ -28,6 +28,8 @@ export interface LandingLanguage {
 }
 
 export interface QuizRound {
+  /** Optional complete question for same-language rounds that are not translations. */
+  question?: string
   /** English meaning the learner is asked to match. */
   prompt: string
   options: string[]
@@ -123,30 +125,33 @@ export const LANDING_LANGUAGES: LandingLanguage[] = [
     ],
   },
   {
-    code: 'pcm',
+    code: 'en',
     name: 'English',
-    endonym: 'Naijá',
-    greeting: 'How you dey?',
-    greetingMeaning: 'How are you?',
+    endonym: 'English',
+    greeting: 'Good morning',
+    greetingMeaning: 'A friendly morning greeting',
     accent: 'ai',
     quiz: [
       {
-        prompt: 'How are you?',
-        options: ['I dey come', 'How you dey?', 'Abeg'],
-        answer: 1,
-        note: 'How you dey? is the everyday how are you. I dey come means I will be back — even if you are leaving.',
-      },
-      {
-        prompt: 'Please',
-        options: ['Abeg', 'Wetin', 'Chop'],
+        question: 'Which phrase is a greeting in the morning?',
+        prompt: 'Good morning',
+        options: ['Good morning', 'Good night', 'Goodbye'],
         answer: 0,
-        note: 'Abeg is please — softening almost any request. Wetin means what, and chop means eat.',
+        note: 'Good morning is a polite greeting used before midday. Good night is normally used when leaving or going to sleep.',
       },
       {
+        question: 'Which word is politely added to a request?',
+        prompt: 'Please',
+        options: ['Please', 'Later', 'Maybe'],
+        answer: 0,
+        note: 'Please makes a request polite. Thank you shows appreciation after someone helps you.',
+      },
+      {
+        question: "Which phrase is a polite answer to 'How are you?'",
         prompt: 'I am fine',
-        options: ['I no sabi', 'Make we go', 'I dey fine'],
+        options: ['I do not know', 'Let us go', 'I am fine, thank you'],
         answer: 2,
-        note: 'I dey fine answers how you dey. I no sabi means I do not know — sabi is to know.',
+        note: 'I am fine, thank you is a polite answer to “How are you?” and returns the speaker’s kindness.',
       },
     ],
   },

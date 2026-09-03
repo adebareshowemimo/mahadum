@@ -26,7 +26,7 @@ class CourseController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $perPage = min(max($request->integer('per_page', 20), 1), 100);
+        $perPage = min(max($request->integer('per_page', 12), 1), 100);
         $query = Course::query()->with(['language', 'ownerUser'])->withCount('levels');
 
         // Learners only see published courses; CMS roles see drafts too.
@@ -49,16 +49,32 @@ class CourseController extends Controller
             $query->whereHas('language', fn ($q) => $q->where('code', $request->query('language')));
         }
 
+        if ($request->filled('level')) {
+            $query->where('level_band', $request->query('level'));
+        }
+
         // Admin oversight filters (only meaningful for CMS roles that see drafts).
         if ($request->filled('status')) {
             $query->where('status', $request->query('status'));
         }
 
         if ($q = trim((string) $request->query('q', ''))) {
-            $query->where('title', 'like', "%{$q}%");
+            $query->where(fn ($courses) => $courses
+                ->where('title', 'like', "%{$q}%")
+                ->orWhere('description', 'like', "%{$q}%"));
         }
 
-        return CourseResource::collection($query->latest()->paginate($perPage));
+        $levels = Course::query()
+            ->where('is_published', true)
+            ->whereNotNull('level_band')
+            ->where('level_band', '!=', '')
+            ->distinct()
+            ->orderBy('level_band')
+            ->pluck('level_band')
+            ->values();
+
+        return CourseResource::collection($query->latest()->paginate($perPage))
+            ->additional(['filters' => ['levels' => $levels]]);
     }
 
     public function show(Course $course): CourseResource

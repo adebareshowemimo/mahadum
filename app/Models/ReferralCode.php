@@ -21,6 +21,8 @@ use Illuminate\Support\Carbon;
  * @property-read Model|\Eloquent $owner
  * @property-read Collection<int, Referral> $referrals
  * @property-read int|null $referrals_count
+ * @property-read Collection<int, ReferralInvitation> $invitations
+ * @property-read int|null $invitations_count
  *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ReferralCode newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ReferralCode newQuery()
@@ -53,5 +55,13 @@ class ReferralCode extends Model
     public function referrals(): HasMany
     {
         return $this->hasMany(Referral::class);
+    }
+
+    /**
+     * @return HasMany<ReferralInvitation, $this>
+     */
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(ReferralInvitation::class);
     }
 }

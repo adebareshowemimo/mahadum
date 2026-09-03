@@ -70,18 +70,22 @@ class TelcoController extends Controller
     {
         $this->abortUnlessEnabled();
 
+        $plan = Plan::findOrFail($request->integer('plan_id'));
+
+        // Validate the commercial entitlement before consuming the single-use
+        // OTP so a tampered plan ID cannot burn a legitimate verification.
+        abort_unless($plan->interval === 'month', 422, 'Airtime billing is only available for monthly plans.');
+        abort_unless(
+            $plan->audience === 'individual' && $plan->code === 'premium_individual',
+            422,
+            'Airtime billing is only available for the Individual monthly plan.',
+        );
+
         abort_unless(
             $this->otp->consumeVerified($request->user(), (string) $request->string('msisdn')),
             403,
             'Phone number not verified. Request and confirm an OTP first.',
         );
-
-        $plan = Plan::findOrFail($request->integer('plan_id'));
-
-        // Airtime billing debits a monthly plan's price/30 each day. Enrolling an
-        // annual (or other-cadence) plan would over-charge (e.g. ₦60,000/30 = ₦2,000/day),
-        // so restrict daily VAS billing to monthly tiers.
-        abort_unless($plan->interval === 'month', 422, 'Airtime billing is only available for monthly plans.');
 
         $subscription = new Subscription([
             'plan_id' => $plan->id,

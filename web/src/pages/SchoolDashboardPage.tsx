@@ -28,7 +28,7 @@ function Dashboard({ orgId }: { orgId: number }) {
   const [newOpen, setNewOpen] = useState(false)
 
   if (isLoading) return <Skeleton className="h-40" />
-  if (isError || !data) return <Alert variant="danger">Couldn’t load the school dashboard.</Alert>
+  if (isError || !data) return <Alert variant="danger">Couldn’t load the Educator/School dashboard.</Alert>
 
   const seatsPct = data.seats.purchased > 0 ? Math.round((data.seats.filled / data.seats.purchased) * 100) : 0
 

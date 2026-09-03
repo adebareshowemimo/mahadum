@@ -2,10 +2,15 @@
 
 namespace App\Providers;
 
+use App\Services\MailConfiguration;
+use App\Services\PaymentConfiguration;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -23,6 +28,24 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Encrypted admin-managed integration overrides must be applied in web,
+        // CLI and queue-worker processes. Environment values remain fallbacks.
+        try {
+            if (Schema::hasTable('settings')) {
+                app(MailConfiguration::class)->apply();
+                app(PaymentConfiguration::class)->apply();
+
+                Queue::before(function (JobProcessing $event): void {
+                    app(MailConfiguration::class)->apply();
+                    app(PaymentConfiguration::class)->apply();
+                    app('mail.manager')->purge('smtp');
+                });
+            }
+        } catch (\Throwable) {
+            // Deployment commands may bootstrap before the database exists;
+            // environment configuration remains the safe fallback in that case.
+        }
+
         // Default API limiter (per-token, fallback per-IP).
         RateLimiter::for('api', fn (Request $request) => Limit::perMinute(60)
             ->by($request->user()?->id ?: $request->ip()));

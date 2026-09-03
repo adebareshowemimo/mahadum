@@ -31,7 +31,7 @@ export function OrgActivityReportPage() {
   return (
     <div className="flex flex-col gap-6">
       <AdminPageHeader
-        title="Organizations & schools"
+        title="Organizations & Educator/School accounts"
         description="New organizations over time, the status mix, and platform-wide class & student totals."
         backTo="/admin/reports"
         backLabel="Reports"

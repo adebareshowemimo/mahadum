@@ -6,6 +6,7 @@ use App\Models\LearnerProfile;
 use App\Services\Family\WalletService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @mixin LearnerProfile
@@ -18,6 +19,11 @@ class LearnerProfileResource extends JsonResource
             'id' => $this->id,
             'display_name' => $this->display_name,
             'avatar_id' => $this->avatar_id,
+            'avatar_url' => $this->profilePhoto
+                ? (str_starts_with($this->profilePhoto->url, 'http')
+                    ? $this->profilePhoto->url
+                    : Storage::disk('public')->url($this->profilePhoto->url))
+                : null,
             'age_band' => $this->age_band,
             'current_level' => $this->current_level,
             'target_language' => $this->whenLoaded('targetLanguage', fn () => $this->targetLanguage?->code),

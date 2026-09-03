@@ -3,20 +3,30 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\AuditLogger;
+use App\Services\IntegrationSettings;
+use App\Services\PaymentConfiguration;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Validation\ValidationException;
 
 /**
- * Read-only operations console for the payment gateways. Secrets live in the
- * environment (PCI-safe: never in the app DB, never returned to the client) — this
- * only reports whether each provider is *configured*, the live/test mode, the
- * default, and the webhook URL to register. A test-connection performs a harmless
- * authenticated read against the provider to validate the key.
+ * Operations console for payment gateways. Monnify credentials may come from
+ * environment variables or encrypted DB overrides and are never returned.
  */
 class GatewayController extends Controller
 {
+    public function __construct(
+        private IntegrationSettings $settings,
+        private PaymentConfiguration $payments,
+        private AuditLogger $audit,
+    ) {}
+
     public function index(): JsonResponse
     {
+        $this->payments->apply();
+
         return response()->json(['data' => [
             'live' => (bool) config('services.payments.live'),
             'default' => (string) config('services.payments.default', 'monnify'),
@@ -24,8 +34,11 @@ class GatewayController extends Controller
                 [
                     'key' => 'monnify',
                     'label' => 'Monnify',
-                    'configured' => filled(config('services.monnify.api_key')) && filled(config('services.monnify.secret')),
+                    'configured' => filled(config('services.monnify.api_key'))
+                        && filled(config('services.monnify.secret'))
+                        && filled(config('services.monnify.contract_code')),
                     'is_default' => config('services.payments.default') === 'monnify',
+                    'environment' => $this->payments->monnifyEnvironment(),
                     'webhook_url' => url('/api/v1/webhooks/monnify'),
                     'requirements' => [
                         ['label' => 'API key', 'env' => 'MONNIFY_API_KEY', 'set' => filled(config('services.monnify.api_key'))],
@@ -82,6 +95,8 @@ class GatewayController extends Controller
      */
     public function test(string $provider): JsonResponse
     {
+        $this->payments->apply();
+
         return match ($provider) {
             'monnify' => $this->pingMonnify(),
             'paystack' => $this->ping(
@@ -96,6 +111,60 @@ class GatewayController extends Controller
             ),
             default => response()->json(['data' => ['ok' => false, 'message' => 'Unknown provider.']], 404),
         };
+    }
+
+    public function updateMonnify(Request $request): JsonResponse
+    {
+        $clean = $request->validate([
+            'live' => ['required', 'boolean'],
+            'environment' => ['required', 'in:sandbox,live'],
+            'api_key' => ['nullable', 'string', 'max:255'],
+            'secret' => ['nullable', 'string', 'max:1000'],
+            'contract_code' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $apiKey = filled($clean['api_key'] ?? null) ? $clean['api_key'] : config('services.monnify.api_key');
+        $secret = filled($clean['secret'] ?? null) ? $clean['secret'] : config('services.monnify.secret');
+        $contractCode = filled($clean['contract_code'] ?? null) ? $clean['contract_code'] : config('services.monnify.contract_code');
+
+        if ($clean['live'] && (! filled($apiKey) || ! filled($secret) || ! filled($contractCode))) {
+            throw ValidationException::withMessages([
+                'api_key' => ['API key, secret key and contract code are required before live checkout can be enabled.'],
+            ]);
+        }
+
+        $before = [
+            'live' => (bool) config('services.payments.live'),
+            'environment' => $this->payments->monnifyEnvironment(),
+            'configured' => filled(config('services.monnify.api_key')) && filled(config('services.monnify.secret')) && filled(config('services.monnify.contract_code')),
+        ];
+        $values = [
+            'payments.live' => (bool) $clean['live'],
+            'payments.default' => 'monnify',
+            'monnify.base_url' => $clean['environment'] === 'live'
+                ? PaymentConfiguration::MONNIFY_LIVE_URL
+                : PaymentConfiguration::MONNIFY_SANDBOX_URL,
+        ];
+        if (filled($clean['api_key'] ?? null)) {
+            $values['monnify.api_key'] = $clean['api_key'];
+        }
+        if (filled($clean['secret'] ?? null)) {
+            $values['monnify.secret'] = $clean['secret'];
+        }
+        if (filled($clean['contract_code'] ?? null)) {
+            $values['monnify.contract_code'] = $clean['contract_code'];
+        }
+
+        $this->settings->set($values);
+        $this->payments->apply();
+        $after = [
+            'live' => (bool) config('services.payments.live'),
+            'environment' => $this->payments->monnifyEnvironment(),
+            'configured' => filled(config('services.monnify.api_key')) && filled(config('services.monnify.secret')) && filled(config('services.monnify.contract_code')),
+        ];
+        $this->audit->record('payment.monnify_configuration_updated', null, $before, $after);
+
+        return $this->index();
     }
 
     /**

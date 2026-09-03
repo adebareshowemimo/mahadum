@@ -74,6 +74,28 @@ class TelcoOtpTest extends TestCase
         $this->assertDatabaseHas('telco_otps', ['msisdn' => self::MSISDN]);
     }
 
+    public function test_family_plan_is_rejected_without_consuming_the_verified_otp(): void
+    {
+        $this->requestAndPinCode();
+        $this->postJson('/api/v1/telco/otp/verify', ['msisdn' => self::MSISDN, 'code' => '123456'])->assertOk();
+        $family = Plan::where('code', 'premium_family')->firstOrFail();
+
+        $this->postJson('/api/v1/telco/subscribe', [
+            'plan_id' => $family->id,
+            'msisdn' => self::MSISDN,
+            'operator' => 'mtn',
+        ])->assertUnprocessable()
+            ->assertJsonPath('message', 'Airtime billing is only available for the Individual monthly plan.');
+
+        $this->assertDatabaseHas('telco_otps', ['msisdn' => self::MSISDN, 'consumed_at' => null]);
+
+        $this->postJson('/api/v1/telco/subscribe', [
+            'plan_id' => $this->plan()->id,
+            'msisdn' => self::MSISDN,
+            'operator' => 'mtn',
+        ])->assertCreated();
+    }
+
     public function test_wrong_code_does_not_verify(): void
     {
         $this->requestAndPinCode();

@@ -6,6 +6,7 @@ import {
   CardBody,
   CardHeader,
   CardTitle,
+  Icon,
   Input,
   Skeleton,
 } from '@/components/ui'
@@ -35,8 +36,9 @@ export function WalletPage() {
         <CardBody className="flex flex-wrap items-center justify-between gap-4 bg-primary-soft">
           <div>
             <p className="text-sm font-medium text-primary">Coin balance</p>
-            <p className="font-display text-4xl font-extrabold text-foreground">
-              🪙 {wallet.coin_balance.toLocaleString()}
+            <p className="flex items-center gap-2 font-display text-4xl font-extrabold text-foreground">
+              <Icon name="coin" className="size-8 text-gold-600" />
+              {wallet.coin_balance.toLocaleString()}
             </p>
           </div>
           <div className="text-right">

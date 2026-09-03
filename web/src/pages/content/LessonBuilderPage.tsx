@@ -27,10 +27,13 @@ import {
   IconButton,
   Input,
   Modal,
+  Progress,
   Skeleton,
 } from '@/components/ui'
 import { ApiError, contentApi, type AddComponentInput, type AuthorComponent, type AuthorQuestionInput, type QuestionType } from '@/lib/api'
 import { cn } from '@/lib/cn'
+import { formatFileSize } from '@/lib/format'
+import { useConfig } from '@/lib/config/useConfig'
 import {
   useAddComponent,
   useDeleteComponent,
@@ -45,6 +48,7 @@ import { useCanManageContent } from '@/lib/content/permissions'
 import { LessonPreviewModal } from './LessonPreviewModal'
 
 const TYPE_ICON: Record<string, string> = { video: '🎬', quiz: '❓', speaking: '🎙️', exercise: '🎯', game: '🎮', assignment: '📝' }
+const MAX_MEDIA_UPLOAD_BYTES = 300 * 1024 * 1024
 
 function componentSummary(c: AuthorComponent): string {
   const d = (c.detail ?? {}) as Record<string, unknown>
@@ -443,10 +447,16 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
   const [pickedAssetId, setPickedAssetId] = useState<number | null>(null)
   const [youtubeUrl, setYoutubeUrl] = useState((d.external_url as string) ?? '')
   const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<{ loaded: number; total: number } | null>(null)
+  const [uploadedAssetId, setUploadedAssetId] = useState<number | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
 
   const videoAssets = (library.data ?? []).filter((a) => a.type === 'video')
   const youtubeUrlValid = /^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(youtubeUrl.trim())
+  const uploadPercent = uploadProgress
+    ? Math.min(100, Math.round((uploadProgress.loaded / uploadProgress.total) * 100))
+    : 0
+  const busy = uploading || pending
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -454,21 +464,27 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
     let sourceAssetId: number | undefined
     if (source === 'library') {
       sourceAssetId = pickedAssetId ?? undefined
+    } else if (source === 'upload' && uploadedAssetId) {
+      sourceAssetId = uploadedAssetId
     } else if (source === 'upload' && file) {
       setUploading(true)
+      setUploadProgress({ loaded: 0, total: file.size })
       try {
-        const asset = await contentApi.uploadMedia(file)
+        const asset = await contentApi.uploadMedia(file, (loaded, total) => {
+          setUploadProgress({ loaded, total })
+        })
         sourceAssetId = asset.id
+        setUploadedAssetId(asset.id)
       } catch (err) {
-        setUploadError(err instanceof ApiError ? err.message : 'Upload failed.')
+        setUploadError(err instanceof ApiError ? (err.fieldError('file') ?? err.message) : 'Upload failed.')
         setUploading(false)
+        setUploadProgress(null)
         return
       }
       setUploading(false)
     }
     const ok = await submit({
       type: 'video',
-      xp_value: 5,
       settings: { require_watch: requireWatch },
       video: {
         title,
@@ -479,13 +495,22 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
         external_url: source === 'youtube' ? youtubeUrl.trim() : undefined,
       },
     })
-    if (ok) { setTitle(''); setPresenter(''); setFile(null); setPickedAssetId(null); setYoutubeUrl(''); setSource('upload') }
+    if (ok) {
+      setTitle('')
+      setPresenter('')
+      setFile(null)
+      setPickedAssetId(null)
+      setUploadedAssetId(null)
+      setUploadProgress(null)
+      setYoutubeUrl('')
+      setSource('upload')
+    }
   }
 
   return (
     <Modal
       open
-      onClose={onClose}
+      onClose={() => { if (!busy) onClose() }}
       title={isEdit ? 'Edit video' : 'Add video'}
       description={isEdit ? 'Update the details, or attach a new file to replace the current one.' : 'Upload a file or reuse one from your media library.'}
       variant="workspace"
@@ -505,8 +530,9 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
             <button
               key={opt}
               type="button"
+              disabled={busy}
               onClick={() => setSource(opt)}
-              className={cn('flex-1 rounded-lg py-1.5 capitalize transition-colors', source === opt ? 'bg-surface text-foreground shadow-sm' : 'text-muted')}
+              className={cn('flex-1 rounded-lg py-1.5 capitalize transition-colors disabled:cursor-not-allowed disabled:opacity-50', source === opt ? 'bg-surface text-foreground shadow-sm' : 'text-muted')}
             >
               {opt === 'upload' ? 'Upload new' : opt === 'library' ? 'From library' : 'YouTube link'}
             </button>
@@ -517,13 +543,23 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
           <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-border-strong p-6 text-center hover:bg-surface-muted">
             <span className="text-3xl" aria-hidden="true">🎬</span>
             <span className="text-sm font-medium text-foreground">{file ? file.name : 'Choose a video file'}</span>
-            <span className="text-xs text-subtle">MP4 / WebM, up to 100 MB</span>
+            <span className="text-xs text-subtle">MP4 / WebM, up to 300 MB</span>
             <input
               type="file"
               accept="video/*"
+              disabled={busy}
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0] ?? null
+                setUploadError(null)
+                setUploadProgress(null)
+                setUploadedAssetId(null)
+                if (f && f.size > MAX_MEDIA_UPLOAD_BYTES) {
+                  setFile(null)
+                  setUploadError('This video is larger than the 300 MB upload limit.')
+                  e.target.value = ''
+                  return
+                }
                 setFile(f)
                 if (f && !title) setTitle(f.name.replace(/\.[^.]+$/, ''))
               }}
@@ -559,6 +595,23 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
           </div>
         )}
 
+        {uploadProgress && (
+          <div className="rounded-xl border border-border bg-surface-muted px-4 py-3" aria-live="polite">
+            <div className="mb-2 flex items-baseline justify-between gap-3 text-sm">
+              <span className="font-semibold text-foreground">
+                {uploading ? (uploadPercent >= 100 ? 'Processing video…' : 'Uploading video…') : 'Upload complete'}
+              </span>
+              <span className="text-xs text-muted tabular-nums">
+                {formatFileSize(uploadProgress.loaded)} of {formatFileSize(uploadProgress.total)}
+              </span>
+            </div>
+            <Progress value={uploadPercent} tone={uploading ? 'primary' : 'success'} showLabel />
+            {uploading && uploadPercent >= 100 && (
+              <p className="mt-2 text-xs text-muted">Transfer complete. The server is saving the file.</p>
+            )}
+          </div>
+        )}
+
         <Input label="Video title" value={title} onChange={(e) => setTitle(e.target.value)} required />
         <Input label="Presenter (optional)" value={presenter} onChange={(e) => setPresenter(e.target.value)} />
         <label className="flex flex-col gap-1.5">
@@ -584,14 +637,17 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
           )}
         </label>
         <div className="flex gap-2">
-          <Button type="button" variant="secondary" fullWidth onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="secondary" fullWidth onClick={onClose} disabled={busy}>Cancel</Button>
           <Button
             type="submit"
             fullWidth
-            loading={uploading || pending}
+            loading={busy}
             disabled={(source === 'library' && pickedAssetId == null) || (source === 'youtube' && !youtubeUrlValid)}
           >
-            {uploading ? 'Uploading…' : isEdit ? 'Save changes' : 'Add video'}
+            {uploading
+              ? uploadPercent >= 100 ? 'Processing video…' : `Uploading ${uploadPercent}%`
+              : pending ? (isEdit ? 'Saving changes…' : 'Adding video…')
+                : isEdit ? 'Save changes' : 'Add video'}
           </Button>
         </div>
       </form>
@@ -604,6 +660,64 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
 interface CardDraft { key: string; front_text: string; back_text: string; mnemonic: string; audio_asset_id: number | null; audio: string | null }
 
 const newCard = (): CardDraft => ({ key: uid(), front_text: '', back_text: '', mnemonic: '', audio_asset_id: null, audio: null })
+
+const FLASHCARD_TEMPLATE = 'Front (Word),Back (Meaning),Mnemonic (Optional)\nẸ káàrọ̀,Good morning,A morning greeting\n'
+
+function downloadFlashcardTemplate() {
+  const blob = new Blob([`\uFEFF${FLASHCARD_TEMPLATE}`], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = 'flashcard-import-template.csv'
+  anchor.click()
+  URL.revokeObjectURL(url)
+}
+
+function parseCsvLine(line: string): string[] {
+  const values: string[] = []
+  let value = ''
+  let quoted = false
+  for (let index = 0; index < line.length; index++) {
+    const char = line[index]
+    if (char === '"') {
+      if (quoted && line[index + 1] === '"') {
+        value += '"'
+        index++
+      } else quoted = !quoted
+    } else if (char === ',' && !quoted) {
+      values.push(value.trim())
+      value = ''
+    } else value += char
+  }
+  values.push(value.trim())
+  return values
+}
+
+export function parseFlashcardCsv(text: string): CardDraft[] {
+  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter((line) => line.trim())
+  if (lines.length < 2) throw new Error('The file has no flashcard rows.')
+  const headers = parseCsvLine(lines[0]).map((header) => header.toLowerCase())
+  const frontIndex = headers.findIndex((header) => ['front', 'front (word)', 'front_text'].includes(header))
+  const backIndex = headers.findIndex((header) => ['back', 'back (meaning)', 'back_text'].includes(header))
+  const mnemonicIndex = headers.findIndex((header) => ['mnemonic', 'mnemonic (optional)'].includes(header))
+  if (frontIndex < 0 || backIndex < 0) throw new Error('Use the template columns Front (Word) and Back (Meaning).')
+
+  const cards = lines.slice(1).map((line, index) => {
+    const values = parseCsvLine(line)
+    const front = values[frontIndex]?.trim() ?? ''
+    const back = values[backIndex]?.trim() ?? ''
+    if (!front || !back) throw new Error(`Row ${index + 2} needs both Front (Word) and Back (Meaning).`)
+    return { ...newCard(), front_text: front, back_text: back, mnemonic: mnemonicIndex >= 0 ? values[mnemonicIndex]?.trim() ?? '' : '' }
+  })
+
+  const seen = new Set<string>()
+  return cards.filter((card) => {
+    const key = `${card.front_text.toLocaleLowerCase()}\u0000${card.back_text.toLocaleLowerCase()}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
 
 function cardsFromComponent(editing?: AuthorComponent): CardDraft[] {
   const cards = (editing?.detail?.cards as Array<Record<string, unknown>> | undefined) ?? []
@@ -624,6 +738,20 @@ function AddExerciseModal({ lessonId, editing, onClose }: { lessonId: number; ed
   const audioAssets = (audio.data ?? []) as AudioAsset[]
   const [cards, setCards] = useState<CardDraft[]>(() => cardsFromComponent(editing))
   const [localError, setLocalError] = useState<string | null>(null)
+
+  async function importFlashcards(file: File | undefined) {
+    if (!file) return
+    setLocalError(null)
+    try {
+      const imported = parseFlashcardCsv(await file.text())
+      setCards((current) => {
+        const existing = current.filter((card) => card.front_text.trim() || card.back_text.trim())
+        return [...existing, ...imported]
+      })
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : 'Could not read the flashcard file.')
+    }
+  }
 
   function patch(key: string, fn: (c: CardDraft) => CardDraft) {
     setCards((cs) => cs.map((c) => (c.key === key ? fn(c) : c)))
@@ -658,6 +786,23 @@ function AddExerciseModal({ lessonId, editing, onClose }: { lessonId: number; ed
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         {error && <Alert variant="danger">{error}</Alert>}
         {localError && <Alert variant="danger">{localError}</Alert>}
+
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-surface-muted p-3">
+          <Button type="button" size="sm" variant="secondary" onClick={downloadFlashcardTemplate}>Download CSV template</Button>
+          <label className="inline-flex min-h-10 cursor-pointer items-center rounded-xl border border-border bg-surface px-3 text-sm font-semibold text-foreground">
+            Import completed CSV
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              className="sr-only"
+              onChange={(event) => {
+                void importFlashcards(event.target.files?.[0])
+                event.target.value = ''
+              }}
+            />
+          </label>
+          <span className="text-xs text-muted">Imported cards are previewed below before saving.</span>
+        </div>
 
         <div className="-mr-1 flex max-h-[55vh] flex-col gap-3 overflow-y-auto pr-1">
           {cards.map((c, i) => (
@@ -734,6 +879,7 @@ function AddGameModal({ lessonId, editing, onClose }: { lessonId: number; editin
   )
   const [pairs, setPairs] = useState<PairDraft[]>(() => pairsFromComponent(editing))
   const [localError, setLocalError] = useState<string | null>(null)
+  const tonePracticeEnabled = useConfig().data?.feature_flags.tone_practice === true
 
   function patch(key: string, fn: (p: PairDraft) => PairDraft) {
     setPairs((ps) => ps.map((p) => (p.key === key ? fn(p) : p)))
@@ -769,7 +915,9 @@ function AddGameModal({ lessonId, editing, onClose }: { lessonId: number; editin
             className="h-11 rounded-xl border border-border-strong bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           >
             {Object.entries(GAME_TYPE_LABEL).map(([v, label]) => (
-              <option key={v} value={v}>{label}</option>
+              <option key={v} value={v} disabled={v === 'tone_pop' && !tonePracticeEnabled}>
+                {label}{v === 'tone_pop' && !tonePracticeEnabled ? ' — Coming soon' : ''}
+              </option>
             ))}
           </select>
         </label>
@@ -1172,7 +1320,7 @@ function QuizBuilderModal({ lessonId, editing, onClose }: { lessonId: number; ed
       }
       return item
     })
-    const ok = await submit({ type: 'quiz', xp_value: 10, quiz: { pass_threshold: 0.6, hearts_enabled: true, questions: out } })
+    const ok = await submit({ type: 'quiz', quiz: { pass_threshold: 0.6, hearts_enabled: true, questions: out } })
     if (ok && !isEdit) {
       const fresh = newQuestion()
       setQuestions([fresh])

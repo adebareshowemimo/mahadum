@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use App\Services\Billing\InvoiceLineBuilder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -52,6 +53,46 @@ class Invoice extends Model
         'paid_at' => 'datetime',
         'lines' => 'array',
     ];
+
+    /**
+     * Canonical display breakdown for school invoices, including a zero-value
+     * registration line when that fee was waived for a top-up.
+     *
+     * @return list<array{description: string, amount_minor: int}>
+     */
+    public function breakdownLines(): array
+    {
+        $lines = collect($this->lines ?? [])->map(function (array $line): array {
+            $description = strtolower(trim($line['description']));
+
+            if (str_contains($description, 'student') && str_contains($description, 'school')) {
+                $line['description'] = InvoiceLineBuilder::STUDENT_SCHOOL_FEES;
+            } elseif (str_contains($description, 'registration')) {
+                $line['description'] = InvoiceLineBuilder::REGISTRATION_FEES;
+            }
+
+            return [
+                'description' => $line['description'],
+                'amount_minor' => (int) $line['amount_minor'],
+            ];
+        })->values();
+
+        $hasStudentFees = $lines->contains('description', InvoiceLineBuilder::STUDENT_SCHOOL_FEES);
+        $hasRegistrationFees = $lines->contains('description', InvoiceLineBuilder::REGISTRATION_FEES);
+
+        if ($hasStudentFees && ! $hasRegistrationFees) {
+            $studentIndex = $lines->search(fn (array $line) => $line['description'] === InvoiceLineBuilder::STUDENT_SCHOOL_FEES);
+            $lines->splice((int) $studentIndex + 1, 0, [[
+                'description' => InvoiceLineBuilder::REGISTRATION_FEES,
+                'amount_minor' => 0,
+            ]]);
+        }
+
+        /** @var list<array{description: string, amount_minor: int}> $result */
+        $result = $lines->all();
+
+        return $result;
+    }
 
     /**
      * @return BelongsTo<Organization, $this>

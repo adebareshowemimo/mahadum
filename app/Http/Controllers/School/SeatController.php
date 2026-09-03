@@ -56,11 +56,7 @@ class SeatController extends Controller
         $seatsSubtotal = $qty * $band['per_student_minor'];
         $registration = $includeRegistration ? $band['registration_minor'] : 0;
 
-        $lines = [['description' => 'Student school fees', 'amount_minor' => $seatsSubtotal]];
-        if ($registration > 0) {
-            $lines[] = ['description' => 'Registration fee', 'amount_minor' => $registration];
-        }
-        $billed = InvoiceLineBuilder::withVat($lines);
+        $billed = InvoiceLineBuilder::schoolFees($seatsSubtotal, $registration);
         $vat = $billed['total_minor'] - $seatsSubtotal - $registration;
 
         $allocation = $organization->seatAllocations()->create([

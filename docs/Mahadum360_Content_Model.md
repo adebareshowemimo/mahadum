@@ -224,7 +224,7 @@ GET /api/v1/lessons/451/play
       "video": { "duration": 92, "poster": "https://cdn/...jpg",
         "hls": "https://cdn/.../signed.m3u8",
         "captions": [ {"lang":"en","url":"..."}, {"lang":"ig","url":"..."} ] } },
-    { "id": 2, "type": "quiz", "position": 2, "xp": 10,
+    { "id": 2, "type": "quiz", "position": 2, "xp": 1,
       "quiz": { "pass_threshold": 0.6, "hearts_enabled": true,
         "questions": [ /* options WITHOUT is_correct */ ] } },
     { "id": 3, "type": "speaking", "position": 3, "xp": 8,

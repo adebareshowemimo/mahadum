@@ -140,7 +140,7 @@ class ClassLearnerInvitationTest extends TestCase
         $class = SchoolClass::create([
             'organization_id' => $school->id,
             'teacher_user_id' => $teacher->id,
-            'name' => 'Pidgin A1',
+            'name' => 'English A1',
         ]);
         $token = str_repeat('b', 64);
         ClassLearnerInvitation::create([

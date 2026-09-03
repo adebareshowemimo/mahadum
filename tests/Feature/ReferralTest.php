@@ -3,24 +3,31 @@
 namespace Tests\Feature;
 
 use App\Models\Commission;
+use App\Models\LearnerProfile;
+use App\Models\LessonProgress;
 use App\Models\Payout;
 use App\Models\Plan;
+use App\Models\QuizAttempt;
 use App\Models\Referral;
 use App\Models\ReferralCode;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Models\Wallet;
+use App\Models\WalletFundingTransaction;
 use App\Services\Billing\PaymentService;
 use App\Services\Referral\ReferralService;
 use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Tests\Concerns\MakesContent;
 use Tests\TestCase;
 
 class ReferralTest extends TestCase
 {
-    use RefreshDatabase;
+    use MakesContent, RefreshDatabase;
 
-    public function test_signup_attributes_and_verified_payment_creates_escrow_commission(): void
+    /** Activation needs a paid subscription AND a finished lesson AND a finished quiz. */
+    public function test_activation_gate_requires_paid_sub_plus_lesson_and_quiz(): void
     {
         $this->seedRbac();
         $this->seed(PlanSeeder::class);
@@ -28,7 +35,6 @@ class ReferralTest extends TestCase
         $referrer = $this->userWithRole('parent');
         $code = app(ReferralService::class)->codeFor($referrer)->code;
 
-        // referred signs up with the code
         $this->postJson('/api/v1/auth/register', [
             'first_name' => 'Ref', 'last_name' => 'Erred', 'email' => 'referred@test.local', 'phone' => '+2348012340002',
             'password' => 'Password123!', 'password_confirmation' => 'Password123!', 'device_name' => 'd',
@@ -36,31 +42,40 @@ class ReferralTest extends TestCase
         ], ['X-Device-Id' => 'dev1'])->assertCreated();
 
         $referred = User::where('email', 'referred@test.local')->first();
-        $this->assertDatabaseHas('referrals', ['referred_user_id' => $referred->id, 'status' => 'pending']);
+        $referral = Referral::where('referred_user_id', $referred->id)->firstOrFail();
+        $this->assertSame('pending', $referral->status);
 
-        // referred subscribes (card) then the gateway confirms → qualify
-        $this->actingAsUser($referred);
+        $lesson = $this->publishedLesson();
+        $quizId = $lesson->components->firstWhere('type', 'quiz')->quiz->id;
+        $profile = LearnerProfile::create(['user_id' => $referred->id, 'display_name' => 'R', 'current_level' => 1]);
         $plan = Plan::where('code', 'premium_individual')->first();
-        $subId = $this->postJson('/api/v1/subscriptions', ['plan_id' => $plan->id, 'method' => 'card'], [
-            'Idempotency-Key' => 's-1',
-        ])->json('data.subscription_id');
 
-        app(PaymentService::class)->process('paystack', 'evt-1', "sub_$subId", 'success', $plan->price_minor, []);
-
-        $this->assertDatabaseHas('referrals', ['referred_user_id' => $referred->id, 'status' => 'qualified']);
-        $this->assertDatabaseHas('commissions', [
-            'beneficiary_type' => User::class, 'beneficiary_id' => $referrer->id,
-            'status' => 'pending_escrow', 'amount_minor' => (int) round($plan->price_minor * 0.20),
+        // Paid subscription alone → still pending.
+        Subscription::create([
+            'subscriber_type' => User::class, 'subscriber_id' => $referred->id,
+            'plan_id' => $plan->id, 'status' => 'active', 'method' => 'card', 'started_at' => now(),
         ]);
+        app(ReferralService::class)->maybeActivateForUser($referred);
+        $this->assertSame('pending', $referral->fresh()->status);
+
+        // + a finished lesson → still pending (no quiz yet).
+        LessonProgress::create(['learner_profile_id' => $profile->id, 'lesson_id' => $lesson->id, 'status' => 'completed', 'completed_at' => now()]);
+        app(ReferralService::class)->maybeActivateForUser($referred);
+        $this->assertSame('pending', $referral->fresh()->status);
+
+        // + a finished quiz → activates.
+        QuizAttempt::create(['learner_profile_id' => $profile->id, 'quiz_id' => $quizId, 'attempt_no' => 1, 'started_at' => now(), 'completed_at' => now()]);
+        app(ReferralService::class)->maybeActivateForUser($referred);
+
+        $referral->refresh();
+        $this->assertSame('qualified', $referral->status);
+        $this->assertNotNull($referral->activated_at);
     }
 
     /**
-     * Drives a referred user to a qualified subscription with a pending_escrow
-     * commission, and returns [referral, subscriptionId, PaymentService].
-     *
-     * @return array{0: Referral, 1: int, 2: PaymentService}
+     * @return array{0: Referral, 1: User, 2: User} [referral, referrer, referred] with an active referral
      */
-    private function qualifiedReferral(string $email): array
+    private function activatedReferral(string $email = 'buyer@test.local'): array
     {
         $this->seed(PlanSeeder::class);
 
@@ -70,53 +85,90 @@ class ReferralTest extends TestCase
 
         $referral = Referral::create([
             'referral_code_id' => $code->id, 'referred_user_id' => $referred->id,
-            'status' => 'pending', 'signed_up_at' => now(),
+            'status' => 'qualified', 'signed_up_at' => now()->subDays(1), 'activated_at' => now()->subDays(1),
         ]);
 
-        $this->actingAsUser($referred);
-        $plan = Plan::where('code', 'premium_individual')->first();
-        $subId = $this->postJson('/api/v1/subscriptions', ['plan_id' => $plan->id, 'method' => 'card'], [
-            'Idempotency-Key' => 'sub-'.$email,
-        ])->json('data.subscription_id');
-
-        $payments = app(PaymentService::class);
-        $payments->process('paystack', 'pay-'.$email, "sub_$subId", 'success', $plan->price_minor, []);
-
-        return [$referral, (int) $subId, $payments];
+        return [$referral, $referrer, $referred];
     }
 
-    public function test_refund_reverses_escrowed_commission_and_blocks_clearing(): void
+    private function fundWallet(User $user, int $amountMinor, string $eventKey): void
+    {
+        $wallet = Wallet::create(['owner_type' => User::class, 'owner_id' => $user->id, 'currency' => 'NGN']);
+        $funding = WalletFundingTransaction::create([
+            'wallet_id' => $wallet->id, 'gateway' => 'paystack', 'amount_minor' => $amountMinor,
+            'currency' => 'NGN', 'status' => 'pending', 'gateway_ref' => 'wf-'.$eventKey,
+        ]);
+        app(PaymentService::class)->process('paystack', $eventKey, $funding->gateway_ref, 'success', $amountMinor, []);
+    }
+
+    public function test_purchase_within_window_earns_five_percent_and_after_window_earns_nothing(): void
     {
         $this->seedRbac();
-        [$referral, $subId, $payments] = $this->qualifiedReferral('referred-r@test.local');
+        [$referral, $referrer, $referred] = $this->activatedReferral();
+
+        $this->fundWallet($referred, 200_000, 'evt-in');
+
+        $this->assertDatabaseHas('commissions', [
+            'referral_id' => $referral->id, 'beneficiary_type' => User::class, 'beneficiary_id' => $referrer->id,
+            'status' => 'pending_escrow', 'kind' => 'purchase', 'amount_minor' => 10_000, // 5% of 200000
+        ]);
+
+        // Past the 30-day earning window → no further commission.
+        $referral->update(['activated_at' => now()->subDays(40)]);
+        $this->fundWallet($referred, 200_000, 'evt-out');
+
+        $this->assertSame(1, Commission::where('referral_id', $referral->id)->count());
+    }
+
+    public function test_commission_rate_follows_the_admin_setting(): void
+    {
+        $this->seedRbac();
+        $admin = $this->userWithRole('super_admin');
+        [$referral, $referrer, $referred] = $this->activatedReferral();
+
+        $this->actingAsUser($admin);
+        $this->putJson('/api/v1/admin/settings', [
+            'values' => ['referral.commission_bps' => 1000],
+        ])->assertOk();
+
+        $this->fundWallet($referred, 200_000, 'evt-x');
+
+        $this->assertDatabaseHas('commissions', [
+            'referral_id' => $referral->id, 'amount_minor' => 20_000, // 10% of 200000
+        ]);
+    }
+
+    public function test_refund_of_a_purchase_unwinds_its_escrowed_commission(): void
+    {
+        $this->seedRbac();
+        [$referral, , $referred] = $this->activatedReferral();
+
+        $wallet = Wallet::create(['owner_type' => User::class, 'owner_id' => $referred->id, 'currency' => 'NGN']);
+        $funding = WalletFundingTransaction::create([
+            'wallet_id' => $wallet->id, 'gateway' => 'paystack', 'amount_minor' => 200_000,
+            'currency' => 'NGN', 'status' => 'pending', 'gateway_ref' => 'wf-refund',
+        ]);
+        $payments = app(PaymentService::class);
+        $payments->process('paystack', 'pay-r', $funding->gateway_ref, 'success', 200_000, []);
 
         $commission = Commission::where('referral_id', $referral->id)->firstOrFail();
-        $this->assertEquals('pending_escrow', $commission->status);
+        $this->assertSame('pending_escrow', $commission->status);
 
-        // refund the subscription → unwind the commission
-        $payments->process('paystack', 'refund-r', "sub_$subId", 'refund', 100000, []);
-
-        $this->assertEquals('reversed', $commission->fresh()->status);
-        $this->assertEquals('reversed', $referral->fresh()->status);
-        $this->assertEquals('refunded', Subscription::find($subId)->status);
-
-        // a reversed commission is no longer pending_escrow, so the clearing job skips it
-        $commission->update(['escrow_until' => now()->subDay()]);
-        Artisan::call('commissions:clear-escrow');
-        $this->assertEquals('reversed', $commission->fresh()->status);
+        $payments->process('paystack', 'refund-r', $funding->gateway_ref, 'refund', 200_000, []);
+        $this->assertSame('reversed', $commission->fresh()->status);
     }
 
-    public function test_refund_of_cleared_commission_flags_clawback(): void
+    public function test_clawback_flagged_when_a_refund_hits_an_already_cleared_commission(): void
     {
         $this->seedRbac();
-        [$referral, $subId, $payments] = $this->qualifiedReferral('referred-c@test.local');
+        [$referral, , $referred] = $this->activatedReferral();
+        $this->fundWallet($referred, 200_000, 'evt-cb');
 
         $commission = Commission::where('referral_id', $referral->id)->firstOrFail();
         $commission->update(['status' => 'cleared', 'cleared_at' => now()]);
 
-        $payments->process('paystack', 'refund-c', "sub_$subId", 'refund', 100000, []);
-
-        $this->assertEquals('clawback_pending', $commission->fresh()->status);
+        app(ReferralService::class)->reverseForSource($commission->source_type, $commission->source_id);
+        $this->assertSame('clawback_pending', $commission->fresh()->status);
     }
 
     public function test_same_device_signup_is_rejected(): void
@@ -154,7 +206,6 @@ class ReferralTest extends TestCase
         Artisan::call('commissions:clear-escrow');
         $this->assertEquals('cleared', $commission->fresh()->status);
 
-        // velocity: >15 signups in 24h flags the code
         for ($i = 0; $i < 16; $i++) {
             Referral::create(['referral_code_id' => $code->id, 'status' => 'pending', 'signed_up_at' => now()]);
         }

@@ -60,7 +60,7 @@ function SchoolReferrals({ orgId }: { orgId: number }) {
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold text-foreground">School referrals</h1>
+          <h1 className="font-display text-2xl font-bold text-foreground">Educator/School referrals</h1>
           <p className="mt-1 text-muted">Your school’s own code — commission accrues to the school, not an individual.</p>
         </div>
         <div className="flex flex-col items-end gap-2">

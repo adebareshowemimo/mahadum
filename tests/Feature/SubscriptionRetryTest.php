@@ -47,7 +47,7 @@ class SubscriptionRetryTest extends TestCase
 
         Http::fake([
             'sandbox.monnify.com/api/v1/auth/login' => Http::response(['responseBody' => ['accessToken' => 'tok_1']]),
-            'sandbox.monnify.com/api/v1/merchant/transactions/query*' => Http::response([
+            'sandbox.monnify.com/api/v2/merchant/transactions/query*' => Http::response([
                 'responseBody' => ['paymentStatus' => 'PAID', 'amountPaid' => 3000],
             ]),
         ]);
@@ -69,7 +69,7 @@ class SubscriptionRetryTest extends TestCase
 
         Http::fake([
             'sandbox.monnify.com/api/v1/auth/login' => Http::response(['responseBody' => ['accessToken' => 'tok_2']]),
-            'sandbox.monnify.com/api/v1/merchant/transactions/query*' => Http::response([
+            'sandbox.monnify.com/api/v2/merchant/transactions/query*' => Http::response([
                 'responseBody' => ['paymentStatus' => 'PENDING'],
             ]),
             'sandbox.monnify.com/api/v1/merchant/transactions/init-transaction' => Http::response([
@@ -98,7 +98,7 @@ class SubscriptionRetryTest extends TestCase
 
         Http::fake([
             'sandbox.monnify.com/api/v1/auth/login' => Http::response(['responseBody' => ['accessToken' => 'tok_404']]),
-            'sandbox.monnify.com/api/v1/merchant/transactions/query*' => Http::response([
+            'sandbox.monnify.com/api/v2/merchant/transactions/query*' => Http::response([
                 'requestSuccessful' => false,
                 'responseMessage' => "Could not find transaction with payment reference sub_{$sub->id} for merchant",
             ], 404),

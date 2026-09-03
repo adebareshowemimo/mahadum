@@ -4,7 +4,7 @@ import { useTheme } from '@/lib/theme'
 import { Logo } from '@/components/Logo'
 import {
   Alert, Avatar, Badge, Button, Button3D, Card, CardBody, CardDescription, CardHeader, CardTitle,
-  CodeInput, FileUpload, Input, PhoneInput, Progress, Skeleton, Spinner, Switch,
+  CodeInput, FileUpload, Icon, Input, PhoneInput, Progress, Skeleton, Spinner, Switch,
 } from '@/components/ui'
 import {
   CoinPill, CulturalBadgeCard, CurrentLessonCard, HeartsCounter, LessonNode, LessonStepProgress,
@@ -13,6 +13,7 @@ import {
 import { ChildProfileSwitcher, ChoreCard, FamilyLeaderboardRow, WalletBalanceCard } from '@/components/family'
 import { CulturalVideoCard, LanguageSelectionCard, NativeSpeakerCard, ProverbCard, WordOfDayCard } from '@/components/cultural'
 import { AirtimeRechargeCTA, CommissionBadge, ReferralCodeCard, RemoveAdsCTA, SubscriptionStatusBadge, TelcoGraceBanner } from '@/components/billing'
+import { useConfig } from '@/lib/config/useConfig'
 
 type Mode = 'foundations' | 'learner' | 'family' | 'school'
 
@@ -49,6 +50,7 @@ export function ComponentsPage() {
   const [pin, setPin] = useState('')
   const [phone, setPhone] = useState('')
   const [reward, setReward] = useState(false)
+  const tonePracticeEnabled = useConfig().data?.feature_flags.tone_practice === true
 
   return (
     <div className="min-h-dvh bg-background">
@@ -92,7 +94,7 @@ export function ComponentsPage() {
 
             <Section title="Buttons · primary CTAs" hint="Chunky 3D press — click to feel it sink. African Gold keeps charcoal text.">
               <Button3D variant="primary" leftIcon={<span>📖</span>}>Start lesson</Button3D>
-              <Button3D variant="reward" leftIcon={<span>🪙</span>}>Claim coins</Button3D>
+              <Button3D variant="reward" leftIcon={<Icon name="coin" className="size-5" />}>Claim coins</Button3D>
               <Button3D variant="premium" leftIcon={<span>✨</span>}>Upgrade</Button3D>
               <Button3D variant="parent">Approve</Button3D>
               <Button3D variant="billing" leftIcon={<span>📲</span>}>Recharge</Button3D>
@@ -114,7 +116,9 @@ export function ComponentsPage() {
               <Badge variant="clay">Culture Master</Badge>
               <Badge variant="ai">Speaking Expert</Badge>
               <Badge variant="primary">Family Hero</Badge>
-              <Badge variant="warning">Needs tone practice</Badge>
+              {tonePracticeEnabled
+                ? <Badge variant="warning">Needs tone practice</Badge>
+                : <Badge variant="neutral">Tone practice · Coming soon</Badge>}
               <Badge variant="info" dot>Parent review</Badge>
               <Badge variant="premium">Premium</Badge>
               <Badge variant="neutral">Free tier</Badge>
@@ -164,7 +168,10 @@ export function ComponentsPage() {
           <>
             <Section title="Learning stats" hint="Bright, gamified, reward-heavy — child-safe.">
               <HeartsCounter current={4} /><XpCounter value={1240} /><CoinPill amount={320} />
-              <SpeakingScoreGauge score={86} /><SpeakingScoreGauge score={62} label="Tone" />
+              <SpeakingScoreGauge score={86} />
+              {tonePracticeEnabled
+                ? <SpeakingScoreGauge score={62} label="Tone" />
+                : <Badge variant="neutral">Tone scoring · Coming soon</Badge>}
             </Section>
 
             <Section title="Lesson pathway">

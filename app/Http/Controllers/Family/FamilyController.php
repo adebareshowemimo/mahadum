@@ -16,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class FamilyController extends Controller
 {
@@ -25,7 +26,7 @@ class FamilyController extends Controller
 
     public function show(Request $request): JsonResponse
     {
-        $family = $this->family($request->user())->load(['learnerProfiles.targetLanguage', 'owner']);
+        $family = $this->family($request->user())->load(['learnerProfiles.targetLanguage', 'learnerProfiles.profilePhoto', 'owner']);
         $wallet = $this->wallets->walletFor($family);
 
         return response()->json(['data' => [
@@ -45,6 +46,8 @@ class FamilyController extends Controller
             'learners' => $family->learnerProfiles->map(fn ($l) => [
                 'id' => $l->id,
                 'display_name' => $l->display_name,
+                'avatar_id' => $l->avatar_id,
+                'avatar_url' => $this->avatarUrl($l),
                 'is_child' => $l->user_id === null,
                 'pin_protected' => $l->parental_pin !== null,
                 'coin_balance' => $this->wallets->walletFor($l)->coin_balance,
@@ -98,12 +101,14 @@ class FamilyController extends Controller
         $family = $this->family($request->user());
         abort_unless((int) $learner->family_id === $family->id, 403, 'Not your family.');
 
-        $learner->load('targetLanguage');
+        $learner->load(['targetLanguage', 'profilePhoto']);
         $wallet = $this->wallets->walletFor($learner);
 
         return response()->json(['data' => [
             'id' => $learner->id,
             'display_name' => $learner->display_name,
+            'avatar_id' => $learner->avatar_id,
+            'avatar_url' => $this->avatarUrl($learner),
             'age_band' => $learner->age_band,
             'current_level' => $learner->current_level,
             'target_language' => $learner->targetLanguage?->code,
@@ -158,5 +163,16 @@ class FamilyController extends Controller
         $minorAge = (int) $this->settings->get('compliance.minor_age', config('compliance.minor_age'));
 
         return $age < $minorAge ? 'coppa_parental' : 'data_processing';
+    }
+
+    private function avatarUrl(LearnerProfile $learner): ?string
+    {
+        if (! $learner->profilePhoto) {
+            return null;
+        }
+
+        return str_starts_with($learner->profilePhoto->url, 'http')
+            ? $learner->profilePhoto->url
+            : Storage::disk('public')->url($learner->profilePhoto->url);
     }
 }

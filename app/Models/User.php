@@ -34,6 +34,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property int|null $organization_id
  * @property string|null $username
  * @property string|null $phone
+ * @property Carbon|null $date_of_birth
  * @property string|null $google_id
  * @property string $locale
  * @property string $status
@@ -98,6 +99,7 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $casts = [
         'email_verified_at' => 'datetime',
         'last_login_at' => 'datetime',
+        'date_of_birth' => 'date',
         'password' => 'hashed',
     ];
 

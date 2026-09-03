@@ -19,6 +19,7 @@ import { formatMoney } from '@/lib/format'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useConfig } from '@/lib/config/useConfig'
 import { useEntitlements } from '@/lib/billing/entitlements'
+import { planFeatures } from '@/lib/billing/planFeatures'
 import {
   useCancelSubscription,
   useChangeSubscription,
@@ -31,21 +32,6 @@ import {
 import { useFamily } from '@/lib/family/queries'
 import { TelcoOptInModal } from '@/components/billing/TelcoOptInModal'
 import { DataBundleModal } from '@/components/billing/DataBundleModal'
-
-/** Build a readable feature list for a plan card. */
-function planFeatures(plan: Plan): string[] {
-  const f = plan.features ?? {}
-  const out: string[] = []
-  out.push(plan.max_profiles == null ? 'Unlimited profiles (per seat)' : `Up to ${plan.max_profiles} profile${plan.max_profiles === 1 ? '' : 's'}`)
-  if (f.ads === false) out.push('Ad-free')
-  else out.push('Ad-supported')
-  if (f.unlimited_hearts) out.push('Unlimited hearts')
-  if (f.offline_download) out.push('Offline downloads')
-  if (f.family_dashboard) out.push('Family dashboard, chores & monitoring')
-  if (f.teacher_analytics) out.push('Teacher analytics')
-  if (f.seats) out.push('Classroom seats')
-  return out
-}
 
 /**
  * A subscription id the SPA has cached (via /me) can go stale if it was acted
@@ -334,7 +320,7 @@ export function BillingPage() {
                         <Button variant="premium" fullWidth loading={busyPlan === plan.id} onClick={() => subscribe(plan)}>
                           Choose {plan.name}
                         </Button>
-                        {telcoBillingEnabled && (
+                        {telcoBillingEnabled && plan.audience === 'individual' && plan.interval === 'month' && (
                           <Button variant="ghost" size="sm" fullWidth onClick={() => setTelcoPlan(plan)}>
                             or pay with airtime
                           </Button>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import {
   Alert,
   Badge,
@@ -8,12 +8,21 @@ import {
   CardHeader,
   CardTitle,
   Icon,
+  Input,
   Skeleton,
 } from '@/components/ui'
 import { formatMoney } from '@/lib/format'
+import { ApiError, type ReferralInvitationChannel } from '@/lib/api'
 import { PAYOUT_FLOOR_NAIRA, RequestPayoutModal } from '@/components/referral/RequestPayoutModal'
 import { ReferralStatusAlert } from '@/components/referral/ReferralStatusAlert'
-import { usePayouts, useReferralCode, useReferralSummary } from '@/lib/referral/queries'
+import {
+  usePayouts,
+  useReferralActivations,
+  useReferralCode,
+  useReferralInvitations,
+  useReferralSummary,
+  useSendInvitation,
+} from '@/lib/referral/queries'
 
 function humanize(status: string): string {
   return status.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
@@ -56,7 +65,9 @@ export function ReferralsPage() {
 
       <ReferralStatusAlert />
       <ReferralCodeCard />
+      <InviteCard />
       <SummarySection />
+      <ActivationsSection />
       <PayoutsSection />
 
       <RequestPayoutModal open={payoutOpen} onClose={() => setPayoutOpen(false)} availableMinor={available} />
@@ -107,6 +118,163 @@ function ReferralCodeCard() {
         </div>
       </CardBody>
     </Card>
+  )
+}
+
+function InviteCard() {
+  const [channel, setChannel] = useState<ReferralInvitationChannel>('email')
+  const [contact, setContact] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [sent, setSent] = useState<string | null>(null)
+  const send = useSendInvitation()
+  const { data: invitations } = useReferralInvitations()
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setSent(null)
+    try {
+      await send.mutateAsync({ channel, contact: contact.trim() })
+      setSent(contact.trim())
+      setContact('')
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'account_exists') {
+        setError('That account already exists and can’t be referred.')
+      } else if (err instanceof ApiError) {
+        setError(err.fieldErrors.contact ?? err.message)
+      } else {
+        setError('Couldn’t send that invite. Try again.')
+      }
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Invite a friend</CardTitle>
+      </CardHeader>
+      <CardBody className="flex flex-col gap-4">
+        <form onSubmit={submit} className="flex flex-col gap-3">
+          <div className="inline-flex w-fit overflow-hidden rounded-xl border border-border">
+            {(['email', 'phone'] as const).map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setChannel(c)}
+                className={
+                  'px-4 py-2 text-sm font-semibold capitalize transition-colors ' +
+                  (channel === c ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-foreground')
+                }
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-start gap-2">
+            <div className="min-w-[16rem] flex-1">
+              <Input
+                type={channel === 'email' ? 'email' : 'tel'}
+                value={contact}
+                onChange={(e) => {
+                  setContact(e.target.value)
+                  setError(null)
+                }}
+                placeholder={channel === 'email' ? 'friend@example.com' : '0803 000 1111'}
+                aria-label={`Friend's ${channel}`}
+              />
+            </div>
+            <Button type="submit" variant="parent" loading={send.isPending} disabled={!contact.trim()}>
+              Send invite
+            </Button>
+          </div>
+          {error && <p className="text-sm text-danger">{error}</p>}
+          {sent && <p className="text-sm text-success">Invite recorded for {sent}. It activates once they subscribe and finish a lesson and a quiz.</p>}
+        </form>
+
+        {invitations && invitations.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">Sent invites</p>
+            <div className="flex flex-wrap gap-1.5">
+              {invitations.map((inv) => (
+                <Badge key={inv.id} variant={inv.status === 'accepted' ? 'success' : 'neutral'}>
+                  {inv.contact} · {inv.status}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardBody>
+    </Card>
+  )
+}
+
+function ActivationsSection() {
+  const [search, setSearch] = useState('')
+  const { data, isLoading, isError } = useReferralActivations(search)
+  const rows = data?.data ?? []
+
+  return (
+    <section className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-display text-lg font-bold text-foreground">Activations</h2>
+        <div className="min-w-[14rem]">
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by email or phone"
+            leftIcon={<Icon name="search" />}
+            aria-label="Search activations"
+          />
+        </div>
+      </div>
+
+      {isError ? (
+        <Alert variant="danger">Couldn’t load your activations.</Alert>
+      ) : isLoading ? (
+        <Skeleton className="h-32" />
+      ) : rows.length === 0 ? (
+        <Card>
+          <CardBody className="py-8 text-center text-sm text-muted">
+            {search ? 'No activations match that search.' : 'No one has activated your code yet.'}
+          </CardBody>
+        </Card>
+      ) : (
+        <Card>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
+                  <th className="px-4 py-2.5 font-semibold">SN</th>
+                  <th className="px-4 py-2.5 font-semibold">Activated</th>
+                  <th className="px-4 py-2.5 font-semibold">Code</th>
+                  <th className="px-4 py-2.5 font-semibold">Via email</th>
+                  <th className="px-4 py-2.5 font-semibold">Via phone</th>
+                  <th className="px-4 py-2.5 font-semibold">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.sn} className="border-b border-border last:border-0">
+                    <td className="px-4 py-3 tabular-nums text-muted">{r.sn}</td>
+                    <td className="px-4 py-3 text-foreground">
+                      {r.activated_at ? new Date(r.activated_at).toLocaleDateString() : '—'}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-foreground">{r.code}</td>
+                    <td className="px-4 py-3 text-foreground">{r.via_email ?? '—'}</td>
+                    <td className="px-4 py-3 text-foreground">{r.via_phone ?? '—'}</td>
+                    <td className="px-4 py-3">
+                      <Badge variant={r.status === 'active' ? 'success' : 'neutral'}>
+                        {r.status === 'active' ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+    </section>
   )
 }
 

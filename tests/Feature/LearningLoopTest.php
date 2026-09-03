@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Course;
+use App\Models\Plan;
+use App\Models\Subscription;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\MakesContent;
 use Tests\TestCase;
@@ -42,15 +45,15 @@ class LearningLoopTest extends TestCase
             'learner_id' => $learner->id, 'component_id' => $speakC->id,
         ])->assertCreated();
 
-        // complete lesson → full score, xp 23, next_node null
+        // complete lesson → full score, xp 14, next_node null
         $this->postJson("/api/v1/lessons/{$lesson->id}/complete", ['learner_id' => $learner->id])
             ->assertOk()
             ->assertJsonPath('data.lesson_score', 1)
-            ->assertJsonPath('data.xp_total', 23)
+            ->assertJsonPath('data.xp_total', 14)
             ->assertJsonPath('data.next_node', null);
 
         $this->assertDatabaseHas('xp_ledger', ['learner_profile_id' => $learner->id, 'source' => 'quiz', 'amount' => 2]);
-        $this->assertDatabaseHas('xp_ledger', ['learner_profile_id' => $learner->id, 'source' => 'lesson', 'amount' => 23]);
+        $this->assertDatabaseHas('xp_ledger', ['learner_profile_id' => $learner->id, 'source' => 'lesson', 'amount' => 14]);
         $this->assertDatabaseHas('lesson_progress', ['learner_profile_id' => $learner->id, 'status' => 'completed']);
     }
 
@@ -67,6 +70,53 @@ class LearningLoopTest extends TestCase
         $this->postJson("/api/v1/components/{$quizC->id}/answer", [
             'learner_id' => $learner->id, 'question_id' => $question->id, 'answer' => ['option_id' => $wrong->id],
         ])->assertOk()->assertJsonPath('data.correct', false)->assertJsonPath('data.xp_awarded', 0);
+    }
+
+    public function test_paid_family_learner_keeps_unlimited_hearts_after_a_wrong_answer(): void
+    {
+        $this->seedRbac();
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $learner = $this->parentWithChild($parent);
+        $lesson = $this->publishedLesson();
+        $quizComponent = $lesson->components->firstWhere('type', 'quiz');
+        $quizComponent->quiz->update(['hearts_enabled' => true]);
+        $question = $quizComponent->quiz->questions->first();
+        $wrong = $question->options->firstWhere('is_correct', false);
+
+        $plan = Plan::create([
+            'code' => 'family-test',
+            'name' => 'Family Test',
+            'price_minor' => 1000,
+            'currency' => 'NGN',
+            'interval' => 'month',
+            'audience' => 'family',
+            'max_profiles' => 5,
+            'features' => ['unlimited_hearts' => true],
+        ]);
+        Subscription::create([
+            'subscriber_type' => User::class,
+            'subscriber_id' => $parent->id,
+            'plan_id' => $plan->id,
+            'status' => 'active',
+            'method' => 'card',
+            'started_at' => now(),
+        ]);
+
+        $this->postJson("/api/v1/components/{$quizComponent->id}/answer", [
+            'learner_id' => $learner->id,
+            'question_id' => $question->id,
+            'answer' => ['option_id' => $wrong->id],
+        ])->assertOk()
+            ->assertJsonPath('data.correct', false)
+            ->assertJsonPath('data.unlimited_hearts', true)
+            ->assertJsonPath('data.hearts_remaining', null);
+
+        $this->assertDatabaseMissing('hearts', ['learner_profile_id' => $learner->id]);
+        $this->assertDatabaseHas('question_responses', [
+            'learner_profile_id' => $learner->id,
+            'question_id' => $question->id,
+            'hearts_lost' => 0,
+        ]);
     }
 
     public function test_cannot_complete_with_incomplete_components(): void

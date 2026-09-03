@@ -22,7 +22,8 @@ class ExampleTest extends TestCase
 
         $response = $this->get('/');
 
-        $response->assertStatus(200);
+        $response->assertStatus(200)
+            ->assertHeader('Cache-Control', 'must-revalidate, no-cache, no-store, private');
 
         unlink($index);
     }

@@ -55,7 +55,7 @@
             <tr><th>Description</th><th class="right">Amount</th></tr>
         </thead>
         <tbody>
-            @forelse (($invoice->lines ?? []) as $line)
+            @forelse ($invoice->breakdownLines() as $line)
             <tr>
                 <td>{{ $line['description'] }}</td>
                 <td class="right">&#8358;{{ number_format($line['amount_minor'] / 100, 2) }}</td>

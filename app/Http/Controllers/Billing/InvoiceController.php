@@ -27,7 +27,7 @@ class InvoiceController extends Controller
             'id' => $i->id,
             'type' => $i->type,
             'amount_minor' => $i->amount_minor,
-            'lines' => $i->lines,
+            'lines' => $i->breakdownLines(),
             'status' => $i->status,
             'issued_at' => $i->issued_at,
             'paid_at' => $i->paid_at,

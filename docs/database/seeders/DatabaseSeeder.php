@@ -11,7 +11,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolesAndPermissionsSeeder::class,
             PlanSeeder::class,      // billing tiers (free / premium / school_*)
-            LanguageSeeder::class,  // yo / ig / ha / pcm
+            LanguageSeeder::class,  // yo / ig / ha / en
         ]);
     }
 }

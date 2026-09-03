@@ -1,37 +1,29 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Alert,
   Avatar,
-  Button,
-  Card,
-  CardBody,
   Icon,
+  learnerAvatarPresetId,
+  LinkButton,
   Skeleton,
 } from '@/components/ui'
 import { cn } from '@/lib/cn'
-import { ApiError, type CourseSummary, type NodeState, type PathNode } from '@/lib/api'
+import { type NodeState, type PathNode } from '@/lib/api'
 import { useActiveProfile } from '@/lib/profile/ActiveProfile'
-import { useCourses, useEnroll, usePath } from '@/lib/learning/queries'
+import { usePath } from '@/lib/learning/queries'
 import { useHearts, useStreak } from '@/lib/gamification/queries'
+import { formatDayStreak } from '@/lib/gamification/format'
+import { CourseCatalogPage } from '@/pages/CourseCatalogPage'
+import { ProfilePictureModal } from '@/components/learner/ProfilePictureModal'
 
 export function LearnPage() {
+  const [pictureOpen, setPictureOpen] = useState(false)
   const { activeLearner } = useActiveProfile()
   const { data: path, isLoading, isError } = usePath(activeLearner?.id)
 
   if (!activeLearner) {
-    return (
-      <Card>
-        <CardBody className="flex flex-col items-center gap-3 py-12 text-center">
-          <span className="text-4xl" aria-hidden="true">
-            🧑‍🎓
-          </span>
-          <h1 className="font-display text-xl font-bold text-foreground">Choose a learner</h1>
-          <p className="max-w-xs text-sm text-muted">
-            Pick a profile from the switcher in the top bar to start learning.
-          </p>
-        </CardBody>
-      </Card>
-    )
+    return <CourseCatalogPage />
   }
 
   if (isLoading) return <TreeSkeleton />
@@ -45,7 +37,19 @@ export function LearnPage() {
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Avatar name={activeLearner.display_name} size="lg" />
+          <button
+            type="button"
+            onClick={() => setPictureOpen(true)}
+            className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            aria-label={`Change ${activeLearner.display_name}’s profile picture`}
+          >
+            <Avatar
+              name={activeLearner.display_name}
+              src={activeLearner.avatar_url ?? undefined}
+              avatarId={activeLearner.avatar_id ?? learnerAvatarPresetId(activeLearner.id)}
+              size="lg"
+            />
+          </button>
           <div>
             <h1 className="font-display text-2xl font-bold text-foreground">
               {activeLearner.display_name}’s journey
@@ -72,10 +76,29 @@ export function LearnPage() {
               </ol>
             </section>
           ))}
+          <div className="flex flex-col items-start gap-3 rounded-2xl border border-border bg-surface-muted p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-display font-bold text-foreground">Ready for something new?</h2>
+              <p className="mt-1 text-sm text-muted">Browse the course library without leaving this learning journey behind.</p>
+            </div>
+            <LinkButton to="/learn/courses" variant="secondary">Browse more courses</LinkButton>
+          </div>
         </div>
       )}
 
-      <EnrollCard learnerId={activeLearner.id} hasPath={hasPath} />
+      {!hasPath && (
+        <div className="rounded-2xl border border-dashed border-border-strong bg-surface px-6 py-14 text-center">
+          <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary-soft text-primary">
+            <Icon name="layers" className="size-7" />
+          </span>
+          <h2 className="mt-4 font-display text-xl font-bold text-foreground">Choose a first course</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted">
+            Search the learning library by language and level, then add a course to {activeLearner.display_name}’s journey.
+          </p>
+          <LinkButton to="/learn/courses" className="mt-5">Explore courses</LinkButton>
+        </div>
+      )}
+      <ProfilePictureModal learner={activeLearner} open={pictureOpen} onClose={() => setPictureOpen(false)} />
     </div>
   )
 }
@@ -116,81 +139,20 @@ function NodeRow({ node, learnerId: _learnerId }: { node: PathNode; learnerId: n
   )
 }
 
-function EnrollCard({ learnerId, hasPath }: { learnerId: number; hasPath: boolean }) {
-  const { data: courses, isLoading, isError } = useCourses(learnerId)
-  const enroll = useEnroll(learnerId)
-
-  if (isLoading) return <Skeleton className="h-40" />
-
-  if (isError) return <Alert variant="danger">We couldn’t load the available courses. Please refresh and try again.</Alert>
-
-  const available = (courses ?? []).filter((c: CourseSummary) => c.is_published && !c.is_enrolled)
-
-  return (
-    <Card>
-      <CardBody className="flex flex-col gap-4">
-        <div className="text-center">
-          <span className="text-4xl" aria-hidden="true">
-            🚀
-          </span>
-          <h2 className="mt-2 font-display text-xl font-bold text-foreground">
-            {hasPath ? 'Available courses' : 'Start a course'}
-          </h2>
-          <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
-            {hasPath ? 'Add another published course to this learner’s journey.' : 'Choose a course to begin the learning journey.'}
-          </p>
-        </div>
-
-        {enroll.isError && (
-          <Alert variant="danger">
-            {enroll.error instanceof ApiError ? enroll.error.message : 'Could not enroll. Please try again.'}
-          </Alert>
-        )}
-
-        {available.length === 0 ? (
-          <p className="text-center text-sm text-muted">
-            {hasPath ? 'This learner is enrolled in every available course.' : 'No courses are available yet.'}
-          </p>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {available.map((course) => (
-              <div key={course.id} className="flex flex-col gap-2 rounded-xl border border-border p-4">
-                <div>
-                  <p className="font-semibold text-foreground">{course.title}</p>
-                  {course.description && (
-                    <p className="mt-0.5 line-clamp-2 text-sm text-muted">{course.description}</p>
-                  )}
-                </div>
-                <Button
-                  size="sm"
-                  className="mt-auto"
-                  loading={enroll.isPending && enroll.variables === course.id}
-                  onClick={() => enroll.mutate(course.id)}
-                >
-                  Start course
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardBody>
-    </Card>
-  )
-}
-
 function StatsBar({ learnerId, coinBalance }: { learnerId: number; coinBalance: number }) {
   const streak = useStreak(learnerId)
   const hearts = useHearts(learnerId)
   return (
     <div className="flex items-center gap-3">
       <span className="flex items-center gap-1.5 rounded-full bg-surface-muted px-3 py-1.5 text-sm font-bold text-foreground">
-        🔥 {streak.data?.count ?? 0}
+        🔥 {formatDayStreak(streak.data?.count ?? 0)}
       </span>
       <span className="flex items-center gap-1.5 rounded-full bg-surface-muted px-3 py-1.5 text-sm font-bold text-foreground">
         ❤️ {hearts.data?.current ?? 0}
       </span>
       <span className="flex items-center gap-1.5 rounded-full bg-surface-muted px-3 py-1.5 text-sm font-bold text-foreground">
-        🪙 {coinBalance.toLocaleString()}
+        <Icon name="coin" className="size-4 text-gold-600" />
+        {coinBalance.toLocaleString()}
       </span>
     </div>
   )

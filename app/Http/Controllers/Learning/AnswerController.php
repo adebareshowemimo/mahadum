@@ -13,8 +13,10 @@ use App\Models\QuestionResponse;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
 use App\Models\XpLedger;
+use App\Services\Billing\EntitlementResolver;
 use App\Services\Learning\AnswerGrader;
 use App\Services\Learning\XapiRecorder;
+use App\Services\Referral\ReferralService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -22,7 +24,7 @@ class AnswerController extends Controller
 {
     use ResolvesLearner;
 
-    public function store(StoreAnswerRequest $request, LessonComponent $component, AnswerGrader $grader, XapiRecorder $xapi): JsonResponse
+    public function store(StoreAnswerRequest $request, LessonComponent $component, AnswerGrader $grader, XapiRecorder $xapi, ReferralService $referrals, EntitlementResolver $entitlements): JsonResponse
     {
         abort_unless($component->type === 'quiz', 422, 'This component is not a quiz.');
 
@@ -34,7 +36,9 @@ class AnswerController extends Controller
 
         $verdict = $grader->grade($question, $request->array('answer'));
 
-        return DB::transaction(function () use ($request, $learner, $component, $quiz, $question, $verdict, $xapi) {
+        $unlimitedHearts = (bool) $entitlements->forLearner($learner)['unlimited_hearts'];
+
+        return DB::transaction(function () use ($request, $learner, $component, $quiz, $question, $verdict, $xapi, $referrals, $unlimitedHearts) {
             $progress = $this->lessonProgress($learner, $component->lesson);
 
             $attempt = $this->resolveAttempt($learner->id, $quiz);
@@ -47,14 +51,15 @@ class AnswerController extends Controller
                     'correct' => $verdict['is_correct'],
                     'correct_answer' => $verdict['correct_answer'],
                     'explanation' => $verdict['explanation'],
-                    'hearts_remaining' => $this->applyHearts($learner->id, 0),
+                    'hearts_remaining' => $this->applyHearts($learner->id, 0, $unlimitedHearts),
+                    'unlimited_hearts' => $unlimitedHearts,
                     'xp_awarded' => 0,
                     'attempts_exhausted' => true,
                 ]]);
             }
 
-            $heartsLost = (! $verdict['is_correct'] && $quiz->hearts_enabled) ? 1 : 0;
-            $heartsRemaining = $this->applyHearts($learner->id, $heartsLost);
+            $heartsLost = (! $unlimitedHearts && ! $verdict['is_correct'] && $quiz->hearts_enabled) ? 1 : 0;
+            $heartsRemaining = $this->applyHearts($learner->id, $heartsLost, $unlimitedHearts);
 
             // XP for a question is earned once per learner, never re-farmed on replay.
             $alreadyEarned = QuestionResponse::where('learner_profile_id', $learner->id)
@@ -87,6 +92,11 @@ class AnswerController extends Controller
 
             $this->syncQuizProgress($progress->id, $component, $quiz, $learner->id, $attempt);
 
+            // A finished quiz may complete a referral's activation gate (FR-7).
+            if ($attempt->completed_at !== null) {
+                $referrals->maybeActivateForLearner($learner);
+            }
+
             $xapi->record($learner->id, XapiRecorder::VERB_ANSWERED, 'questions', $question->id, $question->prompt, XapiRecorder::ACTIVITY_INTERACTION, [
                 'success' => $verdict['is_correct'],
                 'score' => ['scaled' => $verdict['is_correct'] ? 1.0 : 0.0],
@@ -97,6 +107,7 @@ class AnswerController extends Controller
                 'correct_answer' => $verdict['correct_answer'],
                 'explanation' => $verdict['explanation'],
                 'hearts_remaining' => $heartsRemaining,
+                'unlimited_hearts' => $unlimitedHearts,
                 'xp_awarded' => $xpAwarded,
                 'attempts_exhausted' => false,
             ]]);
@@ -145,8 +156,12 @@ class AnswerController extends Controller
     }
 
     /** Decrement hearts but never below 0 (Rule 4 — never blocks learning). */
-    private function applyHearts(int $learnerId, int $lost): int
+    private function applyHearts(int $learnerId, int $lost, bool $unlimited): ?int
     {
+        if ($unlimited) {
+            return null;
+        }
+
         $heart = Heart::firstOrCreate(['learner_profile_id' => $learnerId], ['current' => 5]);
 
         if ($lost > 0) {

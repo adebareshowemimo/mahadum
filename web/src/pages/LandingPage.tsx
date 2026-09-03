@@ -69,7 +69,7 @@ function SiteHeader() {
   const [open, setOpen] = useState(false)
   const links = [
     { to: '/#families', label: 'For families' },
-    { to: '/#schools', label: 'For schools' },
+    { to: '/#schools', label: 'For educators/schools' },
     { to: '/pricing', label: 'Pricing' },
   ]
 
@@ -440,7 +440,9 @@ function ApprovalDemo() {
 
         <div className="mt-5 flex items-center justify-between rounded-xl bg-gold-50 px-4 py-3">
           <span className="text-sm font-semibold text-charcoal-800">Reward on approval</span>
-          <span className="font-display font-bold text-gold-700">🪙 50 coins</span>
+          <span className="inline-flex items-center gap-1.5 font-display font-bold text-gold-700">
+            <Icon name="coin" className="size-4" /> 50 coins
+          </span>
         </div>
 
         {!approved ? (
@@ -512,7 +514,7 @@ function SchoolsSection() {
         <div className="grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
           <Reveal>
             <span className="inline-flex items-center gap-2 rounded-full bg-chore-50 px-3 py-1 text-sm font-bold text-chore-700">
-              For schools
+              For educators/schools
             </span>
             <h2 className="mt-4 font-display text-3xl font-extrabold text-navy-950 sm:text-5xl">
               The policy says teach it. The materials never arrived.
@@ -561,7 +563,7 @@ function SchoolsSection() {
             <div className="mt-6 overflow-x-auto rounded-[1rem] border border-chore-100 bg-white">
               <table className="w-full text-left text-sm">
                 <caption className="sr-only">
-                  School pricing bands for a nine-month academic year
+                  Educator/School pricing bands for a nine-month academic year
                 </caption>
                 <thead className="bg-surface-muted">
                   <tr>
@@ -865,7 +867,7 @@ function ClosingCta() {
               variant="ghost"
               className="text-white hover:bg-white/10"
             >
-              Talk to us about schools
+              Talk to us about Educator/School plans
             </LinkButton>
           </div>
         </Reveal>
@@ -902,7 +904,7 @@ function SiteFooter() {
               href="#schools"
               className="flex min-h-11 items-center text-sm font-semibold text-muted hover:text-foreground"
             >
-              For schools
+              For educators/schools
             </a>
             <Link
               to="/pricing"

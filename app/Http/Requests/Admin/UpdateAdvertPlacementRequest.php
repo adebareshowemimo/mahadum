@@ -19,7 +19,7 @@ class UpdateAdvertPlacementRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'string', 'max:255'],
-            'position' => ['sometimes', Rule::in(['leaderboard', 'inline'])],
+            'position' => ['sometimes', Rule::in(['leaderboard', 'inline', 'profile_data_topup'])],
             'size' => ['nullable', 'string', 'max:50'],
             'media_asset_id' => ['sometimes', 'integer', 'exists:media_assets,id'],
             'target_url' => ['sometimes', 'url', 'max:2048'],

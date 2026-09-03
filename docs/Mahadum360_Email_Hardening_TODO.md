@@ -17,10 +17,15 @@ tracks the **deliberately-deferred optional items** so nothing is lost.
 
 ---
 
-## A. ESP go-live `[OPS]` — the only thing blocking real inbox delivery
+## A. ESP go-live `[OPS]` — provider credentials and sender-domain verification
 
-Nothing here is code; it's the deploy/ops checklist. Until it's done, mail goes to
-the `log` driver, not inboxes.
+The super-admin Email configuration page now saves APP_KEY-encrypted SMTP overrides,
+shows queue health, and sends an immediate branded test. Provider credentials and
+sender-domain DNS still have to be supplied by the operator.
+
+- [x] **Admin SMTP configuration + delivery test.** `/admin/emails/configuration`
+  supports SMTP/log mode, host/port/encryption, credentials, sender identity, queue
+  counts, audited updates, and a synchronous test that cannot claim success in log mode.
 
 - [ ] **Testing/staging → Mailtrap.** Set `MAIL_MAILER=smtp`,
   `MAIL_HOST=sandbox.smtp.mailtrap.io`, `MAIL_PORT=2525`, inbox `MAIL_USERNAME` /

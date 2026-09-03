@@ -28,22 +28,22 @@ class PlanSeeder extends Seeder
             [
                 'code' => 'premium_individual', 'name' => 'Premium (Individual)', 'price_minor' => 300000,
                 'currency' => 'NGN', 'interval' => 'month', 'audience' => 'individual', 'max_profiles' => 1,
-                'features' => ['ads' => false, 'offline_download' => true, 'unlimited_hearts' => true],
+                'features' => ['ads' => false, 'offline_download' => false, 'unlimited_hearts' => true],
             ],
             [
                 'code' => 'premium_individual_annual', 'name' => 'Premium (Individual, Annual)', 'price_minor' => 3000000,
                 'currency' => 'NGN', 'interval' => 'year', 'audience' => 'individual', 'max_profiles' => 1,
-                'features' => ['ads' => false, 'offline_download' => true, 'unlimited_hearts' => true],
+                'features' => ['ads' => false, 'offline_download' => false, 'unlimited_hearts' => true],
             ],
             [
                 'code' => 'premium_family', 'name' => 'Premium (Family)', 'price_minor' => 600000,
                 'currency' => 'NGN', 'interval' => 'month', 'audience' => 'family', 'max_profiles' => 6,
-                'features' => ['ads' => false, 'offline_download' => true, 'unlimited_hearts' => true, 'family_dashboard' => true],
+                'features' => ['ads' => false, 'offline_download' => false, 'unlimited_hearts' => true, 'family_dashboard' => true],
             ],
             [
                 'code' => 'premium_family_annual', 'name' => 'Premium (Family, Annual)', 'price_minor' => 6000000,
                 'currency' => 'NGN', 'interval' => 'year', 'audience' => 'family', 'max_profiles' => 6,
-                'features' => ['ads' => false, 'offline_download' => true, 'unlimited_hearts' => true, 'family_dashboard' => true],
+                'features' => ['ads' => false, 'offline_download' => false, 'unlimited_hearts' => true, 'family_dashboard' => true],
             ],
             [
                 'code' => 'school_term', 'name' => 'School (Per Term)', 'price_minor' => 0,

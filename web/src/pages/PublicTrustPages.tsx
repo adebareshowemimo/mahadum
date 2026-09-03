@@ -151,7 +151,7 @@ const TERMS_SECTIONS = [
   },
   {
     id: 'organisations',
-    title: 'Schools and institutions',
+    title: 'Educators, schools and institutions',
     paragraphs: [
       'Organisation administrators control authorised seats, roles, rosters and programme access. A separate order, proposal or service agreement may define pricing, term, data responsibilities, support and programme requirements.',
       'Where an organisation supplies or controls an account, its authorised administrators may access information and learning activity according to their role and the applicable agreement.',
@@ -347,7 +347,7 @@ const TOPIC_EMAILS: Record<string, string> = {
 
 const CONTACT_TOPICS: { value: string; label: string; detail: string; icon: IconName }[] = [
   { value: 'family', label: 'Family & learning', detail: 'Accounts, lessons and subscriptions', icon: 'users' },
-  { value: 'school', label: 'Schools', detail: 'Curriculum, seats and school plans', icon: 'cap' },
+  { value: 'school', label: 'Educators/Schools', detail: 'Curriculum, seats and school plans', icon: 'cap' },
   { value: 'partnership', label: 'Partnerships', detail: 'Institutions, culture and distribution', icon: 'building' },
   { value: 'support', label: 'Technical support', detail: 'Access, devices and troubleshooting', icon: 'layers' },
   { value: 'safety', label: 'Child safety', detail: 'A concern about a learner or profile', icon: 'shield' },

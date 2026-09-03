@@ -29,7 +29,7 @@ import {
   Modal,
   Skeleton,
 } from '@/components/ui'
-import { ApiError, type AuthorLesson, type AuthorLevel } from '@/lib/api'
+import { ApiError, type AuthorLesson, type AuthorLevel, type CourseSummary } from '@/lib/api'
 import {
   useAuthorCourses,
   useCourseLevels,
@@ -42,6 +42,7 @@ import {
   useReorderLevels,
   useUpdateLesson,
   useUpdateLevel,
+  useUpdateCourse,
 } from '@/lib/content/queries'
 import { useCanManageContent } from '@/lib/content/permissions'
 
@@ -53,6 +54,7 @@ export function CourseBuilderPage() {
   const canManage = useCanManageContent()
   const reorderLevels = useReorderLevels(id)
   const [levelOpen, setLevelOpen] = useState(false)
+  const [courseDetailsOpen, setCourseDetailsOpen] = useState(false)
   const [editingLevel, setEditingLevel] = useState<AuthorLevel | null>(null)
   const [deletingLevel, setDeletingLevel] = useState<AuthorLevel | null>(null)
   const dndSensors = useSensors(
@@ -102,9 +104,12 @@ export function CourseBuilderPage() {
               Preview course
             </Button>
             {canManage && (
-              <Button variant="secondary" leftIcon={<Icon name="layers" className="size-[18px]" />} onClick={() => setLevelOpen(true)}>
-                Add level
-              </Button>
+              <>
+                <Button variant="secondary" onClick={() => setCourseDetailsOpen(true)}>Edit course details</Button>
+                <Button variant="secondary" leftIcon={<Icon name="layers" className="size-[18px]" />} onClick={() => setLevelOpen(true)}>
+                  Add level
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -140,9 +145,53 @@ export function CourseBuilderPage() {
       )}
 
       <NewLevelModal courseId={id} open={levelOpen} onClose={() => setLevelOpen(false)} />
+      <EditCourseModal key={courseDetailsOpen ? course?.id ?? 'open' : 'closed'} course={courseDetailsOpen ? course ?? null : null} onClose={() => setCourseDetailsOpen(false)} />
       <EditLevelModal key={editingLevel?.id ?? 'edit-level'} courseId={id} level={editingLevel} onClose={() => setEditingLevel(null)} />
       <DeleteLevelModal courseId={id} level={deletingLevel} onClose={() => setDeletingLevel(null)} />
     </div>
+  )
+}
+
+function EditCourseModal({ course, onClose }: { course: CourseSummary | null; onClose: () => void }) {
+  const updateCourse = useUpdateCourse()
+  const [title, setTitle] = useState(course?.title ?? '')
+  const [description, setDescription] = useState(course?.description ?? '')
+  const [levelBand, setLevelBand] = useState(course?.level_band ?? '')
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [formError, setFormError] = useState<string | null>(null)
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    if (!course) return
+    setErrors({})
+    setFormError(null)
+    try {
+      await updateCourse.mutateAsync({
+        courseId: course.id,
+        input: { title: title.trim(), description: description.trim(), level_band: levelBand.trim() },
+      })
+      onClose()
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setErrors(error.fieldErrors)
+        if (Object.keys(error.fieldErrors).length === 0) setFormError(error.message)
+      } else setFormError('Could not update the course.')
+    }
+  }
+
+  return (
+    <Modal open={course !== null} onClose={onClose} title="Edit course details" description="Update the heading learners see before opening the course.">
+      <form className="flex flex-col gap-4" onSubmit={submit}>
+        {formError && <Alert variant="danger">{formError}</Alert>}
+        <Input label="Course title" value={title} onChange={(event) => setTitle(event.target.value)} error={errors.title} required />
+        <Input label="Description" value={description} onChange={(event) => setDescription(event.target.value)} error={errors.description} />
+        <Input label="Level band" value={levelBand} onChange={(event) => setLevelBand(event.target.value)} error={errors.level_band} />
+        <div className="flex gap-2">
+          <Button type="button" variant="secondary" fullWidth onClick={onClose}>Cancel</Button>
+          <Button type="submit" fullWidth loading={updateCourse.isPending} disabled={!title.trim()}>Save changes</Button>
+        </div>
+      </form>
+    </Modal>
   )
 }
 

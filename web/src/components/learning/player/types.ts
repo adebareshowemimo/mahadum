@@ -96,6 +96,7 @@ export interface QuizSlide extends SlideBase {
   options: { id: number; label: string }[]
   /** Right-side choices for match_pairs (shuffled, no pairing revealed). */
   matchPool: string[]
+  passThreshold: number
   /** Resume: this question was already answered correctly in the open attempt. */
   wasCorrect: boolean
 }
@@ -194,6 +195,7 @@ function playComponentToSlides(c: PlayComponent, lessonTitle?: string): Slide[] 
       promptImage: q.prompt_image ?? null,
       options: q.options.map((o) => ({ id: o.id, label: o.label })),
       matchPool: q.match_pool ?? [],
+      passThreshold: c.quiz?.pass_threshold ?? 0.7,
       completed: !!q.answered,
       wasCorrect: !!q.was_correct,
     }))
@@ -274,6 +276,7 @@ export function authorToSlides(lesson: AuthorLesson): { slides: Slide[]; key: Ma
           promptImage: (q.prompt_image as string) ?? null,
           options: options.map((o) => ({ id: o.id, label: o.label })),
           matchPool: qtype === 'match_pairs' ? options.map((o) => o.match_target ?? '').filter(Boolean) : [],
+          passThreshold: (d.pass_threshold as number) ?? 0.7,
           wasCorrect: false,
         })
         key.set(qid, {

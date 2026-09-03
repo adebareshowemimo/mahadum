@@ -268,7 +268,7 @@ const ECOSYSTEM_VIEWS = [
   },
   {
     id: 'school',
-    label: 'School',
+    label: 'Educator/School',
     heading: 'Language learning has an operational home.',
     body: 'Rosters, seats, classes, reporting, invoices, clubs and competitions live in one tenant-safe workspace.',
     features: ['CSV roster import', 'Seat and class management', 'Reports and invoices'],
@@ -373,7 +373,7 @@ export function LandingV5Page() {
                   ['Teacher', 'Assigns the right level to a class.'],
                   ['Learner', 'Listens, speaks and completes it.'],
                   ['Adult', 'Reviews the attempt and responds.'],
-                  ['School', 'Sees progress, seats and outcomes.'],
+                  ['Educator/School', 'Sees progress, seats and outcomes.'],
                 ].map(([title, body], index) => (
                   <li key={title} className="relative pt-14">
                     <span className="absolute left-0 top-0 flex size-12 items-center justify-center rounded-full bg-white font-display text-lg font-extrabold text-navy-950">{index + 1}</span>

@@ -15,6 +15,10 @@ use Illuminate\Support\Carbon;
  * @property int $beneficiary_id
  * @property int $amount_minor
  * @property string $status
+ * @property string $kind
+ * @property string|null $source_type
+ * @property int|null $source_id
+ * @property string|null $source_event
  * @property Carbon|null $escrow_until
  * @property Carbon|null $cleared_at
  * @property Carbon|null $created_at
@@ -58,6 +62,12 @@ class Commission extends Model
     }
 
     public function beneficiary(): MorphTo
+    {
+        return $this->morphTo();
+    }
+
+    /** The purchase (Subscription / WalletFundingTransaction) that earned this. */
+    public function source(): MorphTo
     {
         return $this->morphTo();
     }

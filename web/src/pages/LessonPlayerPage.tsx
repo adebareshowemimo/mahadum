@@ -5,6 +5,7 @@ import { Alert, Button3D, Skeleton } from '@/components/ui'
 import { ApiError, learningApi, type CompleteResult, type LessonPlay } from '@/lib/api'
 import { useActiveProfile } from '@/lib/profile/ActiveProfile'
 import { useEntitlements } from '@/lib/billing/entitlements'
+import { formatDayStreak } from '@/lib/gamification/format'
 import { learningKeys } from '@/lib/learning/queries'
 import { AdModal } from '@/components/gamification/AdModal'
 import { SlideDeck, createLiveService, playToSlides, resumePlan } from '@/components/learning/player'
@@ -110,7 +111,7 @@ function LessonComplete({ lessonId, learnerId, onExit }: { lessonId: number; lea
       <div className="flex flex-wrap justify-center gap-3">
         <Stat label="Score" value={`${Math.round(result.lesson_score * 100)}%`} />
         <Stat label="XP earned" value={`+${result.xp_total}`} />
-        <Stat label="Streak" value={`🔥 ${result.streak.count}`} />
+        <Stat label="Streak" value={`🔥 ${formatDayStreak(result.streak.count)}`} />
       </div>
       {badgeCount > 0 && (
         <p className="text-sm font-semibold text-primary">🏅 {badgeCount} new badge{badgeCount === 1 ? '' : 's'}!</p>

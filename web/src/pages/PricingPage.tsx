@@ -13,6 +13,7 @@ import {
   type PricingInfo,
 } from '@/lib/api'
 import { useAuth } from '@/lib/auth/AuthProvider'
+import { FREE_PLAN_FEATURES, planFeatures } from '@/lib/billing/planFeatures'
 import { cn } from '@/lib/cn'
 import { ConceptFooter, ConceptHeader } from './LandingVariantsPage'
 
@@ -88,7 +89,7 @@ function PricingHero() {
               href="#school-pricing"
               className="inline-flex h-12 items-center justify-center rounded-xl border border-chore-200 bg-white px-6 font-display font-bold text-chore-700 transition-colors hover:bg-chore-50"
             >
-              See school pricing
+              See Educator/School pricing
             </a>
           </div>
           <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-navy-700">
@@ -157,25 +158,20 @@ function PricingBody({ data, onOpenQuote }: { data: PricingInfo; onOpenQuote: ()
           price="₦0"
           cadence="forever"
           blurb={data.free.blurb}
-          features={['Every lesson and quiz', 'Speaking practice', 'XP, streaks and badges', 'Supported by age-appropriate ads']}
+          features={[...FREE_PLAN_FEATURES]}
         />
         <PlanCard
           name="Individual"
           plan={individual}
           interval={interval}
-          features={['Everything in Free', 'Ad-free learning', 'Offline lesson downloads', 'Unlimited hearts', '1 learner profile']}
+          features={individual ? planFeatures(individual) : []}
         />
         <PlanCard
           name="Family"
           plan={family}
           interval={interval}
           highlight
-          features={[
-            'Everything in Individual',
-            `Up to ${family?.max_profiles ?? 6} learner profiles`,
-            'Family progress dashboard',
-            'Chores, coins and parent approvals',
-          ]}
+          features={family ? planFeatures(family) : []}
         />
       </div>
 
@@ -208,7 +204,7 @@ function PricingBody({ data, onOpenQuote }: { data: PricingInfo; onOpenQuote: ()
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <LinkButton to="/register" size="lg" variant="accent">Create a free account</LinkButton>
           <Button size="lg" variant="ghost" className="text-white hover:bg-white/10" onClick={onOpenQuote}>
-            Talk to us about schools
+            Talk to us about Educator/School plans
           </Button>
         </div>
       </Reveal>
@@ -335,7 +331,7 @@ function SchoolPricing({
             imgClassName="object-center"
           />
           <div className="p-6 sm:p-10 lg:p-12">
-            <p className="font-display text-lg font-extrabold text-[#a93403]">For schools and institutions</p>
+            <p className="font-display text-lg font-extrabold text-[#a93403]">For educators, schools and institutions</p>
             <h2 className="mt-3 max-w-[15ch] font-display text-3xl font-extrabold leading-tight text-navy-950 sm:text-5xl">
               One curriculum. Every learner visible.
             </h2>
@@ -347,7 +343,7 @@ function SchoolPricing({
 
             <div className="mt-8 overflow-x-auto rounded-xl bg-white">
               <table className="w-full min-w-[31rem] text-left text-sm">
-                <caption className="sr-only">School pricing by number of students</caption>
+                <caption className="sr-only">Educator/School pricing by number of students</caption>
                 <thead className="bg-navy-950 text-white">
                   <tr>
                     <th scope="col" className="px-4 py-3 font-display font-bold">School size</th>

@@ -29,6 +29,7 @@ class ConfigController extends Controller
             'feature_flags' => [
                 'telco_billing' => $this->settings->get('feature.telco_billing'),
                 'ai_pronunciation' => $this->settings->get('feature.ai_pronunciation'),
+                'tone_practice' => $this->settings->get('feature.tone_practice'),
             ],
             'cdn_base' => config('platform.cdn_base'),
             'languages' => LanguageResource::collection(

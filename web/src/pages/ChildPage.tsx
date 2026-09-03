@@ -1,8 +1,10 @@
+import { useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Alert, Avatar, Badge, Button, Card, CardBody, CardHeader, CardTitle, LinkButton, Skeleton } from '@/components/ui'
+import { Alert, Avatar, Badge, Button, Card, CardBody, CardHeader, CardTitle, Icon, learnerAvatarPresetId, LinkButton, Skeleton } from '@/components/ui'
 import { useChild } from '@/lib/family/queries'
 import { usePath } from '@/lib/learning/queries'
 import { useActiveProfile } from '@/lib/profile/ActiveProfile'
+import { ProfilePictureModal } from '@/components/learner/ProfilePictureModal'
 
 export function ChildPage() {
   const { learnerId } = useParams()
@@ -12,6 +14,7 @@ export function ChildPage() {
   const path = usePath(validId)
   const { setActiveLearner } = useActiveProfile()
   const navigate = useNavigate()
+  const [pictureOpen, setPictureOpen] = useState(false)
 
   if (validId === null) {
     return <Alert variant="danger">This child profile link is invalid.</Alert>
@@ -37,7 +40,7 @@ export function ChildPage() {
         <LinkButton to="/family" variant="ghost" size="sm">← Back to family</LinkButton>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Avatar name={learner.display_name} size="lg" />
+            <Avatar name={learner.display_name} src={learner.avatar_url ?? undefined} avatarId={learner.avatar_id ?? learnerAvatarPresetId(learner.id)} size="lg" />
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="font-display text-2xl font-bold text-foreground">{learner.display_name}</h1>
@@ -48,12 +51,19 @@ export function ChildPage() {
               </p>
             </div>
           </div>
-          <Button onClick={openLearning}>View learning</Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={() => setPictureOpen(true)}>Change picture</Button>
+            <Button onClick={openLearning}>View learning</Button>
+          </div>
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Child’s coins" value={`🪙 ${learner.coin_balance.toLocaleString()}`} detail="Learner wallet balance" />
+        <StatCard
+          label="Child’s coins"
+          value={<span className="inline-flex items-center gap-2"><Icon name="coin" className="size-6 text-gold-600" />{learner.coin_balance.toLocaleString()}</span>}
+          detail="Learner wallet balance"
+        />
         <StatCard label="Lessons completed" value={completed.toLocaleString()} detail={`${nodes.length.toLocaleString()} lessons on the journey`} />
         <StatCard label="Profile PIN" value={learner.pin_protected ? 'Protected' : 'Not set'} detail="Managed from the family page" />
       </div>
@@ -87,11 +97,13 @@ export function ChildPage() {
           )}
         </CardBody>
       </Card>
+
+      <ProfilePictureModal learner={learner} open={pictureOpen} onClose={() => setPictureOpen(false)} />
     </div>
   )
 }
 
-function StatCard({ label, value, detail }: { label: string; value: string; detail: string }) {
+function StatCard({ label, value, detail }: { label: string; value: ReactNode; detail: string }) {
   return (
     <Card>
       <CardBody>

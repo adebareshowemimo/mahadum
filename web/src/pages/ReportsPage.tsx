@@ -29,7 +29,7 @@ const REPORTS: { to: string; title: string; description: string; icon: IconName 
   },
   {
     to: '/admin/reports/org-activity',
-    title: 'Organizations & schools',
+    title: 'Organizations & Educator/School accounts',
     description: 'New organizations per month, status mix, and class/student totals.',
     icon: 'building',
   },

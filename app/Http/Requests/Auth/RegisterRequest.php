@@ -22,8 +22,10 @@ class RegisterRequest extends FormRequest
             'username' => ['nullable', 'string', 'alpha_dash', 'max:50', 'unique:users,username'],
             'password' => ['required', 'confirmed', Password::defaults()],
             'device_name' => ['required', 'string', 'max:255'],
-            // age-gate branch: parent (default) manages children; learner = adult self-learner
-            'account_type' => ['nullable', 'in:parent,learner'],
+            // Public signup choices. parent/learner remain accepted for older
+            // clients and class-invitation registration.
+            'account_type' => ['nullable', 'in:individual,family,educator_school,institution,parent,learner'],
+            'organization_name' => ['required_if:account_type,educator_school,institution', 'nullable', 'string', 'max:255'],
             'family_name' => ['nullable', 'string', 'max:255'],
             'date_of_birth' => ['nullable', 'date', 'before:today'],
             'referral_code' => ['nullable', 'string', 'max:50'],
@@ -33,6 +35,6 @@ class RegisterRequest extends FormRequest
 
     public function accountType(): string
     {
-        return $this->input('account_type', 'parent');
+        return $this->input('account_type', 'family');
     }
 }

@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class MediaController extends Controller
 {
@@ -33,6 +34,7 @@ class MediaController extends Controller
         'invoices' => ['pdf_asset_id'],
         'competition_entries' => ['media_asset_id'],
         'advert_placements' => ['media_asset_id'],
+        'learner_profiles' => ['profile_photo_asset_id'],
     ];
 
     public function __construct(private AuditLogger $audit) {}
@@ -189,10 +191,14 @@ class MediaController extends Controller
     public function upload(UploadMediaRequest $request): JsonResponse
     {
         $file = $request->file('file');
-        $path = $file->store('media', 'public'); // storage/app/public/media/...
-
-        $group = explode('/', (string) $file->getMimeType())[0]; // video|audio|image
-        $type = in_array($group, ['video', 'audio', 'image'], true) ? $group : 'file';
+        $extension = strtolower($file->getClientOriginalExtension());
+        $type = match (true) {
+            in_array($extension, ['mp4', 'm4v', 'webm', 'ogv', 'mov'], true) => 'video',
+            in_array($extension, ['mp3', 'm4a', 'aac', 'wav', 'ogg', 'oga'], true) => 'audio',
+            in_array($extension, ['jpg', 'jpeg', 'png', 'webp'], true) => 'image',
+            default => 'file', // defensive; UploadMediaRequest rejects this branch
+        };
+        $path = $file->storeAs('media', Str::uuid().'.'.$extension, 'public');
 
         $asset = MediaAsset::create([
             'type' => $type,

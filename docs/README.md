@@ -11,7 +11,7 @@ Drop into a Laravel 12/13 app: copy `database/migrations/*` and `app/Models/*`.
 - **`app/Models/User.php`** — Sanctum (`HasApiTokens`) + spatie (`HasRoles`).
 - **`database/seeders/`** — `RolesAndPermissionsSeeder` (7 roles + granular,
   aspect-grouped permissions — see [Roles & Permissions](Mahadum360_Roles_Permissions.md)),
-  `PlanSeeder` (billing tiers), `LanguageSeeder` (yo/ig/ha/pcm), wired via `DatabaseSeeder`.
+  `PlanSeeder` (billing tiers), `LanguageSeeder` (yo/ig/ha/en), wired via `DatabaseSeeder`.
   `DemoSeeder` (small local fixtures, auto-run on `db:seed` in local) and **`DevSeeder`**
   (large dataset for frontend dev — `php artisan db:seed --class=DevSeeder`; logins `*@dev.mahadum360`,
   password `Password123!`; idempotent guard, drop the DB to reseed).

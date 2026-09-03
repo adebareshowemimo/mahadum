@@ -10,7 +10,7 @@ export interface SlideProps {
   service: PlayerService
   isLast: boolean
   onAdvance: () => void
-  onGraded: (correct: boolean) => void
+  onGraded: (correct: boolean, xpAwarded: number) => void
   onHearts: (hearts: number | null) => void
 }
 
@@ -150,7 +150,7 @@ function QuizSlideView({ slide, service, isLast, onAdvance, onGraded, onHearts }
     try {
       const res = await service.gradeQuiz(slide, answer)
       setVerdict(res)
-      onGraded(res.correct)
+      onGraded(res.correct, res.xpAwarded)
       onHearts(res.heartsRemaining)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not check your answer.')
@@ -340,10 +340,26 @@ function TextInput({ slide, verdict, onAnswer }: QuizInputProps) {
 }
 
 /** Word bank — arrange tiles into the sentence in order. */
+export function shuffleWordOptions<T>(options: readonly T[], random: () => number = Math.random): T[] {
+  const shuffled = [...options]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+
+  // Never hand learners the authored answer order merely because the RNG did.
+  if (shuffled.length > 1 && shuffled.every((value, index) => value === options[index])) {
+    ;[shuffled[0], shuffled[1]] = [shuffled[1], shuffled[0]]
+  }
+
+  return shuffled
+}
+
 function WordBankInput({ slide, verdict, onAnswer }: QuizInputProps) {
   const [order, setOrder] = useState<number[]>([])
   const byId = useMemo(() => new Map(slide.options.map((o) => [o.id, o.label])), [slide.options])
-  const pool = slide.options.filter((o) => !order.includes(o.id))
+  const shuffledOptions = useMemo(() => shuffleWordOptions(slide.options), [slide.id, slide.options])
+  const pool = shuffledOptions.filter((o) => !order.includes(o.id))
 
   function add(id: number) {
     const next = [...order, id]
@@ -798,7 +814,8 @@ function AssignmentSlideView({ slide, service, onAdvance }: SlideProps & { slide
           </p>
           {slide.coinReward > 0 && (
             <p className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-gold-500/40 bg-gold-500/10 px-3 py-1 text-sm font-bold text-gold-200">
-              🪙 {slide.coinReward} on approval
+              <Icon name="coin" className="size-4" />
+              {slide.coinReward} on approval
             </p>
           )}
         </div>

@@ -11,6 +11,7 @@ import {
   CardTitle,
   Icon,
   Input,
+  learnerAvatarPresetId,
   LinkButton,
   Modal,
   Skeleton,
@@ -54,7 +55,7 @@ export function FamilyPage() {
           </CardHeader>
           <CardBody className="flex flex-col gap-3">
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl">🪙</span>
+              <Icon name="coin" className="size-8 text-gold-600" />
               <span className="font-display text-2xl font-bold text-foreground">
                 {family.wallet.coin_balance.toLocaleString()}
               </span>
@@ -110,13 +111,14 @@ export function FamilyPage() {
                   className="flex min-w-0 flex-1 items-center gap-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
                   aria-label={`View ${l.display_name}'s profile`}
                 >
-                  <Avatar name={l.display_name} />
+                  <Avatar name={l.display_name} src={l.avatar_url ?? undefined} avatarId={l.avatar_id ?? learnerAvatarPresetId(l.id)} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold text-foreground hover:text-primary">{l.display_name}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
                       {l.is_child && <Badge variant="info">Child</Badge>}
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-muted">
-                        🪙 {l.coin_balance.toLocaleString()}
+                        <Icon name="coin" className="size-3.5 text-gold-600" />
+                        {l.coin_balance.toLocaleString()}
                       </span>
                     </div>
                   </div>

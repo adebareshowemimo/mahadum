@@ -68,4 +68,15 @@ class ProfileSwitchTest extends TestCase
             ->assertStatus(422)
             ->assertJsonPath('error.code', 'pin_not_set');
     }
+
+    public function test_switching_from_a_child_to_the_parents_own_learner_profile_needs_no_pin(): void
+    {
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $child = $this->parentWithChild($parent);
+        $self = LearnerProfile::create(['user_id' => $parent->id, 'display_name' => $parent->name, 'age_band' => 'adult']);
+
+        $this->postJson("/api/v1/profiles/{$self->id}/switch", ['from_learner_id' => $child->id])
+            ->assertOk()
+            ->assertJsonPath('data.active_learner_id', $self->id);
+    }
 }

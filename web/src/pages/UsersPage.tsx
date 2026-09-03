@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AdminPageHeader, AdminToolbar, DataTable, FilterSelect, type Column } from '@/components/admin'
-import { Alert, Badge, Button } from '@/components/ui'
-import { type AdminUserRow, type AdminUsersQuery, type Role } from '@/lib/api'
-import { useAdminUsers } from '@/lib/admin/queries'
+import { Alert, Badge, Button, Input, Modal } from '@/components/ui'
+import { ApiError, type AdminUserRow, type AdminUsersQuery, type CreateAdminUserInput, type Role } from '@/lib/api'
+import { useAdminOrganizations, useAdminUsers, useCreateAdminUser } from '@/lib/admin/queries'
 
 const ROLES: Role[] = ['super_admin', 'content_owner', 'school_admin', 'teacher', 'supervisor', 'parent', 'student']
 
@@ -23,6 +23,7 @@ export function UsersPage() {
   const [status, setStatus] = useState('')
   const [type, setType] = useState('')
   const [page, setPage] = useState(1)
+  const [creating, setCreating] = useState(false)
 
   const q = useDebounced(search)
   const params: AdminUsersQuery = useMemo(
@@ -109,7 +110,13 @@ export function UsersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <AdminPageHeader title="Users" description="Everyone with an account across the platform." />
+      <AdminPageHeader
+        title="Users"
+        description="Everyone with an account across the platform."
+        actions={<Button onClick={() => setCreating(true)}>Create user</Button>}
+      />
+
+      {creating && <CreateUserModal onClose={() => setCreating(false)} />}
 
       <DataTable
         columns={columns}
@@ -144,7 +151,7 @@ export function UsersPage() {
               options={[
                 { label: 'Single', value: 'single' },
                 { label: 'Family', value: 'family' },
-                { label: 'School', value: 'school' },
+                { label: 'Educator/School', value: 'school' },
               ]}
               allLabel="All types"
             />
@@ -173,5 +180,99 @@ export function UsersPage() {
         </div>
       )}
     </div>
+  )
+}
+
+function CreateUserModal({ onClose }: { onClose: () => void }) {
+  const create = useCreateAdminUser()
+  const organizations = useAdminOrganizations({ status: 'active' })
+  const [form, setForm] = useState<CreateAdminUserInput>({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    username: '',
+    locale: 'en',
+    status: 'active',
+    role: 'parent',
+  })
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [formError, setFormError] = useState<string | null>(null)
+  const needsOrganization = ['school_admin', 'teacher', 'supervisor'].includes(form.role)
+
+  function change<K extends keyof CreateAdminUserInput>(key: K, value: CreateAdminUserInput[K]) {
+    setForm((current) => ({ ...current, [key]: value }))
+  }
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault()
+    setErrors({})
+    setFormError(null)
+    try {
+      await create.mutateAsync({
+        ...form,
+        first_name: form.first_name.trim(),
+        last_name: form.last_name.trim(),
+        email: form.email.trim(),
+        phone: form.phone?.trim() || undefined,
+        username: form.username?.trim() || undefined,
+        organization_id: needsOrganization ? form.organization_id : undefined,
+      })
+      onClose()
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setErrors(error.fieldErrors)
+        if (Object.keys(error.fieldErrors).length === 0) setFormError(error.message)
+      } else setFormError('Could not create the user.')
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Create user" description="The user receives a secure link to set their own password.">
+      <form className="flex flex-col gap-4" onSubmit={submit}>
+        {formError && <Alert variant="danger">{formError}</Alert>}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Input label="First name" value={form.first_name} error={errors.first_name} onChange={(event) => change('first_name', event.target.value)} required />
+          <Input label="Last name" value={form.last_name} error={errors.last_name} onChange={(event) => change('last_name', event.target.value)} required />
+        </div>
+        <Input label="Email" type="email" value={form.email} error={errors.email} onChange={(event) => change('email', event.target.value)} required />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Input label="Phone (optional)" value={form.phone ?? ''} error={errors.phone} onChange={(event) => change('phone', event.target.value)} />
+          <Input label="Username (optional)" value={form.username ?? ''} error={errors.username} onChange={(event) => change('username', event.target.value)} />
+        </div>
+        <label className="flex flex-col gap-1.5 text-sm font-medium text-foreground">
+          Role
+          <select
+            className="h-11 rounded-xl border border-border bg-surface px-3"
+            value={form.role}
+            onChange={(event) => change('role', event.target.value as Role)}
+          >
+            {ROLES.map((role) => <option key={role} value={role}>{role}</option>)}
+          </select>
+          {errors.role && <span className="text-xs text-danger">{errors.role}</span>}
+        </label>
+        {needsOrganization && (
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-foreground">
+            Organization
+            <select
+              className="h-11 rounded-xl border border-border bg-surface px-3"
+              value={form.organization_id ?? ''}
+              onChange={(event) => change('organization_id', event.target.value ? Number(event.target.value) : undefined)}
+              required
+            >
+              <option value="">Choose an organization</option>
+              {(organizations.data?.data ?? []).map((organization) => (
+                <option key={organization.id} value={organization.id}>{organization.name}</option>
+              ))}
+            </select>
+            {errors.organization_id && <span className="text-xs text-danger">{errors.organization_id}</span>}
+          </label>
+        )}
+        <div className="flex gap-2">
+          <Button type="button" variant="secondary" fullWidth onClick={onClose}>Cancel</Button>
+          <Button type="submit" fullWidth loading={create.isPending}>Create and invite</Button>
+        </div>
+      </form>
+    </Modal>
   )
 }

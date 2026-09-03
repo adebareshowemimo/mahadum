@@ -21,6 +21,7 @@ import {
   useRefillHearts,
   useStreak,
 } from '@/lib/gamification/queries'
+import { formatDayStreak } from '@/lib/gamification/format'
 
 const MAX_HEARTS = 5
 
@@ -54,12 +55,11 @@ function Achievements({ learner }: { learner: LearnerProfile }) {
               <Skeleton className="h-16" />
             ) : (
               <>
-                <div className="flex items-baseline gap-2">
+                <div className="flex items-baseline gap-2" aria-label={formatDayStreak(streak.data?.count ?? 0)}>
                   <span className="text-4xl">🔥</span>
-                  <span className="font-display text-3xl font-extrabold text-foreground">
-                    {streak.data?.count ?? 0}
+                  <span className="font-display text-2xl font-extrabold text-foreground">
+                    {formatDayStreak(streak.data?.count ?? 0)}
                   </span>
-                  <span className="text-muted">day{(streak.data?.count ?? 0) === 1 ? '' : 's'}</span>
                 </div>
                 <p className="text-sm text-muted">
                   Longest: {streak.data?.longest ?? 0} days ·{' '}

@@ -69,7 +69,7 @@ export function OrganizationCreatePage() {
                   onChange={(e) => set('type', e.target.value)}
                   className="h-11 rounded-xl border border-border-strong bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 >
-                  <option value="school">School</option>
+                  <option value="school">Educator/School</option>
                   <option value="district">District</option>
                   <option value="ngo">NGO</option>
                   <option value="business">Business</option>

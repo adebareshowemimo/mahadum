@@ -12,7 +12,7 @@ type ConceptTone = 'light' | 'blue' | 'navy'
 // Shared public navigation for every marketing and account-entry surface.
 const SITE_NAV = [
   { to: '/families', label: 'Families' },
-  { to: '/schools', label: 'Schools' },
+  { to: '/schools', label: 'Educators/Schools' },
   { to: '/institutions', label: 'Institutions' },
   { to: '/about', label: 'About' },
   { to: '/pricing', label: 'Pricing' },
@@ -104,7 +104,7 @@ export function ConceptHeader({ tone = 'light', overlay = false }: { tone?: Conc
 const ROLE_QUICK_LINKS: Partial<Record<string, { to: string; label: string; icon: 'shield' | 'layers' | 'building' | 'cap' | 'users' | 'book' }>> = {
   super_admin: { to: '/admin', label: 'Admin overview', icon: 'shield' },
   content_owner: { to: '/courses', label: 'Courses', icon: 'layers' },
-  school_admin: { to: '/school', label: 'School dashboard', icon: 'building' },
+  school_admin: { to: '/school', label: 'Educator/School dashboard', icon: 'building' },
   teacher: { to: '/classes', label: 'My classes', icon: 'cap' },
   parent: { to: '/family', label: 'Family hub', icon: 'users' },
   supervisor: { to: '/family', label: 'Family hub', icon: 'users' },

@@ -51,6 +51,16 @@ function CourseOverview({ courseId }: { courseId: number }) {
           This is how learners play your content. Pick a unit to step through it. Draft lessons are included for review.
         </p>
 
+        {course?.description && (
+          <p className="mb-6 rounded-2xl border border-border bg-surface px-5 py-4 text-sm leading-relaxed text-foreground">
+            {course.description}
+          </p>
+        )}
+
+        {(levels.data?.length ?? 0) > 0 && (
+          <h2 className="mb-3 font-display text-lg font-bold text-foreground">Course contents</h2>
+        )}
+
         {levels.isLoading ? (
           <div className="flex flex-col gap-4">
             <Skeleton className="h-28" />
@@ -88,6 +98,16 @@ function UnitStartCard({ courseId, level }: { courseId: number; level: AuthorLev
         <p className="mt-1 text-sm text-muted">
           {lessons.isLoading ? 'Loading…' : `${count} lesson${count === 1 ? '' : 's'}`}
         </p>
+        {count > 0 && (
+          <ol className="mt-3 space-y-1 rounded-2xl bg-surface-muted p-3 text-left text-sm text-foreground">
+            {lessons.data?.map((lesson, index) => (
+              <li key={lesson.id} className="flex items-center justify-between gap-3">
+                <span>{index + 1}. {lesson.title}</span>
+                {lesson.est_minutes ? <span className="shrink-0 text-xs text-muted">{lesson.est_minutes} min</span> : null}
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
       <Button3D
         variant="primary"

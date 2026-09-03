@@ -43,6 +43,7 @@ export interface LearnerProfile {
   id: number
   display_name: string
   avatar_id: number | null
+  avatar_url: string | null
   age_band: string | null
   current_level: number | null
   target_language?: string | null
@@ -186,7 +187,15 @@ export interface FamilyOverview {
   child_limit: number
   wallet: WalletBalance
   parent: { id: number; name: string; email: string }
-  learners: { id: number; display_name: string; is_child: boolean; pin_protected: boolean; coin_balance: number }[]
+  learners: {
+    id: number
+    display_name: string
+    avatar_id: number | null
+    avatar_url: string | null
+    is_child: boolean
+    pin_protected: boolean
+    coin_balance: number
+  }[]
 }
 
 export interface ChildCoinTransaction {
@@ -201,6 +210,8 @@ export interface ChildCoinTransaction {
 export interface ChildDetail {
   id: number
   display_name: string
+  avatar_id: number | null
+  avatar_url: string | null
   age_band: string | null
   current_level: number | null
   target_language: string | null
@@ -292,6 +303,19 @@ export interface CourseSummary {
   /** Present on admin/CMS listings (course owner name, level count). */
   owner?: string | null
   levels_count?: number
+}
+
+export interface CourseCatalogQuery {
+  learner_id?: number
+  q?: string
+  language?: string
+  level?: string
+  page?: number
+  per_page?: number
+}
+
+export interface CourseCatalogPage extends Paginated<CourseSummary> {
+  filters: { levels: string[] }
 }
 
 /** A lesson published by a course-level publish. */
@@ -554,7 +578,8 @@ export interface AnswerResult {
     pairs?: { option_id: number; match_target: string }[]
   }
   explanation: string | null
-  hearts_remaining: number
+  hearts_remaining: number | null
+  unlimited_hearts?: boolean
   xp_awarded: number
   /** True when a replay past `max_attempts` is graded for practice (nothing scored). */
   attempts_exhausted?: boolean
@@ -697,6 +722,38 @@ export interface ReferralSummary {
   commissions: Record<string, CommissionStat>
   /** Cleared commissions less requested, approved, and paid payouts. */
   available_minor: number
+}
+
+export interface ReferralActivation {
+  sn: number
+  activated_at: string | null
+  code: string
+  via_email: string | null
+  via_phone: string | null
+  status: 'active' | 'inactive'
+}
+
+export type ReferralActivationsPage = Paginated<ReferralActivation>
+
+export interface ReferralActivationsQuery {
+  search?: string
+  per_page?: number
+  page?: number
+}
+
+export type ReferralInvitationChannel = 'email' | 'phone'
+
+export interface ReferralInvitation {
+  id: number
+  channel: ReferralInvitationChannel
+  contact: string
+  status: string
+  sent_at?: string | null
+}
+
+export interface SendReferralInvitationInput {
+  channel: ReferralInvitationChannel
+  contact: string
 }
 
 export type PayoutMethod = 'bank' | 'coins'
@@ -1018,7 +1075,7 @@ export interface AdminOrgQuery {
 
 // ---- Adverts (banner-ad placements) ----
 
-export type AdvertPosition = 'leaderboard' | 'inline'
+export type AdvertPosition = 'leaderboard' | 'inline' | 'profile_data_topup'
 
 /** Publicly-served creative for a position — null when nothing is active. */
 export interface ActiveAdvert {
@@ -1269,6 +1326,27 @@ export interface FlaggedReferral {
   updated_at: string | null
 }
 
+export interface AdminReferralCodeRow {
+  sn: number
+  id: number
+  code: string
+  owner: { type: 'user' | 'organization'; id: number; name: string | null }
+  status: string
+  count_activated: number
+  via_email: number
+  via_phone: number
+  active_count: number
+  inactive_count: number
+}
+
+export type AdminReferralCodesPage = Paginated<AdminReferralCodeRow>
+
+export interface AdminReferralCodesQuery {
+  search?: string
+  per_page?: number
+  page?: number
+}
+
 // ---- Admin: system settings ----
 
 export type SettingType = 'int' | 'bool' | 'string'
@@ -1335,6 +1413,7 @@ export interface GatewayProvider {
   is_default: boolean
   webhook_url: string
   requirements: GatewayRequirement[]
+  environment?: 'sandbox' | 'live'
 }
 
 /**
@@ -1361,6 +1440,40 @@ export interface GatewayStatus {
 export interface GatewayTestResult {
   ok: boolean
   message: string
+}
+
+export interface MonnifyConfigurationInput {
+  live: boolean
+  environment: 'sandbox' | 'live'
+  api_key?: string
+  secret?: string
+  contract_code?: string
+}
+
+export interface EmailConfiguration {
+  mailer: 'smtp' | 'log'
+  host: string
+  port: number
+  scheme: 'tls' | 'ssl' | null
+  username: string | null
+  password_set: boolean
+  from_address: string
+  from_name: string
+  delivery_enabled: boolean
+  queue_connection: string
+  pending_jobs: number
+  failed_jobs: number
+}
+
+export interface EmailConfigurationInput {
+  mailer: 'smtp' | 'log'
+  host: string
+  port: number
+  scheme: 'tls' | 'ssl' | null
+  username: string
+  password?: string
+  from_address: string
+  from_name: string
 }
 
 // ---- Admin: income report ----
@@ -1630,6 +1743,18 @@ export interface AdminUsersQuery {
   page?: number
 }
 
+export interface CreateAdminUserInput {
+  first_name: string
+  last_name: string
+  email: string
+  username?: string
+  phone?: string
+  locale?: string
+  status?: 'active' | 'suspended'
+  role: Role
+  organization_id?: number
+}
+
 export interface AssignRoleInput {
   role: Role
   action: 'assign' | 'revoke'
@@ -1723,12 +1848,22 @@ export interface RegisterInput {
   password: string
   password_confirmation: string
   username?: string
-  /** Defaults to 'parent' on the backend. */
-  account_type?: 'parent' | 'learner'
+  /** Public signup choice; parent/learner support legacy and invitation flows. */
+  account_type?: 'individual' | 'family' | 'educator_school' | 'institution' | 'parent' | 'learner'
+  organization_name?: string
   family_name?: string
   date_of_birth?: string
   referral_code?: string
   class_invitation_token?: string
+}
+
+export interface GoogleAuthInput {
+  id_token: string
+  account_type?: 'individual' | 'family' | 'educator_school' | 'institution'
+  organization_name?: string
+  phone?: string
+  date_of_birth?: string
+  referral_code?: string
 }
 
 /* ── Language & Culture competition ─────────────────────────────────────── */

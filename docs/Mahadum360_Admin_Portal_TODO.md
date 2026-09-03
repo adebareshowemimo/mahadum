@@ -215,8 +215,9 @@ wants an **income reporting table** and a general **reports** area.
 
 ## 6. Payment gateway setup ⭐ `[MVP]` — ✅ shipped 2026-07-01  *(review #6)*
 
-> **Decision (resolved):** secrets stay **env-based** (PCI-safe — never in the app DB,
-> never returned to the client). The **Paystack + Flutterwave integration itself was
+> **Decision (updated 2026-08-20):** environment values remain the deployment fallback;
+> Monnify may also be configured by a super admin using **APP_KEY-encrypted DB overrides**.
+> Secrets are never returned to the client or written into audit payloads. The **Paystack + Flutterwave integration itself was
 > already complete**: hosted-checkout drivers (`PaystackGateway`/`FlutterwaveGateway`),
 > `PaymentGatewayManager` (live opt-in via `PAYMENT_GATEWAY_LIVE`, else `NullGateway`),
 > signature-verified idempotent webhooks (charge success + refunds), wired into
@@ -233,6 +234,9 @@ wants an **income reporting table** and a general **reports** area.
   cards (configured/default badges, env-var checklist, copyable webhook URL, **Test
   connection** with inline result). *(Verified live: test hit the real Paystack API and
   reported HTTP 401 for the placeholder dev key.)*
+- [x] ✅ **Monnify admin configuration** — sandbox/live environment, encrypted API key,
+  secret and contract code, checkout enable switch, copyable webhook URL, audited save,
+  and harmless authentication test. Existing env credentials remain valid fallbacks.
 
 ---
 
@@ -489,23 +493,20 @@ school_admin, teacher, parent), covering multiple roles — not just admin. Kept
   payout modal.
 
 **Missing / requested — Content owner**
-- [ ] ⬜ `[BE]` **Content-owner performance dashboard.** Confirmed nothing exists today —
-  `content_owner` only appears as a role gate on `UsersPage.tsx`/`EmailCampaignsPage.tsx`,
-  no dashboard. At minimum, per course: users/subscribers, revenue, subscription status mix
-  (active/cancelled/pending), referral counts — reuse the stat-card + `MonthlyTable`
-  patterns already built for `/admin/reports` (§5). Needs a new `GET /content-owner/courses/
-  {course}/performance`-style endpoint (or extend `CourseController`) scoped to courses the
-  requesting content_owner actually owns.
+- [x] ✅ `[BE+FE]` **Content-owner performance dashboard.** `/home` now gives content owners
+  a dedicated per-course view backed by `GET /courses-performance`, scoped to their owned
+  courses. It reports active/cancelled/pending subscriptions, referred users and attributed
+  referral revenue, unconfirmed revenue plus escrowed commission, and attributed active
+  revenue. Search, publication filtering, pagination, loading/error/empty states, and the
+  reusable full report at `/content/performance` are included.
 
 **Missing / requested — Marketing & auth pages**
 - [ ] ⬜ Login page: add a copyright footer line. `web/src/pages/LoginPage.tsx` /
   `web/src/components/auth/AuthLayout.tsx` currently has none (copyright only exists on
   `LandingPage.tsx`/`LandingVariantsPage.tsx`).
-- [ ] ⬜ **"Try a lesson" doesn't go anywhere real** — both occurrences in
-  `web/src/pages/LandingPage.tsx` (hero CTA line ~179, footer link ~890) point to `#try`,
-  an in-page anchor, not an actual playable sample lesson. Decide the real destination (a
-  public/unauthenticated demo lesson route, or straight to `/register`) and wire the link
-  to it instead of the anchor.
+- [x] ✅ **Families “Try a lesson” destination** — the `/families` hero now links to
+  `/#v1-quiz`, the playable, unauthenticated lesson on the selected V1 landing page. Cross-route
+  hash restoration waits for the lazy-loaded lesson and corrects for image-driven layout shift.
 
 ---
 

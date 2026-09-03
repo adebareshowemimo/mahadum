@@ -29,7 +29,13 @@ interface SlideDeckProps {
   renderComplete: (stats: DeckStats) => ReactNode
 }
 
-type Phase = 'start' | 'play' | 'complete'
+type Phase = 'start' | 'play' | 'quiz-complete' | 'complete'
+
+interface QuizRun {
+  answered: number
+  correct: number
+  xp: number
+}
 
 /**
  * Immersive, slide-based player shell on a heritage "stage" (deep navy + gold
@@ -57,6 +63,8 @@ export function SlideDeck({
   const [index, setIndex] = useState(0)
   const [hearts, setHearts] = useState<number | null>(initialHearts)
   const [correct, setCorrect] = useState(0)
+  const [quizRuns, setQuizRuns] = useState<Record<number, QuizRun>>({})
+  const [summaryComponentId, setSummaryComponentId] = useState<number | null>(null)
 
   const total = slides.length
   const quizTotal = countQuiz(slides)
@@ -70,6 +78,14 @@ export function SlideDeck({
   }
 
   function advance() {
+    const current = slides[index]
+    const following = slides[index + 1]
+    if (current?.kind === 'quiz' && following?.componentId !== current.componentId) {
+      setSummaryComponentId(current.componentId)
+      setPhase('quiz-complete')
+      return
+    }
+
     setIndex((i) => {
       const next = i + 1
       if (next >= total) setPhase('complete')
@@ -77,8 +93,65 @@ export function SlideDeck({
     })
   }
 
+  function recordQuizResult(componentId: number, ok: boolean, xpAwarded: number) {
+    setQuizRuns((runs) => {
+      const previous = runs[componentId] ?? { answered: 0, correct: 0, xp: 0 }
+      return {
+        ...runs,
+        [componentId]: {
+          answered: previous.answered + 1,
+          correct: previous.correct + (ok ? 1 : 0),
+          xp: previous.xp + xpAwarded,
+        },
+      }
+    })
+    if (ok) setCorrect((value) => value + 1)
+  }
+
+  function continueAfterQuiz() {
+    const next = index + 1
+    setSummaryComponentId(null)
+    if (next >= total) setPhase('complete')
+    else {
+      setIndex(next)
+      setPhase('play')
+    }
+  }
+
+  function retryQuiz(componentId: number, fromIndex: number) {
+    const run = quizRuns[componentId]
+    if (run) setCorrect((value) => Math.max(0, value - run.correct))
+    setQuizRuns((runs) => {
+      const next = { ...runs }
+      delete next[componentId]
+      return next
+    })
+    setSummaryComponentId(null)
+    setIndex(fromIndex)
+    setPhase('play')
+  }
+
   const stats: DeckStats = { total, quizTotal, correct, hearts }
-  const headerFilled = phase === 'start' ? startIndex : phase === 'complete' ? total : Math.min(index, total)
+  const headerFilled = phase === 'start' ? startIndex : phase === 'complete' ? total : Math.min(index + (phase === 'quiz-complete' ? 1 : 0), total)
+  const summarySlides = summaryComponentId == null
+    ? []
+    : slides.filter((slide): slide is Extract<Slide, { kind: 'quiz' }> => slide.kind === 'quiz' && slide.componentId === summaryComponentId)
+  const priorSummaryCorrect = summarySlides.filter((slide) => slide.completed && slide.wasCorrect).length
+  const priorSummaryAnswered = summarySlides.filter((slide) => slide.completed).length
+  const currentRun = summaryComponentId == null ? undefined : quizRuns[summaryComponentId]
+  const summaryCorrect = priorSummaryCorrect + (currentRun?.correct ?? 0)
+  const summaryAnswered = priorSummaryAnswered + (currentRun?.answered ?? 0)
+  const summaryTotal = summarySlides.length
+  const summaryThreshold = summarySlides[0]?.passThreshold ?? 0.7
+  const summaryPassed = summaryTotal > 0 && summaryCorrect / summaryTotal >= summaryThreshold
+  const firstQuizIndex = summaryComponentId == null ? -1 : slides.findIndex((slide) => slide.kind === 'quiz' && slide.componentId === summaryComponentId)
+  let reviewVideoIndex = -1
+  for (let candidateIndex = firstQuizIndex - 1; candidateIndex >= 0; candidateIndex -= 1) {
+    if (slides[candidateIndex]?.kind === 'video') {
+      reviewVideoIndex = candidateIndex
+      break
+    }
+  }
 
   return (
     <div className="dark heritage-stage flex min-h-screen flex-col text-foreground">
@@ -106,8 +179,23 @@ export function SlideDeck({
           service={service}
           isLast={index === total - 1}
           onAdvance={advance}
-          onGraded={(ok) => ok && setCorrect((c) => c + 1)}
+          onGraded={(ok, xpAwarded) => recordQuizResult(slides[index].componentId, ok, xpAwarded)}
           onHearts={setHearts}
+        />
+      )}
+
+      {phase === 'quiz-complete' && summaryComponentId !== null && (
+        <QuizCompleteScreen
+          correct={summaryCorrect}
+          answered={summaryAnswered}
+          total={summaryTotal}
+          xp={currentRun?.xp ?? 0}
+          passed={summaryPassed}
+          hasNext={index + 1 < total}
+          canReviewVideo={reviewVideoIndex >= 0}
+          onContinue={continueAfterQuiz}
+          onRetry={() => retryQuiz(summaryComponentId, firstQuizIndex)}
+          onReview={() => retryQuiz(summaryComponentId, reviewVideoIndex >= 0 ? reviewVideoIndex : firstQuizIndex)}
         />
       )}
 
@@ -116,6 +204,64 @@ export function SlideDeck({
           {renderComplete(stats)}
         </div>
       )}
+    </div>
+  )
+}
+
+function QuizCompleteScreen({
+  correct,
+  answered,
+  total,
+  xp,
+  passed,
+  hasNext,
+  canReviewVideo,
+  onContinue,
+  onRetry,
+  onReview,
+}: {
+  correct: number
+  answered: number
+  total: number
+  xp: number
+  passed: boolean
+  hasNext: boolean
+  canReviewVideo: boolean
+  onContinue: () => void
+  onRetry: () => void
+  onReview: () => void
+}) {
+  const percentage = total > 0 ? Math.round((correct / total) * 100) : 0
+  return (
+    <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-5 px-4 py-10 text-center">
+      <span className="text-6xl" aria-hidden="true">{passed ? '🎉' : '📚'}</span>
+      <div>
+        <p className="text-xs font-bold uppercase tracking-wide text-gold-300">Quiz complete</p>
+        <h1 className="mt-2 font-display text-3xl font-bold text-foreground">
+          {correct} out of {total} correct
+        </h1>
+        <p className="mt-2 text-muted">{percentage}% · {answered} answered · +{xp} XP this run</p>
+      </div>
+      {!passed && (
+        <p className="rounded-2xl bg-foreground/5 px-4 py-3 text-sm text-muted">
+          Review the lesson, then try this quiz again when you’re ready.
+        </p>
+      )}
+      <div className="flex w-full flex-col gap-2">
+        {passed ? (
+          <Button3D variant="reward" size="lg" fullWidth onClick={onContinue}>
+            {hasNext ? 'Continue to next activity' : 'Finish lesson'}
+          </Button3D>
+        ) : (
+          <>
+            {canReviewVideo && <Button3D variant="reward" size="lg" fullWidth onClick={onReview}>Review lesson video</Button3D>}
+            <Button3D variant="neutral" size="lg" fullWidth onClick={onRetry}>Retry quiz</Button3D>
+            <button type="button" className="min-h-11 text-sm font-semibold text-muted underline" onClick={onContinue}>
+              Continue without retrying
+            </button>
+          </>
+        )}
+      </div>
     </div>
   )
 }

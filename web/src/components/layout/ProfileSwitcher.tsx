@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { Avatar, Button, CodeInput, Icon } from '@/components/ui'
+import { Avatar, Button, CodeInput, Icon, learnerAvatarPresetId } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { ApiError, profileApi, type LearnerProfile } from '@/lib/api'
 import { useActiveProfile } from '@/lib/profile/ActiveProfile'
@@ -44,7 +44,7 @@ export function ProfileSwitcher() {
     // when hopping from one already-active child profile to another sibling
     // — otherwise an unprotected profile is a free door between kids sharing
     // the device.
-    if (learner.pin_protected || activeLearner) setPending(learner)
+    if (learner.is_child && (learner.pin_protected || activeLearner?.is_child)) setPending(learner)
     else void enter(learner).catch(() => undefined)
   }
 
@@ -64,7 +64,7 @@ export function ProfileSwitcher() {
         title="Switch profile"
       >
         {activeLearner ? (
-          <Avatar name={activeLearner.display_name} size="sm" />
+          <Avatar name={activeLearner.display_name} src={activeLearner.avatar_url ?? undefined} avatarId={activeLearner.avatar_id ?? learnerAvatarPresetId(activeLearner.id)} size="sm" />
         ) : (
           <span className="flex size-8 items-center justify-center rounded-full bg-surface-muted text-muted">
             <Icon name="users" className="size-[18px]" />
@@ -98,7 +98,7 @@ export function ProfileSwitcher() {
                       active && 'bg-primary-soft',
                     )}
                   >
-                    <Avatar name={learner.display_name} size="sm" />
+                    <Avatar name={learner.display_name} src={learner.avatar_url ?? undefined} avatarId={learner.avatar_id ?? learnerAvatarPresetId(learner.id)} size="sm" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium text-foreground">
                         {learner.display_name}
@@ -182,7 +182,7 @@ function PinModal({
         className="relative w-full max-w-sm rounded-2xl border border-border bg-surface p-8 shadow-xl animate-step-in"
       >
         <div className="flex flex-col items-center gap-4 text-center">
-          <Avatar name={learner.display_name} size="lg" />
+          <Avatar name={learner.display_name} src={learner.avatar_url ?? undefined} avatarId={learner.avatar_id ?? learnerAvatarPresetId(learner.id)} size="lg" />
           <div>
             <h2 className="font-display text-xl font-bold text-foreground">{learner.display_name}</h2>
             <p className="mt-1 text-sm text-muted">Enter the parental PIN to continue.</p>
