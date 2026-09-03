@@ -12,6 +12,7 @@ use Illuminate\Support\Carbon;
  * @property int $learner_profile_id
  * @property int $current
  * @property Carbon|null $refills_at
+ * @property Carbon|null $competitive_paused_until
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read LearnerProfile|null $learnerProfile
@@ -36,6 +37,7 @@ class Heart extends Model
 
     protected $casts = [
         'refills_at' => 'datetime',
+        'competitive_paused_until' => 'datetime',
     ];
 
     /**

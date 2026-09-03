@@ -62,6 +62,8 @@ export function SlideDeck({
   const [phase, setPhase] = useState<Phase>('start')
   const [index, setIndex] = useState(0)
   const [hearts, setHearts] = useState<number | null>(initialHearts)
+  const [practiceMode, setPracticeMode] = useState(false)
+  const [competitivePausedUntil, setCompetitivePausedUntil] = useState<string | null>(null)
   const [correct, setCorrect] = useState(0)
   const [quizRuns, setQuizRuns] = useState<Record<number, QuizRun>>({})
   const [summaryComponentId, setSummaryComponentId] = useState<number | null>(null)
@@ -156,6 +158,12 @@ export function SlideDeck({
   return (
     <div className="dark heritage-stage flex min-h-screen flex-col text-foreground">
       <Header filled={headerFilled} total={total} hearts={hearts} onExit={onExit} />
+      {practiceMode && (
+        <div className="bg-gold-500/15 px-4 py-2 text-center text-sm font-semibold text-gold-200">
+          Practice mode: keep learning freely. XP and leaderboard progress resume
+          {competitivePausedUntil ? ` ${new Date(competitivePausedUntil).toLocaleString()}` : ' after your heart refill'}.
+        </div>
+      )}
 
       {phase === 'start' && (
         <StartScreen
@@ -181,6 +189,10 @@ export function SlideDeck({
           onAdvance={advance}
           onGraded={(ok, xpAwarded) => recordQuizResult(slides[index].componentId, ok, xpAwarded)}
           onHearts={setHearts}
+          onPracticeMode={(active, until) => {
+            setPracticeMode(active)
+            setCompetitivePausedUntil(until)
+          }}
         />
       )}
 

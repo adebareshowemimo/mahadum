@@ -88,6 +88,7 @@ const LeaderboardPage = lazy(() => import('@/pages/LeaderboardPage').then((m) =>
 const LearnPage = lazy(() => import('@/pages/LearnPage').then((m) => ({ default: m.LearnPage })))
 const CourseCatalogPage = lazy(() => import('@/pages/CourseCatalogPage').then((m) => ({ default: m.CourseCatalogPage })))
 const LessonPlayerPage = lazy(() => import('@/pages/LessonPlayerPage').then((m) => ({ default: m.LessonPlayerPage })))
+const TonePracticeInvitationPage = lazy(() => import('@/pages/TonePracticeInvitationPage').then((m) => ({ default: m.TonePracticeInvitationPage })))
 const InvoicesPage = lazy(() => import('@/pages/InvoicesPage').then((m) => ({ default: m.InvoicesPage })))
 const ReferralsPage = lazy(() => import('@/pages/ReferralsPage').then((m) => ({ default: m.ReferralsPage })))
 const ReviewsPage = lazy(() => import('@/pages/ReviewsPage').then((m) => ({ default: m.ReviewsPage })))
@@ -314,6 +315,7 @@ export function App() {
       <Route element={<ProtectedRoute />}>
         {/* Chrome-free, immersive screens — rendered outside the authoring shell. */}
         <Route path="/learn/lessons/:lessonId" element={<LessonPlayerPage />} />
+        <Route path="/tone-practice/:token" element={<TonePracticeInvitationPage />} />
         <Route path="/courses/:courseId/preview" element={<CoursePreviewPage />} />
         <Route path="/courses/:courseId/levels/:levelId/preview" element={<CoursePreviewPage />} />
 

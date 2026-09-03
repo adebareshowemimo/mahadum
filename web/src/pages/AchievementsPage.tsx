@@ -138,6 +138,14 @@ function Achievements({ learner }: { learner: LearnerProfile }) {
                   {league.data?.league?.name ?? 'League'} · rank{' '}
                   <span className="font-medium text-foreground">{league.data?.rank ?? '—'}</span>
                 </p>
+                {league.data?.learning_level && (
+                  <p className="text-sm font-semibold text-primary">
+                    Level {league.data.learning_level.number} · {league.data.learning_level.name}
+                  </p>
+                )}
+                {hearts.data?.practice_mode && (
+                  <Alert variant="info">Practice mode is active. Keep learning; XP and rankings resume after your hearts refill.</Alert>
+                )}
               </>
             )}
           </CardBody>

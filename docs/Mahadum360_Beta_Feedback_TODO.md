@@ -143,7 +143,7 @@ Use the non-blocking alternatives in BF-10.8 and BF-13.1 unless the product owne
 
 ## BF-07 — Badges, streak definition, and learning levels
 
-**Review finding:** Production badge logic currently awards only First Steps, Week Warrior, and Sharp Shooter. “Family Hero” and the six named levels appear only as showcase/design text, not implemented rules.
+**Implementation update (2026-09-03):** Family Hero and the approved lifetime-XP level system are implemented. Existing streak wording work remains separate.
 
 ### BF-07.1 Streak definition and display
 
@@ -154,28 +154,28 @@ Use the non-blocking alternatives in BF-10.8 and BF-13.1 unless the product owne
 
 ### BF-07.2 Family Hero
 
-- [?] Define eligibility: all learners globally, within one family, or within a league; define timezone, ties, and whether “score” means daily XP or quiz score.
-- [ ] Add the badge definition and deterministic daily award job only after the definition is approved.
-- [ ] Make the job idempotent and test ties, reruns, no activity, and day boundaries.
+- [x] Eligibility approved: highest legitimate daily XP within one family, using the family timezone; all tied leaders win.
+- [x] Add the `Family Hero` badge and deterministic daily award job.
+- [x] Make the job idempotent and test ties and reruns; date windows use family-local midnight boundaries and no-activity families are skipped.
 
 ### BF-07.3 Learning levels
 
-- [?] Define numeric thresholds and whether levels derive from lifetime XP, course mastery, or league performance.
-- [ ] Implement the approved mapping: Level 0 Star Starter, Level 1 Bronze, Level 2 Silver, Level 3 Gold, Level 4 Platinum, Level 5 Culture Master.
-- [ ] Return level number/name from the API and use it consistently on profile, achievements, and leaderboard surfaces.
-- [ ] Add boundary tests for every threshold and migration/backfill tests for existing learners.
+- [x] Levels derive from lifetime XP: 0, 100, 500, 1,500, 4,000, and 10,000 XP thresholds.
+- [x] Implement the approved mapping: Level 0 Star Starter, Level 1 Bronze, Level 2 Silver, Level 3 Gold, Level 4 Platinum, Level 5 Culture Master.
+- [x] Return level number/name from learner resources and leaderboard APIs; render it on the leaderboard.
+- [~] Migration/backfill and representative threshold regression coverage added; exhaustive every-boundary coverage remains desirable.
 
 ## BF-08 — Tone-practice invitation
 
 **Review finding:** Speaking submissions exist, but there is no peer invitation/link workflow and no defined “cannot practice tone” state.
 
-- [?] Define the trigger and audience: microphone unavailable, learner chooses “practice with someone,” failed speech recognition, or an author-marked partner activity.
-- [?] Confirm privacy rules for child profiles: inviter display name, guardian approval, recipients, link expiry, and whether a recipient must sign in.
-- [ ] Design a signed, expiring invitation URL tied to the specific published video/activity; never expose a child’s email, phone, or internal learner ID.
-- [ ] Add email/WhatsApp/share-sheet delivery through existing messaging seams, with guardian control for minors.
-- [ ] Use approved, pronoun-safe invitation copy; do not hard-code “with her.”
-- [ ] Track sent/opened/accepted states and audit abuse-sensitive events.
-- [ ] Test expired/tampered links, unpublished content, minor privacy, existing/new recipients, and rate limits.
+- [x] Learner/guardian chooses “practice with someone”; recipients are registered parents/guardians or same-school teachers/staff.
+- [x] Guardian-controlled for child profiles; recipient must sign in with the invited account and links expire after 48 hours.
+- [x] Use a random, hashed-token invitation tied to one published speaking activity; payloads expose no child contact details or internal learner ID.
+- [x] Add queued email delivery through the existing notification seam. WhatsApp/share-sheet delivery remains out of scope.
+- [x] Use pronoun-safe invitation copy.
+- [x] Track sent/opened/accepted states and audit sent/accepted events.
+- [~] Cover registered-recipient authorization and minor privacy; add broader expired/tampered, unpublished-content, and throttle integration cases later.
 
 ## BF-09 — Tone feature “Coming soon” state
 
@@ -254,10 +254,10 @@ Use the non-blocking alternatives in BF-10.8 and BF-13.1 unless the product owne
 
 **Review finding:** Blocked by product rule. Current code deliberately floors hearts at zero but never blocks learning.
 
-- [?] **Do not implement the requested lock without a formal BRD change.** It conflicts with “Free = full learning + ads” and “learning is never dead-ended.”
-- [ ] Recommended compliant alternative: at zero hearts, keep lessons/quizzes playable in practice mode, pause new XP/competitive score for 12 hours, and offer an optional rewarded-ad refill or paid unlimited hearts.
-- [ ] If the alternative is approved, show supportive copy that clearly says learning remains available; do not use “See you in 12 hours” if the learner can continue.
-- [ ] Add clock-injected tests for cooldown start/expiry, practice access, rewarded refill, and paid bypass.
+- [x] The BRD-compliant practice-mode alternative was approved; no learning lock was introduced.
+- [x] At zero hearts, lessons/quizzes remain playable while new XP/competitive score pauses for 12 hours; rewarded refill and paid unlimited hearts remain available.
+- [x] Show supportive copy that explicitly says learning remains available.
+- [~] Regression coverage includes cooldown start/expiry, practice access, manual refill, and paid bypass; a clock-injection seam can further tighten time assertions.
 
 ### BF-10.9 Shuffle “Build the Sentence” options
 
@@ -318,8 +318,8 @@ Use the non-blocking alternatives in BF-10.8 and BF-13.1 unless the product owne
 **Review finding:** Blocked by the locked BRD. It directly contradicts “never gate/lock learning behind hearts or paywall” and “Free = full learning + ads.” The requested pricing copy in BF-05 also depends on this unresolved conflict.
 
 - [?] **Do not build the paywall as written** unless the BRD, entitlement model, public terms, pricing copy, and master implementation TODO are formally revised together.
-- [ ] Preserve visibility of every published language for Free users.
-- [ ] Recommended compliant monetization: keep all core lessons available; reserve conveniences such as ad-free use, unlimited hearts/competitive attempts, family dashboards, offline access when built, and enhanced analytics for paid plans.
+- [x] Preserve visibility and access to every published language/core lesson for Free users; no Lesson 1 paywall was added.
+- [x] Keep all core lessons available; reserve conveniences such as ad-free use, unlimited hearts/competitive attempts, family dashboards, offline access when built, and enhanced analytics for paid plans.
 - [ ] If leadership overrides the BRD, write a separate migration/design covering lesson entitlement metadata, catalogue lock state, deep-link enforcement, API authorization, existing enrolments, schools/telco, refunds, analytics, and accessibility before implementation.
 
 ## BF-14 — Flashcard bulk upload template

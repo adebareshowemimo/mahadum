@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\ResolvesLearner;
 use App\Http\Controllers\Controller;
 use App\Models\AdImpression;
 use App\Models\Heart;
+use App\Services\Gamification\PracticeModeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -14,16 +15,18 @@ class HeartController extends Controller
 {
     use ResolvesLearner;
 
-    private const MAX_HEARTS = 5;
-
-    public function show(Request $request): JsonResponse
+    public function show(Request $request, PracticeModeService $practice): JsonResponse
     {
         $request->validate(['learner_id' => ['required', 'integer', 'exists:learner_profiles,id']]);
         $learner = $this->learner($request->integer('learner_id'));
 
-        $heart = Heart::firstOrCreate(['learner_profile_id' => $learner->id], ['current' => self::MAX_HEARTS]);
+        $state = $practice->state($learner);
+        $heart = Heart::where('learner_profile_id', $learner->id)->firstOrFail();
 
-        return response()->json(['data' => ['current' => $heart->current, 'refills_at' => $heart->refills_at]]);
+        return response()->json(['data' => [
+            ...$state,
+            'refills_at' => $heart->refills_at,
+        ]]);
     }
 
     /**
@@ -59,13 +62,19 @@ class HeartController extends Controller
             $impression->update(['consumed_at' => now()]);
         }
 
-        $heart = Heart::firstOrCreate(['learner_profile_id' => $learner->id], ['current' => self::MAX_HEARTS]);
-        $heart->update(['current' => self::MAX_HEARTS, 'refills_at' => null]);
+        $heart = Heart::firstOrCreate(['learner_profile_id' => $learner->id], ['current' => PracticeModeService::MAX_HEARTS]);
+        $heart->update([
+            'current' => PracticeModeService::MAX_HEARTS,
+            'refills_at' => null,
+            'competitive_paused_until' => null,
+        ]);
 
         return response()->json(['data' => [
             'current' => $heart->current,
             'refills_at' => $heart->refills_at,
             'method' => $method,
+            'practice_mode' => false,
+            'competitive_paused_until' => null,
         ]]);
     }
 }

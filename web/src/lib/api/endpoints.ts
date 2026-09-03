@@ -462,6 +462,25 @@ export const learningApi = {
     return data.data
   },
 
+  async inviteTonePractice(input: { learnerId: number; componentId: number; recipientEmail: string }): Promise<{ sent: boolean; expires_at: string }> {
+    const { data } = await api.post('/tone-practice/invitations', {
+      learner_id: input.learnerId,
+      component_id: input.componentId,
+      recipient_email: input.recipientEmail,
+    })
+    return data.data
+  },
+
+  async tonePracticeInvitation(token: string): Promise<import('./types').TonePracticeInvitation> {
+    const { data } = await api.get(`/tone-practice/invitations/${encodeURIComponent(token)}`)
+    return data.data
+  },
+
+  async acceptTonePracticeInvitation(token: string): Promise<import('./types').TonePracticeInvitation> {
+    const { data } = await api.post(`/tone-practice/invitations/${encodeURIComponent(token)}/accept`)
+    return data.data
+  },
+
   async submitAssignment(input: {
     learnerId: number
     componentId: number

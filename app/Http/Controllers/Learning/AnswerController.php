@@ -6,7 +6,6 @@ use App\Http\Controllers\Concerns\ResolvesLearner;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Learning\StoreAnswerRequest;
 use App\Models\ComponentProgress;
-use App\Models\Heart;
 use App\Models\LessonComponent;
 use App\Models\Question;
 use App\Models\QuestionResponse;
@@ -14,6 +13,8 @@ use App\Models\Quiz;
 use App\Models\QuizAttempt;
 use App\Models\XpLedger;
 use App\Services\Billing\EntitlementResolver;
+use App\Services\Gamification\LearningLevelService;
+use App\Services\Gamification\PracticeModeService;
 use App\Services\Learning\AnswerGrader;
 use App\Services\Learning\XapiRecorder;
 use App\Services\Referral\ReferralService;
@@ -24,7 +25,7 @@ class AnswerController extends Controller
 {
     use ResolvesLearner;
 
-    public function store(StoreAnswerRequest $request, LessonComponent $component, AnswerGrader $grader, XapiRecorder $xapi, ReferralService $referrals, EntitlementResolver $entitlements): JsonResponse
+    public function store(StoreAnswerRequest $request, LessonComponent $component, AnswerGrader $grader, XapiRecorder $xapi, ReferralService $referrals, EntitlementResolver $entitlements, PracticeModeService $practice, LearningLevelService $levels): JsonResponse
     {
         abort_unless($component->type === 'quiz', 422, 'This component is not a quiz.');
 
@@ -38,7 +39,7 @@ class AnswerController extends Controller
 
         $unlimitedHearts = (bool) $entitlements->forLearner($learner)['unlimited_hearts'];
 
-        return DB::transaction(function () use ($request, $learner, $component, $quiz, $question, $verdict, $xapi, $referrals, $unlimitedHearts) {
+        return DB::transaction(function () use ($request, $learner, $component, $quiz, $question, $verdict, $xapi, $referrals, $unlimitedHearts, $practice, $levels) {
             $progress = $this->lessonProgress($learner, $component->lesson);
 
             $attempt = $this->resolveAttempt($learner->id, $quiz);
@@ -47,24 +48,33 @@ class AnswerController extends Controller
             // so the learner still sees the answer + explanation — learning is never
             // dead-ended (Rule 4) — but nothing is scored and no XP/hearts move.
             if ($attempt === null) {
+                $heartState = $unlimitedHearts
+                    ? ['current' => null, 'practice_mode' => false, 'competitive_paused_until' => null]
+                    : $practice->applyMistake($learner, false);
+
                 return response()->json(['data' => [
                     'correct' => $verdict['is_correct'],
                     'correct_answer' => $verdict['correct_answer'],
                     'explanation' => $verdict['explanation'],
-                    'hearts_remaining' => $this->applyHearts($learner->id, 0, $unlimitedHearts),
+                    'hearts_remaining' => $heartState['current'],
                     'unlimited_hearts' => $unlimitedHearts,
+                    'practice_mode' => $heartState['practice_mode'],
+                    'competitive_paused_until' => $heartState['competitive_paused_until'],
                     'xp_awarded' => 0,
                     'attempts_exhausted' => true,
                 ]]);
             }
 
             $heartsLost = (! $unlimitedHearts && ! $verdict['is_correct'] && $quiz->hearts_enabled) ? 1 : 0;
-            $heartsRemaining = $this->applyHearts($learner->id, $heartsLost, $unlimitedHearts);
+            $heartState = $unlimitedHearts
+                ? ['current' => null, 'practice_mode' => false, 'competitive_paused_until' => null]
+                : $practice->applyMistake($learner, $heartsLost > 0);
 
             // XP for a question is earned once per learner, never re-farmed on replay.
-            $alreadyEarned = QuestionResponse::where('learner_profile_id', $learner->id)
-                ->where('question_id', $question->id)
-                ->where('is_correct', true)
+            $alreadyEarned = XpLedger::where('learner_profile_id', $learner->id)
+                ->where('source', 'quiz')
+                ->where('reference_type', Question::class)
+                ->where('reference_id', $question->id)
                 ->exists();
 
             QuestionResponse::updateOrCreate(
@@ -79,7 +89,7 @@ class AnswerController extends Controller
             );
 
             $xpAwarded = 0;
-            if ($verdict['is_correct'] && ! $alreadyEarned) {
+            if ($verdict['is_correct'] && ! $alreadyEarned && ! $heartState['practice_mode']) {
                 $xpAwarded = (int) $question->points;
                 XpLedger::create([
                     'learner_profile_id' => $learner->id,
@@ -88,6 +98,7 @@ class AnswerController extends Controller
                     'reference_type' => Question::class,
                     'reference_id' => $question->id,
                 ]);
+                $levels->forLearner($learner);
             }
 
             $this->syncQuizProgress($progress->id, $component, $quiz, $learner->id, $attempt);
@@ -106,8 +117,10 @@ class AnswerController extends Controller
                 'correct' => $verdict['is_correct'],
                 'correct_answer' => $verdict['correct_answer'],
                 'explanation' => $verdict['explanation'],
-                'hearts_remaining' => $heartsRemaining,
+                'hearts_remaining' => $heartState['current'],
                 'unlimited_hearts' => $unlimitedHearts,
+                'practice_mode' => $heartState['practice_mode'],
+                'competitive_paused_until' => $heartState['competitive_paused_until'],
                 'xp_awarded' => $xpAwarded,
                 'attempts_exhausted' => false,
             ]]);
@@ -153,23 +166,6 @@ class AnswerController extends Controller
             'attempt_no' => $nextNo,
             'started_at' => now(),
         ]);
-    }
-
-    /** Decrement hearts but never below 0 (Rule 4 — never blocks learning). */
-    private function applyHearts(int $learnerId, int $lost, bool $unlimited): ?int
-    {
-        if ($unlimited) {
-            return null;
-        }
-
-        $heart = Heart::firstOrCreate(['learner_profile_id' => $learnerId], ['current' => 5]);
-
-        if ($lost > 0) {
-            $heart->current = max(0, $heart->current - $lost);
-            $heart->save();
-        }
-
-        return $heart->current;
     }
 
     private function syncQuizProgress(int $lessonProgressId, LessonComponent $component, $quiz, int $learnerId, QuizAttempt $attempt): void

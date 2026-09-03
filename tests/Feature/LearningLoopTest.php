@@ -129,4 +129,17 @@ class LearningLoopTest extends TestCase
         $this->postJson("/api/v1/lessons/{$lesson->id}/complete", ['learner_id' => $learner->id])
             ->assertStatus(422)->assertJsonPath('error.code', 'lesson_incomplete');
     }
+
+    public function test_free_learners_can_open_published_learning_without_a_lesson_one_paywall(): void
+    {
+        $this->seedRbac();
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $learner = $this->parentWithChild($parent);
+        $lesson = $this->publishedLesson();
+        $lesson->update(['position' => 2]);
+
+        $this->getJson("/api/v1/lessons/{$lesson->id}/play?learner_id={$learner->id}")
+            ->assertOk()
+            ->assertJsonPath('data.lesson.id', $lesson->id);
+    }
 }

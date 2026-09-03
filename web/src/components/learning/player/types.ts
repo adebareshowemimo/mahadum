@@ -48,6 +48,8 @@ export interface Verdict {
   heartsRemaining: number | null
   /** Replay past the quiz's attempt cap — graded for practice, nothing scored. */
   attemptsExhausted: boolean
+  practiceMode: boolean
+  competitivePausedUntil: string | null
 }
 
 /** Only free-text questions take a typed answer; everything else is interactive. */
@@ -319,6 +321,7 @@ export interface PlayerService {
   gradeQuiz(slide: QuizSlide, answer: Answer): Promise<Verdict>
   completeStep(slide: Slide): Promise<void>
   submitSpeaking(slide: SpeakingSlide, audio: Blob | null): Promise<void>
+  inviteTonePractice(slide: SpeakingSlide, recipientEmail: string): Promise<void>
   /** Submit a recorded assignment clip (coins escrow until a parent approves). */
   submitAssignment(slide: AssignmentSlide, media: Blob | null, filename?: string): Promise<void>
   /** Persist a video-watching beat (no-op in preview). */
@@ -352,6 +355,8 @@ export function createLiveService(lessonId: number, learnerId: number): PlayerSe
         xpAwarded: res.xp_awarded,
         heartsRemaining: res.hearts_remaining,
         attemptsExhausted: res.attempts_exhausted ?? false,
+        practiceMode: res.practice_mode ?? false,
+        competitivePausedUntil: res.competitive_paused_until ?? null,
       }
     },
     async completeStep(slide) {
@@ -359,6 +364,9 @@ export function createLiveService(lessonId: number, learnerId: number): PlayerSe
     },
     async submitSpeaking(slide, audio) {
       await learningApi.submitSpeaking({ learnerId, componentId: slide.componentId, audio: audio ?? undefined })
+    },
+    async inviteTonePractice(slide, recipientEmail) {
+      await learningApi.inviteTonePractice({ learnerId, componentId: slide.componentId, recipientEmail })
     },
     async submitAssignment(slide, media, filename) {
       await learningApi.submitAssignment({ learnerId, componentId: slide.componentId, media: media ?? undefined, filename })
@@ -430,10 +438,13 @@ export function createPreviewService(key: Map<number, QuizKey>, hearts: { value:
         xpAwarded: correct ? 10 : 0,
         heartsRemaining: hearts.value,
         attemptsExhausted: false,
+        practiceMode: false,
+        competitivePausedUntil: null,
       }
     },
     async completeStep() {},
     async submitSpeaking() {},
+    async inviteTonePractice() {},
     async submitAssignment() {},
     async trackVideo() {},
   }

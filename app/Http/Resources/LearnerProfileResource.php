@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Models\LearnerProfile;
 use App\Services\Family\WalletService;
+use App\Services\Gamification\LearningLevelService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -15,6 +16,8 @@ class LearnerProfileResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $learningLevel = app(LearningLevelService::class)->forLearner($this->resource);
+
         return [
             'id' => $this->id,
             'display_name' => $this->display_name,
@@ -26,6 +29,7 @@ class LearnerProfileResource extends JsonResource
                 : null,
             'age_band' => $this->age_band,
             'current_level' => $this->current_level,
+            'learning_level' => $learningLevel,
             'target_language' => $this->whenLoaded('targetLanguage', fn () => $this->targetLanguage?->code),
             'is_child' => $this->user_id === null,
             'pin_protected' => $this->parental_pin !== null,

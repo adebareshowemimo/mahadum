@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\ResolvesLearner;
 use App\Http\Controllers\Controller;
 use App\Models\League;
 use App\Services\Gamification\LeagueService;
+use App\Services\Gamification\LearningLevelService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -13,7 +14,7 @@ class LeaderboardController extends Controller
 {
     use ResolvesLearner;
 
-    public function __construct(private LeagueService $leagues) {}
+    public function __construct(private LeagueService $leagues, private LearningLevelService $levels) {}
 
     /** The caller's learner's current-week league standing. */
     public function current(Request $request): JsonResponse
@@ -30,6 +31,7 @@ class LeaderboardController extends Controller
             'league' => ['id' => $league->id, 'name' => $league->name, 'tier' => $league->tier, 'week_start' => $league->week_start],
             'rank' => $mine?->rank,
             'weekly_xp' => $mine?->weekly_xp,
+            'learning_level' => $this->levels->forLearner($learner),
         ]]);
     }
 
@@ -54,6 +56,7 @@ class LeaderboardController extends Controller
             'learner_id' => $m->learner_profile_id,
             'display_name' => $m->learnerProfile?->display_name,
             'weekly_xp' => $m->weekly_xp,
+            'learning_level' => $m->learnerProfile ? $this->levels->forLearner($m->learnerProfile) : null,
         ])->values()]);
     }
 }

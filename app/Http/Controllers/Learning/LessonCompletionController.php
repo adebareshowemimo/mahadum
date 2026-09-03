@@ -8,7 +8,10 @@ use App\Http\Requests\Learning\CompleteLessonRequest;
 use App\Models\LearnerPathNode;
 use App\Models\Lesson;
 use App\Models\XpLedger;
+use App\Services\Billing\EntitlementResolver;
 use App\Services\Gamification\BadgeService;
+use App\Services\Gamification\LearningLevelService;
+use App\Services\Gamification\PracticeModeService;
 use App\Services\Gamification\StreakService;
 use App\Services\Learning\LessonScorer;
 use App\Services\Learning\XapiRecorder;
@@ -28,6 +31,9 @@ class LessonCompletionController extends Controller
         BadgeService $badges,
         XapiRecorder $xapi,
         ReferralService $referrals,
+        EntitlementResolver $entitlements,
+        PracticeModeService $practice,
+        LearningLevelService $levels,
     ): JsonResponse {
         $learner = $this->learner($request->integer('learner_id'));
         $lesson->load('components');
@@ -49,8 +55,12 @@ class LessonCompletionController extends Controller
 
         $alreadyDone = $progress->status === 'completed';
         $score = $scorer->score($lesson, $byComponent);
+        $unlimitedHearts = (bool) $entitlements->forLearner($learner)['unlimited_hearts'];
+        $heartState = $unlimitedHearts
+            ? ['practice_mode' => false, 'competitive_paused_until' => null]
+            : $practice->state($learner);
 
-        $result = DB::transaction(function () use ($lesson, $learner, $progress, $byComponent, $score, $alreadyDone) {
+        $result = DB::transaction(function () use ($lesson, $learner, $progress, $byComponent, $score, $alreadyDone, $heartState) {
             $progress->update([
                 'status' => 'completed',
                 'score' => $score,
@@ -60,7 +70,7 @@ class LessonCompletionController extends Controller
 
             // XP awarded once per lesson (idempotent on re-complete).
             $xpTotal = (int) $lesson->components->sum('xp_value');
-            if (! $alreadyDone && $xpTotal > 0) {
+            if (! $alreadyDone && $xpTotal > 0 && ! $heartState['practice_mode']) {
                 XpLedger::create([
                     'learner_profile_id' => $learner->id,
                     'amount' => $xpTotal,
@@ -70,8 +80,15 @@ class LessonCompletionController extends Controller
                 ]);
             }
 
-            return ['xp_total' => $alreadyDone ? 0 : $xpTotal, 'next_node' => $this->unlockNext($learner->id, $lesson->id)];
+            return [
+                'xp_total' => $alreadyDone || $heartState['practice_mode'] ? 0 : $xpTotal,
+                'next_node' => $this->unlockNext($learner->id, $lesson->id),
+            ];
         });
+
+        if ($result['xp_total'] > 0) {
+            $levels->forLearner($learner);
+        }
 
         if (! $alreadyDone) {
             $xapi->record($learner->id, XapiRecorder::VERB_COMPLETED, 'lessons', $lesson->id, $lesson->title, XapiRecorder::ACTIVITY_LESSON, [
@@ -94,6 +111,8 @@ class LessonCompletionController extends Controller
             'streak' => ['count' => $streak->current_count, 'state' => $streak->state],
             'badges_unlocked' => $badgesUnlocked,
             'next_node' => $result['next_node'],
+            'practice_mode' => $heartState['practice_mode'],
+            'competitive_paused_until' => $heartState['competitive_paused_until'],
         ]]);
     }
 

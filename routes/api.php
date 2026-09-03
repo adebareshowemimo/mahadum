@@ -80,6 +80,7 @@ use App\Http\Controllers\Learning\LessonPlayController;
 use App\Http\Controllers\Learning\PathController;
 use App\Http\Controllers\Learning\ProgressController;
 use App\Http\Controllers\Learning\SpeakingSubmissionController;
+use App\Http\Controllers\Learning\TonePracticeInvitationController;
 use App\Http\Controllers\MeController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PricingController;
@@ -239,6 +240,12 @@ Route::prefix('v1')->group(function () {
         Route::post('components/{component}/answer', [AnswerController::class, 'store']);
         Route::post('lessons/{lesson}/complete', [LessonCompletionController::class, 'complete']);
         Route::post('speaking-submissions', [SpeakingSubmissionController::class, 'store']);
+        Route::post('tone-practice/invitations', [TonePracticeInvitationController::class, 'store'])
+            ->middleware('throttle:10,1');
+        Route::get('tone-practice/invitations/{token}', [TonePracticeInvitationController::class, 'show'])
+            ->middleware('throttle:30,1');
+        Route::post('tone-practice/invitations/{token}/accept', [TonePracticeInvitationController::class, 'accept'])
+            ->middleware('throttle:20,1');
         Route::post('assignment-submissions', [AssignmentSubmissionController::class, 'store']);
 
         /* ---- Gamification ---- */

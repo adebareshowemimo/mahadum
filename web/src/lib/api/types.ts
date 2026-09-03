@@ -46,12 +46,20 @@ export interface LearnerProfile {
   avatar_url: string | null
   age_band: string | null
   current_level: number | null
+  learning_level?: LearningLevel
   target_language?: string | null
   /** True for child profiles (no own user account). */
   is_child: boolean
   /** Requires a parental PIN to switch into. */
   pin_protected: boolean
   coin_balance: number
+}
+
+export interface LearningLevel {
+  number: number
+  name: string
+  lifetime_xp: number
+  next_level_xp: number | null
 }
 
 export interface Family {
@@ -580,6 +588,8 @@ export interface AnswerResult {
   explanation: string | null
   hearts_remaining: number | null
   unlimited_hearts?: boolean
+  practice_mode?: boolean
+  competitive_paused_until?: string | null
   xp_awarded: number
   /** True when a replay past `max_attempts` is graded for practice (nothing scored). */
   attempts_exhausted?: boolean
@@ -632,6 +642,8 @@ export interface CompleteResult {
   streak: { count: number; state: string }
   badges_unlocked: { id: number; name: string }[] | string[]
   next_node: { lesson_id: number; unlocked: boolean } | null
+  practice_mode?: boolean
+  competitive_paused_until?: string | null
 }
 
 // ---- Gamification ----
@@ -646,6 +658,8 @@ export interface StreakInfo {
 export interface HeartsInfo {
   current: number
   refills_at: string | null
+  practice_mode?: boolean
+  competitive_paused_until?: string | null
 }
 
 export type AdPlacement = 'post_lesson' | 'rewarded_heart'
@@ -689,6 +703,7 @@ export interface LeagueStanding {
   league: { id: number; name: string; tier: number | string; week_start: string | null }
   rank: number | null
   weekly_xp: number | null
+  learning_level?: LearningLevel
 }
 
 export interface LeaderboardRow {
@@ -696,6 +711,15 @@ export interface LeaderboardRow {
   learner_id: number
   display_name: string | null
   weekly_xp: number
+  learning_level?: LearningLevel | null
+}
+
+export interface TonePracticeInvitation {
+  inviter_name: string
+  lesson_title: string
+  practice_text: string
+  expires_at: string
+  accepted: boolean
 }
 
 // ---- Referrals & payouts ----

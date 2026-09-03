@@ -116,6 +116,9 @@ function LessonComplete({ lessonId, learnerId, onExit }: { lessonId: number; lea
       {badgeCount > 0 && (
         <p className="text-sm font-semibold text-primary">🏅 {badgeCount} new badge{badgeCount === 1 ? '' : 's'}!</p>
       )}
+      {result.practice_mode && (
+        <Alert variant="info">You completed the lesson in practice mode. Learning stayed open, while XP and leaderboard progress remain paused until your hearts refill.</Alert>
+      )}
       <Button3D
         variant="reward"
         size="lg"

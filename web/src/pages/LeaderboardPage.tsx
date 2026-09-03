@@ -30,7 +30,9 @@ function Leaderboard({ learner }: { learner: LearnerProfile }) {
               <div>
                 <p className="text-sm font-medium text-primary">{league.data?.league?.name ?? 'Your league'}</p>
                 <p className="font-display text-lg font-bold text-foreground">
-                  Tier {String(league.data?.league?.tier ?? '—')}
+                  {league.data?.learning_level
+                    ? `Level ${league.data.learning_level.number} · ${league.data.learning_level.name}`
+                    : `Tier ${String(league.data?.league?.tier ?? '—')}`}
                 </p>
               </div>
               <div className="text-right">
@@ -74,7 +76,10 @@ function Leaderboard({ learner }: { learner: LearnerProfile }) {
                   {row.display_name ?? 'Learner'}
                   {isMe && <span className="ml-2 text-xs font-medium text-primary">You</span>}
                 </span>
-                <span className="font-display font-bold text-foreground">⚡ {row.weekly_xp}</span>
+                <span className="text-right">
+                  <span className="block font-display font-bold text-foreground">⚡ {row.weekly_xp}</span>
+                  {row.learning_level && <span className="block text-xs text-muted">Lv {row.learning_level.number} · {row.learning_level.name}</span>}
+                </span>
               </li>
             )
           })}
