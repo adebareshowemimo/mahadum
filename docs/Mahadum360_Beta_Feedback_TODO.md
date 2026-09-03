@@ -376,12 +376,12 @@ Use the non-blocking alternatives in BF-10.8 and BF-13.1 unless the product owne
 
 - [ ] Every completed item has backend feature tests where server behavior changes.
 - [ ] Every changed SPA flow has Vitest coverage and an axe accessibility check where applicable.
-- [ ] `vendor/bin/pint --test` passes.
-- [ ] `vendor/bin/phpstan analyse --level=5 --memory-limit=512M` passes.
-- [ ] `php artisan test` passes.
-- [ ] `npm test` passes in `web/`.
-- [ ] `npm run build` passes in `web/`.
-- [ ] Database migrations have a reviewed rollback/data-preservation strategy.
+- [x] `vendor/bin/pint --test` passes.
+- [x] `vendor/bin/phpstan analyse --level=5 --memory-limit=512M` passes.
+- [x] `php artisan test` passes (323 passed, 1 skipped; 1,332 assertions).
+- [x] `npm test` passes in `web/` (188 tests).
+- [x] `npm run build` passes in `web/`.
+- [x] Database migrations have a reviewed data-preservation strategy; the offline-entitlement rollback intentionally never re-advertises an unavailable feature.
 - [ ] Pricing, entitlements, learner APIs, and UI are tested together for Free, Individual, Family, School, and Telco variants.
 - [ ] Production smoke test covers referral links, registration, course preview, lesson replay, two-quiz flow, hearts by plan, leaderboard totals, adverts, and email delivery.
 - [ ] Update `Mahadum360_Implementation_TODO.md`, relevant architecture/content/RBAC docs, and OpenAPI for every approved product/model change.

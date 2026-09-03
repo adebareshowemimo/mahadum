@@ -1,6 +1,6 @@
 # Azure Deployment Plan
 
-> **Status:** Validated
+> **Status:** Deployed to production
 
 Generated: 2026-08-20
 
@@ -276,6 +276,14 @@ This section will be populated by the Azure validation workflow before deploymen
 - **Authenticated smoke test:** passed login, referral deep-link bundle validation, user/course queries, and English/Pidgin data checks.
 - **Runtime:** Apache, PHP 8.3 FPM, MySQL, and `mahadum-queue` all active; scheduler cron present.
 - **Rollback artifact:** pre-release source/build archive retained at `/var/backups/mahadum/pre-7f8c1a0.tar.gz` (application secrets and persistent uploads excluded).
+
+### Beta-feedback release `63c0101`
+
+- **Release branch:** `codex/beta-feedback-20260903`
+- **Target:** existing VM `mahadum`, resource group `MAHADUM`, Canada Central.
+- **Result:** snapshot release deployed; Composer install and Vite build passed; migration `2026_09_03_000004` ran; RBAC reseeded; caches rebuilt; queue restarted; maintenance cleared.
+- **Verification:** `https://mahadum360.com`, `/up`, `/api/v1/config`, `/pricing`, `/r/LZBE7XN5`, and a deployed avatar asset returned HTTP 200. Browser smoke redirected the referral to `/register?ref=LZBE7XN5`. Runtime services were active and paid personal plans reported zero enabled offline-download flags.
+- **Rollback artifacts:** source snapshot and two database dumps retained under `/var/backups/mahadum/beta-63c0101-20260903T185453Z`.
 - **Live role verification:** VM system identity has no Azure role assignments. This is expected: the application uses local MySQL/disk and provisions no Azure data-plane resources or managed-identity dependencies.
 
 ---
