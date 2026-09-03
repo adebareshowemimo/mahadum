@@ -90,16 +90,18 @@ paths:
           application/json:
             schema:
               type: object
-              required: [first_name, last_name, email, password, password_confirmation, device_name]
+              required: [first_name, last_name, email, phone, password, password_confirmation, device_name]
               properties:
                 first_name: { type: string, maxLength: 255 }
                 last_name: { type: string, maxLength: 255 }
                 email: { type: string, format: email, maxLength: 255 }
+                phone: { type: string, maxLength: 20 }
                 username: { type: string, maxLength: 50, nullable: true, description: "alpha_dash; unique" }
                 password: { type: string, format: password }
                 password_confirmation: { type: string, format: password }
                 device_name: { type: string, maxLength: 255 }
-                account_type: { type: string, enum: [parent, learner], default: parent }
+                account_type: { type: string, enum: [family, educator_school, institution, parent, learner], default: family }
+                organization_name: { type: string, maxLength: 255, nullable: true, description: "Required for educator_school and institution accounts" }
                 family_name: { type: string, maxLength: 255, nullable: true }
                 date_of_birth: { type: string, format: date, nullable: true, description: "before today" }
                 referral_code: { type: string, maxLength: 50, nullable: true }
@@ -167,6 +169,11 @@ paths:
               properties:
                 id_token: { type: string }
                 device_name: { type: string, maxLength: 255 }
+                account_type: { type: string, enum: [family, educator_school, institution], default: family }
+                organization_name: { type: string, maxLength: 255, nullable: true, description: "Required when account_type is educator_school or institution" }
+                phone: { type: string, maxLength: 20, nullable: true, description: "Required for a new signup when account_type is provided" }
+                date_of_birth: { type: string, format: date, nullable: true, description: "Collected by the signup age gate" }
+                referral_code: { type: string, maxLength: 50, nullable: true, description: "Attributed only when Google creates a new account" }
       responses:
         "200":
           description: OK
@@ -297,6 +304,17 @@ paths:
                       families:
                         type: array
                         items: { $ref: "#/components/schemas/Family" }
+                      learner_profiles:
+                        type: array
+                        description: Direct adult learner identities owned by the signed-in user.
+                        items:
+                          type: object
+                          properties:
+                            id: { type: integer }
+                            display_name: { type: string }
+                            avatar_id: { type: integer, nullable: true }
+                            avatar_url: { type: string, nullable: true }
+                            is_child: { type: boolean }
                       organizations:
                         type: array
                         items:
@@ -307,6 +325,16 @@ paths:
                             role: { type: string }
                       active_organization_id: { type: integer, nullable: true }
         "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /me/learner-profile:
+    post:
+      tags: [Account, Learning]
+      summary: Create or return the signed-in adult's personal learner profile
+      description: Idempotent setup used when a parent chooses to learn with their own account.
+      responses:
+        "200": { description: Existing learner profile }
+        "201": { description: Learner profile created }
+        "403": { description: Account role cannot create a personal learner profile }
 
   /me/devices:
     post:
@@ -502,6 +530,29 @@ paths:
           required: false
           schema: { type: string }
           description: Filter by language code
+        - name: level
+          in: query
+          required: false
+          schema: { type: string }
+          description: Filter by the course level band
+        - name: q
+          in: query
+          required: false
+          schema: { type: string }
+          description: Search course titles and descriptions
+        - name: learner_id
+          in: query
+          required: false
+          schema: { type: integer }
+          description: Include enrollment state for an authorized learner profile
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: per_page
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 12 }
       responses:
         "200":
           description: OK (paginated)
@@ -513,6 +564,10 @@ paths:
                   - type: object
                     properties:
                       data: { type: array, items: { $ref: "#/components/schemas/Course" } }
+                      filters:
+                        type: object
+                        properties:
+                          levels: { type: array, items: { type: string } }
     post:
       tags: [Content]
       summary: Create a course (content_owner)
@@ -879,6 +934,33 @@ paths:
                             score: { type: number, nullable: true }
                             components_completed: { type: integer }
                             completed_at: { type: string, format: date-time, nullable: true }
+
+  /learners/{learner}/avatar:
+    parameters:
+      - $ref: "#/components/parameters/LearnerId"
+    post:
+      tags: [Learning]
+      summary: Choose a built-in avatar or upload a learner profile photo
+      description: Available to the learner themselves or the parent who owns the learner's family.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar_id: { type: integer, minimum: 1, maximum: 8 }
+                photo: { type: string, format: binary, description: "JPG, PNG, or WebP up to 5 MB" }
+              oneOf:
+                - required: [avatar_id]
+                - required: [photo]
+      responses:
+        "200":
+          description: Updated learner profile
+        "403":
+          description: Not the learner or owning parent
+        "422":
+          description: Invalid preset or image
 
   /lessons/{lesson}/play:
     parameters:
@@ -1872,6 +1954,92 @@ paths:
                       referrals: { type: object, additionalProperties: { type: integer } }
                       commissions: { type: object, additionalProperties: true }
 
+  /referrals/activations:
+    get:
+      tags: [Referrals & Payouts]
+      summary: People who activated the caller's code (referrals.view)
+      parameters:
+        - { name: search, in: query, schema: { type: string }, description: Match invited contact or the referred user's email/phone }
+        - { name: per_page, in: query, schema: { type: integer } }
+        - { name: page, in: query, schema: { type: integer } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        sn: { type: integer }
+                        activated_at: { type: string, nullable: true }
+                        code: { type: string }
+                        via_email: { type: string, nullable: true }
+                        via_phone: { type: string, nullable: true }
+                        status: { type: string, enum: [active, inactive] }
+                  meta: { type: object, additionalProperties: true }
+
+  /referrals/invitations:
+    get:
+      tags: [Referrals & Payouts]
+      summary: Invites the caller has sent (referrals.view)
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [Referrals & Payouts]
+      summary: Invite an email or phone (referrals.view)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channel, contact]
+              properties:
+                channel: { type: string, enum: [email, phone] }
+                contact: { type: string }
+      responses:
+        "201": { description: Invitation recorded }
+        "422":
+          description: Invalid contact, or the account already exists (error.code = account_exists)
+
+  /admin/referrals/codes:
+    get:
+      tags: [Referrals & Payouts]
+      summary: Per-code activation dashboard (analytics.platform.view)
+      parameters:
+        - { name: search, in: query, schema: { type: string } }
+        - { name: per_page, in: query, schema: { type: integer } }
+        - { name: page, in: query, schema: { type: integer } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        sn: { type: integer }
+                        id: { type: integer }
+                        code: { type: string }
+                        owner: { type: object, additionalProperties: true }
+                        status: { type: string }
+                        count_activated: { type: integer }
+                        via_email: { type: integer }
+                        via_phone: { type: integer }
+                        active_count: { type: integer }
+                        inactive_count: { type: integer }
+                  meta: { type: object, additionalProperties: true }
+
   /payouts:
     get:
       tags: [Referrals & Payouts]
@@ -2093,6 +2261,15 @@ paths:
                         id: { type: integer }
                         type: { type: string }
                         amount_minor: { type: integer }
+                        lines:
+                          type: array
+                          description: Itemized fees. New school invoices always include Student School Fees and Registration Fees, followed by VAT when applicable.
+                          items:
+                            type: object
+                            required: [description, amount_minor]
+                            properties:
+                              description: { type: string, example: Student School Fees }
+                              amount_minor: { type: integer }
                         status: { type: string }
                         issued_at: { type: string, format: date-time, nullable: true }
                         paid_at: { type: string, format: date-time, nullable: true }
@@ -2678,8 +2855,26 @@ paths:
   /admin/payment-gateways:
     get:
       tags: [Admin]
-      summary: Per-provider gateway status + env-var checklist; secrets never returned (system.settings.manage)
+      summary: Per-provider gateway status; secrets never returned (system.settings.manage)
       responses: { "200": { description: OK } }
+  /admin/payment-gateways/monnify:
+    put:
+      tags: [Admin]
+      summary: Save encrypted Monnify configuration and live/sandbox mode (system.settings.manage)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [live, environment]
+              properties:
+                live: { type: boolean }
+                environment: { type: string, enum: [sandbox, live] }
+                api_key: { type: string, nullable: true, description: Leave blank to preserve the saved value }
+                secret: { type: string, nullable: true, description: Leave blank to preserve the saved value }
+                contract_code: { type: string, nullable: true, description: Leave blank to preserve the saved value }
+      responses: { "200": { description: Updated }, "422": { $ref: "#/components/responses/ValidationError" } }
   /admin/payment-gateways/{provider}/test:
     parameters:
       - { name: provider, in: path, required: true, schema: { type: string } }
@@ -2697,6 +2892,30 @@ paths:
       tags: [Admin]
       summary: Update whitelisted settings, per-key validated + audited (system.settings.manage)
       responses: { "200": { description: OK }, "422": { $ref: "#/components/responses/ValidationError" } }
+
+  /admin/email-configuration:
+    get:
+      tags: [Email]
+      summary: SMTP delivery status and queue health; password never returned (system.settings.manage)
+      responses: { "200": { description: OK } }
+    put:
+      tags: [Email]
+      summary: Save encrypted SMTP configuration (system.settings.manage)
+      responses: { "200": { description: Updated }, "422": { $ref: "#/components/responses/ValidationError" } }
+  /admin/email-configuration/test:
+    post:
+      tags: [Email]
+      summary: Send an immediate branded delivery test without waiting for the queue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses: { "200": { description: Test delivered }, "422": { $ref: "#/components/responses/ValidationError" } }
 
   # --------------------------------------------------------------- Admin: fraud review
   /admin/referrals/flagged:
@@ -3457,7 +3676,11 @@ components:
         position: { type: integer, minimum: 1, nullable: true }
         title: { type: string, maxLength: 255, nullable: true }
         is_required: { type: boolean, default: true }
-        xp_value: { type: integer, minimum: 0, default: 0 }
+        xp_value:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: "Optional component override. When omitted, the admin-managed default is used (quiz 1 XP; video 5 XP)."
         settings: { type: object, nullable: true, additionalProperties: true }
         video:
           type: object

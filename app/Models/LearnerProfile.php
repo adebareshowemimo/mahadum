@@ -18,6 +18,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $user_id
  * @property string $display_name
  * @property int|null $avatar_id
+ * @property int|null $profile_photo_asset_id
  * @property Carbon|null $date_of_birth
  * @property string|null $age_band
  * @property int|null $target_language_id
@@ -33,6 +34,7 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, LessonProgress> $lessonProgress
  * @property-read int|null $lesson_progress_count
  * @property-read Organization|null $organization
+ * @property-read MediaAsset|null $profilePhoto
  * @property-read Collection<int, SpeakingSubmission> $speakingSubmissions
  * @property-read int|null $speaking_submissions_count
  * @property-read Streak|null $streak
@@ -67,6 +69,8 @@ use Illuminate\Support\Carbon;
 class LearnerProfile extends Model
 {
     use HasFactory, SoftDeletes;
+
+    public const AVATAR_IDS = [1, 2, 3, 4, 5, 6, 7, 8];
 
     protected $guarded = [];
 
@@ -104,6 +108,14 @@ class LearnerProfile extends Model
     public function targetLanguage(): BelongsTo
     {
         return $this->belongsTo(Language::class, 'target_language_id');
+    }
+
+    /**
+     * @return BelongsTo<MediaAsset, $this>
+     */
+    public function profilePhoto(): BelongsTo
+    {
+        return $this->belongsTo(MediaAsset::class, 'profile_photo_asset_id');
     }
 
     /**

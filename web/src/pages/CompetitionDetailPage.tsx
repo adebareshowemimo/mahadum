@@ -190,7 +190,7 @@ function SubmitEntryModal({ competition, open, onClose }: { competition: Competi
 
           {category === 'school_play' ? (
             <label className="flex flex-col gap-1.5 text-sm">
-              <span className="font-semibold text-foreground">School</span>
+              <span className="font-semibold text-foreground">Educator/School</span>
               <select
                 value={orgId}
                 onChange={(e) => setOrgId(e.target.value === '' ? '' : Number(e.target.value))}

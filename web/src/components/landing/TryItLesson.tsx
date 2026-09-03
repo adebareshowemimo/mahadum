@@ -84,7 +84,7 @@ export function TryItLesson({ language }: { language: LandingLanguage }) {
             {language.name} · Round {index + 1} of {rounds.length}
           </p>
           <h3 className="mt-2 font-display text-2xl font-bold text-ivory-50 sm:text-3xl">
-            How do you say <span className="text-[#ffb277]">“{round.prompt}”</span>?
+            Which phrase means <span className="text-[#ffb277]">“{round.prompt}”</span> in {language.name}?
           </h3>
 
           <ul className="mt-6 flex flex-col gap-3">

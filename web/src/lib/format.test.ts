@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatMoney } from './format'
+import { formatFileSize, formatMoney } from './format'
 
 describe('formatMoney', () => {
   it('formats NGN minor units with the naira symbol', () => {
@@ -14,5 +14,14 @@ describe('formatMoney', () => {
 
   it('treats missing amounts as zero', () => {
     expect(formatMoney(undefined as unknown as number, 'NGN')).toBe('₦0.00')
+  })
+})
+
+describe('formatFileSize', () => {
+  it('formats upload byte counts compactly', () => {
+    expect(formatFileSize(0)).toBe('0 B')
+    expect(formatFileSize(1024)).toBe('1.00 KB')
+    expect(formatFileSize(61_424_327)).toBe('58.6 MB')
+    expect(formatFileSize(300 * 1024 * 1024)).toBe('300 MB')
   })
 })

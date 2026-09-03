@@ -55,10 +55,14 @@ class PaymentService
             return 'ignored';
         }
 
+        // One referral commission per settled webhook — a replayed webhook or a
+        // renewal charge is never double-counted.
+        $sourceEvent = $source.':'.$eventKey;
+
         $outcome = match ($kind) {
             'refund' => $this->reverse($reference, $amountMinor),
             'failed' => $this->fail($reference),
-            default => $this->settle($reference, $amountMinor),
+            default => $this->settle($reference, $amountMinor, $sourceEvent),
         };
 
         $event->update(['status' => $outcome === 'unmatched' ? 'unmatched' : 'processed', 'processed_at' => now()]);
@@ -67,20 +71,20 @@ class PaymentService
     }
 
     /** Credit path: confirm a wallet funding or activate a subscription. */
-    private function settle(?string $reference, ?int $amountMinor): string
+    private function settle(?string $reference, ?int $amountMinor, string $sourceEvent = ''): string
     {
         if (! $reference) {
             return 'unmatched';
         }
 
         if ($funding = $this->findFunding($reference)) {
-            $this->settleFunding($funding, $amountMinor);
+            $this->settleFunding($funding, $amountMinor, $sourceEvent);
 
             return 'funded';
         }
 
         if ($subscription = $this->findSubscription($reference)) {
-            $this->activateSubscription($subscription);
+            $this->activateSubscription($subscription, $amountMinor, $sourceEvent);
 
             return 'subscription_active';
         }
@@ -182,7 +186,7 @@ class PaymentService
         return Invoice::where('gateway_txn_ref', $reference)->first();
     }
 
-    private function settleFunding(WalletFundingTransaction $funding, ?int $amountMinor): void
+    private function settleFunding(WalletFundingTransaction $funding, ?int $amountMinor, string $sourceEvent = ''): void
     {
         if ($funding->status === 'success') {
             return; // already settled
@@ -196,6 +200,11 @@ class PaymentService
         $owner = $funding->wallet->owner;
         $payer = $owner instanceof User ? $owner : ($owner instanceof Family ? $owner->owner : null);
         $payer?->notify(new WalletFunded($credited));
+
+        // A funded wallet is a purchase by the referred person (FR-7): pay the referrer.
+        if ($payer instanceof User && $sourceEvent !== '') {
+            $this->referrals->recordReferredPurchase($payer, $funding, $credited, $sourceEvent);
+        }
     }
 
     private function reverseFunding(WalletFundingTransaction $funding, ?int $amountMinor): void
@@ -209,6 +218,9 @@ class PaymentService
         $this->wallets->debitCurrency($funding->wallet, $reversed);
 
         $this->audit->record('funding.refunded', $funding, ['status' => 'success'], ['status' => 'refunded', 'amount_minor' => $reversed]);
+
+        // Claw back any referral commission this funding earned (FR-7.3).
+        $this->referrals->reverseForSource(WalletFundingTransaction::class, $funding->id);
     }
 
     private function cancelSubscription(Subscription $subscription): void
@@ -226,22 +238,39 @@ class PaymentService
         $this->referrals->reverseForSubscription($subscription);
     }
 
-    private function activateSubscription(Subscription $subscription): void
+    private function activateSubscription(Subscription $subscription, ?int $amountMinor = null, string $sourceEvent = ''): void
     {
-        if ($subscription->status === 'active') {
+        $firstActivation = $subscription->status !== 'active';
+
+        if ($firstActivation) {
+            $subscription->update([
+                'status' => 'active',
+                'started_at' => now(),
+                'renews_at' => $this->renewsAt($subscription->plan),
+            ]);
+        }
+
+        $subscriber = $subscription->subscriber;
+        if (! $subscriber instanceof User) {
             return;
         }
 
-        $subscription->update([
-            'status' => 'active',
-            'started_at' => now(),
-            'renews_at' => $this->renewsAt($subscription->plan),
-        ]);
+        // Verified-payment gate (FR-7.2): re-check activation for any pending
+        // referral of this payer now that a paid subscription is confirmed.
+        $this->referrals->maybeActivateForUser($subscriber);
 
-        // Verified-payment gate (FR-7.2): qualify any pending referral for this payer.
-        $subscriber = $subscription->subscriber;
-        if ($subscriber instanceof User) {
-            $this->referrals->qualifyForSubscriber($subscriber, $subscription);
+        // Every confirmed charge (first payment and renewals) is a purchase by
+        // the referred person — pay the referrer their cut inside the window.
+        if ($sourceEvent !== '') {
+            $this->referrals->recordReferredPurchase(
+                $subscriber,
+                $subscription,
+                $amountMinor ?? (int) ($subscription->plan->price_minor ?? 0),
+                $sourceEvent,
+            );
+        }
+
+        if ($firstActivation) {
             $subscriber->notify(new SubscriptionActivated($subscription)); // receipt
         }
     }

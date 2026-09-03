@@ -12,6 +12,7 @@ use App\Services\Gamification\BadgeService;
 use App\Services\Gamification\StreakService;
 use App\Services\Learning\LessonScorer;
 use App\Services\Learning\XapiRecorder;
+use App\Services\Referral\ReferralService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -26,6 +27,7 @@ class LessonCompletionController extends Controller
         StreakService $streaks,
         BadgeService $badges,
         XapiRecorder $xapi,
+        ReferralService $referrals,
     ): JsonResponse {
         $learner = $this->learner($request->integer('learner_id'));
         $lesson->load('components');
@@ -82,6 +84,9 @@ class LessonCompletionController extends Controller
         // unlock badges. Recorded after the lesson is finalized.
         $streak = $streaks->recordActivity($learner);
         $badgesUnlocked = $badges->evaluate($learner);
+
+        // A finished lesson may complete a referral's activation gate (FR-7).
+        $referrals->maybeActivateForLearner($learner);
 
         return response()->json(['data' => [
             'lesson_score' => $score,

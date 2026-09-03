@@ -15,6 +15,7 @@ use App\Models\QuizAttempt;
 use App\Models\XpLedger;
 use App\Services\Learning\AnswerGrader;
 use App\Services\Learning\XapiRecorder;
+use App\Services\Referral\ReferralService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -22,7 +23,7 @@ class AnswerController extends Controller
 {
     use ResolvesLearner;
 
-    public function store(StoreAnswerRequest $request, LessonComponent $component, AnswerGrader $grader, XapiRecorder $xapi): JsonResponse
+    public function store(StoreAnswerRequest $request, LessonComponent $component, AnswerGrader $grader, XapiRecorder $xapi, ReferralService $referrals): JsonResponse
     {
         abort_unless($component->type === 'quiz', 422, 'This component is not a quiz.');
 
@@ -34,7 +35,7 @@ class AnswerController extends Controller
 
         $verdict = $grader->grade($question, $request->array('answer'));
 
-        return DB::transaction(function () use ($request, $learner, $component, $quiz, $question, $verdict, $xapi) {
+        return DB::transaction(function () use ($request, $learner, $component, $quiz, $question, $verdict, $xapi, $referrals) {
             $progress = $this->lessonProgress($learner, $component->lesson);
 
             $attempt = $this->resolveAttempt($learner->id, $quiz);
@@ -86,6 +87,11 @@ class AnswerController extends Controller
             }
 
             $this->syncQuizProgress($progress->id, $component, $quiz, $learner->id, $attempt);
+
+            // A finished quiz may complete a referral's activation gate (FR-7).
+            if ($attempt->completed_at !== null) {
+                $referrals->maybeActivateForLearner($learner);
+            }
 
             $xapi->record($learner->id, XapiRecorder::VERB_ANSWERED, 'questions', $question->id, $question->prompt, XapiRecorder::ACTIVITY_INTERACTION, [
                 'success' => $verdict['is_correct'],

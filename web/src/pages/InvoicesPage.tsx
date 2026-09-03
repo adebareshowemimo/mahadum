@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Alert, Badge, Button, Card, CardBody, Skeleton } from '@/components/ui'
-import { ApiError, schoolApi } from '@/lib/api'
+import { Alert, Badge, Button, Card, CardBody, Icon, Skeleton } from '@/components/ui'
+import { ApiError, schoolApi, type SchoolInvoice } from '@/lib/api'
 import { formatMoney } from '@/lib/format'
 import { SchoolGate } from '@/components/school/SchoolGate'
 import { useInvoices, usePayInvoice } from '@/lib/school/queries'
@@ -56,7 +56,9 @@ function Invoices({ orgId }: { orgId: number }) {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="font-display text-2xl font-bold text-foreground">Invoices</h1>
-        <p className="mt-1 text-muted">Billing history for your school.</p>
+        <p className="mt-1 max-w-2xl text-muted">
+          Review student school fees, registration fees, tax, and the final amount before paying.
+        </p>
       </div>
 
       {error && <Alert variant="danger">{error}</Alert>}
@@ -75,31 +77,24 @@ function Invoices({ orgId }: { orgId: number }) {
           </CardBody>
         </Card>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="overflow-hidden rounded-2xl border border-border bg-surface">
           {data.map((inv) => (
-            <Card key={inv.id}>
-              <CardBody className="flex flex-wrap items-center justify-between gap-3 py-3">
-                <div>
-                  <p className="font-semibold text-foreground">
-                    {formatMoney(inv.amount_minor, 'NGN')}{' '}
-                    <span className="text-sm font-normal capitalize text-muted">· {inv.type}</span>
-                  </p>
-                  <p className="text-xs text-muted">
+            <article key={inv.id} className="border-b border-border p-5 last:border-b-0 sm:p-6">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="font-semibold text-foreground">Invoice #{String(inv.id).padStart(6, '0')}</h2>
+                    <Badge variant={STATUS_TONE[inv.status] ?? 'neutral'}>{inv.status}</Badge>
+                    <span className="text-sm capitalize text-muted">{inv.type}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted">
                     Issued {inv.issued_at ? new Date(inv.issued_at).toLocaleDateString() : '—'}
+                    {inv.paid_at ? ` · Paid ${new Date(inv.paid_at).toLocaleDateString()}` : ''}
                   </p>
-                  {inv.lines && inv.lines.length > 0 && (
-                    <ul className="mt-2 flex flex-col gap-0.5 border-l-2 border-border pl-2 text-xs text-muted">
-                      {inv.lines.map((line, idx) => (
-                        <li key={idx} className="flex items-center justify-between gap-4">
-                          <span>{line.description}</span>
-                          <span>{formatMoney(line.amount_minor, 'NGN')}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+
+                  <InvoiceBreakdown invoice={inv} />
                 </div>
-                <div className="flex items-center gap-3">
-                  <Badge variant={STATUS_TONE[inv.status] ?? 'neutral'}>{inv.status}</Badge>
+                <div className="flex shrink-0 flex-wrap items-center gap-2 lg:pt-1">
                   {inv.status === 'unpaid' && (
                     <Button
                       size="sm"
@@ -111,14 +106,55 @@ function Invoices({ orgId }: { orgId: number }) {
                     </Button>
                   )}
                   <Button size="sm" variant="outline" loading={downloading === inv.id} onClick={() => download(inv.id)}>
-                    PDF
+                    <Icon name="clipboard" className="size-4" />
+                    Download PDF
                   </Button>
                 </div>
-              </CardBody>
-            </Card>
+              </div>
+            </article>
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function InvoiceBreakdown({ invoice }: { invoice: SchoolInvoice }) {
+  const lines = invoice.lines ?? []
+  const schoolFees = lines.find((line) => line.description.toLowerCase().includes('student school'))
+  const registrationFees = lines.find((line) => line.description.toLowerCase().includes('registration'))
+  const additionalLines = lines.filter((line) => line !== schoolFees && line !== registrationFees)
+  const hasFeeBreakdown = Boolean(schoolFees || registrationFees)
+
+  return (
+    <div className="mt-4 max-w-xl rounded-xl bg-surface-muted p-4">
+      <dl className="flex flex-col gap-3 text-sm">
+        <BreakdownRow label="Student School Fees" amount={schoolFees?.amount_minor} />
+        <BreakdownRow label="Registration Fees" amount={registrationFees?.amount_minor} />
+        {additionalLines.map((line, index) => (
+          <BreakdownRow key={`${line.description}-${index}`} label={line.description} amount={line.amount_minor} subdued />
+        ))}
+        <div className="border-t border-border pt-3">
+          <div className="flex items-baseline justify-between gap-6">
+            <dt className="font-semibold text-foreground">Total {invoice.status === 'paid' ? 'paid' : 'due'}</dt>
+            <dd className="text-base font-bold tabular-nums text-foreground">{formatMoney(invoice.amount_minor, 'NGN')}</dd>
+          </div>
+        </div>
+      </dl>
+      {!hasFeeBreakdown && (
+        <p className="mt-3 text-xs text-muted">The detailed fee split is unavailable for this older invoice.</p>
+      )}
+    </div>
+  )
+}
+
+function BreakdownRow({ label, amount, subdued = false }: { label: string; amount?: number; subdued?: boolean }) {
+  return (
+    <div className="flex items-baseline justify-between gap-6">
+      <dt className={subdued ? 'text-muted' : 'font-medium text-foreground'}>{label}</dt>
+      <dd className={`tabular-nums ${subdued ? 'text-muted' : 'font-semibold text-foreground'}`}>
+        {amount == null ? '—' : formatMoney(amount, 'NGN')}
+      </dd>
     </div>
   )
 }

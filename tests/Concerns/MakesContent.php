@@ -29,7 +29,7 @@ trait MakesContent
         $video = $lesson->components()->create(['type' => 'video', 'position' => 1, 'xp_value' => 5]);
         $video->video()->create(['title' => 'V', 'duration_seconds' => 10, 'status' => 'ready', 'kind' => 'lesson']);
 
-        $quizC = $lesson->components()->create(['type' => 'quiz', 'position' => 2, 'xp_value' => 10]);
+        $quizC = $lesson->components()->create(['type' => 'quiz', 'position' => 2, 'xp_value' => 1]);
         $quiz = $quizC->quiz()->create(['pass_threshold' => 0.5]);
         $question = $quiz->questions()->create(['type' => 'mcq_single', 'prompt' => 'Pick', 'points' => 2, 'position' => 1]);
         $question->options()->create(['label' => 'Right', 'is_correct' => true, 'position' => 1]);

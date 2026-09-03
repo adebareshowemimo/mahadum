@@ -17,6 +17,7 @@ import {
   type LoginInput,
   type Me,
   type RegisterInput,
+  type GoogleAuthInput,
   type Role,
 } from '@/lib/api'
 
@@ -29,7 +30,7 @@ interface AuthContextValue {
   activeOrgId: number | null
   login: (input: LoginInput) => Promise<void>
   register: (input: RegisterInput) => Promise<void>
-  loginWithGoogle: (idToken: string) => Promise<void>
+  loginWithGoogle: (input: GoogleAuthInput) => Promise<void>
   logout: () => Promise<void>
   setActiveOrg: (id: number | null) => void
   /** True if the user holds any of the given roles. */
@@ -78,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [adoptSession],
   )
   const loginWithGoogle = useCallback(
-    async (idToken: string) => adoptSession(await authApi.google(idToken)),
+    async (input: GoogleAuthInput) => adoptSession(await authApi.google(input)),
     [adoptSession],
   )
 

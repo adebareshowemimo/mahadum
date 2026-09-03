@@ -72,4 +72,33 @@ class MediaOrphanTest extends TestCase
             ->assertJsonPath('data.type', 'video')
             ->assertJsonPath('data.url', fn ($url) => str_starts_with($url, '/storage/media/'));
     }
+
+    public function test_mp4_with_generic_binary_mime_is_accepted_and_keeps_a_video_extension(): void
+    {
+        $this->seedRbac();
+        Storage::fake('public');
+        $this->actingAsUser($this->userWithRole('content_owner'));
+
+        $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->create('camera-export.mp4', 128, 'application/octet-stream'),
+        ])->assertCreated()
+            ->assertJsonPath('data.type', 'video')
+            ->assertJsonPath('data.url', fn ($url) => str_ends_with($url, '.mp4'));
+    }
+
+    public function test_media_upload_accepts_up_to_300_mb_and_rejects_larger_files(): void
+    {
+        $this->seedRbac();
+        Storage::fake('public');
+        $this->actingAsUser($this->userWithRole('content_owner'));
+
+        $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->create('maximum.mp4', 307200, 'video/mp4'),
+        ])->assertCreated();
+
+        $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->create('too-large.mp4', 307201, 'video/mp4'),
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('file');
+    }
 }

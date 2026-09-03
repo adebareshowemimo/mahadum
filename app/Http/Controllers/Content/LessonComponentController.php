@@ -10,12 +10,15 @@ use App\Models\ExerciseDeck;
 use App\Models\Lesson;
 use App\Models\LessonComponent;
 use App\Models\Quiz;
+use App\Services\Settings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
 
 class LessonComponentController extends Controller
 {
+    public function __construct(private Settings $settings) {}
+
     /**
      * Create a component (the base sequence row) plus its typed detail.
      * For quizzes, nested questions + options can be created in the same call.
@@ -33,7 +36,7 @@ class LessonComponentController extends Controller
                 'position' => $position,
                 'title' => $request->input('title'),
                 'is_required' => $request->boolean('is_required', true),
-                'xp_value' => $request->input('xp_value', 0),
+                'xp_value' => $request->input('xp_value', $this->settings->componentXp($type)),
                 'settings' => $request->input('settings'),
             ]);
 

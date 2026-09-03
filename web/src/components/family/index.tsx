@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { cn } from '@/lib/cn'
-import { Avatar, Badge, Button, Card, CardBody } from '@/components/ui'
+import { Avatar, Badge, Button, Card, CardBody, Icon } from '@/components/ui'
 
 const naira = (minor: number) => '₦' + (minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })
 
@@ -17,7 +17,7 @@ export function WalletBalanceCard({ currencyMinor, coins, onFund }: { currencyMi
         <div>
           <p className="font-display text-3xl font-bold">{naira(currencyMinor)}</p>
           <p className="mt-1 inline-flex items-center gap-1.5 text-sm text-navy-200">
-            <span className="grid size-4 place-items-center rounded-full bg-gold-400 text-[10px] font-bold text-charcoal-900">₵</span>
+            <Icon name="coin" className="size-4 text-gold-400" />
             {coins.toLocaleString()} coins available
           </p>
         </div>
@@ -56,7 +56,7 @@ export function ChoreCard({ title, assignee, reward, status, onApprove }: { titl
         </div>
         <div className="flex items-center justify-between">
           <span className="inline-flex items-center gap-1.5 text-sm font-bold text-gold-700 dark:text-gold-300">
-            <span className="grid size-4 place-items-center rounded-full bg-gold-400 text-[10px] text-charcoal-900">₵</span>
+            <Icon name="coin" className="size-4 text-gold-600 dark:text-gold-300" />
             {reward} coins
           </span>
           {pending && <Button variant="parent" size="sm" onClick={onApprove}>Approve reward</Button>}

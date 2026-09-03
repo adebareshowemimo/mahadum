@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\ReferralCode;
+use App\Services\Settings;
 use Illuminate\Console\Command;
 
 /**
@@ -15,9 +16,9 @@ class FlagReferralVelocity extends Command
 
     protected $description = 'Flag referral codes exceeding the 24h sign-up velocity limit';
 
-    public function handle(): int
+    public function handle(Settings $settings): int
     {
-        $limit = (int) config('referral.velocity_limit');
+        $limit = (int) $settings->get('referral.velocity_limit', 15);
 
         $flagged = ReferralCode::where('status', 'active')
             ->whereHas('referrals', fn ($q) => $q->where('signed_up_at', '>=', now()->subDay()), '>', $limit)

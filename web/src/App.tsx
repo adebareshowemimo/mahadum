@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect } from 'react'
-import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
+import { Navigate, Outlet, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { AdminRoute, GuestRoute, ProtectedRoute, RoleRoute, TeacherRoute } from '@/components/auth/ProtectedRoute'
 import { AdminLayout } from '@/components/admin'
 import { AppLayout } from '@/components/layout/AppLayout'
@@ -52,6 +52,7 @@ const ReportsPage = lazy(() => import('@/pages/ReportsPage').then((m) => ({ defa
 const GrowthReportPage = lazy(() => import('@/pages/GrowthReportPage').then((m) => ({ default: m.GrowthReportPage })))
 const SubscriptionsReportPage = lazy(() => import('@/pages/SubscriptionsReportPage').then((m) => ({ default: m.SubscriptionsReportPage })))
 const ReferralsReportPage = lazy(() => import('@/pages/ReferralsReportPage').then((m) => ({ default: m.ReferralsReportPage })))
+const ReferralCodesAdminPage = lazy(() => import('@/pages/ReferralCodesAdminPage').then((m) => ({ default: m.ReferralCodesAdminPage })))
 const OrgActivityReportPage = lazy(() => import('@/pages/OrgActivityReportPage').then((m) => ({ default: m.OrgActivityReportPage })))
 const RenewalsReportPage = lazy(() => import('@/pages/RenewalsReportPage').then((m) => ({ default: m.RenewalsReportPage })))
 const EmailCampaignsPage = lazy(() => import('@/pages/EmailCampaignsPage').then((m) => ({ default: m.EmailCampaignsPage })))
@@ -60,6 +61,7 @@ const ContactListsPage = lazy(() => import('@/pages/ContactListsPage').then((m) 
 const EmailLogPage = lazy(() => import('@/pages/EmailLogPage').then((m) => ({ default: m.EmailLogPage })))
 const EmailLogDetailPage = lazy(() => import('@/pages/EmailLogDetailPage').then((m) => ({ default: m.EmailLogDetailPage })))
 const EmailTemplatesPage = lazy(() => import('@/pages/EmailTemplatesPage').then((m) => ({ default: m.EmailTemplatesPage })))
+const EmailConfigurationPage = lazy(() => import('@/pages/EmailConfigurationPage').then((m) => ({ default: m.EmailConfigurationPage })))
 const EmailTemplateDetailPage = lazy(() => import('@/pages/EmailTemplateDetailPage').then((m) => ({ default: m.EmailTemplateDetailPage })))
 const AuditLogPage = lazy(() => import('@/pages/AuditLogPage').then((m) => ({ default: m.AuditLogPage })))
 const FraudReviewPage = lazy(() => import('@/pages/FraudReviewPage').then((m) => ({ default: m.FraudReviewPage })))
@@ -111,7 +113,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/family': 'Family',
   '/classes': 'Classes',
   '/assignments': 'Assignments',
-  '/school': 'School Dashboard',
+  '/school': 'Educator/School Dashboard',
   '/admin': 'Admin Overview',
   '/login': 'Sign In',
   '/register': 'Create Account',
@@ -133,7 +135,7 @@ function PageTitleManager() {
 }
 
 // A link to "/#some-id" from a route OTHER than the target page (e.g. the
-// Families page linking to the "#try" section on "/") triggers a real
+// Families page linking to the "#v1-quiz" lesson on "/") triggers a real
 // full-page navigation. The browser's native scroll-to-fragment fires before
 // the lazy-loaded target section has mounted, so it silently no-ops and the
 // visitor just lands at the top of the page. Retry the scroll for a couple of
@@ -238,10 +240,12 @@ const REAL_PAGES = new Set([
   '/admin/emails/contacts',
   '/admin/emails/log',
   '/admin/emails/templates',
+  '/admin/emails/configuration',
   '/admin/settings/gateways',
   '/admin/audit',
   '/admin/settings',
   '/admin/fraud',
+  '/admin/referrals',
   '/admin/support',
   '/support',
   '/admin/languages',
@@ -263,6 +267,13 @@ const REAL_PAGES = new Set([
   '/courses',
   '/media',
 ])
+
+/** Referral share link — carries the code into the sign-up form. */
+function ReferralLanding() {
+  const { code } = useParams<{ code: string }>()
+  const target = code ? `/register?ref=${encodeURIComponent(code)}` : '/register'
+  return <Navigate to={target} replace />
+}
 
 export function App() {
   return (
@@ -288,6 +299,8 @@ export function App() {
       <Route path="/child-safety" element={<ChildSafetyPage />} />
       <Route path="/accessibility" element={<AccessibilityPage />} />
       <Route path="/class-invitations/:token" element={<ClassInvitationPage />} />
+      {/* Referral share links (mahadum360.com/r/CODE) → sign-up with the code applied. */}
+      <Route path="/r/:code" element={<ReferralLanding />} />
 
       {/* Public auth screens — redirect away if already signed in. */}
       <Route element={<GuestRoute />}>
@@ -363,12 +376,14 @@ export function App() {
             <Route path="/admin/emails/log" element={<EmailLogPage />} />
             <Route path="/admin/emails/log/:logId" element={<EmailLogDetailPage />} />
             <Route path="/admin/emails/templates" element={<EmailTemplatesPage />} />
+            <Route path="/admin/emails/configuration" element={<EmailConfigurationPage />} />
             <Route path="/admin/emails/templates/:templateKey" element={<EmailTemplateDetailPage />} />
             <Route path="/admin/emails/:campaignId" element={<CampaignDetailPage />} />
             <Route path="/admin/settings/gateways" element={<GatewaysPage />} />
             <Route path="/admin/audit" element={<AuditLogPage />} />
             <Route path="/admin/settings" element={<SettingsPage />} />
             <Route path="/admin/fraud" element={<FraudReviewPage />} />
+            <Route path="/admin/referrals" element={<ReferralCodesAdminPage />} />
             <Route path="/admin/support" element={<SupportPage />} />
             <Route path="/admin/languages" element={<LanguagesPage />} />
             <Route path="/admin/plans" element={<PlansPage />} />

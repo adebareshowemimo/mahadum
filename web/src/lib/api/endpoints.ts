@@ -15,6 +15,8 @@ import type {
   CoursePerformance,
   CoursePublishResult,
   CourseSummary,
+  CourseCatalogQuery,
+  CourseCatalogPage,
   CreateChoreInput,
   FamilyOverview,
   HeartsInfo,
@@ -24,6 +26,7 @@ import type {
   LeaderboardRow,
   LeagueStanding,
   LearnerPath,
+  LearnerProfile,
   LessonAnalytics,
   LessonPlay,
   QuizImportResult,
@@ -36,10 +39,15 @@ import type {
   AuditLogPage,
   AuditLogQuery,
   FlaggedReferral,
+  AdminReferralCodesPage,
+  AdminReferralCodesQuery,
   SettingsResponse,
   SettingValue,
   GatewayStatus,
   GatewayTestResult,
+  MonnifyConfigurationInput,
+  EmailConfiguration,
+  EmailConfigurationInput,
   GrowthReport,
   IncomeReport,
   IncomeReportQuery,
@@ -131,6 +139,10 @@ import type {
   PurchaseSeatsResult,
   ReferralCode,
   ReferralSummary,
+  ReferralActivationsPage,
+  ReferralActivationsQuery,
+  ReferralInvitation,
+  SendReferralInvitationInput,
   RequestPayoutInput,
   RosterImportResult,
   ClassAnalytics,
@@ -146,6 +158,7 @@ import type {
   TelcoOperator,
   TelcoStatus,
   LoginInput,
+  GoogleAuthInput,
   Me,
   RefreshedToken,
   RegisterInput,
@@ -184,8 +197,8 @@ export const authApi = {
   },
 
   /** Exchange a Google ID token (from Google Identity Services) for a session. */
-  async google(idToken: string): Promise<AuthSession> {
-    const { data } = await api.post('/auth/google', { id_token: idToken, device_name: deviceName() })
+  async google(input: GoogleAuthInput): Promise<AuthSession> {
+    const { data } = await api.post('/auth/google', { ...input, device_name: deviceName() })
     return data.data
   },
 
@@ -284,6 +297,17 @@ export const familyApi = {
     return data.data
   },
 
+  async updateLearnerAvatar(
+    learnerId: number,
+    input: { avatarId?: number; photo?: File },
+  ): Promise<LearnerProfile> {
+    const form = new FormData()
+    if (input.photo) form.append('photo', input.photo)
+    else if (input.avatarId) form.append('avatar_id', String(input.avatarId))
+    const { data } = await api.post(`/learners/${learnerId}/avatar`, form)
+    return data.data
+  },
+
   /** Set, change, or (with `pin: null`) clear one child's own PIN. */
   async setChildPin(learnerId: number, pin: string | null): Promise<{ id: number; pin_protected: boolean }> {
     const { data } = await api.put(`/family/children/${learnerId}/pin`, { pin })
@@ -357,10 +381,10 @@ export const learningApi = {
     return data.data
   },
 
-  /** Published courses available to enroll into. */
-  async courses(learnerId: number): Promise<CourseSummary[]> {
-    const { data } = await api.get('/courses', { params: { per_page: 100, learner_id: learnerId } })
-    return data.data
+  /** Paginated published-course library for learner and parent discovery. */
+  async courses(query: CourseCatalogQuery = {}): Promise<CourseCatalogPage> {
+    const { data } = await api.get('/courses', { params: query })
+    return data
   },
 
   async enroll(learnerId: number, courseId: number): Promise<{ enrollment_id: number }> {
@@ -603,10 +627,18 @@ export const contentApi = {
   },
 
   /** Upload a media file to local storage; returns the created asset (id + url). */
-  async uploadMedia(file: File): Promise<{ id: number; type: string; url: string }> {
+  async uploadMedia(
+    file: File,
+    onProgress?: (loaded: number, total: number) => void,
+  ): Promise<{ id: number; type: string; url: string }> {
     const form = new FormData()
     form.append('file', file)
-    const { data } = await api.post('/media/upload', form)
+    const { data } = await api.post('/media/upload', form, {
+      onUploadProgress: (event) => {
+        const total = event.total && event.total > 0 ? event.total : file.size
+        onProgress?.(Math.min(event.loaded, total), total)
+      },
+    })
     return data.data
   },
 
@@ -1039,6 +1071,26 @@ export const adminApi = {
     return data.data
   },
 
+  async updateMonnify(input: MonnifyConfigurationInput): Promise<GatewayStatus> {
+    const { data } = await api.put('/admin/payment-gateways/monnify', input)
+    return data.data
+  },
+
+  async emailConfiguration(): Promise<EmailConfiguration> {
+    const { data } = await api.get('/admin/email-configuration')
+    return data.data
+  },
+
+  async updateEmailConfiguration(input: EmailConfigurationInput): Promise<EmailConfiguration> {
+    const { data } = await api.put('/admin/email-configuration', input)
+    return data.data
+  },
+
+  async testEmailConfiguration(email: string): Promise<GatewayTestResult> {
+    const { data } = await api.post('/admin/email-configuration/test', { email })
+    return data.data
+  },
+
   async auditLogs(params: AuditLogQuery = {}): Promise<AuditLogPage> {
     const { data } = await api.get('/admin/audit-logs', { params })
     return data
@@ -1092,6 +1144,11 @@ export const adminApi = {
   async flaggedReferrals(): Promise<FlaggedReferral[]> {
     const { data } = await api.get('/admin/referrals/flagged')
     return data.data
+  },
+
+  async referralCodes(params: AdminReferralCodesQuery = {}): Promise<AdminReferralCodesPage> {
+    const { data } = await api.get('/admin/referrals/codes', { params })
+    return data
   },
 
   async clearReferral(codeId: number): Promise<{ id: number; status: string }> {
@@ -1374,6 +1431,21 @@ export const referralApi = {
     return data.data
   },
 
+  async activations(params: ReferralActivationsQuery = {}): Promise<ReferralActivationsPage> {
+    const { data } = await api.get('/referrals/activations', { params })
+    return data
+  },
+
+  async invitations(): Promise<ReferralInvitation[]> {
+    const { data } = await api.get('/referrals/invitations')
+    return data.data
+  },
+
+  async sendInvitation(input: SendReferralInvitationInput): Promise<ReferralInvitation> {
+    const { data } = await api.post('/referrals/invitations', input)
+    return data.data
+  },
+
   async requestPayout(input: RequestPayoutInput): Promise<{ id: number; status: string }> {
     const { data } = await api.post('/payouts/request', input, {
       headers: { 'Idempotency-Key': idempotencyKey() },
@@ -1434,6 +1506,12 @@ export const gamificationApi = {
 }
 
 export const profileApi = {
+  /** Create or return the signed-in parent's/student's own adult learner identity. */
+  async ensureSelfLearner(): Promise<LearnerProfile> {
+    const { data } = await api.post('/me/learner-profile')
+    return data.data
+  },
+
   /**
    * Switch the active child learner profile. `pin` is required for pin-protected
    * profiles, and whenever `fromLearnerId` names a different, already-active

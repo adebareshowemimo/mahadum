@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { AdminPageHeader } from '@/components/admin'
-import { Alert, Badge, Button, Card, CardBody, Skeleton } from '@/components/ui'
+import { Alert, Badge, Button, Card, CardBody, Input, Skeleton, Switch } from '@/components/ui'
 import {
   ApiError,
   type GatewayProvider,
@@ -8,7 +8,7 @@ import {
   type GatewayTestResult,
   type TelcoGatewayStatus,
 } from '@/lib/api'
-import { usePaymentGateways, useTestGateway } from '@/lib/admin/queries'
+import { usePaymentGateways, useTestGateway, useUpdateMonnify } from '@/lib/admin/queries'
 
 export function GatewaysPage() {
   const { data, isLoading, isError } = usePaymentGateways()
@@ -20,7 +20,7 @@ export function GatewaysPage() {
     <div className="flex flex-col gap-6">
       <AdminPageHeader
         title="Payment gateways"
-        description="Monnify (default), Paystack & Flutterwave. Keys are set in the server environment (never stored in-app or shown here) — this console reports status and validates the connection."
+        description="Configure Monnify as the default checkout provider, verify credentials, and monitor the fallback gateways. Saved secrets are encrypted and never displayed."
       />
 
       <Alert variant={data.live ? 'success' : 'warning'}>
@@ -30,21 +30,106 @@ export function GatewaysPage() {
             <span className="capitalize">{data.default}</span>.
           </>
         ) : (
-          <>
-            <strong>Live mode is OFF</strong> (<code>PAYMENT_GATEWAY_LIVE=false</code>). Checkouts use a no-op gateway
-            and return no checkout URL. Set it to <code>true</code> in the environment to go live.
-          </>
+          <><strong>Live mode is OFF.</strong> Checkouts use a no-op gateway and no money moves. Enable it in the Monnify configuration after testing sandbox credentials.</>
         )}
       </Alert>
 
+      {data.providers.filter((provider) => provider.key === 'monnify').map((provider) => (
+        <MonnifyCard key={provider.key} provider={provider} live={data.live} />
+      ))}
+
       <div className="grid gap-4 md:grid-cols-2">
-        {data.providers.map((p) => (
+        {data.providers.filter((provider) => provider.key !== 'monnify').map((p) => (
           <GatewayCard key={p.key} provider={p} isDefault={p.is_default} />
         ))}
       </div>
 
       <TelcoCard telco={data.telco} />
     </div>
+  )
+}
+
+function MonnifyCard({ provider, live }: { provider: GatewayProvider; live: boolean }) {
+  const update = useUpdateMonnify()
+  const test = useTestGateway()
+  const [enabled, setEnabled] = useState(live)
+  const [environment, setEnvironment] = useState<'sandbox' | 'live'>(provider.environment ?? 'sandbox')
+  const [apiKey, setApiKey] = useState('')
+  const [secret, setSecret] = useState('')
+  const [contractCode, setContractCode] = useState('')
+  const [result, setResult] = useState<GatewayTestResult | null>(null)
+
+  async function save() {
+    setResult(null)
+    try {
+      await update.mutateAsync({
+        live: enabled,
+        environment,
+        ...(apiKey ? { api_key: apiKey } : {}),
+        ...(secret ? { secret } : {}),
+        ...(contractCode ? { contract_code: contractCode } : {}),
+      })
+      setApiKey('')
+      setSecret('')
+      setContractCode('')
+      setResult({ ok: true, message: 'Monnify configuration saved securely.' })
+    } catch (error) {
+      setResult({ ok: false, message: error instanceof ApiError ? error.message : 'Could not save Monnify configuration.' })
+    }
+  }
+
+  async function testConnection() {
+    setResult(null)
+    try {
+      setResult(await test.mutateAsync('monnify'))
+    } catch (error) {
+      setResult({ ok: false, message: error instanceof ApiError ? error.message : 'Test failed.' })
+    }
+  }
+
+  return (
+    <Card>
+      <CardBody className="flex flex-col gap-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-bold text-foreground">Monnify</h2>
+              <Badge variant="primary">Default</Badge>
+              <Badge variant={provider.configured ? 'success' : 'warning'}>{provider.configured ? 'Configured' : 'Incomplete'}</Badge>
+            </div>
+            <p className="mt-1 text-sm text-muted">Hosted card and bank-transfer checkout for Nigerian Naira payments.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-foreground">Enable checkout</span>
+            <Switch checked={enabled} onChange={setEnabled} />
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="flex flex-col gap-1.5 text-sm font-semibold text-foreground">
+            Environment
+            <select
+              value={environment}
+              onChange={(event) => setEnvironment(event.target.value as 'sandbox' | 'live')}
+              className="h-11 rounded-xl border border-border-strong bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="sandbox">Sandbox</option>
+              <option value="live">Live</option>
+            </select>
+          </label>
+          <Input label="Contract code" value={contractCode} onChange={(event) => setContractCode(event.target.value)} placeholder={provider.configured ? 'Saved — enter only to replace' : 'Monnify contract code'} autoComplete="off" />
+          <Input label="API key" type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={provider.configured ? 'Saved — enter only to replace' : 'Monnify API key'} autoComplete="new-password" />
+          <Input label="Secret key" type="password" value={secret} onChange={(event) => setSecret(event.target.value)} placeholder={provider.configured ? 'Saved — enter only to replace' : 'Monnify secret key'} autoComplete="new-password" />
+        </div>
+
+        <WebhookUrl url={provider.webhook_url} label="Monnify" />
+        {result && <Alert variant={result.ok ? 'success' : 'danger'}>{result.message}</Alert>}
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button variant="secondary" loading={test.isPending} disabled={!provider.configured} onClick={testConnection}>Test connection</Button>
+          <Button variant="parent" loading={update.isPending} onClick={save}>Save Monnify</Button>
+        </div>
+      </CardBody>
+    </Card>
   )
 }
 

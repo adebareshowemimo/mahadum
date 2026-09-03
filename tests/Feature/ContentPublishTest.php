@@ -102,6 +102,75 @@ class ContentPublishTest extends TestCase
             ->assertJsonCount(25, 'data');
     }
 
+    public function test_learner_catalog_supports_search_filters_and_pagination(): void
+    {
+        $this->seedRbac();
+        $yoruba = Language::create(['code' => 'yo', 'name' => 'Yoruba', 'script' => 'latin', 'is_active' => true]);
+        $hausa = Language::create(['code' => 'ha', 'name' => 'Hausa', 'script' => 'latin', 'is_active' => true]);
+
+        foreach (range(1, 15) as $number) {
+            Course::create([
+                'language_id' => $yoruba->id,
+                'title' => "Yoruba A1 {$number}",
+                'description' => $number === 1 ? 'Learn useful market vocabulary.' : 'Everyday conversation.',
+                'level_band' => 'A1',
+                'status' => 'published',
+                'is_published' => true,
+            ]);
+        }
+
+        Course::create([
+            'language_id' => $hausa->id,
+            'title' => 'Hausa B1',
+            'description' => 'Intermediate Hausa.',
+            'level_band' => 'B1',
+            'status' => 'published',
+            'is_published' => true,
+        ]);
+
+        $this->actingAsUser($this->userWithRole('student'));
+        $this->getJson('/api/v1/courses?language=yo&level=A1&per_page=10&page=2')
+            ->assertOk()
+            ->assertJsonCount(5, 'data')
+            ->assertJsonPath('meta.current_page', 2)
+            ->assertJsonPath('meta.last_page', 2)
+            ->assertJsonPath('meta.total', 15)
+            ->assertJsonPath('filters.levels.0', 'A1')
+            ->assertJsonPath('filters.levels.1', 'B1');
+
+        $this->getJson('/api/v1/courses?q=market')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.title', 'Yoruba A1 1');
+    }
+
+    public function test_parent_can_browse_published_courses_without_a_learner_profile(): void
+    {
+        $this->seedRbac();
+        $language = Language::create(['code' => 'ha', 'name' => 'Hausa', 'script' => 'latin', 'is_active' => true]);
+        Course::create([
+            'language_id' => $language->id,
+            'title' => 'Everyday Hausa',
+            'status' => 'published',
+            'is_published' => true,
+        ]);
+        Course::create([
+            'language_id' => $language->id,
+            'title' => 'Unpublished draft',
+            'status' => 'draft',
+            'is_published' => false,
+        ]);
+
+        $this->actingAsUser($this->userWithRole('parent'));
+        $this->assertDatabaseCount('learner_profiles', 0);
+
+        $this->getJson('/api/v1/courses?per_page=100')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.title', 'Everyday Hausa')
+            ->assertJsonMissing(['title' => 'Unpublished draft']);
+    }
+
     public function test_learner_catalog_marks_real_enrollment_state_and_rejects_another_profile(): void
     {
         $this->seedRbac();

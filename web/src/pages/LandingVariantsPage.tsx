@@ -38,7 +38,7 @@ export function ConceptFooter({ tone = 'light' }: { tone?: ConceptTone }) {
             <h2 className={cn('font-display text-sm font-extrabold', dark ? 'text-[#ffb277]' : 'text-chore-700')}>Explore</h2>
             <div className="mt-3 grid text-sm font-bold">
               <Link className="inline-flex min-h-11 items-center hover:underline" to="/families">Families</Link>
-              <Link className="inline-flex min-h-11 items-center hover:underline" to="/schools">Schools</Link>
+              <Link className="inline-flex min-h-11 items-center hover:underline" to="/schools">Educators/Schools</Link>
               <Link className="inline-flex min-h-11 items-center hover:underline" to="/institutions">Institutions</Link>
               <Link className="inline-flex min-h-11 items-center hover:underline" to="/about">About us</Link>
               <Link className="inline-flex min-h-11 items-center hover:underline" to="/pricing">Pricing</Link>
@@ -162,7 +162,7 @@ const HERO_SLIDES = [
   },
   {
     id: 'school',
-    tab: 'School',
+    tab: 'Educator/School',
     image: '/images/landing-v3-school-community.webp',
     alt: 'Amara learning with classmates while family members arrive for the school Language and Culture club',
     focus: 'object-[54%_center]',
@@ -662,7 +662,7 @@ const ROLE_VIEWS: Array<{
   },
   {
     id: 'school',
-    label: 'Schools',
+    label: 'Educators/Schools',
     heading: 'Run language learning without building the system yourself.',
     body: 'Import the roster, allocate seats, create classes, assign lessons, inspect results and download invoices from one tenant-safe school workspace.',
     features: ['CSV roster import', 'Class and learner analytics', 'Nine-month school plans'],

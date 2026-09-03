@@ -59,7 +59,7 @@ class MonnifyGateway implements PaymentGateway
 
         $response = Http::withToken($token)
             ->acceptJson()
-            ->get($base.'/api/v1/merchant/transactions/query', ['paymentReference' => $reference]);
+            ->get($base.'/api/v2/merchant/transactions/query', ['paymentReference' => $reference]);
 
         // A reference the gateway has never seen a checkout for (e.g. one only
         // ever created locally, never initialized) 404s — not paid, not a fault.

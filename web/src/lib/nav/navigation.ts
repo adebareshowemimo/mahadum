@@ -56,7 +56,7 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    title: 'School',
+    title: 'Educator/School',
     items: [
       { label: 'Dashboard', to: '/school', icon: 'building', roles: ['school_admin'] },
       { label: 'Roster', to: '/roster', icon: 'users', roles: ['school_admin'] },
@@ -82,7 +82,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Overview', to: '/admin', icon: 'shield', roles: ['super_admin'], end: true },
       { label: 'Organizations', to: '/admin/orgs', icon: 'building', roles: ['super_admin'] },
       { label: 'Adverts', to: '/admin/adverts', icon: 'sparkles', roles: ['super_admin'] },
-      { label: 'School leads', to: '/admin/leads', icon: 'building', roles: ['super_admin'] },
+      { label: 'Educator/School leads', to: '/admin/leads', icon: 'building', roles: ['super_admin'] },
       { label: 'Users', to: '/admin/users', icon: 'users', roles: ['super_admin'] },
       { label: 'Roles', to: '/admin/roles', icon: 'shield', roles: ['super_admin'] },
       { label: 'Courses', to: '/admin/courses', icon: 'layers', roles: ['super_admin'] },
@@ -96,7 +96,9 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Contacts', to: '/admin/emails/contacts', icon: 'users', roles: ['super_admin'] },
       { label: 'Email log', to: '/admin/emails/log', icon: 'clipboard', roles: ['super_admin'] },
       { label: 'Email templates', to: '/admin/emails/templates', icon: 'bell', roles: ['super_admin'] },
+      { label: 'Email configuration', to: '/admin/emails/configuration', icon: 'shield', roles: ['super_admin'] },
       { label: 'Fraud review', to: '/admin/fraud', icon: 'shield', roles: ['super_admin'] },
+      { label: 'Referral codes', to: '/admin/referrals', icon: 'gift', roles: ['super_admin'] },
       { label: 'Gateways', to: '/admin/settings/gateways', icon: 'card', roles: ['super_admin'] },
       { label: 'Audit log', to: '/admin/audit', icon: 'clipboard', roles: ['super_admin'] },
       { label: 'Support', to: '/admin/support', icon: 'bell', roles: ['super_admin'] },

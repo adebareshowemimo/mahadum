@@ -56,6 +56,12 @@ describe('public information pages', () => {
     await expectNoA11yViolations(container)
   })
 
+  it('links families directly to the playable lesson on the selected landing page', () => {
+    renderPage(<FamiliesPage />, '/families')
+
+    expect(screen.getByRole('link', { name: /Try a lesson/i })).toHaveAttribute('href', '/#v1-quiz')
+  })
+
   it('has no automated accessibility violations on the legal-page pattern', async () => {
     const { container } = renderPage(<PrivacyPage />, '/privacy')
     await expectNoA11yViolations(container)

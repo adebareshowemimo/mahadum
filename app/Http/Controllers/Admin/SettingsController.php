@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\LessonComponent;
 use App\Services\AuditLogger;
 use App\Services\Settings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class SettingsController extends Controller
@@ -56,7 +58,21 @@ class SettingsController extends Controller
         }
 
         $before = collect(array_keys($clean))->mapWithKeys(fn ($k) => [$k => $this->settings->get($k)])->all();
-        $applied = $this->settings->set($clean);
+        $applied = DB::transaction(function () use ($clean) {
+            $applied = $this->settings->set($clean);
+
+            $xpSettings = [
+                'learning.quiz_completion_xp' => 'quiz',
+                'learning.video_completion_xp' => 'video',
+            ];
+            foreach ($xpSettings as $key => $type) {
+                if (array_key_exists($key, $applied)) {
+                    LessonComponent::where('type', $type)->update(['xp_value' => (int) $applied[$key]]);
+                }
+            }
+
+            return $applied;
+        });
         $this->audit->record('system.settings_updated', null, $before, $applied);
 
         return response()->json(['data' => ['groups' => $this->settings->describe()]]);

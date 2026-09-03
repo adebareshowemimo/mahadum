@@ -4,7 +4,7 @@ import { useTheme } from '@/lib/theme'
 import { Logo } from '@/components/Logo'
 import {
   Alert, Avatar, Badge, Button, Button3D, Card, CardBody, CardDescription, CardHeader, CardTitle,
-  CodeInput, FileUpload, Input, PhoneInput, Progress, Skeleton, Spinner, Switch,
+  CodeInput, FileUpload, Icon, Input, PhoneInput, Progress, Skeleton, Spinner, Switch,
 } from '@/components/ui'
 import {
   CoinPill, CulturalBadgeCard, CurrentLessonCard, HeartsCounter, LessonNode, LessonStepProgress,
@@ -92,7 +92,7 @@ export function ComponentsPage() {
 
             <Section title="Buttons · primary CTAs" hint="Chunky 3D press — click to feel it sink. African Gold keeps charcoal text.">
               <Button3D variant="primary" leftIcon={<span>📖</span>}>Start lesson</Button3D>
-              <Button3D variant="reward" leftIcon={<span>🪙</span>}>Claim coins</Button3D>
+              <Button3D variant="reward" leftIcon={<Icon name="coin" className="size-5" />}>Claim coins</Button3D>
               <Button3D variant="premium" leftIcon={<span>✨</span>}>Upgrade</Button3D>
               <Button3D variant="parent">Approve</Button3D>
               <Button3D variant="billing" leftIcon={<span>📲</span>}>Recharge</Button3D>

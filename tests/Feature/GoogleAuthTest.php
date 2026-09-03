@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Referral;
 use App\Models\User;
+use App\Services\Referral\ReferralService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 use Laravel\Socialite\Facades\Socialite;
@@ -18,6 +20,30 @@ use Tests\TestCase;
 class GoogleAuthTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_first_google_signup_preserves_referral_attribution(): void
+    {
+        $this->seedRbac();
+        $referrer = $this->userWithRole('parent');
+        $code = app(ReferralService::class)->codeFor($referrer)->code;
+        $this->fakeGoogleUser('google-referred', 'referred-google@example.com', 'Referred Person');
+
+        $this->postJson('/api/v1/auth/google', [
+            'id_token' => 'valid-token',
+            'device_name' => 'browser',
+            'account_type' => 'family',
+            'phone' => '+2348012345678',
+            'referral_code' => $code,
+        ], ['X-Device-Id' => 'google-referral-device'])->assertOk();
+
+        $referred = User::where('email', 'referred-google@example.com')->firstOrFail();
+        $this->assertDatabaseHas('referrals', [
+            'referred_user_id' => $referred->id,
+            'device_fingerprint' => 'google-referral-device',
+            'status' => 'pending',
+        ]);
+        $this->assertSame($code, Referral::where('referred_user_id', $referred->id)->firstOrFail()->referralCode->code);
+    }
 
     /** Stub the Google provider so userFromToken() returns a fixed identity. */
     private function fakeGoogleUser(string $id, string $email, string $name): void
@@ -78,6 +104,44 @@ class GoogleAuthTest extends TestCase
         $existing->refresh();
         $this->assertSame('google-456', $existing->google_id, 'Should link, not create a duplicate account.');
         $this->assertSame(1, User::where('email', 'ada@test.local')->count());
+    }
+
+    public function test_first_google_signup_preserves_the_selected_institution_type(): void
+    {
+        $this->seedRbac();
+        $this->fakeGoogleUser('google-institution', 'director@test.local', 'Ngozi Eze');
+
+        $this->postJson('/api/v1/auth/google', [
+            'id_token' => 'stub-token',
+            'device_name' => 'Pixel',
+            'account_type' => 'institution',
+            'organization_name' => 'Nigerian Heritage Institute',
+            'phone' => '+2348012345700',
+            'date_of_birth' => '1988-06-12',
+        ])->assertOk()->assertJsonPath('data.abilities', ['school_admin']);
+
+        $user = User::where('email', 'director@test.local')->firstOrFail();
+        $this->assertTrue($user->hasRole('school_admin'));
+        $this->assertSame('+2348012345700', $user->phone);
+        $this->assertSame('1988-06-12', $user->date_of_birth?->toDateString());
+        $this->assertDatabaseHas('organizations', [
+            'name' => 'Nigerian Heritage Institute',
+            'type' => 'institution',
+            'status' => 'pending',
+        ]);
+        $this->assertDatabaseHas('organization_user', [
+            'user_id' => $user->id,
+            'role' => 'school_admin',
+        ]);
+    }
+
+    public function test_google_signup_requires_a_phone_when_an_account_type_is_selected(): void
+    {
+        $this->postJson('/api/v1/auth/google', [
+            'id_token' => 'stub-token',
+            'device_name' => 'Pixel',
+            'account_type' => 'family',
+        ])->assertStatus(422)->assertJsonValidationErrors('phone');
     }
 
     public function test_repeat_google_login_reuses_the_same_account(): void

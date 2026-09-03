@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\AuditController;
 use App\Http\Controllers\Admin\CompetitionAdminController;
 use App\Http\Controllers\Admin\ContactListController;
 use App\Http\Controllers\Admin\EmailCampaignController;
+use App\Http\Controllers\Admin\EmailConfigurationController;
 use App\Http\Controllers\Admin\EmailLogController;
 use App\Http\Controllers\Admin\EmailTemplateController;
 use App\Http\Controllers\Admin\FraudController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\Admin\LanguageController;
 use App\Http\Controllers\Admin\OrganizationController;
 use App\Http\Controllers\Admin\PlanController as AdminPlanController;
 use App\Http\Controllers\Admin\PromoCodeController;
+use App\Http\Controllers\Admin\ReferralCodeController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SchoolLeadController as AdminSchoolLeadController;
@@ -72,6 +74,7 @@ use App\Http\Controllers\Learning\AnswerController;
 use App\Http\Controllers\Learning\AssessmentController;
 use App\Http\Controllers\Learning\AssignmentSubmissionController;
 use App\Http\Controllers\Learning\EnrollmentController;
+use App\Http\Controllers\Learning\LearnerAvatarController;
 use App\Http\Controllers\Learning\LessonCompletionController;
 use App\Http\Controllers\Learning\LessonPlayController;
 use App\Http\Controllers\Learning\PathController;
@@ -143,6 +146,7 @@ Route::prefix('v1')->group(function () {
     Route::middleware(['auth:sanctum', 'identify.tenant', 'min.app.version'])->group(function () {
 
         Route::get('me', [MeController::class, 'show']);
+        Route::post('me/learner-profile', [MeController::class, 'ensureLearnerProfile']);
         Route::post('me/devices', [DeviceController::class, 'store']);
         Route::post('auth/refresh', [AuthController::class, 'refresh']);
         Route::delete('auth/token', [AuthController::class, 'logout']);
@@ -229,6 +233,7 @@ Route::prefix('v1')->group(function () {
         Route::post('enrollments', [EnrollmentController::class, 'store']);
         Route::get('learners/{learner}/path', [PathController::class, 'show'])->can('view', 'learner');
         Route::get('learners/{learner}/progress', [ProgressController::class, 'show'])->can('view', 'learner');
+        Route::post('learners/{learner}/avatar', [LearnerAvatarController::class, 'update'])->can('update', 'learner');
         Route::get('lessons/{lesson}/play', [LessonPlayController::class, 'show']);
         Route::post('lessons/{lesson}/progress', [ProgressController::class, 'store']);
         Route::post('components/{component}/answer', [AnswerController::class, 'store']);
@@ -299,6 +304,9 @@ Route::prefix('v1')->group(function () {
         /* ---- Referrals & payouts ---- */
         Route::get('referral-code', [ReferralController::class, 'code'])->middleware('can:referrals.view');
         Route::get('referrals/summary', [ReferralController::class, 'summary'])->middleware('can:referrals.view');
+        Route::get('referrals/activations', [ReferralController::class, 'activations'])->middleware('can:referrals.view');
+        Route::get('referrals/invitations', [ReferralController::class, 'invitations'])->middleware('can:referrals.view');
+        Route::post('referrals/invitations', [ReferralController::class, 'invite'])->middleware('can:referrals.view');
         Route::get('payouts', [PayoutController::class, 'index'])->can('viewAny', Payout::class);
         Route::middleware('idempotency')->group(function () {
             Route::post('payouts/request', [PayoutController::class, 'store'])->can('create', Payout::class);
@@ -438,6 +446,7 @@ Route::prefix('v1')->group(function () {
             Route::match(['put', 'patch'], 'languages/{language}', [LanguageController::class, 'update'])->middleware('can:content.languages.manage');
 
             // Referral fraud review (FR-7.5 velocity flags)
+            Route::get('referrals/codes', [ReferralCodeController::class, 'index'])->middleware('can:analytics.platform.view');
             Route::get('referrals/flagged', [FraudController::class, 'index'])->middleware('can:referrals.fraud.review');
             Route::post('referrals/{referralCode}/clear', [FraudController::class, 'clear'])->middleware('can:referrals.fraud.review');
             Route::post('referrals/{referralCode}/freeze', [FraudController::class, 'freeze'])->middleware('can:referrals.fraud.review');
@@ -445,6 +454,9 @@ Route::prefix('v1')->group(function () {
             // System settings (DB-backed overrides of config defaults)
             Route::get('settings', [SettingsController::class, 'index'])->middleware('can:system.settings.manage');
             Route::match(['put', 'patch'], 'settings', [SettingsController::class, 'update'])->middleware('can:system.settings.manage');
+            Route::get('email-configuration', [EmailConfigurationController::class, 'show'])->middleware('can:system.settings.manage');
+            Route::put('email-configuration', [EmailConfigurationController::class, 'update'])->middleware('can:system.settings.manage');
+            Route::post('email-configuration/test', [EmailConfigurationController::class, 'test'])->middleware('can:system.settings.manage');
 
             // Reports
             Route::get('reports/income', [ReportController::class, 'income'])->middleware('can:analytics.platform.view');
@@ -488,6 +500,7 @@ Route::prefix('v1')->group(function () {
 
             // Payment gateway console (env-configured; secrets never leave the server)
             Route::get('payment-gateways', [GatewayController::class, 'index'])->middleware('can:system.settings.manage');
+            Route::put('payment-gateways/monnify', [GatewayController::class, 'updateMonnify'])->middleware('can:system.settings.manage');
             Route::post('payment-gateways/{provider}/test', [GatewayController::class, 'test'])->middleware('can:system.settings.manage');
         });
     });

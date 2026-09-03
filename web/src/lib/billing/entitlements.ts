@@ -18,7 +18,7 @@ export const FEATURE_META: Record<EntitlementFeature, { label: string; unlockedB
   family_dashboard: { label: 'Family dashboard, chores & monitoring', unlockedBy: 'Premium (Family)' },
   offline_download: { label: 'Offline lesson downloads', unlockedBy: 'Premium' },
   unlimited_hearts: { label: 'Unlimited hearts', unlockedBy: 'Premium' },
-  teacher_analytics: { label: 'Teacher analytics', unlockedBy: 'School' },
+  teacher_analytics: { label: 'Teacher analytics', unlockedBy: 'Educator/School' },
 }
 
 export function useEntitlements(): Entitlements {

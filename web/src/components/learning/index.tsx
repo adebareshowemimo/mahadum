@@ -1,5 +1,5 @@
 import { cn } from '@/lib/cn'
-import { Badge, Button3D, Card, CardBody, Progress } from '@/components/ui'
+import { Badge, Button3D, Card, CardBody, Icon, Progress } from '@/components/ui'
 
 /* ----------------------------------------------------------------- counters */
 
@@ -36,7 +36,7 @@ export function XpCounter({ value }: { value: number }) {
 export function CoinPill({ amount }: { amount: number }) {
   return (
     <div className="inline-flex items-center gap-1.5 rounded-full bg-gold-100 px-3 py-1.5 dark:bg-gold-900/40">
-      <span className="grid size-4 place-items-center rounded-full bg-gold-400 text-[10px] font-bold text-charcoal-900">₵</span>
+      <Icon name="coin" className="size-4 text-gold-700 dark:text-gold-300" />
       <span className="text-sm font-bold tabular-nums text-gold-800 dark:text-gold-200">{amount.toLocaleString()}</span>
     </div>
   )

@@ -16,7 +16,13 @@ use Illuminate\Support\Carbon;
  * @property int|null $referred_subscription_id
  * @property string $status
  * @property string|null $device_fingerprint
+ * @property string|null $contact_channel
+ * @property string|null $contact_value
+ * @property int|null $referral_invitation_id
  * @property Carbon|null $signed_up_at
+ * @property Carbon|null $first_lesson_completed_at
+ * @property Carbon|null $first_quiz_completed_at
+ * @property Carbon|null $activated_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read ReferralCode $code
@@ -49,6 +55,9 @@ class Referral extends Model
 
     protected $casts = [
         'signed_up_at' => 'datetime',
+        'first_lesson_completed_at' => 'datetime',
+        'first_quiz_completed_at' => 'datetime',
+        'activated_at' => 'datetime',
     ];
 
     /**
@@ -89,5 +98,13 @@ class Referral extends Model
     public function commissions(): HasMany
     {
         return $this->hasMany(Commission::class);
+    }
+
+    /**
+     * @return BelongsTo<ReferralInvitation, $this>
+     */
+    public function invitation(): BelongsTo
+    {
+        return $this->belongsTo(ReferralInvitation::class, 'referral_invitation_id');
     }
 }

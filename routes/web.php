@@ -17,5 +17,15 @@ Route::get('/{any?}', function () {
 
     abort_unless(file_exists($index), 404, 'SPA build not found — run the deploy script to build web/ first.');
 
-    return response()->file($index, ['Content-Type' => 'text/html']);
+    $response = response()->file($index, [
+        'Content-Type' => 'text/html',
+        // The HTML points at versioned Vite assets. Revalidate it on every
+        // navigation so a production deployment cannot strand users on an
+        // older bundle while the hashed assets themselves remain cacheable.
+        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+        'Pragma' => 'no-cache',
+        'Expires' => '0',
+    ]);
+
+    return $response->setPrivate();
 })->where('any', '^(?!api|sanctum|storage|up).*$');

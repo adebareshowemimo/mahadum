@@ -22,7 +22,11 @@ class ProfileController extends Controller
         // always when hopping from one already-active child profile to a
         // different one — otherwise an un-PIN'd sibling profile is a free
         // door between kids sharing the device.
-        $switchingBetweenChildren = $fromLearnerId !== null && $fromLearnerId !== $learner->id;
+        $fromLearner = $fromLearnerId ? LearnerProfile::find($fromLearnerId) : null;
+        $switchingBetweenChildren = $fromLearner !== null
+            && $fromLearner->id !== $learner->id
+            && $fromLearner->user_id === null
+            && $learner->user_id === null;
 
         if ($learner->parental_pin === null) {
             if ($switchingBetweenChildren) {

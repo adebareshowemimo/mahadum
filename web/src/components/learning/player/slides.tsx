@@ -798,7 +798,8 @@ function AssignmentSlideView({ slide, service, onAdvance }: SlideProps & { slide
           </p>
           {slide.coinReward > 0 && (
             <p className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-gold-500/40 bg-gold-500/10 px-3 py-1 text-sm font-bold text-gold-200">
-              🪙 {slide.coinReward} on approval
+              <Icon name="coin" className="size-4" />
+              {slide.coinReward} on approval
             </p>
           )}
         </div>

@@ -1,10 +1,30 @@
 import { Badge, Card, CardBody, CardHeader, CardTitle, LinkButton } from '@/components/ui'
 import { useAuth } from '@/lib/auth/AuthProvider'
-import { InlineAdvert } from '@/components/adverts/InlineAdvert'
+import { CoursePerformanceDashboard } from '@/components/content/CoursePerformanceDashboard'
 
 /** Authenticated landing. Rendered inside the app shell (AppLayout). */
 export function DashboardPage() {
   const { user, hasRole } = useAuth()
+
+  if (hasRole('content_owner')) {
+    return (
+      <div className="flex flex-col gap-8">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="font-display text-2xl font-bold text-foreground">
+              Welcome back{user ? `, ${user.user.first_name}` : ''}
+            </h1>
+            <p className="mt-1 max-w-2xl text-muted">
+              See which courses are growing, earning, and waiting for confirmation.
+            </p>
+          </div>
+          <Badge variant="primary">Content owner</Badge>
+        </div>
+
+        <CoursePerformanceDashboard variant="dashboard" />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -57,13 +77,16 @@ export function DashboardPage() {
         </Card>
       </div>
 
-      <InlineAdvert />
-
       <div className="flex flex-wrap gap-3">
         {hasRole('parent', 'supervisor') && (
-          <LinkButton to="/family" variant="parent">
-            Go to family
-          </LinkButton>
+          <>
+            <LinkButton to="/learn/courses" variant="parent">
+              Browse courses
+            </LinkButton>
+            <LinkButton to="/family" variant="secondary">
+              Go to family
+            </LinkButton>
+          </>
         )}
         {hasRole('student') && <LinkButton to="/learn">Continue learning</LinkButton>}
         {hasRole('content_owner') && (

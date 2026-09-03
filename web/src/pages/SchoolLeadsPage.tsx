@@ -7,7 +7,7 @@ import { useSchoolLeads } from '@/lib/admin/queries'
 const columns: Column<SchoolLead>[] = [
   {
     key: 'school',
-    header: 'School',
+    header: 'Educator/School',
     render: (l) => (
       <div>
         <p className="font-semibold text-foreground">{l.school_name}</p>
@@ -38,17 +38,17 @@ export function SchoolLeadsPage() {
   const [page, setPage] = useState(1)
   const { data, isLoading, isError, isFetching } = useSchoolLeads(page)
 
-  if (isError) return <Alert variant="danger">Couldn’t load school leads.</Alert>
+  if (isError) return <Alert variant="danger">Couldn’t load Educator/School leads.</Alert>
 
   return (
     <div className="flex flex-col gap-6">
-      <AdminPageHeader title="School leads" description="Contact details submitted via the pricing page's Get Quote flow, for manual sales follow-up." />
+      <AdminPageHeader title="Educator/School leads" description="Contact details submitted via the pricing page's Get Quote flow, for manual sales follow-up." />
       <DataTable
         columns={columns}
         rows={data?.data ?? []}
         getRowId={(l) => l.id}
         isLoading={isLoading}
-        empty="No school leads yet."
+        empty="No Educator/School leads yet."
       />
       {data?.meta && data.meta.total > 0 && (
         <div className="flex items-center justify-between text-sm text-muted">

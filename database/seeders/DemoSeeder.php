@@ -115,7 +115,7 @@ class DemoSeeder extends Seeder
         $video = $lesson->components()->create(['type' => 'video', 'position' => 1, 'xp_value' => 5]);
         $video->video()->create(['title' => 'Ẹ n lẹ — Hello', 'duration_seconds' => 60, 'status' => 'ready', 'kind' => 'lesson']);
 
-        $quizComponent = $lesson->components()->create(['type' => 'quiz', 'position' => 2, 'xp_value' => 10]);
+        $quizComponent = $lesson->components()->create(['type' => 'quiz', 'position' => 2, 'xp_value' => 1]);
         $quiz = $quizComponent->quiz()->create(['pass_threshold' => 0.5]);
         $question = $quiz->questions()->create(['type' => 'mcq_single', 'prompt' => 'How do you say "hello"?', 'points' => 2, 'position' => 1]);
         $question->options()->create(['label' => 'Ẹ n lẹ', 'is_correct' => true, 'position' => 1]);

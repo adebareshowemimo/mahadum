@@ -17,7 +17,7 @@ class AuthTest extends TestCase
         $res = $this->postJson('/api/v1/auth/register', [
             'first_name' => 'Funmi', 'last_name' => 'Adeyemi',
             'email' => 'funmi@test.local', 'phone' => '+2348012345678', 'password' => 'Password123!',
-            'password_confirmation' => 'Password123!', 'device_name' => 'iPhone',
+            'password_confirmation' => 'Password123!', 'device_name' => 'iPhone', 'date_of_birth' => '1990-04-18',
         ]);
 
         $res->assertCreated()
@@ -26,6 +26,7 @@ class AuthTest extends TestCase
             ->assertJsonPath('data.abilities', ['parent']);
 
         $this->assertDatabaseHas('users', ['email' => 'funmi@test.local', 'first_name' => 'Funmi', 'last_name' => 'Adeyemi', 'phone' => '+2348012345678']);
+        $this->assertSame('1990-04-18', User::where('email', 'funmi@test.local')->firstOrFail()->date_of_birth?->toDateString());
         $this->assertDatabaseHas('families', ['name' => "Funmi's Family"]);
     }
 
@@ -50,6 +51,64 @@ class AuthTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.learner_profiles.0.display_name', 'Ada Okafor')
             ->assertJsonPath('data.learner_profiles.0.coin_balance', 0);
+    }
+
+    public function test_educator_school_registration_creates_a_pending_school_workspace(): void
+    {
+        $this->seedRbac();
+
+        $response = $this->postJson('/api/v1/auth/register', [
+            'first_name' => 'Tola', 'last_name' => 'Adebayo',
+            'email' => 'tola.school@test.local', 'phone' => '+2348012345690',
+            'password' => 'Password123!', 'password_confirmation' => 'Password123!',
+            'device_name' => 'Laptop', 'account_type' => 'educator_school',
+            'organization_name' => 'Tola Learning Centre',
+        ])->assertCreated()->assertJsonPath('data.abilities', ['school_admin']);
+
+        $userId = $response->json('data.user.id');
+        $this->assertDatabaseHas('organizations', [
+            'name' => 'Tola Learning Centre',
+            'type' => 'school',
+            'status' => 'pending',
+            'contact_email' => 'tola.school@test.local',
+        ]);
+        $this->assertDatabaseHas('organization_user', [
+            'user_id' => $userId,
+            'role' => 'school_admin',
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseMissing('families', ['owner_user_id' => $userId]);
+    }
+
+    public function test_institution_registration_creates_a_pending_institution_workspace(): void
+    {
+        $this->seedRbac();
+
+        $this->postJson('/api/v1/auth/register', [
+            'first_name' => 'Amina', 'last_name' => 'Bello',
+            'email' => 'amina.institution@test.local', 'phone' => '+2348012345691',
+            'password' => 'Password123!', 'password_confirmation' => 'Password123!',
+            'device_name' => 'Laptop', 'account_type' => 'institution',
+            'organization_name' => 'Arewa Cultural Foundation',
+        ])->assertCreated()->assertJsonPath('data.abilities', ['school_admin']);
+
+        $this->assertDatabaseHas('organizations', [
+            'name' => 'Arewa Cultural Foundation',
+            'type' => 'institution',
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_organization_name_is_required_for_non_family_registration(): void
+    {
+        $this->seedRbac();
+
+        $this->postJson('/api/v1/auth/register', [
+            'first_name' => 'Tola', 'last_name' => 'Adebayo',
+            'email' => 'missing.org@test.local', 'phone' => '+2348012345692',
+            'password' => 'Password123!', 'password_confirmation' => 'Password123!',
+            'device_name' => 'Laptop', 'account_type' => 'educator_school',
+        ])->assertStatus(422)->assertJsonValidationErrors('organization_name');
     }
 
     public function test_register_requires_last_name(): void

@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\FamilyResource;
 use App\Http\Resources\LearnerProfileResource;
+use App\Models\LearnerProfile;
 use App\Models\OrganizationUser;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -17,7 +19,9 @@ class MeController extends Controller
     {
         $user = $request->user()->load([
             'ownedFamilies.learnerProfiles.targetLanguage',
+            'ownedFamilies.learnerProfiles.profilePhoto',
             'learnerProfile.targetLanguage',
+            'learnerProfile.profilePhoto',
         ]);
 
         // Active personal subscription (drives premium entitlements). School
@@ -59,6 +63,36 @@ class MeController extends Controller
             ] : null,
             'entitlements' => $this->entitlements($subscription?->plan),
         ]]);
+    }
+
+    /**
+     * Create (or return) the signed-in adult's own learner identity. Parents
+     * use this to learn alongside their children without impersonating a child.
+     */
+    public function ensureLearnerProfile(Request $request, AuditLogger $audit): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user->hasAnyRole(['parent', 'student']), 403, 'This account cannot create a personal learner profile.');
+
+        $learner = LearnerProfile::firstOrCreate(
+            ['user_id' => $user->id],
+            [
+                'display_name' => $user->name,
+                'date_of_birth' => $user->date_of_birth,
+                'age_band' => 'adult',
+            ],
+        );
+
+        if ($learner->wasRecentlyCreated) {
+            $audit->record('learner.self_profile_created', $learner, [], [
+                'user_id' => $user->id,
+                'display_name' => $learner->display_name,
+            ]);
+        }
+
+        return (new LearnerProfileResource($learner->load(['targetLanguage', 'profilePhoto'])))
+            ->response()
+            ->setStatusCode($learner->wasRecentlyCreated ? 201 : 200);
     }
 
     /**

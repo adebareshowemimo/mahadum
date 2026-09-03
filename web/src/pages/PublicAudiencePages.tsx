@@ -88,7 +88,7 @@ export function FamiliesPage() {
             </p>
             <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center">
               <LinkButton to="/register" variant="accent" size="lg">Start your family free <span aria-hidden="true">→</span></LinkButton>
-              <a href="/#try" className="inline-flex min-h-12 items-center gap-3 font-display font-extrabold text-white hover:underline">
+              <a href="/#v1-quiz" className="inline-flex min-h-12 items-center gap-3 font-display font-extrabold text-white hover:underline">
                 <span className="flex size-11 items-center justify-center rounded-full border-2 border-white"><Icon name="chevron" className="size-5 -rotate-90" /></span>
                 <span>Try a lesson<small className="block font-sans text-xs font-semibold text-white/70">See how it works</small></span>
               </a>
@@ -461,7 +461,7 @@ export function InstitutionsPage() {
         heading="Build a programme people can carry into real life."
         body="Tell us who you want to reach, what access looks like and where language should lead."
         primary={{ label: 'Discuss a partnership', to: '/contact?topic=partnership' }}
-        secondary={{ label: 'Explore schools', to: '/schools' }}
+        secondary={{ label: 'Explore Educators/Schools', to: '/schools' }}
       />
     </PublicPageShell>
   )

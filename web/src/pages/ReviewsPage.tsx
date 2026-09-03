@@ -98,8 +98,10 @@ function ChoresSection({
             <CardBody className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="font-semibold text-foreground">{c.title}</p>
-                <p className="text-sm text-muted">
-                  {c.assignee ?? 'Unassigned'} · 🪙 {c.coin_reward}
+                <p className="flex flex-wrap items-center gap-1 text-sm text-muted">
+                  <span>{c.assignee ?? 'Unassigned'} ·</span>
+                  <Icon name="coin" className="size-3.5 text-gold-600" />
+                  <span>{c.coin_reward}</span>
                   {c.status === 'pending_review' && (
                     <Badge variant="warning" className="ml-2">
                       Needs another look
@@ -115,7 +117,7 @@ function ChoresSection({
                   Not yet
                 </Button>
                 <Button size="sm" variant="parent" loading={busy} onClick={() => decide(c.chore_id, 'approve')}>
-                  Approve · 🪙 {c.coin_reward}
+                  Approve · <Icon name="coin" className="size-4" /> {c.coin_reward}
                 </Button>
               </div>
             </CardBody>
@@ -157,8 +159,10 @@ function AssignmentsSection({ assignments }: { assignments: AssignmentReviewItem
             <CardBody className="flex flex-col gap-3">
               <div>
                 <p className="font-semibold text-foreground">{a.prompt ?? 'Assignment'}</p>
-                <p className="text-sm text-muted">
-                  {a.learner ?? 'Your child'} · 🪙 {a.coin_reward} on approval
+                <p className="flex flex-wrap items-center gap-1 text-sm text-muted">
+                  <span>{a.learner ?? 'Your child'} ·</span>
+                  <Icon name="coin" className="size-3.5 text-gold-600" />
+                  <span>{a.coin_reward} on approval</span>
                 </p>
               </div>
               {a.media_url ? (
@@ -175,7 +179,7 @@ function AssignmentsSection({ assignments }: { assignments: AssignmentReviewItem
                   Not yet
                 </Button>
                 <Button size="sm" variant="parent" loading={busy} onClick={() => decide(a.id, 'approve')}>
-                  Approve · 🪙 {a.coin_reward}
+                  Approve · <Icon name="coin" className="size-4" /> {a.coin_reward}
                 </Button>
               </div>
             </CardBody>

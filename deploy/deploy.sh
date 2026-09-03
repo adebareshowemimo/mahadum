@@ -10,6 +10,7 @@ APP_DIR="${APP_DIR:-/var/www/mahadum}"
 BRANCH="${BRANCH:-main}"
 WEB_USER="${WEB_USER:-www-data}"
 LOCK_FILE="${LOCK_FILE:-/tmp/mahadum-deploy.lock}"
+SKIP_GIT_PULL="${SKIP_GIT_PULL:-0}"
 
 cd "$APP_DIR"
 
@@ -20,13 +21,18 @@ if ! flock -n 9; then
     exit 1
 fi
 
-PREVIOUS_COMMIT="$(git rev-parse HEAD)"
+PREVIOUS_COMMIT=""
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    PREVIOUS_COMMIT="$(git rev-parse HEAD)"
+fi
 MAINTENANCE_ON=0
 
 rollback() {
     local exit_code=$?
     echo "==> Deploy failed (exit $exit_code). Rolling back to $PREVIOUS_COMMIT" >&2
-    git checkout "$PREVIOUS_COMMIT" --quiet || true
+    if [ -n "$PREVIOUS_COMMIT" ]; then
+        git checkout "$PREVIOUS_COMMIT" --quiet || true
+    fi
     composer install --no-dev --optimize-autoloader --no-interaction --quiet || true
     php artisan config:cache || true
     php artisan route:cache || true
@@ -39,10 +45,14 @@ rollback() {
 }
 trap rollback ERR
 
-echo "==> Pulling $BRANCH"
-git fetch origin
-git checkout "$BRANCH"
-git pull origin "$BRANCH"
+if [ "$SKIP_GIT_PULL" = "1" ]; then
+    echo "==> Using the supplied release snapshot"
+else
+    echo "==> Pulling $BRANCH"
+    git fetch origin
+    git checkout "$BRANCH"
+    git pull origin "$BRANCH"
+fi
 
 echo "==> Installing PHP dependencies"
 composer install --no-dev --optimize-autoloader --no-interaction
@@ -84,6 +94,7 @@ php artisan view:cache
 php artisan storage:link || true
 
 echo "==> Fixing storage/cache permissions"
+install -d -m 0775 -o "$WEB_USER" -g "$WEB_USER" storage/app/public/media
 chown -R "$WEB_USER":"$WEB_USER" storage bootstrap/cache
 chmod -R ug+rwX storage bootstrap/cache
 
@@ -102,4 +113,8 @@ if ! curl --fail --silent --show-error --max-time 10 "$HEALTH_URL" > /dev/null; 
 fi
 
 trap - ERR
-echo "Done. Deployed $(git rev-parse --short HEAD) (was $(git rev-parse --short "$PREVIOUS_COMMIT"))."
+if [ -n "$PREVIOUS_COMMIT" ]; then
+    echo "Done. Deployed $(git rev-parse --short HEAD) (was $(git rev-parse --short "$PREVIOUS_COMMIT"))."
+else
+    echo "Done. Deployed supplied release snapshot."
+fi

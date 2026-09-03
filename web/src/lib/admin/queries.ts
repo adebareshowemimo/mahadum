@@ -4,6 +4,7 @@ import {
   type AdminAdvertPlacementQuery,
   type AdminOrgQuery,
   type AdminPayoutsQuery,
+  type AdminReferralCodesQuery,
   type AdminTicketsQuery,
   type AdminUsersQuery,
   type UpdateTicketInput,
@@ -53,10 +54,12 @@ export const adminKeys = {
   emailTemplate: (key: string) => ['admin-email-template', key] as const,
   emailTemplatePreview: (key: string) => ['admin-email-template-preview', key] as const,
   gateways: ['admin-gateways'] as const,
+  emailConfiguration: ['admin-email-configuration'] as const,
   audit: (params: AuditLogQuery) => ['admin-audit', params] as const,
   support: (params: AdminTicketsQuery) => ['admin-support', params] as const,
   settings: ['admin-settings'] as const,
   flaggedReferrals: ['admin-flagged-referrals'] as const,
+  referralCodes: (params: AdminReferralCodesQuery) => ['admin-referral-codes', params] as const,
   languages: ['admin-languages'] as const,
   plans: ['admin-plans'] as const,
   promos: (page: number) => ['admin-promos', page] as const,
@@ -369,6 +372,30 @@ export function useTestGateway() {
   return useMutation({ mutationFn: (provider: string) => adminApi.testGateway(provider) })
 }
 
+export function useUpdateMonnify() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: adminApi.updateMonnify,
+    onSuccess: (data) => qc.setQueryData(adminKeys.gateways, data),
+  })
+}
+
+export function useEmailConfiguration() {
+  return useQuery({ queryKey: adminKeys.emailConfiguration, queryFn: adminApi.emailConfiguration })
+}
+
+export function useUpdateEmailConfiguration() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: adminApi.updateEmailConfiguration,
+    onSuccess: (data) => qc.setQueryData(adminKeys.emailConfiguration, data),
+  })
+}
+
+export function useTestEmailConfiguration() {
+  return useMutation({ mutationFn: adminApi.testEmailConfiguration })
+}
+
 export function useAuditLogs(params: AuditLogQuery) {
   return useQuery({
     queryKey: adminKeys.audit(params),
@@ -404,6 +431,14 @@ export function useReplyTicket() {
 
 export function useFlaggedReferrals() {
   return useQuery({ queryKey: adminKeys.flaggedReferrals, queryFn: adminApi.flaggedReferrals })
+}
+
+export function useAdminReferralCodes(params: AdminReferralCodesQuery) {
+  return useQuery({
+    queryKey: adminKeys.referralCodes(params),
+    queryFn: () => adminApi.referralCodes(params),
+    placeholderData: (prev) => prev,
+  })
 }
 
 export function useReviewReferral() {

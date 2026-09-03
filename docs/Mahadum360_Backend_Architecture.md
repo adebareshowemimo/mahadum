@@ -128,7 +128,7 @@ The single most important modelling decision: **separate "account/auth" from "le
 `id, family_id, user_id(nullable), learner_profile_id(nullable), relationship(parent|child|guardian|spouse), is_account_owner`
 
 **learner_profiles** — *every learner (child or adult)*
-`id, family_id(nullable), organization_id🔒(nullable), user_id(nullable — null for under-13 children), display_name, avatar_id, date_of_birth, age_band, target_language_id, current_level, parental_pin_protected(bool)`
+`id, family_id(nullable), organization_id🔒(nullable), user_id(nullable — null for under-13 children), display_name, avatar_id, profile_photo_asset_id(nullable), date_of_birth, age_band, target_language_id, current_level, parental_pin_protected(bool)`
 
 **devices** — fraud fingerprinting
 `id, user_id, device_fingerprint, imei(nullable), ip_last_seen, platform, first_seen_at, last_seen_at`
@@ -137,7 +137,7 @@ Plus spatie tables: `roles`, `permissions`, `model_has_roles`, `model_has_permis
 
 ### B. Content / Curriculum — **CENTRAL (shared, no tenant_id)**
 
-**languages** `id, name, code(yo|ig|ha|pcm), script(latin|ajami), rtl(bool), is_active`
+**languages** `id, name, code(yo|ig|ha|en), script(latin|ajami), rtl(bool), is_active`
 
 **courses** `id, language_id, title, description, level_band, owner_user_id(content_owner), status(draft|published), is_published`
 
@@ -229,11 +229,17 @@ Plus spatie tables: `roles`, `permissions`, `model_has_roles`, `model_has_permis
 
 **referral_codes** `id, owner_type(user|organization), owner_id, code(unique), kind(user|school), status(active|flagged|disabled)`
 
-**referrals** `id, referral_code_id, referred_user_id, referred_subscription_id(nullable), status(pending|qualified|rejected), device_fingerprint, signed_up_at`
-> FR-7.1 device/IP block; FR-7.5 velocity block (>15 sign-ups / 24h → flag + freeze).
+**referral_invitations** `id, referral_code_id, inviter_user_id, channel(email|phone), contact(normalized), status(sent|accepted|blocked_existing), accepted_referral_id(nullable), sent_at`
+> A referrer invites a specific email/phone; the sign-up is matched back to it so the dashboards show "via email" vs "via phone". Inviting an already-active account is refused (`422 account_exists`).
 
-**commissions** `id, referral_id, beneficiary_type, beneficiary_id, amount_minor, status(pending_escrow|cleared|cancelled), escrow_until(14 days), cleared_at`
-> Rule 9 / FR-7.3: 14-day escrow; chargeback in window cancels instantly.
+**referrals** `id, referral_code_id, referred_user_id, referred_subscription_id(nullable), contact_channel, contact_value, referral_invitation_id, status(pending|qualified|rejected|reversed), device_fingerprint, signed_up_at, first_lesson_completed_at, first_quiz_completed_at, activated_at`
+> FR-7.1 device/IP block; FR-7.5 velocity block (flag + freeze past `referral.velocity_limit` sign-ups / 24h).
+> **Activation gate (`ReferralService::maybeActivate`, idempotent, hooked from lesson/quiz completion + subscription webhooks):** the referred person must hold a paid subscription AND have finished ≥ `referral.activation_min_lessons` lessons and ≥ `referral.activation_min_quizzes` quizzes (across their own + owned-family learner profiles). On success → `status=qualified`, `activated_at` stamped.
+
+**commissions** `id, referral_id, beneficiary_type, beneficiary_id, amount_minor, status(pending_escrow|cleared|reversed|clawback_pending), kind(purchase|qualifying), source_type/source_id(nullable morph), source_event(unique), escrow_until, cleared_at`
+> After activation, every purchase the referred person makes (subscription charges + wallet funding) within `referral.earning_window_days` earns the code owner `referral.commission_bps` of the amount into escrow (`ReferralService::recordReferredPurchase`, idempotent on `source_event`). Rule 9 / FR-7.3: escrow window; a refund/chargeback unwinds via `ReferralService::reverseForSource` (in-escrow → `reversed`, cleared → `clawback_pending`).
+
+> **All referral rules are live admin settings** (`config/settings.php` "referrals" group, edited at `/admin/settings`): `referral.commission_bps`, `referral.earning_window_days`, `referral.escrow_days`, `referral.velocity_limit`, `referral.activation_min_lessons`, `referral.activation_min_quizzes`, `referral.activation_requires_paid_subscription`.
 
 **payouts** `id, beneficiary_type, beneficiary_id, amount_minor, method(bank|coins), status, requested_at, approved_by, paid_at`
 > Floor ₦5,000 cleared; cap ₦50,000/mo individuals (no cap for verified schools).
@@ -361,7 +367,7 @@ erDiagram
 `GET /plans` · `POST /subscriptions` · `POST /subscriptions/{id}/cancel` · `POST /telco/subscribe` · `GET /telco/status` · `POST /data-bundles/purchase`
 
 **Referrals**
-`GET /referral-code` · `GET /referrals/summary` · `POST /payouts/request` · `GET /payouts`
+`GET /referral-code` · `GET /referrals/summary` · `GET /referrals/activations?search=` · `GET|POST /referrals/invitations` · `POST /payouts/request` · `GET /payouts` · `GET /admin/referrals/codes?search=` (per-code activation dashboard)
 
 **School / Teacher (org-scoped)**
 `GET /schools/{id}/dashboard` · `POST /schools/{id}/students/import` (CSV) · `GET /classes` · `GET /classes/{id}/analytics` · `GET /schools/{id}/seats` · `POST /schools/{id}/seats/purchase` · `GET /schools/{id}/invoices` · `GET /schools/{id}/invoices/{invoice}/pdf` · `GET /schools/{id}/referrals`
@@ -376,7 +382,7 @@ erDiagram
 
 `PaymentService` normalises every gateway event to a **kind** — `success | refund | ignored` — keyed on the gateway event id (replays return `duplicate`). `success` confirms a wallet funding or activates a subscription; `refund` (Monnify `SUCCESSFUL_REFUND`, Paystack `refund.processed`, Flutterwave `charge.refund`/`REFUNDED`) reverses a settled funding (`debitCurrency`, clamped at zero, funding → `refunded`) or cancels a subscription (→ `refunded`); any unrecognised event is recorded as `ignored` and **moves no money**. Both fundings and subscriptions are correlated by our reference (`gateway_ref` / `sub_<id>`) **or** the gateway's `gateway_txn_ref`, so a Monnify refund (which omits our reference) still matches. Money is only ever credited/reversed server-side here, never by the client.
 
-A subscription refund also unwinds the referral commission it earned (FR-7.3, `ReferralService::reverseForSubscription`): a still-escrowed commission is voided (`pending_escrow → reversed`, so `ClearEscrowedCommissions` skips it), while an already-cleared commission is flagged `clawback_pending` for finance to recover. Idempotent — the subscription's `refunded` guard plus per-row status checks make replays no-ops.
+A subscription or wallet-funding refund also unwinds any referral commission that purchase earned (FR-7.3, `ReferralService::reverseForSource`): a still-escrowed commission is voided (`pending_escrow → reversed`, so `ClearEscrowedCommissions` skips it), while an already-cleared commission is flagged `clawback_pending` for finance to recover. Idempotent — the source's `refunded` guard plus per-row status checks make replays no-ops.
 
 **Outbound airtime** (the daily charge + enrolment OTP SMS) goes through `TelcoGatewayManager` → a swappable `TelcoGateway` (`SdpTelcoGateway` over HTTP, or `NullTelcoGateway` when `services.telco.live` is off). Charges are best-effort — a decline is a normal outcome (→ grace), never an exception — so `RunDailyTelcoBilling` keeps processing the batch; the async result is later confirmed by the DLR webhook.
 
@@ -390,7 +396,8 @@ All webhooks **fail closed** on signature: Monnify (HMAC-SHA512 of the raw body,
 | `RetryFailedBilling` | 24h | reattempt; silent reactivation on success |
 | `ClearEscrowedCommissions` | hourly | escrow_until reached + no chargeback → cleared |
 | `EvaluateStreaks` | 00:05 local | at-risk / reset / consume shield |
-| `FlagReferralVelocity` | 15-min | >15 signups/24h → flag + freeze |
+| `FlagReferralVelocity` | 15-min | > `referral.velocity_limit` signups/24h → flag + freeze |
+| `SyncReferralActivations` | hourly | safety net — activate pending referrals whose gate is now met |
 | `PruneWebhookEvents` | 03:30 daily | drop processed webhook events past retention (default 90d) |
 | `SeatInactivityReview` | weekly | ≥40% inactive 4wk → status review |
 | `SyncXapiToLRS` | continuous | push statements to LRS |

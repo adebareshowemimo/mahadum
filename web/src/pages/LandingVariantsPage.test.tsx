@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -70,10 +70,22 @@ describe('landing concepts', () => {
     renderConcept(<LandingV1Page />)
 
     expect(screen.getByRole('heading', { name: /One hello can bring the whole family closer/i })).toBeInTheDocument()
-    await user.click(screen.getByRole('tab', { name: 'School' }))
+    await user.click(screen.getByRole('tab', { name: 'Educator/School' }))
     expect(screen.getByRole('heading', { name: /The policy says teach it/i })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Next story' }))
     expect(screen.getByRole('heading', { name: /Connect across generations/i })).toBeInTheDocument()
+  })
+
+  it('V1 shows English content rather than Pidgin when English is selected', async () => {
+    const user = userEvent.setup()
+    renderConcept(<LandingV1Page />)
+
+    const lesson = within(document.getElementById('v1-quiz')!)
+    await user.click(lesson.getByRole('button', { name: 'English' }))
+
+    expect(lesson.getByRole('heading', { name: /“Good morning” in English/i })).toBeInTheDocument()
+    expect(lesson.getByRole('button', { name: 'Good morning' })).toBeInTheDocument()
+    expect(lesson.queryByText(/How you dey|I dey come|Abeg|Wetin|Chop/i)).not.toBeInTheDocument()
   })
 
   it('V2 changes the visual story and content as adventures change', async () => {

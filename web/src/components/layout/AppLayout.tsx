@@ -8,6 +8,7 @@ import { useTheme } from '@/lib/theme'
 import { visibleSections } from '@/lib/nav/navigation'
 import { ProfileSwitcher } from '@/components/layout/ProfileSwitcher'
 import { AdvertLeaderboard } from '@/components/adverts/AdvertLeaderboard'
+import { ConsumerPageAdvert } from '@/components/adverts/ConsumerPageAdvert'
 
 /** Persistent authenticated frame: sidebar + topbar with a routed content area. */
 export function AppLayout() {
@@ -50,6 +51,7 @@ export function AppLayout() {
         <Topbar onOpenDrawer={() => setDrawerOpen(true)} />
         <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
           <Outlet />
+          <ConsumerPageAdvert />
         </main>
       </div>
     </div>

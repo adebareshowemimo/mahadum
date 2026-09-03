@@ -27,10 +27,12 @@ import {
   IconButton,
   Input,
   Modal,
+  Progress,
   Skeleton,
 } from '@/components/ui'
 import { ApiError, contentApi, type AddComponentInput, type AuthorComponent, type AuthorQuestionInput, type QuestionType } from '@/lib/api'
 import { cn } from '@/lib/cn'
+import { formatFileSize } from '@/lib/format'
 import {
   useAddComponent,
   useDeleteComponent,
@@ -45,6 +47,7 @@ import { useCanManageContent } from '@/lib/content/permissions'
 import { LessonPreviewModal } from './LessonPreviewModal'
 
 const TYPE_ICON: Record<string, string> = { video: '🎬', quiz: '❓', speaking: '🎙️', exercise: '🎯', game: '🎮', assignment: '📝' }
+const MAX_MEDIA_UPLOAD_BYTES = 300 * 1024 * 1024
 
 function componentSummary(c: AuthorComponent): string {
   const d = (c.detail ?? {}) as Record<string, unknown>
@@ -443,10 +446,16 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
   const [pickedAssetId, setPickedAssetId] = useState<number | null>(null)
   const [youtubeUrl, setYoutubeUrl] = useState((d.external_url as string) ?? '')
   const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<{ loaded: number; total: number } | null>(null)
+  const [uploadedAssetId, setUploadedAssetId] = useState<number | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
 
   const videoAssets = (library.data ?? []).filter((a) => a.type === 'video')
   const youtubeUrlValid = /^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(youtubeUrl.trim())
+  const uploadPercent = uploadProgress
+    ? Math.min(100, Math.round((uploadProgress.loaded / uploadProgress.total) * 100))
+    : 0
+  const busy = uploading || pending
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -454,21 +463,27 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
     let sourceAssetId: number | undefined
     if (source === 'library') {
       sourceAssetId = pickedAssetId ?? undefined
+    } else if (source === 'upload' && uploadedAssetId) {
+      sourceAssetId = uploadedAssetId
     } else if (source === 'upload' && file) {
       setUploading(true)
+      setUploadProgress({ loaded: 0, total: file.size })
       try {
-        const asset = await contentApi.uploadMedia(file)
+        const asset = await contentApi.uploadMedia(file, (loaded, total) => {
+          setUploadProgress({ loaded, total })
+        })
         sourceAssetId = asset.id
+        setUploadedAssetId(asset.id)
       } catch (err) {
-        setUploadError(err instanceof ApiError ? err.message : 'Upload failed.')
+        setUploadError(err instanceof ApiError ? (err.fieldError('file') ?? err.message) : 'Upload failed.')
         setUploading(false)
+        setUploadProgress(null)
         return
       }
       setUploading(false)
     }
     const ok = await submit({
       type: 'video',
-      xp_value: 5,
       settings: { require_watch: requireWatch },
       video: {
         title,
@@ -479,13 +494,22 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
         external_url: source === 'youtube' ? youtubeUrl.trim() : undefined,
       },
     })
-    if (ok) { setTitle(''); setPresenter(''); setFile(null); setPickedAssetId(null); setYoutubeUrl(''); setSource('upload') }
+    if (ok) {
+      setTitle('')
+      setPresenter('')
+      setFile(null)
+      setPickedAssetId(null)
+      setUploadedAssetId(null)
+      setUploadProgress(null)
+      setYoutubeUrl('')
+      setSource('upload')
+    }
   }
 
   return (
     <Modal
       open
-      onClose={onClose}
+      onClose={() => { if (!busy) onClose() }}
       title={isEdit ? 'Edit video' : 'Add video'}
       description={isEdit ? 'Update the details, or attach a new file to replace the current one.' : 'Upload a file or reuse one from your media library.'}
       variant="workspace"
@@ -505,8 +529,9 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
             <button
               key={opt}
               type="button"
+              disabled={busy}
               onClick={() => setSource(opt)}
-              className={cn('flex-1 rounded-lg py-1.5 capitalize transition-colors', source === opt ? 'bg-surface text-foreground shadow-sm' : 'text-muted')}
+              className={cn('flex-1 rounded-lg py-1.5 capitalize transition-colors disabled:cursor-not-allowed disabled:opacity-50', source === opt ? 'bg-surface text-foreground shadow-sm' : 'text-muted')}
             >
               {opt === 'upload' ? 'Upload new' : opt === 'library' ? 'From library' : 'YouTube link'}
             </button>
@@ -517,13 +542,23 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
           <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-border-strong p-6 text-center hover:bg-surface-muted">
             <span className="text-3xl" aria-hidden="true">🎬</span>
             <span className="text-sm font-medium text-foreground">{file ? file.name : 'Choose a video file'}</span>
-            <span className="text-xs text-subtle">MP4 / WebM, up to 100 MB</span>
+            <span className="text-xs text-subtle">MP4 / WebM, up to 300 MB</span>
             <input
               type="file"
               accept="video/*"
+              disabled={busy}
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0] ?? null
+                setUploadError(null)
+                setUploadProgress(null)
+                setUploadedAssetId(null)
+                if (f && f.size > MAX_MEDIA_UPLOAD_BYTES) {
+                  setFile(null)
+                  setUploadError('This video is larger than the 300 MB upload limit.')
+                  e.target.value = ''
+                  return
+                }
                 setFile(f)
                 if (f && !title) setTitle(f.name.replace(/\.[^.]+$/, ''))
               }}
@@ -559,6 +594,23 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
           </div>
         )}
 
+        {uploadProgress && (
+          <div className="rounded-xl border border-border bg-surface-muted px-4 py-3" aria-live="polite">
+            <div className="mb-2 flex items-baseline justify-between gap-3 text-sm">
+              <span className="font-semibold text-foreground">
+                {uploading ? (uploadPercent >= 100 ? 'Processing video…' : 'Uploading video…') : 'Upload complete'}
+              </span>
+              <span className="text-xs text-muted tabular-nums">
+                {formatFileSize(uploadProgress.loaded)} of {formatFileSize(uploadProgress.total)}
+              </span>
+            </div>
+            <Progress value={uploadPercent} tone={uploading ? 'primary' : 'success'} showLabel />
+            {uploading && uploadPercent >= 100 && (
+              <p className="mt-2 text-xs text-muted">Transfer complete. The server is saving the file.</p>
+            )}
+          </div>
+        )}
+
         <Input label="Video title" value={title} onChange={(e) => setTitle(e.target.value)} required />
         <Input label="Presenter (optional)" value={presenter} onChange={(e) => setPresenter(e.target.value)} />
         <label className="flex flex-col gap-1.5">
@@ -584,14 +636,17 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
           )}
         </label>
         <div className="flex gap-2">
-          <Button type="button" variant="secondary" fullWidth onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="secondary" fullWidth onClick={onClose} disabled={busy}>Cancel</Button>
           <Button
             type="submit"
             fullWidth
-            loading={uploading || pending}
+            loading={busy}
             disabled={(source === 'library' && pickedAssetId == null) || (source === 'youtube' && !youtubeUrlValid)}
           >
-            {uploading ? 'Uploading…' : isEdit ? 'Save changes' : 'Add video'}
+            {uploading
+              ? uploadPercent >= 100 ? 'Processing video…' : `Uploading ${uploadPercent}%`
+              : pending ? (isEdit ? 'Saving changes…' : 'Adding video…')
+                : isEdit ? 'Save changes' : 'Add video'}
           </Button>
         </div>
       </form>
@@ -1172,7 +1227,7 @@ function QuizBuilderModal({ lessonId, editing, onClose }: { lessonId: number; ed
       }
       return item
     })
-    const ok = await submit({ type: 'quiz', xp_value: 10, quiz: { pass_threshold: 0.6, hearts_enabled: true, questions: out } })
+    const ok = await submit({ type: 'quiz', quiz: { pass_threshold: 0.6, hearts_enabled: true, questions: out } })
     if (ok && !isEdit) {
       const fresh = newQuestion()
       setQuestions([fresh])

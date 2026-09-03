@@ -181,7 +181,7 @@ class DevSeeder extends Seeder
         $video = $lesson->components()->create(['type' => 'video', 'position' => 1, 'xp_value' => 5, 'title' => 'Watch']);
         $video->video()->create(['title' => 'Lesson video', 'duration_seconds' => fake()->numberBetween(40, 180), 'status' => 'ready', 'kind' => 'lesson']);
 
-        $quizC = $lesson->components()->create(['type' => 'quiz', 'position' => 2, 'xp_value' => 10, 'title' => 'Quiz']);
+        $quizC = $lesson->components()->create(['type' => 'quiz', 'position' => 2, 'xp_value' => 1, 'title' => 'Quiz']);
         $quiz = $quizC->quiz()->create(['pass_threshold' => 0.5, 'hearts_enabled' => true]);
         foreach (range(1, 3) as $qPos) {
             $question = $quiz->questions()->create(['type' => 'mcq_single', 'prompt' => fake()->sentence(6).'?', 'points' => 2, 'position' => $qPos]);
@@ -363,10 +363,7 @@ class DevSeeder extends Seeder
                 foreach (range(1, fake()->numberBetween(1, 3)) as $inv) {
                     $fees = fake()->numberBetween(50, 400) * 1000;
                     $registration = fake()->numberBetween(20, 100) * 1000;
-                    $billed = InvoiceLineBuilder::withVat([
-                        ['description' => 'Student school fees', 'amount_minor' => $fees],
-                        ['description' => 'Registration fee', 'amount_minor' => $registration],
-                    ]);
+                    $billed = InvoiceLineBuilder::schoolFees($fees, $registration);
 
                     $org->invoices()->create([
                         'type' => fake()->randomElement(['proforma', 'final']),

@@ -3,20 +3,25 @@
 namespace Tests\Feature;
 
 use App\Models\Commission;
+use App\Models\LearnerProfile;
+use App\Models\LessonProgress;
 use App\Models\Organization;
 use App\Models\Plan;
+use App\Models\QuizAttempt;
 use App\Models\Referral;
 use App\Models\ReferralCode;
 use App\Models\User;
 use App\Services\Billing\PaymentService;
+use App\Services\Referral\ReferralService;
 use App\Services\Settings;
 use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\MakesContent;
 use Tests\TestCase;
 
 class SchoolReferralTest extends TestCase
 {
-    use RefreshDatabase;
+    use MakesContent, RefreshDatabase;
 
     private function orgWithAdmin(): array
     {
@@ -45,7 +50,7 @@ class SchoolReferralTest extends TestCase
         $this->assertSame($code, $second->json('data.code'));
     }
 
-    public function test_signup_with_org_code_qualifies_commission_to_the_organization(): void
+    public function test_activated_org_referral_earns_the_org_a_commission_on_a_purchase(): void
     {
         $this->seedRbac();
         $this->seed(PlanSeeder::class);
@@ -61,17 +66,29 @@ class SchoolReferralTest extends TestCase
         ], ['X-Device-Id' => 'dev-org-1'])->assertCreated();
 
         $referred = User::where('email', 'org-referred@test.local')->first();
+        $lesson = $this->publishedLesson();
+        $quizId = $lesson->components->firstWhere('type', 'quiz')->quiz->id;
+        $profile = LearnerProfile::create(['user_id' => $referred->id, 'display_name' => 'R', 'current_level' => 1]);
+
         $this->actingAsUser($referred);
         $plan = Plan::where('code', 'premium_individual')->first();
         $subId = $this->postJson('/api/v1/subscriptions', ['plan_id' => $plan->id, 'method' => 'card'], [
             'Idempotency-Key' => 'org-sub-1',
         ])->json('data.subscription_id');
-
         app(PaymentService::class)->process('paystack', 'org-evt-1', "sub_$subId", 'success', $plan->price_minor, []);
+
+        // Activation gate: finish a lesson + a quiz.
+        LessonProgress::create(['learner_profile_id' => $profile->id, 'lesson_id' => $lesson->id, 'status' => 'completed', 'completed_at' => now()]);
+        QuizAttempt::create(['learner_profile_id' => $profile->id, 'quiz_id' => $quizId, 'attempt_no' => 1, 'started_at' => now(), 'completed_at' => now()]);
+        app(ReferralService::class)->maybeActivateForUser($referred);
+        $this->assertDatabaseHas('referrals', ['referred_user_id' => $referred->id, 'status' => 'qualified']);
+
+        // A renewal charge after activation → 5% commission to the organization.
+        app(PaymentService::class)->process('paystack', 'org-evt-2', "sub_$subId", 'success', $plan->price_minor, []);
 
         $this->assertDatabaseHas('commissions', [
             'beneficiary_type' => Organization::class, 'beneficiary_id' => $org->id,
-            'status' => 'pending_escrow', 'amount_minor' => (int) round($plan->price_minor * 0.20),
+            'status' => 'pending_escrow', 'amount_minor' => intdiv($plan->price_minor * 500, 10_000),
         ]);
 
         $this->actingAsUser($admin);

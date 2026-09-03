@@ -42,15 +42,15 @@ class LearningLoopTest extends TestCase
             'learner_id' => $learner->id, 'component_id' => $speakC->id,
         ])->assertCreated();
 
-        // complete lesson → full score, xp 23, next_node null
+        // complete lesson → full score, xp 14, next_node null
         $this->postJson("/api/v1/lessons/{$lesson->id}/complete", ['learner_id' => $learner->id])
             ->assertOk()
             ->assertJsonPath('data.lesson_score', 1)
-            ->assertJsonPath('data.xp_total', 23)
+            ->assertJsonPath('data.xp_total', 14)
             ->assertJsonPath('data.next_node', null);
 
         $this->assertDatabaseHas('xp_ledger', ['learner_profile_id' => $learner->id, 'source' => 'quiz', 'amount' => 2]);
-        $this->assertDatabaseHas('xp_ledger', ['learner_profile_id' => $learner->id, 'source' => 'lesson', 'amount' => 23]);
+        $this->assertDatabaseHas('xp_ledger', ['learner_profile_id' => $learner->id, 'source' => 'lesson', 'amount' => 14]);
         $this->assertDatabaseHas('lesson_progress', ['learner_profile_id' => $learner->id, 'status' => 'completed']);
     }
 

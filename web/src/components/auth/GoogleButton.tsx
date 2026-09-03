@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '@/lib/api'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { cn } from '@/lib/cn'
+import type { GoogleAuthInput } from '@/lib/api'
 
 // Minimal typings for the Google Identity Services library we load at runtime.
 interface TokenResponse {
@@ -74,15 +75,23 @@ export function GoogleButton({
   label = 'Continue with Google',
   onSuccess,
   onError,
+  signupContext,
+  onBeforeStart,
 }: {
   label?: string
   onSuccess: () => void
   onError: (message: string) => void
+  signupContext?: Omit<GoogleAuthInput, 'id_token'>
+  onBeforeStart?: () => boolean
 }) {
   const { loginWithGoogle } = useAuth()
   const [ready, setReady] = useState(false)
   const [loading, setLoading] = useState(false)
   const clientRef = useRef<TokenClient | null>(null)
+  const signupContextRef = useRef(signupContext)
+  signupContextRef.current = signupContext
+  const onBeforeStartRef = useRef(onBeforeStart)
+  onBeforeStartRef.current = onBeforeStart
   const configured = CLIENT_ID.length > 0
 
   useEffect(() => {
@@ -101,7 +110,7 @@ export function GoogleButton({
               return
             }
             try {
-              await loginWithGoogle(resp.access_token)
+              await loginWithGoogle({ id_token: resp.access_token, ...signupContextRef.current })
               onSuccess()
             } catch (err) {
               onError(err instanceof ApiError ? err.message : 'Google sign-in failed.')
@@ -125,6 +134,7 @@ export function GoogleButton({
 
   const onClick = useCallback(() => {
     if (!clientRef.current) return
+    if (onBeforeStartRef.current && !onBeforeStartRef.current()) return
     setLoading(true)
     clientRef.current.requestAccessToken()
   }, [])

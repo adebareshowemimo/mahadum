@@ -144,7 +144,7 @@ export function UsersPage() {
               options={[
                 { label: 'Single', value: 'single' },
                 { label: 'Family', value: 'family' },
-                { label: 'School', value: 'school' },
+                { label: 'Educator/School', value: 'school' },
               ]}
               allLabel="All types"
             />
