@@ -233,6 +233,20 @@ This section will be populated by the Azure validation workflow before deploymen
 **Validated by:** Azure validation workflow
 **Validation timestamp:** 2026-09-03T18:49:00Z
 
+### Approved product-rules and generated-avatar release validation — 2026-09-03
+
+| Check | Command Run | Result | Timestamp |
+|-------|-------------|--------|-----------|
+| Azure identity and target | `az account show`; `az vm show`; `az network public-ip show` | Pass: subscription `4212afa5-d96d-4717-a56d-1d34956599a6`; VM `mahadum` running in Canada Central; static IP `20.151.177.171` | 2026-09-03T19:43:05Z |
+| Azure Policy / infrastructure | `az policy assignment list`; plan inspection | Pass: Security Center built-in assignment present; application-only existing-VM release creates no Azure resources and changes no RBAC | 2026-09-03T19:43:05Z |
+| Runtime preflight | Azure VM Run Command; local `/up` health check | Pass: production environment; Apache, PHP-FPM, MySQL, queue worker, scheduler, and Laravel runtime active | 2026-09-03T19:43:05Z |
+| Release integrity | clean Git worktree before validation; `git diff --check`; `bash -n deploy/*.sh` | Pass | 2026-09-03T19:43:05Z |
+| Frontend | `npm test`; `npm run typecheck`; `npm run build` | Pass: 188 tests plus focused avatar asset test; production Vite build | 2026-09-03T19:43:05Z |
+| Backend | `composer ci`; focused product-rule suites | Pass: Pint, PHPStan level 5, 329 passed / 1 skipped in full suite; focused practice/level/hero/tone suite passed | 2026-09-03T19:43:05Z |
+
+**Validated by:** Azure validation workflow
+**Validation timestamp:** 2026-09-03T19:43:05Z
+
 ### Role assignment verification
 
 - **Status:** Not applicable and verified
@@ -285,6 +299,16 @@ This section will be populated by the Azure validation workflow before deploymen
 - **Verification:** `https://mahadum360.com`, `/up`, `/api/v1/config`, `/pricing`, `/r/LZBE7XN5`, and a deployed avatar asset returned HTTP 200. Browser smoke redirected the referral to `/register?ref=LZBE7XN5`. Runtime services were active and paid personal plans reported zero enabled offline-download flags.
 - **Rollback artifacts:** source snapshot and two database dumps retained under `/var/backups/mahadum/beta-63c0101-20260903T185453Z`.
 - **Live role verification:** VM system identity has no Azure role assignments. This is expected: the application uses local MySQL/disk and provisions no Azure data-plane resources or managed-identity dependencies.
+
+### Approved product-rules and generated-avatar release `27f852d`
+
+- **Release branch:** `codex/beta-feedback-20260903`
+- **Target:** existing VM `mahadum`, resource group `MAHADUM`, Canada Central, static IP `20.151.177.171`.
+- **Result:** immutable snapshot deployed; Composer install and Vite production build passed; migration `2026_09_03_000005` ran; RBAC reseeded; caches rebuilt; queue restarted; maintenance cleared.
+- **Features:** 12-hour zero-heart practice mode, lifetime-XP levels, daily Family Hero awards, privacy-safe tone-practice invitations, free core-learning regression guard, and normalized generated avatar artwork.
+- **Verification:** application root, `/up`, `/api/v1/config`, `/pricing`, `/r/LZBE7XN5`, and `avatar-cultural-24.png` returned HTTP 200. Browser smoke redirected the referral to `/register?ref=LZBE7XN5`. Tone-invitation routes, Family Hero schedule, migration, avatar source/assets, and all runtime services were verified on the VM.
+- **Rollback artifacts:** source and database backups passed archive integrity checks at `/var/backups/mahadum/product-rules-27f852d-20260903T194448Z`.
+- **Operational correction:** the immutable archive staging directory initially copied a `0700` mode to the application root. Apache returned 403 until the root/public traversal permissions were restored to `0755`; local SNI health and all public checks then passed.
 
 ---
 
