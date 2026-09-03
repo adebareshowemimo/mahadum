@@ -1,4 +1,6 @@
 import { render, screen } from '@testing-library/react'
+import { existsSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { Avatar, AVATAR_PRESETS, learnerAvatarPresetId } from './Avatar'
 
@@ -13,7 +15,16 @@ describe('Avatar', () => {
       <div>{AVATAR_PRESETS.map((preset) => <Avatar key={preset.id} name={preset.label} avatarId={preset.id} />)}</div>,
     )
     expect(container.querySelectorAll('img')).toHaveLength(AVATAR_PRESETS.length)
-    expect(container.querySelector('img')).toHaveAttribute('src', '/Mahadam%20avatar%20images/BAT.png')
+    expect(container.querySelector('img')).toHaveAttribute('src', '/Mahadam%20avatar%20images/avatar-bat.png')
+  })
+
+  it('maps every supported avatar id to a unique generated asset that exists', () => {
+    expect(AVATAR_PRESETS.map(({ id }) => id)).toEqual(Array.from({ length: 54 }, (_, index) => index + 1))
+    expect(new Set(AVATAR_PRESETS.map(({ src }) => src))).toHaveProperty('size', AVATAR_PRESETS.length)
+
+    for (const preset of AVATAR_PRESETS) {
+      expect(existsSync(resolve(process.cwd(), '..', 'public', 'Mahadam avatar images', preset.src))).toBe(true)
+    }
   })
 
   it('prefers an uploaded photo over a preset', () => {
