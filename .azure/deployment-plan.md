@@ -180,6 +180,12 @@ The current plan deploys application software onto an existing VM and creates **
 
 ## 8. Validation Proof
 
+### Course table-of-contents validation — 2026-09-07
+
+- Azure validation workflow confirmed the expected subscription, Canada Central VM/IP, production marker `541320d`, five active services and successful HTTPS health check.
+- Release `38a0030` is pushed to origin; frontend and documentation changes only. Three targeted regression tests, TypeScript, production build and diff checks passed. Deployment shell syntax passed.
+- Archive SHA-256: `c50352401789bc2230eacdde43d5ac08f1794179ccf5a9db0e608b1a89285573`. Isolated frontend build, verified source/assets backup and atomic SPA entry-point replacement planned. No database, RBAC or infrastructure changes.
+
 ### Referral visibility release validation — 2026-09-07
 
 - Azure validation workflow confirmed the expected subscription and running Canada Central VM at `20.151.177.171`. Production marker `553d9ba`, five active services, HTTPS health passed.
@@ -303,6 +309,13 @@ This section will be populated by the Azure validation workflow before deploymen
 ---
 
 ## 12. Production deployment — 2026-09-03
+
+### Course table-of-contents release — 2026-09-07
+
+- **Application release:** `38a0030`, committed and pushed before deployment to https://mahadum360.com.
+- **Result:** isolated production build, archive checksum and backup integrity passed; frontend published through atomic entry-point replacement. Old hashed assets retained; no maintenance mode, database or infrastructure changes.
+- **Verification:** supplied lesson-editor route and `/up` returned 200. Served entry point is `index-drqyxvUZ.js`; both `CourseBuilderPage-XlhZB3Oc.js` and `LessonBuilderPage-Cw6WDViH.js` import `CourseContents-CdVIthvv.js`. Shared bundle contains contents headings, edit link and current-lesson marker. All five runtime services active. Authenticated editor interaction was not exercised during this deployment.
+- **Backup:** `/var/backups/mahadum/contents-38a0030-20260907T162856Z/source-assets.tar.gz`.
 
 ### Referral visibility release — 2026-09-07
 
