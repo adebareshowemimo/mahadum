@@ -1,19 +1,19 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
+import { getCountries, getCountryCallingCode } from 'libphonenumber-js/min'
 import { cn } from '@/lib/cn'
 
-/** Curated calling codes — Nigeria first, then the main diaspora destinations. */
-export const DIAL_CODES: { code: string; label: string; flag: string }[] = [
-  { code: '+234', label: 'Nigeria', flag: '🇳🇬' },
-  { code: '+44', label: 'United Kingdom', flag: '🇬🇧' },
-  { code: '+1', label: 'USA / Canada', flag: '🇺🇸' },
-  { code: '+233', label: 'Ghana', flag: '🇬🇭' },
-  { code: '+27', label: 'South Africa', flag: '🇿🇦' },
-  { code: '+254', label: 'Kenya', flag: '🇰🇪' },
-  { code: '+971', label: 'United Arab Emirates', flag: '🇦🇪' },
-  { code: '+353', label: 'Ireland', flag: '🇮🇪' },
-  { code: '+61', label: 'Australia', flag: '🇦🇺' },
-  { code: '+49', label: 'Germany', flag: '🇩🇪' },
-]
+/** All countries and territories with calling codes, Nigeria first. */
+const countryNames = new Intl.DisplayNames(['en'], { type: 'region' })
+export const DIAL_CODES = getCountries().map((country) => ({
+  country,
+  code: `+${getCountryCallingCode(country)}`,
+  label: countryNames.of(country) ?? country,
+  flag: String.fromCodePoint(...Array.from(country, (letter) => 127397 + letter.charCodeAt(0))),
+})).sort((a, b) => {
+  if (a.country === 'NG') return -1
+  if (b.country === 'NG') return 1
+  return a.label.localeCompare(b.label, 'en')
+})
 
 export interface PhoneInputProps {
   value: string
@@ -44,7 +44,11 @@ export function PhoneInput({
   const id = useId()
   const selectable = typeof onDialCodeChange === 'function'
   const activeCode = selectable ? (dialCodeValue ?? '+234') : dialCode
-  const flag = DIAL_CODES.find((c) => c.code === activeCode)?.flag ?? '🌍'
+  // Keep country identity separate: many countries share +1, +44, etc.
+  const [selectedCountry, setSelectedCountry] = useState('NG')
+  const activeCountry = DIAL_CODES.find((c) => c.country === selectedCountry && c.code === activeCode)
+    ?? DIAL_CODES.find((c) => c.code === activeCode)
+  const flag = activeCountry?.flag ?? '🌍'
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -64,13 +68,19 @@ export function PhoneInput({
           <select
             aria-label="Country calling code"
             disabled={disabled}
-            value={activeCode}
-            onChange={(e) => onDialCodeChange!(e.target.value)}
-            className="h-11 shrink-0 border-r border-border bg-transparent px-2 text-sm font-semibold text-muted focus:outline-none"
+            value={activeCountry?.country ?? ''}
+            onChange={(e) => {
+              const country = DIAL_CODES.find((c) => c.country === e.target.value)
+              if (country) {
+                setSelectedCountry(country.country)
+                onDialCodeChange!(country.code)
+              }
+            }}
+            className="h-11 w-1/2 min-w-0 shrink-0 truncate border-r border-border bg-transparent px-2 text-sm font-semibold text-muted focus:outline-none"
           >
             {DIAL_CODES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.flag} {c.code} {c.label}
+              <option key={c.country} value={c.country}>
+                {c.label} ({c.code})
               </option>
             ))}
           </select>
@@ -89,7 +99,7 @@ export function PhoneInput({
           value={value}
           onChange={(e) => onChange(e.target.value.replace(/[^\d]/g, ''))}
           placeholder="803 123 4567"
-          className="h-11 flex-1 bg-transparent px-3 text-sm text-foreground placeholder:text-subtle focus:outline-none"
+          className="h-11 min-w-0 flex-1 bg-transparent px-3 text-sm text-foreground placeholder:text-subtle focus:outline-none"
         />
       </div>
       {error && <p className="text-xs font-medium text-danger">{error}</p>}
