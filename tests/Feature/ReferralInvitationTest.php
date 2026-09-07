@@ -91,4 +91,35 @@ class ReferralInvitationTest extends TestCase
             ->assertOk()->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.via_phone', '2348010000001');
     }
+
+    public function test_activity_includes_pending_signups_both_contacts_and_later_pages_without_other_owners(): void
+    {
+        $this->seedRbac();
+        $owner = $this->userWithRole('parent');
+        $code = app(ReferralService::class)->codeFor($owner);
+        $legacyCode = $code->replicate();
+        $legacyCode->code = 'LEGACYOWNER';
+        $legacyCode->save();
+        $otherCode = app(ReferralService::class)->codeFor($this->userWithRole('parent'));
+        $active = $this->userWithRole('parent', ['email' => 'active@example.test', 'phone' => '+2348011111111', 'last_login_at' => now()]);
+        $pending = $this->userWithRole('parent', ['email' => 'pending@example.test', 'phone' => '+2348022222222']);
+        Referral::create(['referral_code_id' => $otherCode->id, 'referred_user_id' => $otherCode->owner_id, 'status' => 'signed_up', 'signed_up_at' => now()]);
+        Referral::create(['referral_code_id' => $legacyCode->id, 'referred_user_id' => $active->id, 'status' => 'qualified',
+            'signed_up_at' => now()->subDay(), 'activated_at' => now(), 'contact_channel' => 'email', 'contact_value' => $active->email]);
+        Referral::create(['referral_code_id' => $code->id, 'referred_user_id' => $pending->id, 'status' => 'signed_up',
+            'signed_up_at' => now(), 'contact_channel' => 'phone', 'contact_value' => null]);
+        $this->actingAsUser($owner);
+        $this->getJson('/api/v1/referrals/activations?per_page=1')
+            ->assertOk()->assertJsonPath('meta.total', 2)->assertJsonPath('meta.last_page', 2)
+            ->assertJsonPath('data.0.status', 'pending')->assertJsonPath('data.0.activated_at', null)
+            ->assertJsonPath('data.0.via_email', $pending->email)->assertJsonPath('data.0.via_phone', $pending->phone);
+        $this->getJson('/api/v1/referrals/activations?per_page=1&page=2')
+            ->assertOk()->assertJsonPath('data.0.sn', 2)->assertJsonPath('data.0.status', 'active')
+            ->assertJsonPath('data.0.activated_at', now()->toDateString())
+            ->assertJsonPath('data.0.via_email', $active->email)->assertJsonPath('data.0.via_phone', $active->phone);
+        $this->getJson('/api/v1/referrals/summary')->assertOk()
+            ->assertJsonPath('data.referrals.qualified', 1)->assertJsonPath('data.referrals.signed_up', 1);
+        $this->getJson('/api/v1/referrals/activations?search=pending@example.test')
+            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.status', 'pending');
+    }
 }

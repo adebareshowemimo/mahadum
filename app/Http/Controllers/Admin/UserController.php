@@ -144,13 +144,14 @@ class UserController extends Controller
      */
     public function referrals(User $user, ReferralService $referrals): JsonResponse
     {
-        $code = ReferralCode::where('owner_type', $user->getMorphClass())
+        $codes = ReferralCode::where('owner_type', $user->getMorphClass())
             ->where('owner_id', $user->id)
-            ->first();
+            ->orderBy('id')->get();
+        $code = $codes->first();
 
-        $outbound = $code
-            ? $code->referrals()->with('referredUser:id,first_name,last_name,email,phone')->orderByDesc('signed_up_at')->get()
-            : collect();
+        $outbound = Referral::whereIn('referral_code_id', $codes->pluck('id'))
+            ->with('referredUser:id,first_name,last_name,email,phone,last_login_at')
+            ->orderByDesc('signed_up_at')->orderByDesc('id')->get();
 
         $commissionByReferral = $code
             ? Commission::whereIn('referral_id', $outbound->pluck('id'))
@@ -174,8 +175,8 @@ class UserController extends Controller
                     : 0,
                 'activations' => $outbound->map(fn (Referral $r) => [
                     'referred_name' => $r->referredUser?->name,
-                    'email' => $r->contact_channel === 'email' ? $r->contact_value : $r->referredUser?->email,
-                    'phone' => $r->contact_channel === 'phone' ? $r->contact_value : $r->referredUser?->phone,
+                    'email' => ($r->contact_channel === 'email' ? $r->contact_value : null) ?: $r->referredUser?->email,
+                    'phone' => ($r->contact_channel === 'phone' ? $r->contact_value : null) ?: $r->referredUser?->phone,
                     'channel' => $r->contact_channel,
                     'signed_up_at' => $r->signed_up_at?->toDateString(),
                     'activated_at' => $r->activated_at?->toDateString(),

@@ -57,4 +57,23 @@ class AdminUserReferralsTest extends TestCase
 
         $this->getJson("/api/v1/admin/users/{$target->id}/referrals")->assertStatus(403);
     }
+
+    public function test_profile_activity_uses_both_contacts_and_recent_login_status(): void
+    {
+        $this->seedRbac();
+        $owner = $this->userWithRole('parent');
+        $code = app(ReferralService::class)->codeFor($owner);
+        $legacyCode = $code->replicate();
+        $legacyCode->code = 'LEGACYPROFILE';
+        $legacyCode->save();
+        $referred = $this->userWithRole('parent', ['email' => 'recent@example.test', 'phone' => '+2348033333333', 'last_login_at' => now()]);
+        Referral::create(['referral_code_id' => $legacyCode->id, 'referred_user_id' => $referred->id,
+            'status' => 'qualified', 'signed_up_at' => now(), 'activated_at' => now(), 'contact_channel' => 'email']);
+        $this->actingAsUser($this->userWithRole('super_admin'));
+        $this->getJson("/api/v1/admin/users/{$owner->id}/referrals")->assertOk()
+            ->assertJsonPath('data.as_referrer.activations.0.email', $referred->email)
+            ->assertJsonPath('data.as_referrer.activations.0.phone', $referred->phone)
+            ->assertJsonPath('data.as_referrer.activations.0.activated_at', now()->toDateString())
+            ->assertJsonPath('data.as_referrer.activations.0.status', 'active');
+    }
 }

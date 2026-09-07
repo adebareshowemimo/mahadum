@@ -2,6 +2,8 @@
 
 > Deployment update (September 7): application commit `2338b90` is live at https://mahadum360.com. All three migrations completed; public pages, entry-point assets, database columns, phone uniqueness, and runtime services passed deployment checks. All 52 user accounts remain. Account cleanup and FluentCRM/SES configuration remain pending; deployment does not establish live email or payment-provider verification.
 
+> Referral tracking follow-up (September 7, local implementation): `/referrals` now includes pending sign-ups, both contact fields, explicit activation status/date, and pagination. Dashboard summaries and admin profiles include activity across all personally owned codes. Both views load recent-login data for active/inactive status and fall back to profile contacts when invitation values are missing. Regression checks cover ownership isolation, legacy codes, pending records, contacts, recent-login status, and pagination. This follow-up has not yet been deployed.
+
 # MAHADUM.360 — Pending Feedback (September 4) — Line-by-line Review
 
 **Reviewed:** 2026-09-06

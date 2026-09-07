@@ -767,7 +767,7 @@ export interface ReferralActivation {
   code: string
   via_email: string | null
   via_phone: string | null
-  status: 'active' | 'inactive'
+  status: 'pending' | 'active' | 'inactive'
 }
 
 export type ReferralActivationsPage = Paginated<ReferralActivation>

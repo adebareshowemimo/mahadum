@@ -9,7 +9,7 @@ export const referralKeys = {
   code: ['referral-code'] as const,
   summary: ['referral-summary'] as const,
   payouts: ['payouts'] as const,
-  activations: (search: string) => ['referral-activations', search] as const,
+  activations: (search: string, page: number) => ['referral-activations', search, page] as const,
   invitations: ['referral-invitations'] as const,
 }
 
@@ -25,10 +25,10 @@ export function usePayouts() {
   return useQuery({ queryKey: referralKeys.payouts, queryFn: referralApi.payouts })
 }
 
-export function useReferralActivations(search: string) {
+export function useReferralActivations(search: string, page = 1) {
   return useQuery({
-    queryKey: referralKeys.activations(search),
-    queryFn: () => referralApi.activations({ search: search || undefined }),
+    queryKey: referralKeys.activations(search, page),
+    queryFn: () => referralApi.activations({ search: search || undefined, page }),
   })
 }
 

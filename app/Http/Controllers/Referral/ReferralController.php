@@ -34,7 +34,8 @@ class ReferralController extends Controller
         $user = $request->user();
         $code = $this->referrals->codeFor($user);
 
-        $referralsByStatus = $code->referrals()
+        $referralsByStatus = Referral::whereHas('referralCode', fn ($q) => $q
+            ->where('owner_type', $user->getMorphClass())->where('owner_id', $user->id))
             ->selectRaw('status, COUNT(*) c')->groupBy('status')->pluck('c', 'status');
 
         $commissions = Commission::where('beneficiary_type', User::class)
@@ -60,18 +61,18 @@ class ReferralController extends Controller
     }
 
     /**
-     * The referrer's dashboard: everyone who activated their code, newest first,
+     * The referrer's dashboard: all attributed sign-ups, including pending activation,
      * searchable by the invited contact or the referred user's email / phone.
      */
     public function activations(Request $request): JsonResponse
     {
-        $code = $this->referrals->codeFor($request->user());
         $search = trim((string) $request->query('search', ''));
 
-        $query = $code->referrals()
-            ->whereNotNull('activated_at')
-            ->with('referredUser:id,email,phone')
-            ->orderByDesc('activated_at');
+        $query = Referral::whereHas('referralCode', fn ($q) => $q
+            ->where('owner_type', $request->user()->getMorphClass())
+            ->where('owner_id', $request->user()->id))
+            ->with(['referredUser:id,email,phone,last_login_at', 'referralCode'])
+            ->orderByDesc('signed_up_at')->orderByDesc('id');
 
         if ($search !== '') {
             $like = '%'.$search.'%';
@@ -81,20 +82,21 @@ class ReferralController extends Controller
                     ->where('email', 'like', $like)->orWhere('phone', 'like', $like)));
         }
 
-        $page = $query->paginate((int) $request->integer('per_page', 20));
+        $page = $query->paginate(max(1, min(100, $request->integer('per_page', 20))));
 
         $offset = ($page->currentPage() - 1) * $page->perPage();
-        $rows = $page->getCollection()->values()->map(function (Referral $referral, int $i) use ($offset, $code) {
-            $email = $referral->contact_channel === 'email' ? $referral->contact_value : $referral->referredUser?->email;
-            $phone = $referral->contact_channel === 'phone' ? $referral->contact_value : $referral->referredUser?->phone;
+        $rows = $page->getCollection()->values()->map(function (Referral $referral, int $i) use ($offset) {
+            $email = $referral->contact_channel === 'email' ? ($referral->contact_value ?: $referral->referredUser?->email) : $referral->referredUser?->email;
+            $phone = $referral->contact_channel === 'phone' ? ($referral->contact_value ?: $referral->referredUser?->phone) : $referral->referredUser?->phone;
 
             return [
                 'sn' => $offset + $i + 1,
                 'activated_at' => $referral->activated_at?->toDateString(),
-                'code' => $code->code,
-                'via_email' => $referral->contact_channel === 'phone' ? null : $email,
-                'via_phone' => $referral->contact_channel === 'email' ? null : $phone,
-                'status' => $this->referrals->isReferredUserActive($referral) ? 'active' : 'inactive',
+                'code' => $referral->referralCode->code,
+                'via_email' => $email,
+                'via_phone' => $phone,
+                'status' => $referral->activated_at === null ? 'pending'
+                    : ($this->referrals->isReferredUserActive($referral) ? 'active' : 'inactive'),
             ];
         });
 
