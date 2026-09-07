@@ -180,6 +180,13 @@ The current plan deploys application software onto an existing VM and creates **
 
 ## 8. Validation Proof
 
+### Worldwide calling-code release validation — 2026-09-07
+
+- Azure validation workflow confirmed the existing subscription and running Canada Central VM at `20.151.177.171`; production marker is `2338b90` and all five runtime services are active. HTTPS health passed.
+- Application delta to `553d9ba` contains frontend source, dependency lockfile, regression test and documentation only. No backend, database or infrastructure changes.
+- Local frontend validation completed: 193 tests across 33 files passed; production build and `git diff --check` passed.
+- Release delta archive SHA-256: `e2ee051a3460f26a1ca81c0aa3ec34c086c247c11d6919cdf15cf4a7d47232af`. Deployment builds in an isolated directory, backs up existing source/assets, retains old hashed assets and atomically replaces the SPA entry point.
+
 ### September 4 feedback release validation — 2026-09-07
 
 - Azure validation workflow confirmed the existing subscription, Canada Central VM `mahadum`, and public IP `20.151.177.171` using `az account show` and `az vm show -d`.
@@ -289,6 +296,14 @@ This section will be populated by the Azure validation workflow before deploymen
 ---
 
 ## 12. Production deployment — 2026-09-03
+
+### Worldwide calling-code release — 2026-09-07
+
+- **Application release:** `553d9ba`, from `origin/codex/beta-feedback-20260903`, deployed to https://mahadum360.com.
+- **Result:** checksum-verified frontend delta built successfully in an isolated VM directory; existing source/assets backed up; SPA entry point switched atomically with old hashed assets retained. No database migrations or maintenance downtime required.
+- **Backup:** `/var/backups/mahadum/countries-553d9ba-20260907T140702Z/source-assets.tar.gz`, archive integrity verified before publication.
+- **Verification:** registration and health returned HTTP 200; Apache, PHP-FPM, MySQL, queue and cron active. Live Chrome registration form showed all 245 country/territory options (Nigeria through Zimbabwe), Nigeria selected by default, and separate Canada/United States entries. No account was created.
+- **Access:** deployment used authenticated Azure VM Run Command; no temporary SSH credentials were added.
 
 ### September feedback release — 2026-09-07
 
