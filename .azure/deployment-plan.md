@@ -1,6 +1,6 @@
 # Azure Deployment Plan
 
-> **Status:** Validated
+> **Status:** Deployed to production
 
 Generated: 2026-08-20
 
@@ -289,6 +289,19 @@ This section will be populated by the Azure validation workflow before deploymen
 ---
 
 ## 12. Production deployment — 2026-09-03
+
+### September feedback release — 2026-09-07
+
+- **Application release:** `2338b90`, pushed to `origin/codex/beta-feedback-20260903` before deployment.
+- **Target:** existing Azure VM `mahadum`, resource group `MAHADUM`, Canada Central; https://mahadum360.com.
+- **Archive SHA-256:** `c81c64bf2a7b2c38813502e41c61c8c92332ea2eec132f0c6fea9ee44b78d77a`, verified after transfer.
+- **Result:** Composer install, production frontend build, all three September 6–7 migrations, RBAC seeding, cache rebuild, queue restart and PHP-FPM reload succeeded. Maintenance mode cleared.
+- **Database:** 52 users before and after. Two duplicate phone associations and one invalid phone were cleared by the documented normalization migration; originals are retained in protected database backups. Unique phone index verified; no duplicate groups remain. Free introductory lessons were pinned to published Igbo and Yoruba lessons. Heart cadence and quiz-XP columns verified.
+- **Public checks:** root, `/up`, `/api/v1/config`, `/pricing`, referral route, and all four entry-point JS/CSS assets returned HTTP 200. Live LessonAccess source hash matches the committed local source.
+- **Runtime:** Apache, PHP-FPM, MySQL, queue worker and cron active; `/etc/cron.d/mahadum-scheduler` runs every minute.
+- **Backups:** `/var/backups/mahadum/sept7-2338b90-20260907T134644Z` contains integrity-checked source/assets and database archives, including a maintenance-time database snapshot. No database restore was needed or tested.
+- **Deployment corrections:** two early attempts restored the previous source/assets before migrations. The successful invocation supplied `LOCK_FILE=/run/lock/mahadum-deploy.lock`, `COMPOSER_HOME=/root/.config/composer`, and `NPM_CONFIG_CACHE=/root/.npm` for Azure Run Command. Temporary SSH access was removed; the original authorized key remains.
+- **Remaining operational work:** account cleanup and FluentCRM/SES configuration were not performed by this release. Live email and payment-provider flows were not exercised.
 
 - **Release:** `7f8c1a017ded91cbfec10ff6890523d263229cb6`
 - **Release branch:** `codex/referral-production-20260903`

@@ -1,5 +1,7 @@
 > September 7 implementation update: the product owner confirmed the feedback learning restrictions in this task. See [current access decision](Mahadum360_Learning_Access_Decision.md). Server access gates, four-answer heart cadence, twelve-hour lock, one-XP quiz scoring, resume totals, content-completion badges, practice-video links, and pricing/terms alignment are implemented. Existing referral/profile/import/export fixes remain included. Production cleanup and FluentCRM/SES configuration await the target environment and client configuration; the new `feedback:cleanup-inventory` command is read-only. Historical statuses below are retained for context and are superseded by this update.
 
+> Deployment update (September 7): application commit `2338b90` is live at https://mahadum360.com. All three migrations completed; public pages, entry-point assets, database columns, phone uniqueness, and runtime services passed deployment checks. All 52 user accounts remain. Account cleanup and FluentCRM/SES configuration remain pending; deployment does not establish live email or payment-provider verification.
+
 # MAHADUM.360 — Pending Feedback (September 4) — Line-by-line Review
 
 **Reviewed:** 2026-09-06
