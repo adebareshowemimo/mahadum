@@ -27,14 +27,15 @@ class TonePracticeInvitationNotification extends Notification implements ShouldQ
     {
         $url = rtrim((string) config('app.frontend_url'), '/').'/tone-practice/'.$this->plainToken;
         $inviter = $this->invitation->inviter->name;
+        $lessonTitle = $this->invitation->component->lesson->title;
 
         return (new MailMessage)
             ->subject('A Mahadum.360 tone-practice invitation')
             ->greeting('Hello')
-            ->line("{$inviter} invited you to help with a short language tone-practice activity.")
+            ->line("{$inviter} invited you to practice the words and tones from “{$lessonTitle}” together.")
             ->line('For learner privacy, sign in with this email address to open it. The learner’s contact details are never shared.')
             ->line('Open the invitation to watch the language video and practice the phrase together.')
-            ->action('Open tone practice', $url)
+            ->action('Watch the video and practice', $url)
             ->line('This invitation expires in 48 hours.');
     }
 }

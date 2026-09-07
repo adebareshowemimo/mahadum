@@ -28,8 +28,9 @@ class TonePracticeInvitationController extends Controller
         $learner = $this->learner($request->integer('learner_id'));
         Gate::authorize('update', $learner);
 
-        $component = LessonComponent::with(['lesson', 'speakingPrompt'])->findOrFail($request->integer('component_id'));
-        abort_unless($component->type === 'speaking' && $component->speakingPrompt !== null, 422, 'Choose a speaking activity.');
+        $component = LessonComponent::with(['lesson', 'speakingPrompt', 'video'])->findOrFail($request->integer('component_id'));
+        abort_unless(($component->type === 'speaking' && $component->speakingPrompt !== null)
+            || ($component->type === 'video' && $component->video !== null), 422, 'Choose a video or speaking activity.');
         abort_if($component->lesson->published_at === null, 422, 'This activity is not published.');
 
         app(LessonAccess::class)->authorize($learner, $component->lesson);
@@ -83,7 +84,7 @@ class TonePracticeInvitationController extends Controller
 
     private function resolveForRecipient(Request $request, string $token): TonePracticeInvitation
     {
-        $invitation = TonePracticeInvitation::with(['component.lesson', 'component.speakingPrompt', 'inviter'])
+        $invitation = TonePracticeInvitation::with(['component.lesson', 'component.speakingPrompt', 'component.video.sourceAsset', 'inviter'])
             ->where('token_hash', hash('sha256', $token))
             ->firstOrFail();
         abort_unless((int) $invitation->recipient_user_id === (int) $request->user()->id, 403, 'This invitation belongs to another account.');
@@ -95,9 +96,10 @@ class TonePracticeInvitationController extends Controller
     /** @return array<string, mixed> */
     private function safePayload(TonePracticeInvitation $invitation): array
     {
-        $video = $invitation->component->lesson->components()->where('type', 'video')
-            ->where('position', '<', $invitation->component->position)->orderByDesc('position')
-            ->with('video.sourceAsset')->first()?->video;
+        $video = $invitation->component->type === 'video' ? $invitation->component->video
+            : $invitation->component->lesson->components()->where('type', 'video')
+                ->where('position', '<', $invitation->component->position)->orderByDesc('position')
+                ->with('video.sourceAsset')->first()?->video;
         $videoUrl = $video?->sourceAsset
             ? Storage::disk('public')->url($video->sourceAsset->url)
             : $video?->external_url;
@@ -107,7 +109,8 @@ class TonePracticeInvitationController extends Controller
             'inviter_name' => $invitation->inviter->name,
             'lesson_title' => $invitation->component->lesson->title,
             'practice_text' => $invitation->component->speakingPrompt?->target_text
-                ?: $invitation->component->speakingPrompt?->prompt_text,
+                ?: ($invitation->component->speakingPrompt?->prompt_text
+                    ?: 'Watch the language video, then take turns repeating the words and matching their tones.'),
             'expires_at' => $invitation->expires_at->toISOString(),
             'accepted' => $invitation->accepted_at !== null,
         ];

@@ -4,6 +4,7 @@ import { cn } from '@/lib/cn'
 import { ApiError } from '@/lib/api'
 import type { Answer, AssignmentSlide, ExerciseSlide, GameSlide, GenericSlide, PlayerService, QType, QuizSlide, Slide, SpeakingSlide, Verdict, VideoSlide } from './types'
 import { youtubeEmbedUrl } from './types'
+import { InviteToPractice } from './InviteToPractice'
 
 export interface SlideProps {
   slide: Slide
@@ -659,6 +660,7 @@ function VideoSlideView({ slide, service, onAdvance }: SlideProps & { slide: Vid
               ? 'Finished — you’re good to continue.'
               : 'Continue when you’re ready.'}
         </p>
+        {hasVideo && (watchedToEnd || isYoutube) && <InviteToPractice slide={slide} service={service} />}
       </SlideBody>
 
       <ActionBar>
@@ -677,9 +679,6 @@ function SpeakingSlideView({ slide, service, onAdvance }: SlideProps & { slide: 
   const [blob, setBlob] = useState<Blob | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteSent, setInviteSent] = useState(false)
-  const [inviteBusy, setInviteBusy] = useState(false)
   const recorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const canRecord = typeof navigator !== 'undefined' && !!navigator.mediaDevices && typeof MediaRecorder !== 'undefined'
@@ -719,20 +718,6 @@ function SpeakingSlideView({ slide, service, onAdvance }: SlideProps & { slide: 
     }
   }
 
-  async function invite() {
-    if (!inviteEmail.trim()) return
-    setInviteBusy(true)
-    setError(null)
-    try {
-      await service.inviteTonePractice(slide, inviteEmail.trim())
-      setInviteSent(true)
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not send the invitation.')
-    } finally {
-      setInviteBusy(false)
-    }
-  }
-
   return (
     <>
       <SlideBody chip={{ icon: '◐', label: 'Say it aloud' }}>
@@ -755,29 +740,7 @@ function SpeakingSlideView({ slide, service, onAdvance }: SlideProps & { slide: 
           </Button3D>
         )}
         {blob && <p className="text-center text-xs text-gold-300">Recording ready ✓</p>}
-        {!service.isPreview && (
-          <div className="rounded-2xl border border-border bg-surface-muted p-4">
-            <p className="font-semibold text-foreground">Practice with a trusted adult or teacher</p>
-            <p className="mt-1 text-xs text-muted">They must already have an account. The private link expires in 48 hours.</p>
-            {inviteSent ? (
-              <p className="mt-3 text-sm font-semibold text-primary">Invitation sent ✓</p>
-            ) : (
-              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                <input
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(event) => setInviteEmail(event.target.value)}
-                  placeholder="adult@example.com"
-                  aria-label="Recipient email"
-                  className="min-h-11 flex-1 rounded-xl border border-border bg-background px-3 text-foreground"
-                />
-                <Button3D variant="neutral" disabled={inviteBusy || !inviteEmail.trim()} onClick={invite}>
-                  {inviteBusy ? 'Sending…' : 'Invite'}
-                </Button3D>
-              </div>
-            )}
-          </div>
-        )}
+        <InviteToPractice slide={slide} service={service} />
       </SlideBody>
       <ActionBar>
         <Button3D variant="reward" size="lg" fullWidth disabled={busy || recording} onClick={submit}>

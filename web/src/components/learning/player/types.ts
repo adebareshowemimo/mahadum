@@ -323,7 +323,7 @@ export interface PlayerService {
   gradeQuiz(slide: QuizSlide, answer: Answer): Promise<Verdict>
   completeStep(slide: Slide): Promise<void>
   submitSpeaking(slide: SpeakingSlide, audio: Blob | null): Promise<void>
-  inviteTonePractice(slide: SpeakingSlide, recipientEmail: string): Promise<void>
+  inviteTonePractice(slide: SpeakingSlide | VideoSlide, recipientEmail: string): Promise<void>
   /** Submit a recorded assignment clip (coins escrow until a parent approves). */
   submitAssignment(slide: AssignmentSlide, media: Blob | null, filename?: string): Promise<void>
   /** Persist a video-watching beat (no-op in preview). */

@@ -64,4 +64,33 @@ class TonePracticeInvitationTest extends TestCase
             ->assertJsonMissingPath('data.learner_name')
             ->assertJsonMissingPath('data.recipient_email');
     }
+
+    public function test_video_invitation_opens_the_exact_video_without_a_speaking_activity(): void
+    {
+        Notification::fake();
+        $this->seedRbac();
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $recipient = $this->userWithRole('parent');
+        $learner = $this->parentWithChild($parent);
+        $lesson = $this->publishedLesson();
+        $first = $lesson->components->firstWhere('type', 'video');
+        $first->video->update(['external_url' => 'https://example.com/first-video.mp4']);
+        $video = $lesson->components()->create(['type' => 'video', 'position' => 4, 'xp_value' => 0]);
+        $video->video()->create(['title' => 'Tone demonstration', 'source_type' => 'youtube',
+            'external_url' => 'https://www.youtube.com/watch?v=abcdefghijk', 'status' => 'ready', 'kind' => 'lesson']);
+        $this->postJson('/api/v1/tone-practice/invitations', [
+            'learner_id' => $learner->id, 'component_id' => $video->id, 'recipient_email' => $recipient->email,
+        ])->assertCreated();
+        $mail = Notification::sent($recipient, TonePracticeInvitationNotification::class)->first()->toMail($recipient);
+        $this->assertSame('Watch the video and practice', $mail->actionText);
+        $this->assertStringContainsString($lesson->title, implode(' ', $mail->introLines));
+        $token = basename(parse_url($mail->actionUrl, PHP_URL_PATH));
+        $this->actingAsUser($recipient);
+        $this->getJson("/api/v1/tone-practice/invitations/{$token}")->assertOk()
+            ->assertJsonPath('data.video_url', 'https://www.youtube.com/watch?v=abcdefghijk')
+            ->assertJsonPath('data.lesson_title', $lesson->title)
+            ->assertJsonMissingPath('data.learner_id');
+        $this->postJson("/api/v1/tone-practice/invitations/{$token}/accept")->assertOk()
+            ->assertJsonPath('data.accepted', true);
+    }
 }
