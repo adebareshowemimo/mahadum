@@ -310,6 +310,15 @@ This section will be populated by the Azure validation workflow before deploymen
 
 ## 12. Production deployment — 2026-09-03
 
+### Video practice invitations release — 2026-09-07
+
+- **Application release:** `3667752`, pushed to `origin/codex/beta-feedback-20260903` and deployed to https://mahadum360.com. Includes the existing course table of contents.
+- **Validation:** three backend tests (19 assertions), three frontend tests, Pint, PHPStan and production build passed. Backend regression tests passed again immediately before deployment verification.
+- **Result:** checksum-verified source delta, isolated production frontend build, integrity-checked backup, atomic PHP files and SPA entry point, PHP-FPM reload and queue restart signal completed. No migrations were required.
+- **Verification:** current entry point `index-6179B2JL.js`; both editor bundles import `CourseContents-3LlwPj9A.js` with the table-of-contents label. `SlideDeck--b_d8PWk.js` includes Invite to Practice. Lesson URL, `/up`, `/api/v1/config` and inspected assets returned HTTP 200; Apache, PHP-FPM, MySQL, queue and cron active.
+- **Backup:** `/var/backups/mahadum/practice-3667752-20260907T170040Z/source-assets.tar.gz`.
+- **Limit:** authenticated production interaction and live invitation email delivery were not exercised. Notification tests used fakes.
+
 ### Course table-of-contents release — 2026-09-07
 
 - **Application release:** `38a0030`, committed and pushed before deployment to https://mahadum360.com.

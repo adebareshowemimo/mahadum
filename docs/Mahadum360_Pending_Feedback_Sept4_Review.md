@@ -12,6 +12,8 @@
 
 > Invite-to-Practice follow-up (September 7, local implementation): the invitation option now appears after uploaded-video completion and alongside embedded videos, as well as speaking activities. A reusable form previews the invitation message, accepts the registered recipient's email, and reports send success/errors. Video invitations reference the exact video component; speaking invitations retain the preceding-video lookup. Email copy names the lesson and links to the private invitation containing the relevant video. Existing recipient, school, expiry and learner-access checks remain. Three backend tests, three frontend tests, Pint, PHPStan and production build passed. Notifications were faked in tests; live email delivery and deployment remain pending.
 
+> Invite-to-Practice deployment update (September 7): the follow-up is now deployed as `3667752`, including the existing course table of contents. Production build, PHP syntax, public health/configuration, feature bundles and runtime services passed. PHP-FPM was reloaded and the queue restart signal issued. Authenticated production interaction and live email delivery remain unverified.
+
 # MAHADUM.360 — Pending Feedback (September 4) — Line-by-line Review
 
 **Reviewed:** 2026-09-06
