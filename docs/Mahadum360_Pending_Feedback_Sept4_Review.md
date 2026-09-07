@@ -6,6 +6,8 @@
 
 > Referral deployment update (September 7): the follow-up above is now deployed as `541320d`. Read-only production checks matched 31 referral records across 19 code owners in both dashboard and admin-profile responses. Public health and the deployed activity/pagination bundle passed; no referral data was changed.
 
+> Course table-of-contents follow-up (September 7, local implementation): the supplied `/courses/12/lessons/79` route is the lesson editor. Course and lesson editors now include a collapsible table of contents generated from saved units and lessons, direct lesson links, current-lesson highlighting, draft labels and durations. Authors add, rename and reorder entries using the existing course structure controls; the table stays synchronized through the shared content queries. Lesson navigation resets editor state. Three component regression tests, TypeScript and the production build passed. This follow-up has not yet been deployed.
+
 # MAHADUM.360 — Pending Feedback (September 4) — Line-by-line Review
 
 **Reviewed:** 2026-09-06

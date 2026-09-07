@@ -46,6 +46,7 @@ import {
 } from '@/lib/content/queries'
 import { useCanManageContent } from '@/lib/content/permissions'
 import { LessonPreviewModal } from './LessonPreviewModal'
+import { CourseContents } from '@/components/content/CourseContents'
 
 const TYPE_ICON: Record<string, string> = { video: '🎬', quiz: '❓', speaking: '🎙️', exercise: '🎯', game: '🎮', assignment: '📝' }
 const MAX_MEDIA_UPLOAD_BYTES = 300 * 1024 * 1024
@@ -68,6 +69,11 @@ function componentSummary(c: AuthorComponent): string {
 }
 
 export function LessonBuilderPage() {
+  const { lessonId } = useParams()
+  return <LessonEditor key={lessonId} />
+}
+
+function LessonEditor() {
   const { courseId, lessonId } = useParams()
   const id = Number(lessonId)
   const lesson = useLessonDetail(id)
@@ -160,6 +166,8 @@ export function LessonBuilderPage() {
           </div>
         </div>
       </div>
+
+      <CourseContents courseId={Number(courseId)} currentLessonId={id} />
 
       {canManage && <label className="flex items-center gap-3 rounded-xl border border-border p-4 text-sm">
         <input type="checkbox" checked={!!lesson.data.is_free_preview} disabled={accessBusy} onChange={() => void toggleFreeLesson()} />

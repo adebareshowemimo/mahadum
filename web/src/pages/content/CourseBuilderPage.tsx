@@ -45,6 +45,7 @@ import {
   useUpdateCourse,
 } from '@/lib/content/queries'
 import { useCanManageContent } from '@/lib/content/permissions'
+import { CourseContents } from '@/components/content/CourseContents'
 
 export function CourseBuilderPage() {
   const { courseId } = useParams()
@@ -115,6 +116,8 @@ export function CourseBuilderPage() {
         </div>
       </div>
 
+      <CourseContents courseId={id} />
+      <h2 id="course-structure" className="font-display text-lg font-bold text-foreground">Course structure</h2>
       {levels.data.length === 0 ? (
         <Card>
           <CardBody className="py-10 text-center text-sm text-muted">
