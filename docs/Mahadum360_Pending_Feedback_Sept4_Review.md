@@ -4,6 +4,8 @@
 
 > Referral tracking follow-up (September 7, local implementation): `/referrals` now includes pending sign-ups, both contact fields, explicit activation status/date, and pagination. Dashboard summaries and admin profiles include activity across all personally owned codes. Both views load recent-login data for active/inactive status and fall back to profile contacts when invitation values are missing. Regression checks cover ownership isolation, legacy codes, pending records, contacts, recent-login status, and pagination. This follow-up has not yet been deployed.
 
+> Referral deployment update (September 7): the follow-up above is now deployed as `541320d`. Read-only production checks matched 31 referral records across 19 code owners in both dashboard and admin-profile responses. Public health and the deployed activity/pagination bundle passed; no referral data was changed.
+
 # MAHADUM.360 — Pending Feedback (September 4) — Line-by-line Review
 
 **Reviewed:** 2026-09-06

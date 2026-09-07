@@ -180,6 +180,13 @@ The current plan deploys application software onto an existing VM and creates **
 
 ## 8. Validation Proof
 
+### Referral visibility release validation — 2026-09-07
+
+- Azure validation workflow confirmed the expected subscription and running Canada Central VM at `20.151.177.171`. Production marker `553d9ba`, five active services, HTTPS health passed.
+- Local verification: 8 backend regression tests / 61 assertions, 11 relevant frontend tests, production build, Pint, PHPStan level 5 and diff checks passed.
+- Release `541320d` changes controllers and frontend only; no migration, dependency, infrastructure or RBAC change. Archive SHA-256 `f571a92ae4939af39d2e8a8ec5abb205f9a99355a36649bc3df6469d44f41f50`.
+- Deployment builds separately, archives current source/assets, replaces controllers and SPA entry point atomically, and performs a read-only production referral-owner count/field check with rollback on failure.
+
 ### Worldwide calling-code release validation — 2026-09-07
 
 - Azure validation workflow confirmed the existing subscription and running Canada Central VM at `20.151.177.171`; production marker is `2338b90` and all five runtime services are active. HTTPS health passed.
@@ -296,6 +303,14 @@ This section will be populated by the Azure validation workflow before deploymen
 ---
 
 ## 12. Production deployment — 2026-09-03
+
+### Referral visibility release — 2026-09-07
+
+- **Application release:** `541320d`, deployed to https://mahadum360.com/referrals from the pushed beta-feedback branch.
+- **Result:** isolated production build and PHP syntax checks passed; controllers and frontend published with rollback backups; PHP-FPM reloaded. No database migration or referral data changes.
+- **Live data verification:** read-only controller checks matched all 31 referrals across 19 existing personal code owners against both dashboard and admin-profile totals. Required fields and pending status passed.
+- **Public verification:** `/referrals`, `/up`, and `ReferralsPage-Dc3Ebjzc.js` returned 200; activity labels and pagination verified in the served bundle. All five runtime services active. Authenticated browser interaction was not exercised in this deployment.
+- **Backup:** `/var/backups/mahadum/referrals-541320d-20260907T155654Z/source-assets.tar.gz`, archive integrity verified before publication.
 
 ### Worldwide calling-code release — 2026-09-07
 
