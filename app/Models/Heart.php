@@ -10,6 +10,7 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property int $learner_profile_id
+ * @property int $questions_since_loss
  * @property int $current
  * @property Carbon|null $refills_at
  * @property Carbon|null $competitive_paused_until

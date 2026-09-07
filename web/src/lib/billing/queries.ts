@@ -24,6 +24,8 @@ export function useCreateSubscription() {
       void qc.invalidateQueries({ queryKey: billingKeys.subscriptions })
       // Invoice subscriptions activate immediately → refresh entitlements via /me.
       void qc.invalidateQueries({ queryKey: ['me'] })
+      void qc.invalidateQueries({ queryKey: ['learner-path'] })
+      void qc.invalidateQueries({ queryKey: ['hearts'] })
     },
   })
 }
@@ -35,6 +37,8 @@ export function useCancelSubscription() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: billingKeys.subscriptions })
       void qc.invalidateQueries({ queryKey: ['me'] })
+      void qc.invalidateQueries({ queryKey: ['learner-path'] })
+      void qc.invalidateQueries({ queryKey: ['hearts'] })
     },
   })
 }
@@ -47,6 +51,8 @@ export function useChangeSubscription() {
       void qc.invalidateQueries({ queryKey: billingKeys.subscriptions })
       // Invoice changes activate immediately → refresh entitlements via /me.
       void qc.invalidateQueries({ queryKey: ['me'] })
+      void qc.invalidateQueries({ queryKey: ['learner-path'] })
+      void qc.invalidateQueries({ queryKey: ['hearts'] })
     },
   })
 }
@@ -58,6 +64,8 @@ export function useRetrySubscription() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: billingKeys.subscriptions })
       void qc.invalidateQueries({ queryKey: ['me'] })
+      void qc.invalidateQueries({ queryKey: ['learner-path'] })
+      void qc.invalidateQueries({ queryKey: ['hearts'] })
     },
   })
 }
@@ -77,6 +85,8 @@ export function useTelcoSubscribe() {
       billingApi.telcoSubscribe(input),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['me'] })
+      void qc.invalidateQueries({ queryKey: ['learner-path'] })
+      void qc.invalidateQueries({ queryKey: ['hearts'] })
       void qc.invalidateQueries({ queryKey: billingKeys.subscriptions })
       void qc.invalidateQueries({ queryKey: billingKeys.telcoStatus })
     },

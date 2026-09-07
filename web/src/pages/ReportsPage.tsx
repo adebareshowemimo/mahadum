@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AdminPageHeader } from '@/components/admin'
-import { Card, CardBody, Icon, type IconName } from '@/components/ui'
+import { Alert, Button, Card, CardBody, Icon, type IconName } from '@/components/ui'
+import { adminApi } from '@/lib/api'
 
 const REPORTS: { to: string; title: string; description: string; icon: IconName }[] = [
   {
@@ -42,9 +44,38 @@ const REPORTS: { to: string; title: string; description: string; icon: IconName 
 ]
 
 export function ReportsPage() {
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
+
+  async function exportUsers() {
+    setExporting(true)
+    setExportError(null)
+    try {
+      await adminApi.exportUsersReport()
+    } catch {
+      setExportError('Could not generate the export. Please try again.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <AdminPageHeader title="Reports" description="Platform analytics. Each report supports a custom date range and export where useful." />
+
+      <Card>
+        <CardBody className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="font-display text-lg font-bold text-foreground">Users &amp; subscriptions</p>
+            <p className="mt-0.5 text-sm text-muted">
+              Download every user with name, email, phone, account status, plan, subscription status,
+              start/expiry dates and payment status (CSV).
+            </p>
+          </div>
+          <Button onClick={exportUsers} loading={exporting}>Export users report</Button>
+        </CardBody>
+      </Card>
+      {exportError && <Alert variant="danger">{exportError}</Alert>}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {REPORTS.map((r) => (

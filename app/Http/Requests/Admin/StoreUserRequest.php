@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Support\Phone;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -12,6 +13,13 @@ class StoreUserRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('phone')) && $this->filled('phone')) {
+            $this->merge(['phone' => Phone::normalize($this->input('phone')) ?? $this->input('phone')]);
+        }
+    }
+
     public function rules(): array
     {
         return [
@@ -19,7 +27,7 @@ class StoreUserRequest extends FormRequest
             'last_name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email:rfc', 'max:255', 'unique:users,email'],
             'username' => ['nullable', 'string', 'max:80', 'unique:users,username'],
-            'phone' => ['nullable', 'string', 'max:20', 'unique:users,phone'],
+            'phone' => ['nullable', 'string', 'regex:/^\+[1-9][0-9]{7,14}$/', 'max:20', 'unique:users,phone'],
             'locale' => ['nullable', 'string', 'max:10'],
             'status' => ['nullable', Rule::in(['active', 'suspended'])],
             'role' => ['required', Rule::in(['super_admin', 'content_owner', 'school_admin', 'teacher', 'supervisor', 'parent', 'student'])],

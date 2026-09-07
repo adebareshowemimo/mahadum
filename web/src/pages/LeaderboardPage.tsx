@@ -38,8 +38,13 @@ function Leaderboard({ learner }: { learner: LearnerProfile }) {
               <div className="text-right">
                 <p className="text-sm text-muted">Your spot</p>
                 <p className="font-display text-lg font-bold text-foreground">
-                  #{league.data?.rank ?? '—'} · ⚡ {league.data?.weekly_xp ?? 0}
+                  #{league.data?.rank ?? '—'} · ⚡ {league.data?.weekly_xp ?? 0} this week
                 </p>
+                {league.data?.learning_level && (
+                  <p className="text-xs text-muted">
+                    {league.data.learning_level.lifetime_xp.toLocaleString()} total XP
+                  </p>
+                )}
               </div>
             </>
           )}
@@ -77,8 +82,12 @@ function Leaderboard({ learner }: { learner: LearnerProfile }) {
                   {isMe && <span className="ml-2 text-xs font-medium text-primary">You</span>}
                 </span>
                 <span className="text-right">
-                  <span className="block font-display font-bold text-foreground">⚡ {row.weekly_xp}</span>
-                  {row.learning_level && <span className="block text-xs text-muted">Lv {row.learning_level.number} · {row.learning_level.name}</span>}
+                  <span className="block font-display font-bold text-foreground">⚡ {row.weekly_xp} this week</span>
+                  {row.learning_level && (
+                    <span className="block text-xs text-muted">
+                      Lv {row.learning_level.number} · {row.learning_level.name} · {row.learning_level.lifetime_xp.toLocaleString()} total
+                    </span>
+                  )}
                 </span>
               </li>
             )

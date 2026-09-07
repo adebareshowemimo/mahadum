@@ -69,6 +69,9 @@ class DevSeeder extends Seeder
 
     public function run(): void
     {
+        if (app()->environment('production')) {
+            throw new \RuntimeException('Demo data cannot be seeded in production.');
+        }
         // This dedicated seeder is idempotent, so existing development
         // databases can pick up the sample placements without being reset.
         $this->call(AdvertPlacementSeeder::class);

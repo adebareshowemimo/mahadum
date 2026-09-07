@@ -1,6 +1,6 @@
 # Azure Deployment Plan
 
-> **Status:** Deployed to production
+> **Status:** Validated
 
 Generated: 2026-08-20
 
@@ -179,6 +179,15 @@ The current plan deploys application software onto an existing VM and creates **
 ---
 
 ## 8. Validation Proof
+
+### September 4 feedback release validation — 2026-09-07
+
+- Azure validation workflow confirmed the existing subscription, Canada Central VM `mahadum`, and public IP `20.151.177.171` using `az account show` and `az vm show -d`.
+- `az policy assignment list` returned the existing Security Center assignment; VM identity role assignments remain empty. No infrastructure or RBAC changes are needed.
+- Azure VM Run Command verified Apache, PHP-FPM, MySQL and queue active, 114 GB free disk, and HTTPS `/up` returning 200.
+- Local validation: PHPUnit 340 passed / 1 skipped (OpenSSL EC key generation unavailable), 1,492 assertions; Vitest 192 passed across 32 files; frontend production build passed; Pint and PHPStan level 5 passed.
+- `git diff --check` and deployment shell syntax passed. Bicep/ARM/Docker checks are not applicable to this existing-VM application release.
+- Production database/source backups and phone normalization preflight will run before migrations. No account cleanup is included.
 
 This section will be populated by the Azure validation workflow before deployment.
 

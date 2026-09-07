@@ -19,7 +19,7 @@ Track work against these — before starting a feature, confirm it maps to one o
 - `docs/Mahadum360_Admin_Portal_TODO.md` — the current focus: building out the **super_admin portal** (§0 hardening + §1 Organizations shipped; §2 Users + permission matrix is next). Follow its per-page "Definition of done".
 - `docs/Mahadum360_Backend_Architecture.md`, `docs/Mahadum360_Roles_Permissions.md`, `docs/Mahadum360_Content_Model.md` — architecture/RBAC/content decisions. Prefer the decision recorded here over inventing a new one.
 
-Product rules that override convenience (from the BRD): never gate/lock *learning* behind hearts or paywall (Free = full learning + ads); chore/assignment coins release **only** on parent approval; commissions sit in 14-day escrow with chargeback clawback; payouts enforce approver ≠ beneficiary (separation of duties).
+Product rules that override convenience (from the BRD): Free = Lesson 0 per language; paid card/bank plans unlock all lessons, telco = Level 1 only; Free learners lose one heart per four answered quiz questions and are locked for 12 hours at zero (approved 2026-09-07; see `docs/Mahadum360_Learning_Access_Decision.md`); chore/assignment coins release **only** on parent approval; commissions sit in 14-day escrow with chargeback clawback; payouts enforce approver ≠ beneficiary (separation of duties).
 
 ## Commands
 

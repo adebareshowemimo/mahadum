@@ -12,9 +12,11 @@ use App\Models\TonePracticeInvitation;
 use App\Models\User;
 use App\Notifications\TonePracticeInvitationNotification;
 use App\Services\AuditLogger;
+use App\Services\Learning\LessonAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class TonePracticeInvitationController extends Controller
@@ -29,6 +31,8 @@ class TonePracticeInvitationController extends Controller
         $component = LessonComponent::with(['lesson', 'speakingPrompt'])->findOrFail($request->integer('component_id'));
         abort_unless($component->type === 'speaking' && $component->speakingPrompt !== null, 422, 'Choose a speaking activity.');
         abort_if($component->lesson->published_at === null, 422, 'This activity is not published.');
+
+        app(LessonAccess::class)->authorize($learner, $component->lesson);
 
         $recipient = User::whereRaw('LOWER(email) = ?', [Str::lower($request->string('recipient_email')->value())])->firstOrFail();
         abort_unless($recipient->status === 'active', 422, 'The recipient account is not active.');
@@ -91,7 +95,15 @@ class TonePracticeInvitationController extends Controller
     /** @return array<string, mixed> */
     private function safePayload(TonePracticeInvitation $invitation): array
     {
+        $video = $invitation->component->lesson->components()->where('type', 'video')
+            ->where('position', '<', $invitation->component->position)->orderByDesc('position')
+            ->with('video.sourceAsset')->first()?->video;
+        $videoUrl = $video?->sourceAsset
+            ? Storage::disk('public')->url($video->sourceAsset->url)
+            : $video?->external_url;
+
         return [
+            'video_url' => $videoUrl,
             'inviter_name' => $invitation->inviter->name,
             'lesson_title' => $invitation->component->lesson->title,
             'practice_text' => $invitation->component->speakingPrompt?->target_text

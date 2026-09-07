@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Concerns;
 use App\Models\LearnerProfile;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
+use App\Services\Learning\LessonAccess;
 use Illuminate\Support\Facades\Gate;
 
 trait ResolvesLearner
@@ -46,6 +47,8 @@ trait ResolvesLearner
 
     protected function lessonProgress(LearnerProfile $learner, Lesson $lesson): LessonProgress
     {
+        app(LessonAccess::class)->authorize($learner, $lesson);
+
         return LessonProgress::firstOrCreate(
             ['learner_profile_id' => $learner->id, 'lesson_id' => $lesson->id],
             ['status' => 'in_progress', 'started_at' => now()],

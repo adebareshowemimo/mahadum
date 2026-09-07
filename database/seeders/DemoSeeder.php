@@ -27,6 +27,9 @@ class DemoSeeder extends Seeder
 
     public function run(): void
     {
+        if (app()->environment('production')) {
+            throw new \RuntimeException('Demo data cannot be seeded in production.');
+        }
         $this->demoFamily();
         $this->demoSchool();
         $this->sampleCourse();

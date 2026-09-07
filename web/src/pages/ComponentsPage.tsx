@@ -29,6 +29,16 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
   )
 }
 
+/** Mirrors app/Services/Gamification/LearningLevelService::LEVELS + BadgeSeeder icons. */
+const LEARNING_TIERS = [
+  { level: 0, name: 'Star Starter', icon: '⭐', minXp: 0 },
+  { level: 1, name: 'Bronze', icon: '🥉', minXp: 100 },
+  { level: 2, name: 'Silver', icon: '🥈', minXp: 500 },
+  { level: 3, name: 'Gold', icon: '🥇', minXp: 1500 },
+  { level: 4, name: 'Platinum', icon: '💎', minXp: 4000 },
+  { level: 5, name: 'Culture Master', icon: '👑', minXp: 10000 },
+] as const
+
 const PALETTE = [
   { name: 'heritage', className: 'bg-heritage-500', use: 'Primary · correct' },
   { name: 'gold', className: 'bg-gold-400', use: 'Reward · coins' },
@@ -125,6 +135,24 @@ export function ComponentsPage() {
               <Badge variant="success">School linked</Badge>
               <CommissionBadge state="pending" amountMinor={250000} />
               <CommissionBadge state="cleared" amountMinor={500000} />
+            </Section>
+
+            <Section title="Learning tiers" hint="Complete the corresponding learning content to earn a badge and a congratulations notification.">
+              <div className="grid w-full gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {LEARNING_TIERS.map((tier) => (
+                  <div key={tier.level} className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-3">
+                    <span className="text-2xl" aria-hidden="true">{tier.icon}</span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-foreground">
+                        Level {tier.level} · {tier.name}
+                      </p>
+                      <p className="text-xs text-muted">
+                        Complete Level {tier.level} content to earn the “{tier.name}” badge
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </Section>
 
             <Section title="Inputs" hint="Phone-first: OTP, PIN lock, WhatsApp fallback, CSV roster.">

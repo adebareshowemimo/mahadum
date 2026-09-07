@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Learning\StoreEnrollmentRequest;
 use App\Models\Course;
 use App\Models\Enrollment;
+use App\Services\Learning\LessonAccess;
 use App\Services\Learning\PathBuilder;
 use App\Services\Learning\XapiRecorder;
 use Illuminate\Http\JsonResponse;
@@ -44,7 +45,7 @@ class EnrollmentController extends Controller
             'course_id' => $course->id,
             'path' => $nodes->map(fn ($n) => [
                 'lesson_id' => $n->lesson_id,
-                'state' => $n->state,
+                'state' => app(LessonAccess::class)->content($learner, $n->lesson)['allowed'] ? $n->state : 'locked',
                 'position' => $n->position,
             ])->values(),
         ]], 201);

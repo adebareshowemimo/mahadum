@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
+ * @property int $xp_awarded
  * @property int $id
  * @property int $learner_profile_id
  * @property int $question_id

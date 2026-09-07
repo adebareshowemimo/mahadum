@@ -21,7 +21,7 @@ class EntitlementResolver
     {
         if ($learner->user_id !== null) {
             $plan = $this->activePlan(User::class, $learner->user_id);
-            if ($plan !== null) {
+            if ($plan !== null && ($plan->price_minor > 0 || $plan->audience === 'school')) {
                 return $this->fromPlan($plan);
             }
         }
@@ -29,14 +29,14 @@ class EntitlementResolver
         $learner->loadMissing('family');
         if ($learner->family?->owner_user_id !== null) {
             $plan = $this->activePlan(User::class, $learner->family->owner_user_id);
-            if ($plan !== null) {
+            if ($plan !== null && ($plan->price_minor > 0 || $plan->audience === 'school')) {
                 return $this->fromPlan($plan);
             }
         }
 
         if ($learner->organization_id !== null) {
             $plan = $this->activePlan(Organization::class, $learner->organization_id);
-            if ($plan !== null) {
+            if ($plan !== null && ($plan->price_minor > 0 || $plan->audience === 'school')) {
                 return $this->fromPlan($plan);
             }
         }
@@ -79,7 +79,7 @@ class EntitlementResolver
             'tier_name' => $plan->name,
             'ads' => (bool) ($features['ads'] ?? false),
             'offline_download' => (bool) ($features['offline_download'] ?? false),
-            'unlimited_hearts' => (bool) ($features['unlimited_hearts'] ?? false),
+            'unlimited_hearts' => $plan->price_minor > 0 || $plan->audience === 'school' || (bool) ($features['unlimited_hearts'] ?? false),
             'family_dashboard' => (bool) ($features['family_dashboard'] ?? false),
             'teacher_analytics' => (bool) ($features['teacher_analytics'] ?? false),
             'max_profiles' => $plan->max_profiles ?? 1,

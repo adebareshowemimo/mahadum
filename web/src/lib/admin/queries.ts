@@ -37,6 +37,7 @@ export const adminKeys = {
   organization: (id: number) => ['admin-organization', id] as const,
   users: (params: AdminUsersQuery) => ['admin-users', params] as const,
   user: (id: number) => ['admin-user', id] as const,
+  userReferrals: (id: number) => ['admin-user-referrals', id] as const,
   roles: ['admin-roles'] as const,
   payouts: (params: AdminPayoutsQuery) => ['admin-payouts', params] as const,
   incomeReport: (params: IncomeReportQuery) => ['admin-income', params] as const,
@@ -263,6 +264,14 @@ export function useAdminUser(userId: number) {
   return useQuery({
     queryKey: adminKeys.user(userId),
     queryFn: () => adminApi.user(userId),
+    enabled: Number.isInteger(userId) && userId > 0,
+  })
+}
+
+export function useAdminUserReferrals(userId: number) {
+  return useQuery({
+    queryKey: adminKeys.userReferrals(userId),
+    queryFn: () => adminApi.userReferrals(userId),
     enabled: Number.isInteger(userId) && userId > 0,
   })
 }

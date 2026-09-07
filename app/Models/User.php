@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Notifications\DatabaseNotificationCollection;
@@ -146,5 +147,15 @@ class User extends Authenticatable implements MustVerifyEmail
     public function devices(): HasMany
     {
         return $this->hasMany(Device::class);
+    }
+
+    /**
+     * Subscriptions billed to this user directly (polymorphic subscriber).
+     *
+     * @return MorphMany<Subscription, $this>
+     */
+    public function subscriptions(): MorphMany
+    {
+        return $this->morphMany(Subscription::class, 'subscriber');
     }
 }

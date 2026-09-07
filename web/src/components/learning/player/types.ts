@@ -100,6 +100,7 @@ export interface QuizSlide extends SlideBase {
   matchPool: string[]
   passThreshold: number
   /** Resume: this question was already answered correctly in the open attempt. */
+  xpAwarded?: number
   wasCorrect: boolean
 }
 
@@ -200,6 +201,7 @@ function playComponentToSlides(c: PlayComponent, lessonTitle?: string): Slide[] 
       passThreshold: c.quiz?.pass_threshold ?? 0.7,
       completed: !!q.answered,
       wasCorrect: !!q.was_correct,
+      xpAwarded: q.xp_awarded ?? 0,
     }))
   }
   return [{ ...base, id: `g${c.id}`, kind: 'generic', activity: c.type }]
@@ -435,7 +437,7 @@ export function createPreviewService(key: Map<number, QuizKey>, hearts: { value:
         correctText: k?.targetText ?? null,
         correctPairs: k?.correctPairs ?? [],
         explanation: k?.explanation ?? null,
-        xpAwarded: correct ? 10 : 0,
+        xpAwarded: correct ? 1 : 0,
         heartsRemaining: hearts.value,
         attemptsExhausted: false,
         practiceMode: false,

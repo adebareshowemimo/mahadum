@@ -19,7 +19,7 @@ import { formatMoney } from '@/lib/format'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useConfig } from '@/lib/config/useConfig'
 import { useEntitlements } from '@/lib/billing/entitlements'
-import { planFeatures } from '@/lib/billing/planFeatures'
+import { FREE_PLAN_FEATURES, planFeatures } from '@/lib/billing/planFeatures'
 import {
   useCancelSubscription,
   useChangeSubscription,
@@ -288,7 +288,7 @@ export function BillingPage() {
                   </div>
 
                   <ul className="flex flex-col gap-1.5 text-sm">
-                    {planFeatures(plan).map((feat) => (
+                    {(isFree ? FREE_PLAN_FEATURES : planFeatures(plan)).map((feat) => (
                       <li key={feat} className="flex items-start gap-2 text-foreground">
                         <Icon name="sparkles" className="mt-0.5 size-4 shrink-0 text-primary" />
                         {feat}

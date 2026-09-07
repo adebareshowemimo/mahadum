@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Alert, Button, Icon, Input } from '@/components/ui'
+import { Alert, Button, Icon, Input, PhoneInput } from '@/components/ui'
 import { AuthLayout } from '@/components/auth/AuthLayout'
 import { GoogleButton } from '@/components/auth/GoogleButton'
 import { cn } from '@/lib/cn'
@@ -96,6 +96,7 @@ export function RegisterPage() {
     password_confirmation: '',
     organization_name: '',
   })
+  const [dialCode, setDialCode] = useState('+234')
   const [consent, setConsent] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
@@ -186,6 +187,7 @@ export function RegisterPage() {
         last_name: values.last_name,
         email: values.email,
         phone: values.phone,
+        dial_code: dialCode,
         password: values.password,
         password_confirmation: values.password_confirmation,
         account_type: invitationToken ? 'learner' : accountType ?? 'family',
@@ -507,17 +509,18 @@ export function RegisterPage() {
               />
             )}
 
-            <Input
-              label="Phone number"
-              type="tel"
-              autoComplete="tel"
-              hint="Used for airtime billing and account recovery."
-              value={values.phone}
-              onChange={update('phone')}
-              error={fieldErrors.phone}
-              autoFocus={signupMethod === 'google'}
-              required
-            />
+            <div>
+              <PhoneInput
+                label="Phone number"
+                value={values.phone}
+                onChange={(v) => setValues((s) => ({ ...s, phone: v }))}
+                dialCodeValue={dialCode}
+                onDialCodeChange={setDialCode}
+                error={fieldErrors.phone}
+                required
+              />
+              <p className="mt-1 text-xs text-muted">Used for airtime billing and account recovery.</p>
+            </div>
 
             {(signupMethod === 'email' || invitationToken) && (
               <>
@@ -570,6 +573,7 @@ export function RegisterPage() {
                 signupContext={{
                   account_type: accountType ?? 'family',
                   phone: values.phone.trim(),
+                  dial_code: dialCode,
                   ...(!isGuardianFlow && dob ? { date_of_birth: dob } : {}),
                   ...(isOrganizationAccount(accountType) ? { organization_name: values.organization_name.trim() } : {}),
                   ...(referralCode ? { referral_code: referralCode } : {}),

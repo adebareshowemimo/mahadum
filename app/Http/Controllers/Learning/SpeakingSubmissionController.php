@@ -9,6 +9,7 @@ use App\Models\ComponentProgress;
 use App\Models\LessonComponent;
 use App\Models\MediaAsset;
 use App\Models\SpeakingSubmission;
+use App\Services\Learning\LessonAccess;
 use App\Services\Learning\XapiRecorder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,8 @@ class SpeakingSubmissionController extends Controller
         $component = LessonComponent::findOrFail($request->integer('component_id'));
 
         abort_unless($component->type === 'speaking', 422, 'This component is not a speaking challenge.');
+
+        app(LessonAccess::class)->authorize($learner, $component->lesson);
 
         $submission = DB::transaction(function () use ($request, $learner, $component) {
             $assetId = null;

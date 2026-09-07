@@ -185,7 +185,7 @@ function Hero({
             </div>
             <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-navy-700">
               <span aria-hidden="true" className="text-leaf-600">✓</span>
-              Every lesson stays free. Paying only adds convenience.
+              Start with Lesson 0 free. Upgrade to unlock more.
             </p>
           </Reveal>
 
@@ -485,12 +485,11 @@ function NeverLockedBand() {
       <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
         <Reveal>
           <h2 className="font-display text-3xl font-extrabold text-white sm:text-4xl">
-            The language is never the premium feature.
+            Start your language journey for free.
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg font-medium leading-relaxed text-chore-50">
-            Every lesson stays open on Free. Hearts invite a quick practice, never a
-            countdown lock. Paid plans remove ads and add offline learning; they do not
-            sell your family&rsquo;s language back to you.
+            Lesson 0 is free in every language. Paid card and bank plans unlock all lessons
+            and unlimited hearts. Free learners pause for 12 hours when hearts run out.
           </p>
         </Reveal>
       </div>
@@ -607,7 +606,7 @@ const PLANS = [
     price: '₦0',
     cadence: 'forever',
     blurb: 'Full learning, forever. Ad-supported.',
-    features: ['Every lesson, unlocked', 'Speaking practice & quizzes', 'Streaks, XP and badges'],
+    features: ['Free lessons and quiz', 'Speaking practice & quizzes', 'Streaks, XP and badges'],
     cta: 'Start free',
     variant: 'outline' as const,
   },
@@ -759,7 +758,7 @@ function TrustSection() {
 const FAQS = [
   {
     q: 'Is it really free?',
-    a: 'Yes — and not in the way other apps mean it. Every lesson is open on the free plan, supported by ads between lessons. Paying removes the ads and adds offline downloads, unlimited hearts and the family dashboard. It never unlocks content.',
+    a: 'Lesson 0 is free in every language, supported by ads. Paid card and bank plans unlock all lessons and unlimited hearts; airtime plans include Level 1 only. Free learners pause for 12 hours when hearts run out.',
   },
   {
     q: 'My child was born abroad and only speaks English. Is this too late?',

@@ -72,10 +72,10 @@ function PricingHero() {
             Straightforward pricing for families and schools
           </p>
           <h1 className="mt-6 max-w-[12ch] font-display text-[clamp(3rem,6vw,5.5rem)] font-extrabold leading-[0.98] tracking-[-0.035em] text-navy-950">
-            Every lesson is free. Choose how you learn.
+            Start with Lesson 0. Unlock more with a paid plan.
           </h1>
           <p className="mt-6 max-w-[38rem] text-lg font-semibold leading-relaxed text-navy-700 sm:text-xl">
-            Start with the complete learning experience at no cost. Upgrade for convenience—no ads, offline lessons,
+            Start with the complete learning experience at no cost. Unlock the curriculum—no ads, offline lessons,
             unlimited hearts, and family tools—not for access to your language.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -95,7 +95,7 @@ function PricingHero() {
           <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-navy-700">
             <span>✓ No card to start</span>
             <span>✓ Cancel anytime</span>
-            <span>✓ Learning never locked</span>
+            <span>✓ Lesson 0 free in every language</span>
           </div>
         </Reveal>
 
@@ -109,8 +109,8 @@ function PricingHero() {
             priority
           />
           <div className="absolute bottom-4 left-4 max-w-[15rem] rounded-xl bg-white p-4 shadow-md sm:bottom-6 sm:left-6">
-            <p className="font-display text-lg font-extrabold text-navy-950">Free means every lesson.</p>
-            <p className="mt-1 text-sm font-semibold text-navy-600">Paying adds comfort, never access.</p>
+            <p className="font-display text-lg font-extrabold text-navy-950">Start learning for free.</p>
+            <p className="mt-1 text-sm font-semibold text-navy-600">Upgrade to unlock Lesson 1 and beyond.</p>
           </div>
         </Reveal>
       </div>
@@ -176,10 +176,10 @@ function PricingBody({ data, onOpenQuote }: { data: PricingInfo; onOpenQuote: ()
       </div>
 
       <Reveal className="mt-8 grid overflow-hidden rounded-[1rem] border border-chore-100 bg-[#f7fbff] md:grid-cols-3">
-        <PromisePoint title="The curriculum stays open">
-          Free learners can complete the same language lessons as paying learners.
+        <PromisePoint title="Start with Lesson 0">
+          Free learners can access Lesson 0 in every language. Paid card and bank plans unlock all lessons; airtime subscriptions include Level 1 only.
         </PromisePoint>
-        <PromisePoint title="Upgrade for convenience">
+        <PromisePoint title="Unlock the curriculum">
           Paid plans remove interruptions and make learning easier on journeys and weak connections.
         </PromisePoint>
         <PromisePoint title="Parents stay in control">

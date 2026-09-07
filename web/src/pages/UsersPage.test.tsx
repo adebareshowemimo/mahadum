@@ -16,6 +16,14 @@ const { useAdminUsersMock, useAdminUserMock, assignMutate, setStatusMutate, crea
 vi.mock('@/lib/admin/queries', () => ({
   useAdminUsers: useAdminUsersMock,
   useAdminUser: useAdminUserMock,
+  useAdminUserReferrals: () => ({
+    data: {
+      as_referrer: { code: null, total_referred: 0, total_qualified: 0, commission_cleared_minor: 0, activations: [] },
+      as_referred: null,
+    },
+    isLoading: false,
+    isError: false,
+  }),
   useAssignUserRole: () => ({ mutateAsync: assignMutate, isPending: false }),
   useSetUserStatus: () => ({ mutateAsync: setStatusMutate, isPending: false }),
   useCreateAdminUser: () => ({ mutateAsync: createMutate, isPending: false }),

@@ -9,6 +9,7 @@ use App\Models\AssignmentSubmission;
 use App\Models\ComponentProgress;
 use App\Models\LessonComponent;
 use App\Models\MediaAsset;
+use App\Services\Learning\LessonAccess;
 use App\Services\Learning\XapiRecorder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +30,8 @@ class AssignmentSubmissionController extends Controller
         $component = LessonComponent::with('assignment')->findOrFail($request->integer('component_id'));
 
         abort_unless($component->type === 'assignment', 422, 'This component is not an assignment.');
+
+        app(LessonAccess::class)->authorize($learner, $component->lesson);
 
         $submission = DB::transaction(function () use ($request, $learner, $component) {
             $assetId = null;

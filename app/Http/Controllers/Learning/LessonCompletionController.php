@@ -69,7 +69,7 @@ class LessonCompletionController extends Controller
             ]);
 
             // XP awarded once per lesson (idempotent on re-complete).
-            $xpTotal = (int) $lesson->components->sum('xp_value');
+            $xpTotal = (int) $lesson->components->where('type', '!=', 'quiz')->sum('xp_value');
             if (! $alreadyDone && $xpTotal > 0 && ! $heartState['practice_mode']) {
                 XpLedger::create([
                     'learner_profile_id' => $learner->id,

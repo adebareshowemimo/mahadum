@@ -1,3 +1,5 @@
+> Current learning access rules (approved 2026-09-07) are defined in [Learning access decision](Mahadum360_Learning_Access_Decision.md). They supersede historical no-paywall and no-heart-lock requirements below.
+
 # MAHADUM.360 — Implementation TODO
 
 A phased, trackable build plan for the MVP (web-first), stitched from the BRD,
@@ -53,7 +55,7 @@ Ongoing in parallel: **Design**, **Content production**, **Integrations**, **Com
 > Two of them (**wordmark**, **max child profiles**) turn out to be already decided in code
 > and only need ratifying. Awaiting sign-off — nothing implemented.
 
-- [x] ✅ **Subscription matrix** — RESOLVED (2026-06-27): family features (dashboard/chores/monitoring) live in **Premium (Family)** tier (+ School); **Free = full learning + ads** (no content gate). Entitlements now exposed via `/me`; family-economy pages gated by `family_dashboard`.
+- [x] ✅ **Subscription matrix** — RESOLVED (2026-06-27): family features (dashboard/chores/monitoring) live in **Premium (Family)** tier (+ School); **Free = Lesson 0 per language + ads**; paid card/bank = all lessons; telco = Level 1 only. Entitlements now exposed via `/me`; family-economy pages gated by `family_dashboard`.
 - [ ] **Zero-hearts behaviour** — exact UX when hearts hit 0 (practice / rewarded ad / wait), respecting Rule 4 (never lock learning). *(blocks M4)*
 - [x] ✅ **Canonical tagline** — **"Learn the language. Live the culture. Connect the generations."** (locked 2026-06-27; single source: `web/src/lib/brand.ts` → `TAGLINE`).
 - [ ] **Wordmark** — `MAHADUM.360` (with dot) confirmed canonical over `Mahadum360`.

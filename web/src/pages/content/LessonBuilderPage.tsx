@@ -82,7 +82,20 @@ export function LessonBuilderPage() {
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
+  const [accessBusy, setAccessBusy] = useState(false)
   const [publishErrors, setPublishErrors] = useState<string[] | null>(null)
+
+  async function toggleFreeLesson() {
+    setAccessBusy(true)
+    try {
+      await contentApi.updateLesson(id, { is_free_preview: !lesson.data?.is_free_preview })
+      await lesson.refetch()
+    } catch (err) {
+      setPublishErrors([err instanceof ApiError ? err.message : 'Could not update lesson access.'])
+    } finally {
+      setAccessBusy(false)
+    }
+  }
 
   async function onPublish() {
     setPublishErrors(null)
@@ -147,6 +160,11 @@ export function LessonBuilderPage() {
           </div>
         </div>
       </div>
+
+      {canManage && <label className="flex items-center gap-3 rounded-xl border border-border p-4 text-sm">
+        <input type="checkbox" checked={!!lesson.data.is_free_preview} disabled={accessBusy} onChange={() => void toggleFreeLesson()} />
+        Free introductory lesson (Lesson 0). All other lessons require a paid plan.
+      </label>}
 
       {publishErrors && (
         <Alert variant="warning" title="Can’t publish yet">
@@ -663,14 +681,103 @@ const newCard = (): CardDraft => ({ key: uid(), front_text: '', back_text: '', m
 
 const FLASHCARD_TEMPLATE = 'Front (Word),Back (Meaning),Mnemonic (Optional)\nẸ káàrọ̀,Good morning,A morning greeting\n'
 
-function downloadFlashcardTemplate() {
-  const blob = new Blob([`\uFEFF${FLASHCARD_TEMPLATE}`], { type: 'text/csv;charset=utf-8' })
+function downloadCsv(filename: string, csv: string) {
+  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
-  anchor.download = 'flashcard-import-template.csv'
+  anchor.download = filename
   anchor.click()
   URL.revokeObjectURL(url)
+}
+
+function downloadFlashcardTemplate() {
+  downloadCsv('flashcard-import-template.csv', FLASHCARD_TEMPLATE)
+}
+
+/** Copy-to-clipboard "generate with AI" disclosure, shared by quiz / game / flashcard builders. */
+function AiPromptDisclosure({ label, prompt }: { label: string; prompt: string }) {
+  const [copied, setCopied] = useState(false)
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(prompt)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setCopied(false)
+    }
+  }
+  return (
+    <details className="rounded-xl border border-border bg-surface-muted px-3 py-2 text-sm">
+      <summary className="cursor-pointer font-medium text-foreground">\u2728 {label} with AI (ChatGPT / Claude)</summary>
+      <div className="mt-2 flex flex-col gap-2">
+        <p className="text-muted">
+          Copy this prompt, fill in the [bracketed] parts, and paste it into ChatGPT or Claude. Paste the reply back into the
+          CSV template above, then import it. The prompt is written so the output matches this importer exactly.
+        </p>
+        <div>
+          <Button type="button" size="sm" variant="secondary" onClick={copy}>
+            {copied ? '\u2713 Copied' : 'Copy AI prompt'}
+          </Button>
+        </div>
+        <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-surface p-3 text-xs leading-relaxed text-muted">{prompt}</pre>
+      </div>
+    </details>
+  )
+}
+
+const FLASHCARD_AI_PROMPT = `Generate [N] flashcards for learning [LANGUAGE] on the topic "[TOPIC]".
+Output as CSV with exactly this header row and nothing else before or after it:
+Front (Word),Back (Meaning),Mnemonic (Optional)
+Rules:
+- "Front (Word)" is the target-language word or short phrase (with correct diacritics / tone marks).
+- "Back (Meaning)" is the English meaning.
+- "Mnemonic (Optional)" is a short memory aid, or leave the cell empty.
+- One flashcard per row. Quote any value containing a comma.`
+
+const GAME_TEMPLATE = 'Game Type,Pairs\nmatch,\u1EB8 k\u00E1\u00E0r\u1ECD\u0300 | Good morning\nmatch,K\u00FA \u00E0\u00E1r\u1ECD\u0300 | Good morning (reply)\n'
+
+const GAME_AI_PROMPT = `Generate a matching game for learning [LANGUAGE] on the topic "[TOPIC]" with [N] pairs.
+Output as CSV with exactly this header row and nothing else before or after it:
+Game Type,Pairs
+Rules:
+- "Game Type" is one of: memory, match, word_builder. Put the same value on every row.
+- "Pairs" is one pair written as "Side A | Side B" (target-language term on the left, its match on the right).
+- One pair per row. Quote any value containing a comma.`
+
+const GAME_TYPES = ['memory', 'match', 'tone_pop', 'word_builder'] as const
+
+/** Parse the game CSV template \u2192 chosen game type + pair drafts. */
+export function parseGameCsv(text: string): { gameType: (typeof GAME_TYPES)[number] | null; pairs: PairDraft[] } {
+  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter((line) => line.trim())
+  if (lines.length < 2) throw new Error('The file has no game rows.')
+  const headers = parseCsvLine(lines[0]).map((h) => h.toLowerCase())
+  const typeIndex = headers.findIndex((h) => ['game type', 'game_type', 'type'].includes(h))
+  const pairsIndex = headers.findIndex((h) => ['pairs', 'pair'].includes(h))
+  if (pairsIndex < 0) throw new Error('Use the template columns Game Type and Pairs.')
+
+  let gameType: (typeof GAME_TYPES)[number] | null = null
+  const seen = new Set<string>()
+  const pairs: PairDraft[] = []
+
+  lines.slice(1).forEach((line, index) => {
+    const values = parseCsvLine(line)
+    const rawType = (typeIndex >= 0 ? values[typeIndex] : '')?.trim().toLowerCase()
+    if (rawType && (GAME_TYPES as readonly string[]).includes(rawType)) {
+      gameType = rawType as (typeof GAME_TYPES)[number]
+    }
+    const cell = values[pairsIndex]?.trim() ?? ''
+    if (!cell) return
+    const [a, b] = cell.split(/\s*[|/]\s*|\s*::\s*/).map((s) => s.trim())
+    if (!a || !b) throw new Error(`Row ${index + 2}: write each pair as "Side A | Side B".`)
+    const key = `${a.toLowerCase()} ${b.toLowerCase()}`
+    if (seen.has(key)) return
+    seen.add(key)
+    pairs.push({ key: uid(), a, b })
+  })
+
+  if (pairs.length < 2) throw new Error('Add at least two complete pairs.')
+  return { gameType, pairs }
 }
 
 function parseCsvLine(line: string): string[] {
@@ -804,6 +911,8 @@ function AddExerciseModal({ lessonId, editing, onClose }: { lessonId: number; ed
           <span className="text-xs text-muted">Imported cards are previewed below before saving.</span>
         </div>
 
+        <AiPromptDisclosure label="Generate flashcards" prompt={FLASHCARD_AI_PROMPT} />
+
         <div className="-mr-1 flex max-h-[55vh] flex-col gap-3 overflow-y-auto pr-1">
           {cards.map((c, i) => (
             <div key={c.key} className="rounded-2xl border border-border bg-surface p-3">
@@ -885,6 +994,21 @@ function AddGameModal({ lessonId, editing, onClose }: { lessonId: number; editin
     setPairs((ps) => ps.map((p) => (p.key === key ? fn(p) : p)))
   }
 
+  async function importGameCsv(file: File | undefined) {
+    if (!file) return
+    setLocalError(null)
+    try {
+      const parsed = parseGameCsv(await file.text())
+      if (parsed.gameType && (parsed.gameType !== 'tone_pop' || tonePracticeEnabled)) setGameType(parsed.gameType)
+      setPairs((current) => {
+        const existing = current.filter((p) => p.a.trim() || p.b.trim())
+        return [...existing, ...parsed.pairs]
+      })
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : 'Could not read the game file.')
+    }
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setLocalError(null)
@@ -921,6 +1045,27 @@ function AddGameModal({ lessonId, editing, onClose }: { lessonId: number; editin
             ))}
           </select>
         </label>
+
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-surface-muted p-3">
+          <Button type="button" size="sm" variant="secondary" onClick={() => downloadCsv('game-import-template.csv', GAME_TEMPLATE)}>
+            Download CSV template
+          </Button>
+          <label className="inline-flex min-h-10 cursor-pointer items-center rounded-xl border border-border bg-surface px-3 text-sm font-semibold text-foreground">
+            Import completed CSV
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              className="sr-only"
+              onChange={(event) => {
+                void importGameCsv(event.target.files?.[0])
+                event.target.value = ''
+              }}
+            />
+          </label>
+          <span className="text-xs text-muted">Columns: Game Type, Pairs (“Side A | Side B”).</span>
+        </div>
+
+        <AiPromptDisclosure label="Generate a game" prompt={GAME_AI_PROMPT} />
 
         <div className="-mr-1 flex max-h-[45vh] flex-col gap-2 overflow-y-auto pr-1">
           <span className="text-sm font-semibold text-foreground">Pairs</span>

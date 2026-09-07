@@ -17,6 +17,7 @@ class UpdateLessonRequest extends FormRequest
             'title' => ['sometimes', 'string', 'max:255'],
             'position' => ['sometimes', 'integer', 'min:1'],
             'est_minutes' => ['sometimes', 'integer', 'min:1'],
+            'is_free_preview' => ['boolean'],
             'is_locked_by_default' => ['boolean'],
         ];
     }

@@ -433,7 +433,7 @@ export function LandingV5Page() {
             </Reveal>
             <div className="mt-12 divide-y divide-white/25 border-y border-white/25">
               {[
-                ['Free learning', 'Every lesson remains available without payment; paid plans add convenience.'],
+                ['Free learning', 'Lesson 0 is available without payment; paid plans unlock further learning.'],
                 ['Child-safe identity', 'Under-13 learners use profiles while adults manage consent and sensitive actions.'],
                 ['Unreliable connections', 'Low-bandwidth activities and offline options reduce dependence on constant data.'],
                 ['Real school operations', 'Seats, rosters, classes, invoices, assignments and reporting are part of the platform.'],

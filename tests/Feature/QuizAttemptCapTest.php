@@ -30,7 +30,7 @@ class QuizAttemptCapTest extends TestCase
         // First attempt: scored, XP awarded, attempt completed (1 question).
         $answer()->assertOk()
             ->assertJsonPath('data.correct', true)
-            ->assertJsonPath('data.xp_awarded', 2)
+            ->assertJsonPath('data.xp_awarded', 1)
             ->assertJsonPath('data.attempts_exhausted', false);
         $this->assertDatabaseCount('quiz_attempts', 1);
 
@@ -60,7 +60,7 @@ class QuizAttemptCapTest extends TestCase
             'learner_id' => $learner->id, 'question_id' => $question->id, 'answer' => ['option_id' => $correct->id],
         ]);
 
-        $answer()->assertOk()->assertJsonPath('data.xp_awarded', 2)->assertJsonPath('data.attempts_exhausted', false);
+        $answer()->assertOk()->assertJsonPath('data.xp_awarded', 1)->assertJsonPath('data.attempts_exhausted', false);
         // A replay starts a second scored attempt, but XP for the question isn't re-earned.
         $answer()->assertOk()->assertJsonPath('data.xp_awarded', 0)->assertJsonPath('data.attempts_exhausted', false);
 

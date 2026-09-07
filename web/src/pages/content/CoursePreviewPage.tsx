@@ -58,7 +58,12 @@ function CourseOverview({ courseId }: { courseId: number }) {
         )}
 
         {(levels.data?.length ?? 0) > 0 && (
-          <h2 className="mb-3 font-display text-lg font-bold text-foreground">Course contents</h2>
+          <div className="mb-3 flex items-baseline justify-between gap-3">
+            <h2 className="font-display text-lg font-bold text-foreground">Course contents</h2>
+            <p className="text-xs text-muted">
+              {levels.data?.length} unit{levels.data?.length === 1 ? '' : 's'}
+            </p>
+          </div>
         )}
 
         {levels.isLoading ? (
@@ -86,6 +91,7 @@ function UnitStartCard({ courseId, level }: { courseId: number; level: AuthorLev
   const navigate = useNavigate()
   const lessons = useLevelLessons(level.id)
   const count = lessons.data?.length ?? 0
+  const totalMinutes = (lessons.data ?? []).reduce((sum, l) => sum + (l.est_minutes ?? 0), 0)
 
   return (
     <div className="flex flex-col gap-4 rounded-3xl border border-border bg-surface p-6 text-center shadow-sm">
@@ -96,14 +102,28 @@ function UnitStartCard({ courseId, level }: { courseId: number; level: AuthorLev
         <p className="text-[11px] font-bold uppercase tracking-wide text-subtle">Unit {level.position}</p>
         <h2 className="font-display text-xl font-bold text-foreground">{level.title}</h2>
         <p className="mt-1 text-sm text-muted">
-          {lessons.isLoading ? 'Loading…' : `${count} lesson${count === 1 ? '' : 's'}`}
+          {lessons.isLoading
+            ? 'Loading…'
+            : `${count} lesson${count === 1 ? '' : 's'}${totalMinutes > 0 ? ` · about ${totalMinutes} min` : ''}`}
         </p>
         {count > 0 && (
           <ol className="mt-3 space-y-1 rounded-2xl bg-surface-muted p-3 text-left text-sm text-foreground">
             {lessons.data?.map((lesson, index) => (
-              <li key={lesson.id} className="flex items-center justify-between gap-3">
-                <span>{index + 1}. {lesson.title}</span>
-                {lesson.est_minutes ? <span className="shrink-0 text-xs text-muted">{lesson.est_minutes} min</span> : null}
+              <li key={lesson.id}>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/courses/${courseId}/levels/${level.id}/preview`)}
+                  className="flex w-full items-center justify-between gap-3 rounded-lg px-1 py-0.5 text-left hover:bg-surface"
+                >
+                  <span>
+                    {index + 1}. {lesson.title}
+                    <span className="ml-2 text-xs text-muted">{lesson.is_free_preview ? 'Free Lesson 0' : 'Paid lesson'}</span>
+                    {!lesson.is_published && (
+                      <span className="ml-2 rounded bg-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase text-subtle">Draft</span>
+                    )}
+                  </span>
+                  {lesson.est_minutes ? <span className="shrink-0 text-xs text-muted">{lesson.est_minutes} min</span> : null}
+                </button>
               </li>
             ))}
           </ol>

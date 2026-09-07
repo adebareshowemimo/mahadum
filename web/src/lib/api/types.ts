@@ -283,6 +283,8 @@ export interface CreateChoreInput {
 export type NodeState = 'locked' | 'active' | 'completed'
 
 export interface PathNode {
+  access_reason?: string | null
+  is_free_preview?: boolean
   lesson_id: number
   title: string
   state: NodeState
@@ -382,6 +384,7 @@ export interface AuthorComponent {
 }
 
 export interface AuthorLesson {
+  is_free_preview?: boolean
   id: number
   title: string
   position: number
@@ -415,6 +418,7 @@ export interface CreateLevelInput {
 }
 
 export interface CreateLessonInput {
+  is_free_preview?: boolean
   title: string
   est_minutes?: number
   position?: number
@@ -509,6 +513,7 @@ export interface QuizQuestion {
   /** Resume: the active learner already answered this in their open attempt. */
   answered?: boolean
   /** Resume: whether that previous answer was correct (null if unanswered). */
+  xp_awarded?: number
   was_correct?: boolean | null
 }
 
@@ -574,6 +579,7 @@ export interface PlayComponent {
 }
 
 export interface LessonPlay {
+  hearts_remaining?: number | null
   lesson: { id: number; title: string; est_minutes: number | null }
   components: PlayComponent[]
 }
@@ -656,7 +662,8 @@ export interface StreakInfo {
 }
 
 export interface HeartsInfo {
-  current: number
+  unlimited_hearts?: boolean
+  current: number | null
   refills_at: string | null
   practice_mode?: boolean
   competitive_paused_until?: string | null
@@ -678,6 +685,9 @@ export interface AdCompleteResult {
 export interface EarnedBadge {
   code: string
   name: string
+  description: string | null
+  icon: string | null
+  level: number | null
   earned_at: string | null
 }
 
@@ -685,6 +695,8 @@ export interface LockedBadge {
   code: string
   name: string
   description: string | null
+  icon: string | null
+  level: number | null
 }
 
 export interface BadgesInfo {
@@ -715,6 +727,7 @@ export interface LeaderboardRow {
 }
 
 export interface TonePracticeInvitation {
+  video_url?: string | null
   inviter_name: string
   lesson_title: string
   practice_text: string
@@ -1753,6 +1766,35 @@ export interface AdminUserRow {
   organizations: AdminUserOrg[]
 }
 
+export interface AdminUserReferralActivation {
+  referred_name: string | null
+  email: string | null
+  phone: string | null
+  channel: 'email' | 'phone' | null
+  signed_up_at: string | null
+  activated_at: string | null
+  status: 'pending' | 'active' | 'inactive'
+  commission_minor: number
+}
+
+export interface AdminUserReferrals {
+  as_referrer: {
+    code: string | null
+    total_referred: number
+    total_qualified: number
+    commission_cleared_minor: number
+    activations: AdminUserReferralActivation[]
+  }
+  as_referred: {
+    code: string | null
+    referrer_name: string | null
+    channel: 'email' | 'phone' | null
+    signed_up_at: string | null
+    activated_at: string | null
+    status: string
+  } | null
+}
+
 export interface Paginated<T> {
   data: T[]
   meta: { current_page: number; last_page: number; per_page: number; total: number }
@@ -1869,6 +1911,8 @@ export interface RegisterInput {
   last_name: string
   email: string
   phone: string
+  /** Country calling code for the phone, e.g. "+234". */
+  dial_code?: string
   password: string
   password_confirmation: string
   username?: string
@@ -1886,6 +1930,7 @@ export interface GoogleAuthInput {
   account_type?: 'individual' | 'family' | 'educator_school' | 'institution'
   organization_name?: string
   phone?: string
+  dial_code?: string
   date_of_birth?: string
   referral_code?: string
 }

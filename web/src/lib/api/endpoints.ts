@@ -76,6 +76,7 @@ import type {
   AdminTicketsPage,
   AdminTicketsQuery,
   AdminUserRow,
+  AdminUserReferrals,
   CreateAdminUserInput,
   CreatePlanInput,
   CreateTicketInput,
@@ -924,6 +925,11 @@ export const adminApi = {
     return data.data
   },
 
+  async userReferrals(userId: number): Promise<AdminUserReferrals> {
+    const { data } = await api.get(`/admin/users/${userId}/referrals`)
+    return data.data
+  },
+
   async assignUserRole(userId: number, input: AssignRoleInput): Promise<AdminUserRow> {
     const { data } = await api.post(`/admin/users/${userId}/roles`, input)
     return data.data
@@ -982,6 +988,19 @@ export const adminApi = {
   async renewalsReport(params: IncomeReportQuery = {}): Promise<RenewalsReport> {
     const { data } = await api.get('/admin/reports/renewals', { params })
     return data.data
+  },
+
+  /** Download the Users + Subscription report as a CSV (auth-protected). */
+  async exportUsersReport(params: { status?: string } = {}): Promise<void> {
+    const res = await api.get('/admin/reports/users/export', { params, responseType: 'blob' })
+    const url = URL.createObjectURL(res.data as Blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `mahadum360-users-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
   },
 
   // ── Email: campaigns ──

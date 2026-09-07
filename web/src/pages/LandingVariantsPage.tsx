@@ -261,7 +261,7 @@ export function LandingV1Page() {
                     See how a word travels
                   </a>
                 </div>
-                <p className="mt-3 text-sm font-bold text-navy-600">No card. Every lesson included on Free.</p>
+                <p className="mt-3 text-sm font-bold text-navy-600">No card. Lesson 0 included on Free.</p>
               </div>
 
               <div className="mt-8 flex items-center gap-3">
@@ -441,9 +441,9 @@ export function LandingV1Page() {
           <div className="mx-auto max-w-5xl px-4 text-center sm:px-6">
             <Reveal>
               <p className="font-display text-2xl font-bold text-[#ffb277]">The whole language belongs to the learner.</p>
-              <h2 className="mt-3 font-display text-4xl font-extrabold leading-tight sm:text-6xl">Every lesson stays free.</h2>
+              <h2 className="mt-3 font-display text-4xl font-extrabold leading-tight sm:text-6xl">Start with Lesson 0 for free.</h2>
               <p className="mx-auto mt-5 max-w-2xl text-lg font-semibold leading-relaxed text-white/80">
-                Free includes the complete learning path. Paid plans remove ads and add offline learning and family controls; they never unlock the language itself.
+                Free includes Lesson 0 in every language. Paid card and bank plans unlock all lessons and unlimited hearts. Airtime plans include Level 1 only.
               </p>
               <LinkButton to="/register" size="lg" variant="accent" className="mt-8">Create your family account</LinkButton>
             </Reveal>
@@ -522,7 +522,7 @@ export function LandingV2Page() {
                 <LinkButton to="/register" size="lg" variant="ghost" className="border-2 border-white/55 bg-white/10 text-white hover:bg-white/20">Start free</LinkButton>
               </div>
               <div className="mt-8 flex flex-wrap gap-2 text-sm font-bold">
-                {['Ages 5+', 'Every lesson free', 'Parent-controlled', 'Built for 3G'].map((item, index) => (
+                {['Ages 5+', 'Lesson 0 free', 'Parent-controlled', 'Built for 3G'].map((item, index) => (
                   <span key={item} className="motion-chip-entry rounded-full bg-white/14 px-3 py-1.5 text-white" style={{ '--chip-i': index } as CSSProperties}>{item}</span>
                 ))}
               </div>
@@ -629,7 +629,7 @@ export function LandingV2Page() {
           <div className="mx-auto max-w-5xl px-4 text-center sm:px-6">
             <Reveal>
               <h2 className="font-display text-5xl font-extrabold leading-[1.02] sm:text-7xl">The next adventure costs ₦0.</h2>
-              <p className="mx-auto mt-5 max-w-2xl text-lg font-bold leading-relaxed">Every lesson is open on Free. Paid plans remove ads and add offline and family conveniences.</p>
+              <p className="mx-auto mt-5 max-w-2xl text-lg font-bold leading-relaxed">Lesson 0 is open on Free. Paid card and bank plans unlock all lessons and unlimited hearts; airtime plans include Level 1 only.</p>
               <LinkButton to="/register" size="lg" variant="parent" className="mt-8">Let them play the first lesson</LinkButton>
             </Reveal>
           </div>

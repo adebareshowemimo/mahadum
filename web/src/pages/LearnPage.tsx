@@ -112,13 +112,13 @@ const NODE_STYLES: Record<NodeState, { ring: string; icon: 'cap' | 'book' | 'shi
 function NodeRow({ node, learnerId: _learnerId }: { node: PathNode; learnerId: number }) {
   const navigate = useNavigate()
   const style = NODE_STYLES[node.state]
-  const interactive = node.state !== 'locked'
+  const interactive = node.state !== 'locked' || !!node.access_reason
 
   return (
     <li className="relative z-10">
       <button
         disabled={!interactive}
-        onClick={() => navigate(`/learn/lessons/${node.lesson_id}`)}
+        onClick={() => navigate(node.access_reason ? '/billing' : `/learn/lessons/${node.lesson_id}`)}
         className={cn(
           'flex w-full items-center gap-4 rounded-2xl border p-3 text-left transition-colors',
           interactive ? 'border-border bg-surface hover:bg-surface-muted' : 'border-transparent opacity-70',
@@ -129,7 +129,7 @@ function NodeRow({ node, learnerId: _learnerId }: { node: PathNode; learnerId: n
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate font-semibold text-foreground">{node.title}</span>
-          <span className="text-xs capitalize text-muted">{node.state}</span>
+          <span className="text-xs capitalize text-muted">{node.access_reason ? 'Upgrade to unlock' : node.state}</span>
         </span>
         {node.state === 'active' && <span className="text-sm font-semibold text-primary">Start →</span>}
         {node.state === 'completed' && <span className="text-sm text-muted">Replay</span>}
@@ -148,7 +148,7 @@ function StatsBar({ learnerId, coinBalance }: { learnerId: number; coinBalance: 
         🔥 {formatDayStreak(streak.data?.count ?? 0)}
       </span>
       <span className="flex items-center gap-1.5 rounded-full bg-surface-muted px-3 py-1.5 text-sm font-bold text-foreground">
-        ❤️ {hearts.data?.current ?? 0}
+        ❤️ {hearts.data?.unlimited_hearts ? '∞' : hearts.data?.current ?? 0}
       </span>
       <span className="flex items-center gap-1.5 rounded-full bg-surface-muted px-3 py-1.5 text-sm font-bold text-foreground">
         <Icon name="coin" className="size-4 text-gold-600" />

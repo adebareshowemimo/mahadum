@@ -30,6 +30,28 @@ class AuthTest extends TestCase
         $this->assertDatabaseHas('families', ['name' => "Funmi's Family"]);
     }
 
+    public function test_register_normalizes_phone_and_rejects_a_duplicate_number(): void
+    {
+        $this->seedRbac();
+
+        $first = $this->postJson('/api/v1/auth/register', [
+            'first_name' => 'Ada', 'last_name' => 'Local', 'email' => 'ada.phone@test.local',
+            'dial_code' => '+234', 'phone' => '08031234567',
+            'password' => 'Password123!', 'password_confirmation' => 'Password123!', 'device_name' => 'iPhone',
+        ]);
+        $first->assertCreated();
+        $this->assertDatabaseHas('users', ['email' => 'ada.phone@test.local', 'phone' => '+2348031234567']);
+
+        // Same subscriber, typed with the international prefix instead — must collide.
+        $dupe = $this->postJson('/api/v1/auth/register', [
+            'first_name' => 'Ada', 'last_name' => 'Twin', 'email' => 'ada.twin@test.local',
+            'phone' => '+234 803 123 4567',
+            'password' => 'Password123!', 'password_confirmation' => 'Password123!', 'device_name' => 'iPhone',
+        ]);
+        $dupe->assertStatus(422)->assertJsonValidationErrors('phone');
+        $this->assertDatabaseMissing('users', ['email' => 'ada.twin@test.local']);
+    }
+
     public function test_learner_registration_creates_a_direct_profile_exposed_by_me(): void
     {
         $this->seedRbac();

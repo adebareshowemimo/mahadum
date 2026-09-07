@@ -11,6 +11,9 @@ use App\Models\MediaAsset;
 use App\Models\QuestionResponse;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
+use App\Services\Billing\EntitlementResolver;
+use App\Services\Gamification\PracticeModeService;
+use App\Services\Learning\LessonAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -41,6 +44,11 @@ class LessonPlayController extends Controller
         ]);
 
         $learner = $this->viewableLearner($request->integer('learner_id'));
+        if ($learner) {
+            app(LessonAccess::class)->authorize($learner, $lesson);
+        } else {
+            abort_unless($request->user()->can('content.lessons.manage'), 422, 'Choose a learner to open this lesson.');
+        }
         $progress = $this->progressByComponent($learner, $lesson);
 
         $components = $lesson->components->map(function ($c) use ($progress, $learner) {
@@ -63,6 +71,8 @@ class LessonPlayController extends Controller
         return response()->json(['data' => [
             'lesson' => ['id' => $lesson->id, 'title' => $lesson->title, 'est_minutes' => $lesson->est_minutes],
             'components' => $components,
+            'hearts_remaining' => $learner && ! app(EntitlementResolver::class)->forLearner($learner)['unlimited_hearts']
+                ? app(PracticeModeService::class)->state($learner)['current'] : null,
         ]]);
     }
 
@@ -74,7 +84,10 @@ class LessonPlayController extends Controller
         }
         $learner = LearnerProfile::find($learnerId);
 
-        return ($learner && Gate::allows('view', $learner)) ? $learner : null;
+        abort_if($learner === null, 404);
+        Gate::authorize('view', $learner);
+
+        return $learner;
     }
 
     /**
@@ -182,7 +195,8 @@ class LessonPlayController extends Controller
                     : [],
                 // Resume: already answered in the learner's open attempt (+ verdict).
                 'answered' => array_key_exists($q->id, $answered),
-                'was_correct' => $answered[$q->id] ?? null,
+                'was_correct' => $answered[$q->id]['correct'] ?? null,
+                'xp_awarded' => $answered[$q->id]['xp'] ?? 0,
             ])->values(),
         ];
     }
@@ -191,7 +205,7 @@ class LessonPlayController extends Controller
      * question_id → is_correct for every question the learner already answered in
      * their open (unfinished) attempt at this quiz. Empty when none.
      *
-     * @return array<int, bool>
+     * @return array<int, array{correct:bool, xp:int}>
      */
     private function answeredMap(?LearnerProfile $learner, Quiz $quiz): array
     {
@@ -201,7 +215,6 @@ class LessonPlayController extends Controller
 
         $attempt = QuizAttempt::where('learner_profile_id', $learner->id)
             ->where('quiz_id', $quiz->id)
-            ->whereNull('completed_at')
             ->orderByDesc('attempt_no')
             ->first();
         if (! $attempt) {
@@ -209,8 +222,8 @@ class LessonPlayController extends Controller
         }
 
         return QuestionResponse::where('quiz_attempt_id', $attempt->id)
-            ->pluck('is_correct', 'question_id')
-            ->map(fn ($v) => (bool) $v)
+            ->get()->keyBy('question_id')
+            ->map(fn ($response) => ['correct' => (bool) $response->is_correct, 'xp' => (int) $response->xp_awarded])
             ->all();
     }
 

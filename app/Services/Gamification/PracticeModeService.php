@@ -20,9 +20,14 @@ class PracticeModeService
             ['current' => self::MAX_HEARTS],
         );
 
+        if ($heart->current <= 0 && $heart->competitive_paused_until === null) {
+            $heart->update(['competitive_paused_until' => now()->addHours(self::PAUSE_HOURS), 'refills_at' => now()->addHours(self::PAUSE_HOURS)]);
+        }
+
         if ($heart->competitive_paused_until?->isPast()) {
             $heart->update([
                 'current' => self::MAX_HEARTS,
+                'questions_since_loss' => 0,
                 'refills_at' => null,
                 'competitive_paused_until' => null,
             ]);
@@ -37,8 +42,8 @@ class PracticeModeService
     }
 
     /**
-     * Apply a quiz mistake and return the resulting competitive state. Learning
-     * itself is never blocked: zero hearts only pauses XP and leaderboards.
+     * Count a quiz answer and deduct one heart per four answers. The historical
+     * practice_mode response field now signals the twelve-hour learning lock.
      *
      * @return array{current:int, practice_mode:bool, competitive_paused_until:?string}
      */
@@ -52,16 +57,25 @@ class PracticeModeService
 
             $heart = Heart::where('learner_profile_id', $learner->id)->lockForUpdate()->firstOrFail();
 
+            if ($heart->current <= 0 && $heart->competitive_paused_until === null) {
+                $heart->update(['competitive_paused_until' => now()->addHours(self::PAUSE_HOURS), 'refills_at' => now()->addHours(self::PAUSE_HOURS)]);
+            }
+
             if ($heart->competitive_paused_until?->isPast()) {
                 $heart->fill([
                     'current' => self::MAX_HEARTS,
+                    'questions_since_loss' => 0,
                     'refills_at' => null,
                     'competitive_paused_until' => null,
                 ]);
             }
 
             if ($loseHeart && $heart->current > 0) {
-                $heart->current--;
+                $heart->questions_since_loss++;
+                if ($heart->questions_since_loss >= 4) {
+                    $heart->questions_since_loss = 0;
+                    $heart->current--;
+                }
                 if ($heart->current === 0) {
                     $resumeAt = now()->addHours(self::PAUSE_HOURS);
                     $heart->refills_at = $resumeAt;

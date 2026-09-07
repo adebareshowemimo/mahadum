@@ -52,15 +52,12 @@ class QuizResumeTest extends TestCase
         $this->assertFalse($after->json('data.components.1.completed'));
     }
 
-    public function test_answered_flags_are_absent_without_a_learner(): void
+    public function test_learner_context_is_required_to_enforce_access(): void
     {
         $this->seedRbac();
         $this->actingAsUser($this->userWithRole('parent'));
         $lesson = $this->publishedLesson();
 
-        $payload = $this->getJson("/api/v1/lessons/{$lesson->id}/play")->assertOk();
-
-        // No learner context → the question is reported as not answered.
-        $this->assertFalse($payload->json('data.components.1.quiz.questions.0.answered'));
+        $this->getJson("/api/v1/lessons/{$lesson->id}/play")->assertStatus(422);
     }
 }

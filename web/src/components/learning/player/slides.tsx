@@ -102,7 +102,7 @@ function Feedback({ verdict, isLast, onAdvance }: { verdict: Verdict; isLast: bo
           <p className="truncate text-sm text-foreground/60">Practice mode — this replay won’t change your score.</p>
         )}
         {verdict.practiceMode && (
-          <p className="text-sm text-gold-200">Practice mode — learning stays open; XP and rankings are paused.</p>
+          <p className="text-sm text-gold-200">See you in 12 hours, or upgrade for unlimited hearts.</p>
         )}
       </div>
 

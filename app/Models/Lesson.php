@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
+ * @property bool $is_free_preview
  * @property int $id
  * @property int $course_level_id
  * @property string $title
@@ -56,6 +57,7 @@ class Lesson extends Model
     protected $guarded = [];
 
     protected $casts = [
+        'is_free_preview' => 'boolean',
         'is_locked_by_default' => 'boolean',
         'published_at' => 'datetime',
     ];

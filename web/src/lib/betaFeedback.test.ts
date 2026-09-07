@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { planFeatures } from '@/lib/billing/planFeatures'
 import { formatDayStreak } from '@/lib/gamification/format'
 import { shuffleWordOptions } from '@/components/learning/player/slides'
-import { parseFlashcardCsv } from '@/pages/content/LessonBuilderPage'
+import { parseFlashcardCsv, parseGameCsv } from '@/pages/content/LessonBuilderPage'
 import { LANDING_LANGUAGES } from '@/components/landing/languages'
 
 describe('beta feedback regression helpers', () => {
@@ -12,6 +12,7 @@ describe('beta feedback regression helpers', () => {
       max_profiles: 5,
       features: { offline_download: false, unlimited_hearts: true },
     })).toEqual([
+      'All lessons with card or bank billing; airtime includes Level 1 only',
       'All Individual plan benefits',
       'Up to 5 profiles',
       'Supported by age-appropriate ads',
@@ -20,6 +21,7 @@ describe('beta feedback regression helpers', () => {
   })
 
   it('uses explicit singular and plural streak wording', () => {
+    expect(formatDayStreak(0)).toBe('0 Day Streak')
     expect(formatDayStreak(1)).toBe('1 Day Streak')
     expect(formatDayStreak(4)).toBe('4 Day Streaks')
   })
@@ -38,6 +40,16 @@ describe('beta feedback regression helpers', () => {
       expect.objectContaining({ front_text: 'Ẹ káàrọ̀, sir', back_text: 'Good morning, sir' }),
     ])
     expect(() => parseFlashcardCsv('Front,Back\nHello,\n')).toThrow('Row 2 needs both Front (Word) and Back (Meaning).')
+  })
+
+  it('imports the game CSV template with its game type and pairs', () => {
+    const parsed = parseGameCsv('﻿Game Type,Pairs\nmatch,Ẹ káàrọ̀ | Good morning\nmatch,Kú àárọ̀ | Good morning (reply)\n')
+    expect(parsed.gameType).toBe('match')
+    expect(parsed.pairs).toEqual([
+      expect.objectContaining({ a: 'Ẹ káàrọ̀', b: 'Good morning' }),
+      expect.objectContaining({ a: 'Kú àárọ̀', b: 'Good morning (reply)' }),
+    ])
+    expect(() => parseGameCsv('Game Type,Pairs\nmatch,only-one-side\n')).toThrow(/Side A \| Side B/)
   })
 
   it('uses natural English quiz questions without changing translation prompts', () => {

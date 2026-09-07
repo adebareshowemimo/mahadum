@@ -18,7 +18,7 @@ export function LessonPlayerPage() {
   const { activeLearner } = useActiveProfile()
 
   const [play, setPlay] = useState<LessonPlay | null>(null)
-  const [loadError, setLoadError] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!activeLearner) {
@@ -26,10 +26,12 @@ export function LessonPlayerPage() {
       return
     }
     let cancelled = false
+    setPlay(null)
+    setLoadError(null)
     learningApi
       .play(id, activeLearner.id)
       .then((p) => !cancelled && setPlay(p))
-      .catch(() => !cancelled && setLoadError(true))
+      .catch((err) => !cancelled && setLoadError(err instanceof ApiError ? err.message : 'We couldn’t open this lesson. Please try again.'))
     return () => {
       cancelled = true
     }
@@ -46,7 +48,9 @@ export function LessonPlayerPage() {
   if (loadError) {
     return (
       <div className="mx-auto max-w-md p-6">
-        <Alert variant="danger">We couldn’t open this lesson. Please go back and try again.</Alert>
+        <Alert variant="warning">{loadError}</Alert>
+        <a href="/billing" className="mt-4 block font-semibold text-primary underline">View plans and upgrade</a>
+        <Button3D variant="neutral" onClick={() => navigate('/learn')}>Back to journey</Button3D>
       </div>
     )
   }
@@ -60,7 +64,7 @@ export function LessonPlayerPage() {
       startCta="Start lesson"
       slides={slides}
       service={service}
-      initialHearts={null}
+      initialHearts={play.hearts_remaining ?? null}
       startIndex={startIndex}
       initialCorrect={priorCorrect}
       onExit={() => navigate('/learn')}

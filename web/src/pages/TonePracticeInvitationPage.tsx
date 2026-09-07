@@ -41,6 +41,7 @@ export function TonePracticeInvitationPage() {
           <div className="rounded-2xl bg-surface-muted p-5 font-display text-2xl font-bold text-foreground">
             {invitation.practice_text}
           </div>
+          {invitation.video_url && <a href={invitation.video_url} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary underline">Watch the language video</a>}
           <p className="text-xs text-muted">No child contact details or internal learner identifiers are shared.</p>
           {invitation.accepted
             ? <Alert variant="success">Accepted — you can now practice this phrase together.</Alert>

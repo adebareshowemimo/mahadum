@@ -33,6 +33,7 @@ class TonePracticeInvitationNotification extends Notification implements ShouldQ
             ->greeting('Hello')
             ->line("{$inviter} invited you to help with a short language tone-practice activity.")
             ->line('For learner privacy, sign in with this email address to open it. The learner’s contact details are never shared.')
+            ->line('Open the invitation to watch the language video and practice the phrase together.')
             ->action('Open tone practice', $url)
             ->line('This invitation expires in 48 hours.');
     }

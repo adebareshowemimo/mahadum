@@ -5,9 +5,15 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AssignRoleRequest;
 use App\Http\Requests\Admin\StoreUserRequest;
+use App\Models\Commission;
+use App\Models\Organization;
 use App\Models\OrganizationUser;
+use App\Models\Referral;
+use App\Models\ReferralCode;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Referral\ReferralService;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -129,6 +135,78 @@ class UserController extends Controller
             'data' => $this->row($user->load('roles')),
             'meta' => ['invitation_sent' => $resetStatus === Password::RESET_LINK_SENT],
         ], 201);
+    }
+
+    /**
+     * Feedback (Sept 4, §2): referral activity for one user — both the codes they
+     * own (who activated through them, activation date/status, channel, contact,
+     * commission earned) and the referral they themselves came from.
+     */
+    public function referrals(User $user, ReferralService $referrals): JsonResponse
+    {
+        $code = ReferralCode::where('owner_type', $user->getMorphClass())
+            ->where('owner_id', $user->id)
+            ->first();
+
+        $outbound = $code
+            ? $code->referrals()->with('referredUser:id,first_name,last_name,email,phone')->orderByDesc('signed_up_at')->get()
+            : collect();
+
+        $commissionByReferral = $code
+            ? Commission::whereIn('referral_id', $outbound->pluck('id'))
+                ->selectRaw('referral_id, COALESCE(SUM(amount_minor),0) total')
+                ->groupBy('referral_id')->pluck('total', 'referral_id')
+            : collect();
+
+        $inbound = Referral::where('referred_user_id', $user->id)
+            ->with(['referralCode.owner'])
+            ->orderByDesc('signed_up_at')
+            ->first();
+
+        return response()->json(['data' => [
+            'as_referrer' => [
+                'code' => $code?->code,
+                'total_referred' => $outbound->count(),
+                'total_qualified' => $outbound->where('status', 'qualified')->count(),
+                'commission_cleared_minor' => $code
+                    ? (int) Commission::where('beneficiary_type', $user->getMorphClass())
+                        ->where('beneficiary_id', $user->id)->where('status', 'cleared')->sum('amount_minor')
+                    : 0,
+                'activations' => $outbound->map(fn (Referral $r) => [
+                    'referred_name' => $r->referredUser?->name,
+                    'email' => $r->contact_channel === 'email' ? $r->contact_value : $r->referredUser?->email,
+                    'phone' => $r->contact_channel === 'phone' ? $r->contact_value : $r->referredUser?->phone,
+                    'channel' => $r->contact_channel,
+                    'signed_up_at' => $r->signed_up_at?->toDateString(),
+                    'activated_at' => $r->activated_at?->toDateString(),
+                    'status' => $r->activated_at === null
+                        ? 'pending'
+                        : ($referrals->isReferredUserActive($r) ? 'active' : 'inactive'),
+                    'commission_minor' => (int) ($commissionByReferral[$r->id] ?? 0),
+                ])->values(),
+            ],
+            'as_referred' => $inbound === null ? null : [
+                'code' => $inbound->referralCode->code,
+                'referrer_name' => $this->ownerName($inbound->referralCode->owner),
+                'channel' => $inbound->contact_channel,
+                'signed_up_at' => $inbound->signed_up_at?->toDateString(),
+                'activated_at' => $inbound->activated_at?->toDateString(),
+                'status' => $inbound->status,
+            ],
+        ]]);
+    }
+
+    private function ownerName(?Model $owner): ?string
+    {
+        if ($owner instanceof User) {
+            return $owner->name;
+        }
+
+        if ($owner instanceof Organization) {
+            return $owner->name;
+        }
+
+        return null;
     }
 
     public function assignRole(AssignRoleRequest $request, User $user): JsonResponse

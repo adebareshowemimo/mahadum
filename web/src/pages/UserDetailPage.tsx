@@ -3,13 +3,15 @@ import { useParams } from 'react-router-dom'
 import { AdminPageHeader } from '@/components/admin'
 import { Alert, Badge, Button, Card, Spinner } from '@/components/ui'
 import { ApiError, type Role, type UserStatus } from '@/lib/api'
-import { useAdminUser, useAssignUserRole, useSetUserStatus } from '@/lib/admin/queries'
+import { formatMoney } from '@/lib/format'
+import { useAdminUser, useAdminUserReferrals, useAssignUserRole, useSetUserStatus } from '@/lib/admin/queries'
 
 const ROLES: Role[] = ['super_admin', 'content_owner', 'school_admin', 'teacher', 'supervisor', 'parent', 'student']
 
 export function UserDetailPage() {
   const userId = Number(useParams().userId)
   const { data: user, isLoading, isError } = useAdminUser(userId)
+  const referrals = useAdminUserReferrals(userId)
   const assign = useAssignUserRole()
   const setStatus = useSetUserStatus()
   const [error, setError] = useState<string | null>(null)
@@ -93,6 +95,66 @@ export function UserDetailPage() {
             })}
           </div>
           <p className="mt-2 text-xs text-muted">Select a role to grant or revoke it. Every change is audited.</p>
+        </section>
+
+        <section aria-labelledby="referrals-heading">
+          <h2 id="referrals-heading" className="mb-2 text-sm font-semibold text-foreground">Referral activity</h2>
+          {referrals.isLoading ? (
+            <p className="text-sm text-muted">Loading…</p>
+          ) : referrals.isError || !referrals.data ? (
+            <p className="text-sm text-muted">Couldn’t load referral activity.</p>
+          ) : (
+            <div className="flex flex-col gap-3 text-sm">
+              {referrals.data.as_referred && (
+                <p className="rounded-xl border border-border p-3 text-muted">
+                  Joined via <span className="font-medium text-foreground">{referrals.data.as_referred.referrer_name ?? 'a referral'}</span>
+                  {referrals.data.as_referred.code ? ` (code ${referrals.data.as_referred.code})` : ''}
+                  {' · '}{referrals.data.as_referred.channel ?? 'link'}
+                  {' · '}status {referrals.data.as_referred.status}
+                </p>
+              )}
+
+              <div className="flex flex-wrap gap-2 text-xs">
+                <Badge variant="neutral">Code: {referrals.data.as_referrer.code ?? 'none issued'}</Badge>
+                <Badge variant="neutral">{referrals.data.as_referrer.total_referred} referred</Badge>
+                <Badge variant="neutral">{referrals.data.as_referrer.total_qualified} activated</Badge>
+                <Badge variant="success">
+                  {formatMoney(referrals.data.as_referrer.commission_cleared_minor, 'NGN')} cleared
+                </Badge>
+              </div>
+
+              {referrals.data.as_referrer.activations.length > 0 ? (
+                <div className="overflow-x-auto rounded-xl border border-border">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-surface-muted text-muted">
+                      <tr>
+                        <th className="px-3 py-2 font-semibold">Referred</th>
+                        <th className="px-3 py-2 font-semibold">Email</th>
+                        <th className="px-3 py-2 font-semibold">Phone</th>
+                        <th className="px-3 py-2 font-semibold">Activated</th>
+                        <th className="px-3 py-2 font-semibold">Status</th>
+                        <th className="px-3 py-2 font-semibold">Commission</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {referrals.data.as_referrer.activations.map((a, i) => (
+                        <tr key={i} className="border-t border-border">
+                          <td className="px-3 py-2 text-foreground">{a.referred_name ?? '—'}</td>
+                          <td className="px-3 py-2">{a.email ?? '—'}</td>
+                          <td className="px-3 py-2">{a.phone ?? '—'}</td>
+                          <td className="px-3 py-2">{a.activated_at ?? '—'}</td>
+                          <td className="px-3 py-2">{a.status}</td>
+                          <td className="px-3 py-2">{a.commission_minor ? formatMoney(a.commission_minor, 'NGN') : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-muted">No one has activated through this user’s code.</p>
+              )}
+            </div>
+          )}
         </section>
 
         <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">

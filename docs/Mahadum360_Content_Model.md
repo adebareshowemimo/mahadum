@@ -1,3 +1,5 @@
+> Current learning access rules (approved 2026-09-07) are defined in [Learning access decision](Mahadum360_Learning_Access_Decision.md). They supersede historical no-paywall and no-heart-lock requirements below.
+
 # MAHADUM.360 — Learning Content Model
 ## Lessons · Video · Quiz · Media Pipeline
 

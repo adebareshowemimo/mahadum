@@ -58,6 +58,7 @@ export function CourseCatalogPage() {
 
   return (
     <div className="flex flex-col gap-6" aria-busy={coursesQuery.isFetching}>
+      <p className="text-sm text-muted">Lesson 0 is free in every language. Paid card and bank plans unlock all lessons; airtime subscriptions include Level 1 only.</p>
       <header className="flex flex-col gap-4 border-b border-border pb-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-sm font-semibold text-primary">Learning library</p>

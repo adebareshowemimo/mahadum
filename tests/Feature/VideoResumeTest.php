@@ -37,9 +37,8 @@ class VideoResumeTest extends TestCase
         $this->assertEquals(42, $withLearner->json('data.components.0.resume_position'));
         $this->assertFalse($withLearner->json('data.components.0.completed'));
 
-        // Without a learner, there's no resume context (defaults to start).
-        $noLearner = $this->getJson("/api/v1/lessons/{$lesson->id}/play")->assertOk();
-        $this->assertEquals(0, $noLearner->json('data.components.0.resume_position'));
+        // Learner identity cannot be omitted to bypass subscription checks.
+        $this->getJson("/api/v1/lessons/{$lesson->id}/play")->assertStatus(422);
     }
 
     public function test_completed_video_reports_completed_so_the_gate_starts_open(): void

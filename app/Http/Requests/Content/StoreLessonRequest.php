@@ -17,6 +17,7 @@ class StoreLessonRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'position' => ['nullable', 'integer', 'min:1'],
             'est_minutes' => ['nullable', 'integer', 'min:1'],
+            'is_free_preview' => ['boolean'],
             'is_locked_by_default' => ['boolean'],
         ];
     }

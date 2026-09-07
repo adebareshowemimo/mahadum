@@ -35,7 +35,7 @@ class LearningLoopTest extends TestCase
         // answer correct → graded server-side, xp awarded
         $this->postJson("/api/v1/components/{$quizC->id}/answer", [
             'learner_id' => $learner->id, 'question_id' => $question->id, 'answer' => ['option_id' => $correct->id],
-        ])->assertOk()->assertJsonPath('data.correct', true)->assertJsonPath('data.xp_awarded', 2);
+        ])->assertOk()->assertJsonPath('data.correct', true)->assertJsonPath('data.xp_awarded', 1);
 
         // complete the other required components
         $this->postJson("/api/v1/lessons/{$lesson->id}/progress", [
@@ -49,11 +49,11 @@ class LearningLoopTest extends TestCase
         $this->postJson("/api/v1/lessons/{$lesson->id}/complete", ['learner_id' => $learner->id])
             ->assertOk()
             ->assertJsonPath('data.lesson_score', 1)
-            ->assertJsonPath('data.xp_total', 14)
+            ->assertJsonPath('data.xp_total', 13)
             ->assertJsonPath('data.next_node', null);
 
-        $this->assertDatabaseHas('xp_ledger', ['learner_profile_id' => $learner->id, 'source' => 'quiz', 'amount' => 2]);
-        $this->assertDatabaseHas('xp_ledger', ['learner_profile_id' => $learner->id, 'source' => 'lesson', 'amount' => 14]);
+        $this->assertDatabaseHas('xp_ledger', ['learner_profile_id' => $learner->id, 'source' => 'quiz', 'amount' => 1]);
+        $this->assertDatabaseHas('xp_ledger', ['learner_profile_id' => $learner->id, 'source' => 'lesson', 'amount' => 13]);
         $this->assertDatabaseHas('lesson_progress', ['learner_profile_id' => $learner->id, 'status' => 'completed']);
     }
 

@@ -74,6 +74,13 @@ export function SlideDeck({
   const canResume = startIndex > 0 && startIndex < total
 
   function begin(fromIndex: number, fromCorrect: number) {
+    const resumed: Record<number, QuizRun> = {}
+    for (const slide of slides.slice(0, fromIndex)) {
+      if (slide.kind !== 'quiz' || !slide.completed) continue
+      const run = resumed[slide.componentId] ?? { answered: 0, correct: 0, xp: 0 }
+      resumed[slide.componentId] = { ...run, answered: run.answered + 1, correct: run.correct + (slide.wasCorrect ? 1 : 0), xp: run.xp + (slide.xpAwarded ?? 0) }
+    }
+    setQuizRuns(resumed)
     setIndex(fromIndex)
     setCorrect(fromCorrect)
     setPhase(total === 0 ? 'complete' : 'play')
@@ -138,11 +145,9 @@ export function SlideDeck({
   const summarySlides = summaryComponentId == null
     ? []
     : slides.filter((slide): slide is Extract<Slide, { kind: 'quiz' }> => slide.kind === 'quiz' && slide.componentId === summaryComponentId)
-  const priorSummaryCorrect = summarySlides.filter((slide) => slide.completed && slide.wasCorrect).length
-  const priorSummaryAnswered = summarySlides.filter((slide) => slide.completed).length
   const currentRun = summaryComponentId == null ? undefined : quizRuns[summaryComponentId]
-  const summaryCorrect = priorSummaryCorrect + (currentRun?.correct ?? 0)
-  const summaryAnswered = priorSummaryAnswered + (currentRun?.answered ?? 0)
+  const summaryCorrect = currentRun?.correct ?? 0
+  const summaryAnswered = currentRun?.answered ?? 0
   const summaryTotal = summarySlides.length
   const summaryThreshold = summarySlides[0]?.passThreshold ?? 0.7
   const summaryPassed = summaryTotal > 0 && summaryCorrect / summaryTotal >= summaryThreshold
@@ -160,10 +165,12 @@ export function SlideDeck({
       <Header filled={headerFilled} total={total} hearts={hearts} onExit={onExit} />
       {practiceMode && (
         <div className="bg-gold-500/15 px-4 py-2 text-center text-sm font-semibold text-gold-200">
-          Practice mode: keep learning freely. XP and leaderboard progress resume
+          See you in 12 hours, or upgrade for unlimited hearts. Access resumes
           {competitivePausedUntil ? ` ${new Date(competitivePausedUntil).toLocaleString()}` : ' after your heart refill'}.
         </div>
       )}
+
+      {practiceMode && <div className="mx-auto flex max-w-md flex-col gap-4 p-6"><a className="font-bold underline" href="/billing">Upgrade for unlimited hearts</a><Button3D variant="neutral" onClick={onExit}>Back to journey</Button3D></div>}
 
       {phase === 'start' && (
         <StartScreen
@@ -180,7 +187,7 @@ export function SlideDeck({
         />
       )}
 
-      {phase === 'play' && slides[index] && (
+      {phase === 'play' && !practiceMode && slides[index] && (
         <SlideView
           key={slides[index].id}
           slide={slides[index]}
@@ -196,7 +203,7 @@ export function SlideDeck({
         />
       )}
 
-      {phase === 'quiz-complete' && summaryComponentId !== null && (
+      {phase === 'quiz-complete' && !practiceMode && summaryComponentId !== null && (
         <QuizCompleteScreen
           correct={summaryCorrect}
           answered={summaryAnswered}
@@ -211,7 +218,7 @@ export function SlideDeck({
         />
       )}
 
-      {phase === 'complete' && (
+      {phase === 'complete' && !practiceMode && (
         <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 py-10 sm:px-6">
           {renderComplete(stats)}
         </div>

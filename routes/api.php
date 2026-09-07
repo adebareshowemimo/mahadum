@@ -191,7 +191,7 @@ Route::prefix('v1')->group(function () {
             ->middleware('can:content.lessons.manage');
         Route::post('levels/{level}/lessons/reorder', [LessonController::class, 'reorder'])
             ->middleware('can:content.lessons.manage');
-        Route::get('lessons/{lesson}', [LessonController::class, 'show']);
+        Route::get('lessons/{lesson}', [LessonController::class, 'show'])->middleware('can:content.courses.view');
         Route::match(['put', 'patch'], 'lessons/{lesson}', [LessonController::class, 'update'])
             ->middleware('can:content.lessons.manage');
         Route::delete('lessons/{lesson}', [LessonController::class, 'destroy'])
@@ -424,6 +424,7 @@ Route::prefix('v1')->group(function () {
             Route::get('users', [UserController::class, 'index'])->middleware('can:users.view');
             Route::post('users', [UserController::class, 'store'])->middleware('can:users.manage');
             Route::get('users/{user}', [UserController::class, 'show'])->middleware('can:users.view');
+            Route::get('users/{user}/referrals', [UserController::class, 'referrals'])->middleware('can:users.view');
             Route::post('users/{user}/roles', [UserController::class, 'assignRole'])->middleware('can:roles.assign');
             Route::post('users/{user}/status', [UserController::class, 'setStatus'])->middleware('can:users.manage');
             Route::get('roles', [RoleController::class, 'index'])->middleware('can:roles.view');
@@ -473,6 +474,7 @@ Route::prefix('v1')->group(function () {
             Route::get('reports/referrals', [ReportController::class, 'referrals'])->middleware('can:analytics.platform.view');
             Route::get('reports/org-activity', [ReportController::class, 'orgActivity'])->middleware('can:analytics.platform.view');
             Route::get('reports/renewals', [ReportController::class, 'renewals'])->middleware('can:analytics.platform.view');
+            Route::get('reports/users/export', [ReportController::class, 'usersExport'])->middleware('can:analytics.platform.view');
 
             // Email — campaigns (compose / target / send / schedule)
             Route::get('email-campaigns', [EmailCampaignController::class, 'index'])->middleware('can:emails.campaigns.manage');

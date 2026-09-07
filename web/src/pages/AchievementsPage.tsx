@@ -10,7 +10,8 @@ import {
   Skeleton,
 } from '@/components/ui'
 import { cn } from '@/lib/cn'
-import type { LearnerProfile } from '@/lib/api'
+import type { EarnedBadge, LearnerProfile, LockedBadge } from '@/lib/api'
+import { Modal } from '@/components/ui'
 import { ActiveLearnerGate } from '@/components/learner/ActiveLearnerGate'
 import { AdModal } from '@/components/gamification/AdModal'
 import {
@@ -37,6 +38,7 @@ function Achievements({ learner }: { learner: LearnerProfile }) {
   const armShield = useArmShield(learner.id)
   const refill = useRefillHearts(learner.id)
   const [adOpen, setAdOpen] = useState(false)
+  const [openBadge, setOpenBadge] = useState<(EarnedBadge | LockedBadge) & { earned_at?: string | null } | null>(null)
 
   return (
     <div className="flex flex-col gap-8">
@@ -91,25 +93,18 @@ function Achievements({ learner }: { learner: LearnerProfile }) {
             ) : (
               <>
                 <p className="text-3xl" aria-label={`${hearts.data?.current ?? 0} of ${MAX_HEARTS} hearts`}>
-                  {'❤️'.repeat(hearts.data?.current ?? 0)}
-                  {'🤍'.repeat(Math.max(0, MAX_HEARTS - (hearts.data?.current ?? 0)))}
+                  {hearts.data?.unlimited_hearts ? '❤️ ∞' : '❤️'.repeat(hearts.data?.current ?? 0)}
+                  {!hearts.data?.unlimited_hearts && '🤍'.repeat(Math.max(0, MAX_HEARTS - (hearts.data?.current ?? 0)))}
                 </p>
                 <p className="text-sm text-muted">
-                  Hearts make practice playful — they never block learning.
+                  {hearts.data?.unlimited_hearts ? 'Unlimited hearts on your paid plan.' : 'One heart per four quiz answers. At zero hearts, learning pauses for 12 hours.'}
                 </p>
-                {(hearts.data?.current ?? 0) < MAX_HEARTS && (
+                {!hearts.data?.unlimited_hearts && (hearts.data?.current ?? 0) < MAX_HEARTS && (
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={() => setAdOpen(true)}>
                       Watch ad
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="billing"
-                      loading={refill.isPending}
-                      onClick={() => refill.mutate({ method: 'coins' })}
-                    >
-                      Use coins
-                    </Button>
+
                   </div>
                 )}
               </>
@@ -144,7 +139,7 @@ function Achievements({ learner }: { learner: LearnerProfile }) {
                   </p>
                 )}
                 {hearts.data?.practice_mode && (
-                  <Alert variant="info">Practice mode is active. Keep learning; XP and rankings resume after your hearts refill.</Alert>
+                  <Alert variant="info">See you in 12 hours, or upgrade for unlimited hearts. Learning resumes when your hearts refill.</Alert>
                 )}
               </>
             )}
@@ -162,10 +157,10 @@ function Achievements({ learner }: { learner: LearnerProfile }) {
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {badges.data?.earned.map((b) => (
-              <BadgeTile key={b.code} name={b.name} earned />
+              <BadgeTile key={b.code} badge={b} earned onClick={() => setOpenBadge(b)} />
             ))}
             {badges.data?.locked.map((b) => (
-              <BadgeTile key={b.code} name={b.name} description={b.description} />
+              <BadgeTile key={b.code} badge={b} onClick={() => setOpenBadge(b)} />
             ))}
             {(badges.data?.earned.length ?? 0) + (badges.data?.locked.length ?? 0) === 0 && (
               <p className="text-sm text-muted">No badges yet — keep learning to earn your first!</p>
@@ -173,6 +168,27 @@ function Achievements({ learner }: { learner: LearnerProfile }) {
           </div>
         )}
       </section>
+
+      <Modal
+        open={openBadge !== null}
+        onClose={() => setOpenBadge(null)}
+        title={openBadge?.name ?? 'Badge'}
+        description={openBadge?.level != null ? `Level ${openBadge.level}` : undefined}
+      >
+        {openBadge && (
+          <div className="flex flex-col items-center gap-3 py-2 text-center">
+            <span className="text-5xl" aria-hidden="true">{openBadge.icon ?? '🏅'}</span>
+            <p className="text-sm text-muted">{openBadge.description ?? 'Keep learning to earn this badge.'}</p>
+            {openBadge.earned_at ? (
+              <p className="text-xs font-medium text-success">
+                Earned {new Date(openBadge.earned_at).toLocaleDateString()}
+              </p>
+            ) : (
+              <Badge variant="neutral">Not earned yet</Badge>
+            )}
+          </div>
+        )}
+      </Modal>
 
       <AdModal
         open={adOpen}
@@ -186,31 +202,32 @@ function Achievements({ learner }: { learner: LearnerProfile }) {
 }
 
 function BadgeTile({
-  name,
-  description,
+  badge,
   earned = false,
+  onClick,
 }: {
-  name: string
-  description?: string | null
+  badge: (EarnedBadge | LockedBadge) & { icon?: string | null }
   earned?: boolean
+  onClick?: () => void
 }) {
   return (
-    <div
+    <button
+      type="button"
+      onClick={onClick}
       className={cn(
-        'flex flex-col items-center gap-2 rounded-2xl border p-4 text-center',
+        'flex flex-col items-center gap-2 rounded-2xl border p-4 text-center transition-colors hover:border-border-strong',
         earned ? 'border-gold-300 bg-gold-50' : 'border-border bg-surface opacity-70',
       )}
-      title={description ?? undefined}
     >
       <span className={cn('text-3xl', !earned && 'grayscale')} aria-hidden="true">
-        {earned ? '🏅' : '🔒'}
+        {badge.icon ?? (earned ? '🏅' : '🔒')}
       </span>
-      <span className="text-sm font-semibold text-foreground">{name}</span>
+      <span className="text-sm font-semibold text-foreground">{badge.name}</span>
       {earned ? (
         <Badge variant="gold">Earned</Badge>
       ) : (
-        description && <span className="line-clamp-2 text-xs text-muted">{description}</span>
+        badge.description && <span className="line-clamp-2 text-xs text-muted">{badge.description}</span>
       )}
-    </div>
+    </button>
   )
 }

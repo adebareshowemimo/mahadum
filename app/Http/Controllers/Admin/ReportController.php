@@ -13,11 +13,13 @@ use App\Models\Subscription;
 use App\Models\TelcoBillingAttempt;
 use App\Models\User;
 use App\Models\WalletFundingTransaction;
+use App\Services\AuditLogger;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
 {
@@ -212,6 +214,69 @@ class ReportController extends Controller
                 'total' => $due->count(),
             ],
         ]]);
+    }
+
+    /**
+     * Feedback (Sept 4, §9): a downloadable Users + Subscription report. Streams
+     * CSV so a large tenant doesn't buffer the whole set in memory. One row per
+     * user; their most recent subscription (if any) supplies the plan columns.
+     *
+     * `payment_status` is derived from the subscription lifecycle state
+     * (active → paid, grace → past_due, pending → pending, else inactive) — the
+     * platform has no single stored payment-status field.
+     */
+    public function usersExport(Request $request, AuditLogger $audit): StreamedResponse
+    {
+        $request->validate(['status' => ['nullable', 'string', 'max:40']]);
+
+        $audit->record('report.users.exported', null, [], [
+            'status_filter' => $request->string('status')->value() ?: null,
+        ]);
+
+        $filename = 'mahadum360-users-'.now()->format('Y-m-d').'.csv';
+
+        return response()->streamDownload(function () use ($request) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM so Excel keeps diacritics
+
+            fputcsv($out, [
+                'Name', 'Email', 'Phone', 'Account status', 'Subscription plan',
+                'Subscription status', 'Subscription start', 'Subscription expiry', 'Payment status',
+            ]);
+
+            User::query()
+                ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
+                ->orderBy('id')
+                ->chunk(500, function ($users) use ($out) {
+                    foreach ($users as $user) {
+                        $sub = Subscription::where('subscriber_type', User::class)
+                            ->where('subscriber_id', $user->id)
+                            ->with('plan:id,name')
+                            ->latest()
+                            ->first();
+                        $plan = $sub?->plan;
+
+                        fputcsv($out, [
+                            $user->name,
+                            $user->email,
+                            $user->phone,
+                            $user->status,
+                            $plan !== null ? $plan->name : '',
+                            $sub !== null ? $sub->status : '',
+                            $sub?->started_at !== null ? $sub->started_at->toDateString() : '',
+                            $sub?->renews_at !== null ? $sub->renews_at->toDateString() : '',
+                            $sub === null ? 'none' : match ($sub->status) {
+                                'active' => 'paid',
+                                'grace' => 'past_due',
+                                'pending' => 'pending',
+                                default => 'inactive',
+                            },
+                        ]);
+                    }
+                });
+
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
     }
 
     /**

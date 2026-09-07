@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\ResolvesLearner;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Learning\StoreAnswerRequest;
 use App\Models\ComponentProgress;
+use App\Models\LearnerProfile;
 use App\Models\LessonComponent;
 use App\Models\Question;
 use App\Models\QuestionResponse;
@@ -40,6 +41,7 @@ class AnswerController extends Controller
         $unlimitedHearts = (bool) $entitlements->forLearner($learner)['unlimited_hearts'];
 
         return DB::transaction(function () use ($request, $learner, $component, $quiz, $question, $verdict, $xapi, $referrals, $unlimitedHearts, $practice, $levels) {
+            LearnerProfile::whereKey($learner->id)->lockForUpdate()->firstOrFail();
             $progress = $this->lessonProgress($learner, $component->lesson);
 
             $attempt = $this->resolveAttempt($learner->id, $quiz);
@@ -65,10 +67,13 @@ class AnswerController extends Controller
                 ]]);
             }
 
-            $heartsLost = (! $unlimitedHearts && ! $verdict['is_correct'] && $quiz->hearts_enabled) ? 1 : 0;
+            $existingResponse = QuestionResponse::where('quiz_attempt_id', $attempt->id)->where('question_id', $question->id)->first();
+            $beforeHearts = $unlimitedHearts ? null : $practice->state($learner)['current'];
+            $countAnswer = ! $unlimitedHearts && $quiz->hearts_enabled && $existingResponse === null;
             $heartState = $unlimitedHearts
                 ? ['current' => null, 'practice_mode' => false, 'competitive_paused_until' => null]
-                : $practice->applyMistake($learner, $heartsLost > 0);
+                : $practice->applyMistake($learner, $countAnswer);
+            $heartsLost = $unlimitedHearts ? 0 : max(0, $beforeHearts - $heartState['current']);
 
             // XP for a question is earned once per learner, never re-farmed on replay.
             $alreadyEarned = XpLedger::where('learner_profile_id', $learner->id)
@@ -89,8 +94,8 @@ class AnswerController extends Controller
             );
 
             $xpAwarded = 0;
-            if ($verdict['is_correct'] && ! $alreadyEarned && ! $heartState['practice_mode']) {
-                $xpAwarded = (int) $question->points;
+            if ($verdict['is_correct'] && ! $alreadyEarned) {
+                $xpAwarded = 1;
                 XpLedger::create([
                     'learner_profile_id' => $learner->id,
                     'amount' => $xpAwarded,
@@ -100,6 +105,9 @@ class AnswerController extends Controller
                 ]);
                 $levels->forLearner($learner);
             }
+
+            QuestionResponse::where('quiz_attempt_id', $attempt->id)->where('question_id', $question->id)
+                ->update(['xp_awarded' => ($existingResponse->xp_awarded ?? 0) + $xpAwarded]);
 
             $this->syncQuizProgress($progress->id, $component, $quiz, $learner->id, $attempt);
 
