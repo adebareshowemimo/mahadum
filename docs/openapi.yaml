@@ -9,6 +9,10 @@ info:
     Laravel Sanctum. Two styles:
     - **Mobile / third-party:** `Authorization: Bearer <token>` (obtained from the auth endpoints).
     - **Web SPA:** session cookie + `X-XSRF-TOKEN` (stateful domains).
+    - **Email verification:** authenticated application routes require a verified email and return
+      `403` with `error.code=email_not_verified` until verified. Only `GET /me`, token refresh,
+      logout, and verification resend remain accessible to authenticated unverified accounts.
+      Registration creates an unverified account and a session restricted to these recovery endpoints.
 
     ## Conventions
     - All success bodies are wrapped in a `data` envelope unless noted; webhooks return a bare `{ "status": ... }`.
@@ -471,7 +475,9 @@ paths:
       summary: Verify an email from the signed link
       description: |
         Public — the URL signature + email hash prove authenticity, so no bearer
-        token is required. The route is `signed`; tampered or expired links 403.
+        token is required. The route is `signed`; JSON clients receive 403 for tampered
+        or expired links. Browser requests redirect to the frontend verification page
+        on success, or with `expired=1` when the signature is invalid/expired.
       security: []
       parameters:
         - { name: id, in: path, required: true, schema: { type: integer } }
@@ -490,6 +496,8 @@ paths:
                     type: object
                     properties:
                       verified: { type: boolean }
+        "302":
+          description: Browser redirect to the frontend verification or recovery page
         "403":
           description: Invalid/expired link or hash mismatch
           content:

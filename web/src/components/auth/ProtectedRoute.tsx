@@ -17,13 +17,16 @@ function SessionLoading() {
  * no session we bounce to /login, preserving the attempted location so we can
  * return there after sign-in.
  */
-export function ProtectedRoute() {
-  const { status } = useAuth()
+export function ProtectedRoute({ allowUnverified = false }: { allowUnverified?: boolean }) {
+  const { status, user } = useAuth()
   const location = useLocation()
 
   if (status === 'loading') return <SessionLoading />
   if (status === 'unauthenticated') {
     return <Navigate to="/login" replace state={{ from: location }} />
+  }
+  if (!allowUnverified && !user?.user.email_verified) {
+    return <Navigate to="/verify-email" replace state={{ from: location }} />
   }
   return <Outlet />
 }
@@ -35,12 +38,15 @@ export function ProtectedRoute() {
  * guards the loading/unauthenticated cases defensively too.
  */
 export function RoleRoute({ roles }: { roles: Role[] }) {
-  const { status, hasRole } = useAuth()
+  const { status, hasRole, user } = useAuth()
   const location = useLocation()
 
   if (status === 'loading') return <SessionLoading />
   if (status === 'unauthenticated') {
     return <Navigate to="/login" replace state={{ from: location }} />
+  }
+  if (!user?.user.email_verified) {
+    return <Navigate to="/verify-email" replace state={{ from: location }} />
   }
   if (!hasRole(...roles)) return <Navigate to="/home" replace />
   return <Outlet />
@@ -61,11 +67,12 @@ export function TeacherRoute() {
  * sent on to the app instead of seeing the sign-in form again.
  */
 export function GuestRoute() {
-  const { status } = useAuth()
+  const { status, user } = useAuth()
   const location = useLocation()
 
   if (status === 'loading') return <SessionLoading />
   if (status === 'authenticated') {
+    if (!user?.user.email_verified) return <Navigate to="/verify-email" replace state={location.state} />
     const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname
     return <Navigate to={from ?? '/home'} replace />
   }

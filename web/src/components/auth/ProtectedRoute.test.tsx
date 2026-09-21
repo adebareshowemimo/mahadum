@@ -9,13 +9,14 @@ const { useAuthMock } = vi.hoisted(() => ({ useAuthMock: vi.fn() }))
 vi.mock('@/lib/auth/AuthProvider', () => ({ useAuth: useAuthMock }))
 
 function setStatus(status: AuthStatus) {
-  useAuthMock.mockReturnValue({ status })
+  useAuthMock.mockReturnValue({ status, user: { user: { email_verified: true } } })
 }
 
 /** Authenticate as a user holding exactly `roles` (drives `hasRole`). */
 function setRoles(roles: Role[], status: AuthStatus = 'authenticated') {
   useAuthMock.mockReturnValue({
     status,
+    user: { user: { email_verified: true } },
     hasRole: (...wanted: Role[]) => wanted.some((r) => roles.includes(r)),
   })
 }
@@ -31,6 +32,7 @@ describe('ProtectedRoute', () => {
             <Route path="/" element={<div>PROTECTED</div>} />
           </Route>
           <Route path="/login" element={<div>LOGIN</div>} />
+          <Route path="/verify-email" element={<div>VERIFY</div>} />
         </Routes>
       </MemoryRouter>,
     )
@@ -40,6 +42,21 @@ describe('ProtectedRoute', () => {
     setStatus('authenticated')
     renderProtected()
     expect(screen.getByText('PROTECTED')).toBeInTheDocument()
+  })
+
+  it('blocks authenticated but unverified users', () => {
+    useAuthMock.mockReturnValue({ status: 'authenticated', user: { user: { email_verified: false } } })
+    renderProtected()
+    expect(screen.getByText('VERIFY')).toBeInTheDocument()
+    expect(screen.queryByText('PROTECTED')).not.toBeInTheDocument()
+  })
+
+  it('allows an unverified session to access the recovery route', () => {
+    useAuthMock.mockReturnValue({ status: 'authenticated', user: { user: { email_verified: false } } })
+    render(<MemoryRouter><Routes><Route element={<ProtectedRoute allowUnverified />}>
+      <Route path="/" element={<div>RECOVERY</div>} />
+    </Route></Routes></MemoryRouter>)
+    expect(screen.getByText('RECOVERY')).toBeInTheDocument()
   })
 
   it('redirects to /login when unauthenticated', () => {
@@ -78,6 +95,16 @@ describe('RoleRoute', () => {
     setRoles(['super_admin'])
     renderRole(['super_admin'])
     expect(screen.getByText('ADMIN')).toBeInTheDocument()
+  })
+
+  it('requires verification even when the user has the admin role', () => {
+    useAuthMock.mockReturnValue({ status: 'authenticated', user: { user: { email_verified: false } }, hasRole: () => true })
+    render(<MemoryRouter initialEntries={['/admin']}><Routes>
+      <Route element={<RoleRoute roles={['super_admin']} />}><Route path="/admin" element={<div>ADMIN</div>} /></Route>
+      <Route path="/verify-email" element={<div>VERIFY</div>} />
+    </Routes></MemoryRouter>)
+    expect(screen.getByText('VERIFY')).toBeInTheDocument()
+    expect(screen.queryByText('ADMIN')).not.toBeInTheDocument()
   })
 
   it('renders when the user holds one of several allowed roles', () => {
@@ -202,5 +229,14 @@ describe('GuestRoute', () => {
     renderGuest()
     expect(screen.getByText('HOME')).toBeInTheDocument()
     expect(screen.queryByText('LOGIN')).not.toBeInTheDocument()
+  })
+
+  it('redirects an unverified login session to recovery', () => {
+    useAuthMock.mockReturnValue({ status: 'authenticated', user: { user: { email_verified: false } } })
+    render(<MemoryRouter initialEntries={['/login']}><Routes>
+      <Route element={<GuestRoute />}><Route path="/login" element={<div>LOGIN</div>} /></Route>
+      <Route path="/verify-email" element={<div>VERIFY</div>} />
+    </Routes></MemoryRouter>)
+    expect(screen.getByText('VERIFY')).toBeInTheDocument()
   })
 })

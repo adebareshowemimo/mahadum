@@ -102,6 +102,7 @@ use App\Http\Controllers\Support\TicketController;
 use App\Http\Controllers\Webhooks\PaymentWebhookController;
 use App\Http\Controllers\Webhooks\SendgridWebhookController;
 use App\Http\Controllers\Webhooks\TelcoWebhookController;
+use App\Http\Middleware\RequireVerifiedEmail;
 use App\Models\Course;
 use App\Models\Payout;
 use App\Models\SchoolClass;
@@ -143,14 +144,19 @@ Route::prefix('v1')->group(function () {
     // SendGrid Event Webhook (token in the URL) — bounces/complaints → suppression.
     Route::post('webhooks/sendgrid/{token}', [SendgridWebhookController::class, 'handle']);
 
-    /* ------------------------------------------------------------- protected */
+    // Recovery/session endpoints must remain available before verification.
     Route::middleware(['auth:sanctum', 'identify.tenant', 'min.app.version'])->group(function () {
-
         Route::get('me', [MeController::class, 'show']);
-        Route::post('me/learner-profile', [MeController::class, 'ensureLearnerProfile']);
-        Route::post('me/devices', [DeviceController::class, 'store']);
         Route::post('auth/refresh', [AuthController::class, 'refresh']);
         Route::delete('auth/token', [AuthController::class, 'logout']);
+        Route::post('email/verification-notification', [EmailVerificationController::class, 'resend'])
+            ->middleware('throttle:6,1');
+    });
+
+    /* ------------------------------------------------------------- protected */
+    Route::middleware(['auth:sanctum', RequireVerifiedEmail::class, 'identify.tenant', 'min.app.version'])->group(function () {
+        Route::post('me/learner-profile', [MeController::class, 'ensureLearnerProfile']);
+        Route::post('me/devices', [DeviceController::class, 'store']);
         Route::post('profiles/{learner}/switch', [ProfileController::class, 'switch'])
             ->can('view', 'learner');
         Route::post('class-invitations/{token}/accept', [ClassLearnerInvitationController::class, 'accept'])
@@ -160,10 +166,6 @@ Route::prefix('v1')->group(function () {
         Route::get('me/notifications', [NotificationController::class, 'index']);
         Route::post('me/notifications/read-all', [NotificationController::class, 'markAllRead']);
         Route::post('me/notifications/{id}/read', [NotificationController::class, 'markRead']);
-
-        // Email verification (resend; the verify link itself is public + signed).
-        Route::post('email/verification-notification', [EmailVerificationController::class, 'resend'])
-            ->middleware('throttle:6,1');
 
         /* ---- Content / CMS (content_owner) ---- */
         Route::get('courses', [CourseController::class, 'index']);

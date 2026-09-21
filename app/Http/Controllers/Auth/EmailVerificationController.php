@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class EmailVerificationController extends Controller
@@ -15,7 +16,7 @@ class EmailVerificationController extends Controller
      * URL signature plus the email hash prove the request is genuine. The route
      * is `signed`, so a tampered or expired link is rejected before reaching here.
      */
-    public function verify(Request $request, string $id, string $hash): JsonResponse
+    public function verify(Request $request, string $id, string $hash): JsonResponse|RedirectResponse
     {
         $user = User::findOrFail($id);
 
@@ -28,6 +29,10 @@ class EmailVerificationController extends Controller
         if (! $user->hasVerifiedEmail()) {
             $user->markEmailAsVerified();
             event(new Verified($user));
+        }
+
+        if (! $request->expectsJson()) {
+            return redirect()->away(rtrim((string) config('app.frontend_url'), '/').'/verify-email?verified=1');
         }
 
         return response()->json(['data' => ['verified' => true]]);

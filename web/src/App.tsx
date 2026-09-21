@@ -38,6 +38,7 @@ const DashboardPage = lazy(() => import('@/pages/DashboardPage').then((m) => ({ 
 const FamilyPage = lazy(() => import('@/pages/FamilyPage').then((m) => ({ default: m.FamilyPage })))
 const ChildPage = lazy(() => import('@/pages/ChildPage').then((m) => ({ default: m.ChildPage })))
 const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })))
+const VerifyEmailPage = lazy(() => import('@/pages/VerifyEmailPage').then((m) => ({ default: m.VerifyEmailPage })))
 const AchievementsPage = lazy(() => import('@/pages/AchievementsPage').then((m) => ({ default: m.AchievementsPage })))
 const AdminOverviewPage = lazy(() => import('@/pages/AdminOverviewPage').then((m) => ({ default: m.AdminOverviewPage })))
 const LandingV1Page = lazy(() => import('@/pages/LandingVariantsPage').then((m) => ({ default: m.LandingV1Page })))
@@ -118,6 +119,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/admin': 'Admin Overview',
   '/login': 'Sign In',
   '/register': 'Create Account',
+  '/verify-email': 'Verify Email',
 }
 
 function PageTitleManager() {
@@ -209,6 +211,7 @@ function ShellSuspense() {
 // Destinations that already have real screens; everything else in the nav
 // resolves to a ComingSoon placeholder so links never dead-end.
 const REAL_PAGES = new Set([
+  '/verify-email',
   '/home',
   '/components',
   '/family',
@@ -309,6 +312,10 @@ export function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+      </Route>
+
+      <Route element={<ProtectedRoute allowUnverified />}>
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
       </Route>
 
       {/* Authenticated app — everything renders inside the role-aware shell. */}

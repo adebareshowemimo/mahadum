@@ -16,6 +16,7 @@ use App\Services\Referral\ReferralService;
 use App\Services\Settings;
 use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\URL;
 use Tests\Concerns\MakesContent;
 use Tests\TestCase;
 
@@ -66,6 +67,10 @@ class SchoolReferralTest extends TestCase
         ], ['X-Device-Id' => 'dev-org-1'])->assertCreated();
 
         $referred = User::where('email', 'org-referred@test.local')->first();
+        $this->getJson(URL::temporarySignedRoute('verification.verify', now()->addHour(), [
+            'id' => $referred->id, 'hash' => sha1($referred->getEmailForVerification()),
+        ]))->assertOk();
+        $referred->refresh();
         $lesson = $this->publishedLesson();
         $quizId = $lesson->components->firstWhere('type', 'quiz')->quiz->id;
         $profile = LearnerProfile::create(['user_id' => $referred->id, 'display_name' => 'R', 'current_level' => 1]);
@@ -74,7 +79,7 @@ class SchoolReferralTest extends TestCase
         $plan = Plan::where('code', 'premium_individual')->first();
         $subId = $this->postJson('/api/v1/subscriptions', ['plan_id' => $plan->id, 'method' => 'card'], [
             'Idempotency-Key' => 'org-sub-1',
-        ])->json('data.subscription_id');
+        ])->assertCreated()->json('data.subscription_id');
         app(PaymentService::class)->process('paystack', 'org-evt-1', "sub_$subId", 'success', $plan->price_minor, []);
 
         // Activation gate: finish a lesson + a quiz.
