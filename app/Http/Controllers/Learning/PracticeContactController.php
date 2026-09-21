@@ -14,9 +14,6 @@ class PracticeContactController extends Controller
     public function index(LearnerProfile $learner, Request $request, PracticeRecipientEligibility $eligibility): JsonResponse
     {
         $search = trim((string) $request->string('q'));
-        if (mb_strlen($search) < 2) {
-            return response()->json(['data' => []]);
-        }
 
         return response()->json(['data' => $eligibility->candidates($learner, $request->user(), $search)]);
     }

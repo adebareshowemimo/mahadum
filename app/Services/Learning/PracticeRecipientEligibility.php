@@ -63,9 +63,9 @@ class PracticeRecipientEligibility
             ->whereIn('id', FamilyMember::where('family_id', $learner->family_id)->whereNotNull('user_id')->pluck('user_id'))
             ->where('id', '!=', $excluding->id)
             ->where('status', 'active')
-            ->where(fn ($q) => $q->where('first_name', 'like', "%{$search}%")
+            ->when($search !== '', fn ($q) => $q->where(fn ($q2) => $q2->where('first_name', 'like', "%{$search}%")
                 ->orWhere('last_name', 'like', "%{$search}%")
-                ->orWhere('email', 'like', "%{$search}%"))
+                ->orWhere('email', 'like', "%{$search}%")))
             ->limit(20)
             ->get()
             ->map(fn (User $user) => $this->present($user, 'family', 'guardian'));
@@ -87,9 +87,9 @@ class PracticeRecipientEligibility
             ->where('id', '!=', $excluding->id)
             ->where('status', 'active')
             ->role(self::SCHOOL_STAFF_ROLES)
-            ->where(fn ($q) => $q->where('first_name', 'like', "%{$search}%")
+            ->when($search !== '', fn ($q) => $q->where(fn ($q2) => $q2->where('first_name', 'like', "%{$search}%")
                 ->orWhere('last_name', 'like', "%{$search}%")
-                ->orWhere('email', 'like', "%{$search}%"))
+                ->orWhere('email', 'like', "%{$search}%")))
             ->limit(20)
             ->get()
             ->map(fn (User $user) => $this->present($user, 'school', (string) $user->getRoleNames()->first()));

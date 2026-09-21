@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ApiError, type PracticeContact } from '@/lib/api'
 import { usePracticeContacts, useInvitePractice } from '@/lib/learning/queries'
 import { Alert, Avatar, Badge, Icon, Input, Spinner } from '@/components/ui'
@@ -8,23 +8,22 @@ const RELATION_LABEL: Record<PracticeContact['relation'], string> = {
   school: 'School staff',
 }
 
-function useDebounced<T>(value: T, ms = 300): T {
-  const [debounced, setDebounced] = useState(value)
-  useEffect(() => {
-    const id = setTimeout(() => setDebounced(value), ms)
-    return () => clearTimeout(id)
-  }, [value, ms])
-  return debounced
-}
-
 export function PracticeWithMeCard({ learnerId }: { learnerId: number }) {
   const [expanded, setExpanded] = useState(false)
+  const [focused, setFocused] = useState(false)
   const [query, setQuery] = useState('')
-  const debouncedQuery = useDebounced(query)
-  const contacts = usePracticeContacts(learnerId, debouncedQuery)
+  // Prefetched once the card mounts, so the list is ready the moment the input is focused.
+  const contacts = usePracticeContacts(learnerId)
   const invite = useInvitePractice()
   const [sentTo, setSentTo] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  const results = useMemo(() => {
+    const list = contacts.data ?? []
+    const q = query.trim().toLowerCase()
+    if (!q) return list
+    return list.filter((contact) => contact.name.toLowerCase().includes(q) || contact.email.toLowerCase().includes(q))
+  }, [contacts.data, query])
 
   async function send(contact: PracticeContact) {
     setError(null)
@@ -62,6 +61,7 @@ export function PracticeWithMeCard({ learnerId }: { learnerId: number }) {
             autoFocus
             placeholder="Search by name or email…"
             value={query}
+            onFocus={() => setFocused(true)}
             onChange={(e) => {
               setQuery(e.target.value)
               setSentTo(null)
@@ -72,17 +72,17 @@ export function PracticeWithMeCard({ learnerId }: { learnerId: number }) {
           {sentTo && <Alert variant="success">Invitation sent to {sentTo}.</Alert>}
           {error && <Alert variant="danger">{error}</Alert>}
 
-          {query.trim().length >= 2 && (
+          {(focused || query.trim().length > 0) && (
             <div className="flex flex-col gap-2">
               {contacts.isLoading && (
                 <div className="flex items-center gap-2 py-2 text-sm text-muted">
-                  <Spinner className="size-4" /> Searching…
+                  <Spinner className="size-4" /> Loading contacts…
                 </div>
               )}
-              {!contacts.isLoading && contacts.data?.length === 0 && (
+              {!contacts.isLoading && results.length === 0 && (
                 <p className="py-2 text-sm text-muted">No one found in this learner’s family or school yet.</p>
               )}
-              {contacts.data?.map((contact) => (
+              {results.map((contact) => (
                 <button
                   key={contact.id}
                   type="button"

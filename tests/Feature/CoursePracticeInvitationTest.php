@@ -42,6 +42,13 @@ class CoursePracticeInvitationTest extends TestCase
 
         $this->assertContains($coParent->id, $ids);
         $this->assertNotContains($stranger->id, $ids);
+
+        $prefetchedIds = collect($this->getJson("/api/v1/learners/{$learner->id}/practice-contacts")
+            ->assertOk()
+            ->json('data'))->pluck('id')->all();
+
+        $this->assertContains($coParent->id, $prefetchedIds);
+        $this->assertNotContains($stranger->id, $prefetchedIds);
     }
 
     public function test_parent_can_invite_a_family_contact_to_practice_the_current_lesson(): void

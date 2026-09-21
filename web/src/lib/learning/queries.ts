@@ -4,7 +4,7 @@ import { learningApi, profileApi, type CourseCatalogQuery, type Me } from '@/lib
 export const learningKeys = {
   path: (learnerId: number) => ['learner-path', learnerId] as const,
   courses: (query: CourseCatalogQuery) => ['courses', 'published', query] as const,
-  practiceContacts: (learnerId: number, q: string) => ['practice-contacts', learnerId, q] as const,
+  practiceContacts: (learnerId: number) => ['practice-contacts', learnerId] as const,
 }
 
 export function usePath(learnerId: number | null | undefined) {
@@ -34,11 +34,13 @@ export function useEnroll(learnerId: number) {
   })
 }
 
-export function usePracticeContacts(learnerId: number, q: string) {
+/** Prefetches every family/school contact this learner may invite (server caps at 20), so the search box has instant results on focus. */
+export function usePracticeContacts(learnerId: number | null | undefined) {
   return useQuery({
-    queryKey: learningKeys.practiceContacts(learnerId, q),
-    queryFn: () => learningApi.searchPracticeContacts(learnerId, q),
-    enabled: q.trim().length >= 2,
+    queryKey: learningKeys.practiceContacts(learnerId ?? 0),
+    queryFn: () => learningApi.searchPracticeContacts(learnerId as number, ''),
+    enabled: !!learnerId,
+    staleTime: 60_000,
   })
 }
 
