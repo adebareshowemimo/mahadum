@@ -133,6 +133,7 @@ import type {
   PromoPreview,
   DataBundle,
   MediaAsset,
+  MediaLibraryPage,
   MediaQuery,
   Payout,
   Plan,
@@ -656,9 +657,11 @@ export const contentApi = {
   async uploadMedia(
     file: File,
     onProgress?: (loaded: number, total: number) => void,
+    folder?: string,
   ): Promise<{ id: number; type: string; url: string }> {
     const form = new FormData()
     form.append('file', file)
+    if (folder) form.append('folder', folder)
     const { data } = await api.post('/media/upload', form, {
       onUploadProgress: (event) => {
         const total = event.total && event.total > 0 ? event.total : file.size
@@ -675,7 +678,7 @@ export const contentApi = {
   },
 
   /** Paginated library for the Media page. */
-  async mediaLibrary(params: MediaQuery = {}): Promise<Paginated<MediaAsset>> {
+  async mediaLibrary(params: MediaQuery = {}): Promise<MediaLibraryPage> {
     const { data } = await api.get('/media', { params })
     return data
   },

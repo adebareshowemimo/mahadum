@@ -113,6 +113,21 @@ const PATHS = {
       <path d="m16 16 4.5 4.5" />
     </>
   ),
+  folder: (
+    <>
+      <path d="M3.5 6.5h6l2 2h9v9.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" />
+      <path d="M3.5 10h17" />
+    </>
+  ),
+  grid: (
+    <>
+      <rect x="4" y="4" width="6" height="6" rx="1" />
+      <rect x="14" y="4" width="6" height="6" rx="1" />
+      <rect x="4" y="14" width="6" height="6" rx="1" />
+      <rect x="14" y="14" width="6" height="6" rx="1" />
+    </>
+  ),
+  list: <path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />,
   plus: <path d="M12 5v14M5 12h14" />,
   'arrow-left': <path d="M19 12H5M11 6l-6 6 6 6" />,
   grip: (

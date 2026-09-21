@@ -63,7 +63,7 @@ const MEDIA_PREFIX = ['content', 'media'] as const
 export function useUploadMedia() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (file: File) => contentApi.uploadMedia(file),
+    mutationFn: ({ file, folder }: { file: File; folder?: string }) => contentApi.uploadMedia(file, undefined, folder),
     onSuccess: () => void qc.invalidateQueries({ queryKey: MEDIA_PREFIX }),
   })
 }

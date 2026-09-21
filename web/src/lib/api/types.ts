@@ -362,14 +362,29 @@ export interface MediaAsset {
   type: string
   url: string
   original_name?: string | null
+  folder?: string | null
   created_at: string | null
 }
 
 export interface MediaQuery {
   q?: string
   type?: string
+  folder?: string
   per_page?: number
   page?: number
+}
+
+export interface MediaFolder {
+  name: string | null
+  total: number
+  video_count: number
+}
+
+export interface MediaLibraryPage extends Paginated<MediaAsset> {
+  folders: MediaFolder[]
+  meta: Paginated<MediaAsset>['meta'] & {
+    type_counts: Record<string, number>
+  }
 }
 
 export interface AuthorComponent {

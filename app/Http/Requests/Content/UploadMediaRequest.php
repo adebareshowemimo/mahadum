@@ -27,6 +27,9 @@ class UploadMediaRequest extends FormRequest
                 'extensions:mp4,m4v,webm,ogv,mov,mp3,m4a,aac,wav,ogg,oga,jpg,jpeg,png,webp',
                 'mimetypes:video/mp4,video/x-m4v,application/mp4,video/webm,video/ogg,video/quicktime,video/x-quicktime,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/x-aac,audio/wav,audio/x-wav,audio/webm,audio/ogg,application/ogg,image/jpeg,image/png,image/webp,application/octet-stream',
             ],
+            // Browser directory uploads send the relative parent path separately.
+            // Keep it display-only: stored files retain UUID names on the public disk.
+            'folder' => ['nullable', 'string', 'max:255', 'regex:/^[^<>:"|?*\\x00-\\x1F]+$/'],
         ];
     }
 

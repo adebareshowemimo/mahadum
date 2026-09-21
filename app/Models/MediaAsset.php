@@ -12,6 +12,7 @@ use Illuminate\Support\Carbon;
  * @property string $type
  * @property string $url
  * @property string|null $original_name
+ * @property string|null $folder
  * @property array<array-key, mixed>|null $qualities
  * @property int|null $duration_seconds
  * @property array<array-key, mixed>|null $captions
@@ -27,6 +28,7 @@ use Illuminate\Support\Carbon;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MediaAsset whereCreatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MediaAsset whereDurationSeconds($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MediaAsset whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MediaAsset whereFolder($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MediaAsset whereQualities($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MediaAsset whereType($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MediaAsset whereUpdatedAt($value)

@@ -50,12 +50,37 @@ class MediaController extends Controller
 
         $query = MediaAsset::query()->latest();
 
-        if ($type = $request->query('type')) {
-            $query->where('type', $type);
-        }
-
         if ($q = trim((string) $request->query('q', ''))) {
             $query->where('original_name', 'like', "%{$q}%");
+        }
+
+        $folders = (clone $query)
+            ->selectRaw('folder, COUNT(*) as total, SUM(CASE WHEN type = ? THEN 1 ELSE 0 END) as video_count', ['video'])
+            ->groupBy('folder')
+            ->orderByRaw('folder IS NULL DESC')
+            ->orderBy('folder')
+            ->get()
+            ->map(fn (MediaAsset $asset) => [
+                'name' => $asset->folder,
+                'total' => (int) $asset->getAttribute('total'),
+                'video_count' => (int) $asset->getAttribute('video_count'),
+            ])
+            ->values();
+
+        if ($request->query('folder') === '__unfiled') {
+            $query->whereNull('folder');
+        } elseif ($folder = trim((string) $request->query('folder', ''))) {
+            $query->where('folder', $folder);
+        }
+
+        $typeCounts = (clone $query)
+            ->selectRaw('type, COUNT(*) as aggregate')
+            ->groupBy('type')
+            ->pluck('aggregate', 'type')
+            ->map(fn ($count) => (int) $count);
+
+        if ($type = $request->query('type')) {
+            $query->where('type', $type);
         }
 
         $page = $query->paginate($perPage);
@@ -66,13 +91,16 @@ class MediaController extends Controller
                 'type' => $a->type,
                 'url' => $this->resolveUrl($a->url),
                 'original_name' => $a->getAttribute('original_name'),
+                'folder' => $a->folder,
                 'created_at' => $a->created_at,
             ]),
+            'folders' => $folders,
             'meta' => [
                 'current_page' => $page->currentPage(),
                 'last_page' => $page->lastPage(),
                 'per_page' => $page->perPage(),
                 'total' => $page->total(),
+                'type_counts' => $typeCounts,
             ],
         ]);
     }
@@ -204,6 +232,7 @@ class MediaController extends Controller
             'type' => $type,
             'url' => $path,
             'original_name' => $file->getClientOriginalName(),
+            'folder' => $this->normaliseFolder($request->string('folder')->toString()),
             'uploaded_by' => $request->user()->id,
         ]);
 
@@ -212,6 +241,22 @@ class MediaController extends Controller
             'type' => $asset->type,
             'url' => Storage::disk('public')->url($path),
             'original_name' => $asset->original_name,
+            'folder' => $asset->folder,
         ]], 201);
+    }
+
+    private function normaliseFolder(string $folder): ?string
+    {
+        $folder = trim(str_replace('\\', '/', $folder), " /\t\n\r\0\x0B");
+        if ($folder === '') {
+            return null;
+        }
+
+        $parts = array_values(array_filter(explode('/', $folder), fn (string $part) => $part !== '' && $part !== '.'));
+        if (in_array('..', $parts, true)) {
+            abort(422, 'The media folder path is invalid.');
+        }
+
+        return implode('/', $parts);
     }
 }

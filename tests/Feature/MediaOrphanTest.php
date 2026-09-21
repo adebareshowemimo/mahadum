@@ -73,6 +73,45 @@ class MediaOrphanTest extends TestCase
             ->assertJsonPath('data.url', fn ($url) => str_starts_with($url, '/storage/media/'));
     }
 
+    public function test_directory_upload_preserves_folder_and_library_reports_video_counts(): void
+    {
+        $this->seedRbac();
+        Storage::fake('public');
+        $this->actingAsUser($this->userWithRole('content_owner'));
+
+        $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->create('greeting.mp4', 128, 'video/mp4'),
+            'folder' => 'Yoruba/Week 1',
+        ])->assertCreated()
+            ->assertJsonPath('data.folder', 'Yoruba/Week 1');
+
+        MediaAsset::create([
+            'type' => 'image',
+            'url' => 'media/poster.png',
+            'original_name' => 'poster.png',
+            'folder' => 'Yoruba/Week 1',
+        ]);
+        MediaAsset::create([
+            'type' => 'video',
+            'url' => 'media/unfiled.mp4',
+            'original_name' => 'unfiled.mp4',
+        ]);
+
+        $this->getJson('/api/v1/media?folder=Yoruba%2FWeek%201')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 2)
+            ->assertJsonPath('meta.type_counts.video', 1)
+            ->assertJsonPath('meta.type_counts.image', 1)
+            ->assertJsonPath('folders.1.name', 'Yoruba/Week 1')
+            ->assertJsonPath('folders.1.total', 2)
+            ->assertJsonPath('folders.1.video_count', 1);
+
+        $this->getJson('/api/v1/media?folder=__unfiled')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.original_name', 'unfiled.mp4');
+    }
+
     public function test_mp4_with_generic_binary_mime_is_accepted_and_keeps_a_video_extension(): void
     {
         $this->seedRbac();
