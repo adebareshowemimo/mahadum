@@ -135,6 +135,7 @@ import type {
   MediaAsset,
   MediaLibraryPage,
   MediaQuery,
+  UpdateMediaAssetInput,
   Payout,
   Plan,
   PurchaseSeatsInput,
@@ -658,7 +659,7 @@ export const contentApi = {
     file: File,
     onProgress?: (loaded: number, total: number) => void,
     folder?: string,
-  ): Promise<{ id: number; type: string; url: string }> {
+  ): Promise<MediaAsset> {
     const form = new FormData()
     form.append('file', file)
     if (folder) form.append('folder', folder)
@@ -690,6 +691,11 @@ export const contentApi = {
 
   async purgeMediaOrphans(ids: number[]): Promise<{ deleted: number; skipped: number }> {
     const { data } = await api.post('/media/orphans/purge', { ids })
+    return data.data
+  },
+
+  async updateMedia(id: number, input: UpdateMediaAssetInput): Promise<MediaAsset> {
+    const { data } = await api.patch(`/media/${id}`, input)
     return data.data
   },
 

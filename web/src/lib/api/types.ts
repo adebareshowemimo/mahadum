@@ -363,7 +363,17 @@ export interface MediaAsset {
   url: string
   original_name?: string | null
   folder?: string | null
+  title?: string | null
+  description?: string | null
+  tags?: string[]
   created_at: string | null
+}
+
+export interface UpdateMediaAssetInput {
+  title?: string | null
+  description?: string | null
+  tags?: string[] | null
+  folder?: string | null
 }
 
 export interface MediaQuery {

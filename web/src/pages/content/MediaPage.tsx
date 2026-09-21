@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Alert, Badge, Button, Card, CardBody, Icon, Input, Modal, Skeleton, Spinner } from '@/components/ui'
 import { ApiError, type MediaAsset, type MediaQuery } from '@/lib/api'
 import { cn } from '@/lib/cn'
@@ -8,19 +8,12 @@ import {
   useMediaOrphans,
   usePurgeMediaOrphans,
   useUploadMedia,
+  useUpdateMedia,
 } from '@/lib/content/queries'
-
-function useDebounced<T>(value: T, ms = 300): T {
-  const [v, setV] = useState(value)
-  useEffect(() => {
-    const id = setTimeout(() => setV(value), ms)
-    return () => clearTimeout(id)
-  }, [value, ms])
-  return v
-}
 
 export function MediaPage() {
   const [search, setSearch] = useState('')
+  const [appliedSearch, setAppliedSearch] = useState('')
   const [type, setType] = useState('')
   const [folder, setFolder] = useState('')
   const [view, setView] = useState<'list' | 'grid'>('list')
@@ -32,12 +25,13 @@ export function MediaPage() {
   const [uploadStatus, setUploadStatus] = useState<string | null>(null)
   const [copied, setCopied] = useState<number | null>(null)
   const [cleanupOpen, setCleanupOpen] = useState(false)
+  const [editing, setEditing] = useState<MediaAsset | null>(null)
 
   // Unreferenced assets — a lightweight bounded query drives the cleanup banner.
   const orphans = useMediaOrphans({ per_page: 100 })
   const orphanTotal = orphans.data?.meta.total ?? 0
 
-  const q = useDebounced(search)
+  const q = appliedSearch
   const params: MediaQuery = useMemo(
     () => ({ q: q || undefined, type: type || undefined, folder: folder || undefined }),
     [q, type, folder],
@@ -151,16 +145,23 @@ export function MediaPage() {
       {uploadStatus && <Alert role="status">{uploadStatus}</Alert>}
 
       {/* Search + type filter — server-side so the library scales to any size. */}
-      <div className="flex flex-wrap items-center gap-3">
+      <form
+        className="flex flex-wrap items-center gap-3"
+        onSubmit={(event) => {
+          event.preventDefault()
+          setAppliedSearch(search.trim())
+        }}
+      >
         <div className="min-w-[14rem] flex-1">
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by filename…"
+            placeholder="Search title, filename, description or tags…"
             leftIcon={<Icon name="search" />}
-            aria-label="Search media by filename"
+            aria-label="Search media"
           />
         </div>
+        <Button type="submit" variant="secondary">Search</Button>
         <label className="flex items-center gap-2 text-sm">
           <span className="font-semibold text-muted">Type</span>
           <select
@@ -198,7 +199,7 @@ export function MediaPage() {
             <Icon name="grid" className="size-4" /> Grid
           </button>
         </div>
-      </div>
+      </form>
 
       {error && <Alert variant="danger">{error}</Alert>}
 
@@ -280,13 +281,15 @@ export function MediaPage() {
               <Preview asset={asset} />
               <CardBody className="flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="truncate text-sm font-medium text-foreground" title={asset.original_name ?? undefined}>
-                    {asset.original_name ?? `Asset #${asset.id}`}
+                  <p className="truncate text-sm font-medium text-foreground" title={mediaLabel(asset)}>
+                    {mediaLabel(asset)}
                   </p>
                   <Badge variant="neutral">{asset.type}</Badge>
                 </div>
                 <p className="truncate text-xs text-muted">{asset.folder ?? 'Unfiled'}</p>
+                {asset.title && asset.original_name && <p className="truncate text-xs text-subtle">{asset.original_name}</p>}
                 <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setEditing(asset)}>Edit</Button>
                   <Button size="sm" variant="secondary" className="flex-1" onClick={() => copy(asset)}>
                     {copied === asset.id ? 'Copied ✓' : 'Copy URL'}
                   </Button>
@@ -314,11 +317,11 @@ export function MediaPage() {
               <tbody className="divide-y divide-border">
                 {assets.map((asset) => (
                   <tr key={asset.id} className="hover:bg-surface-muted/70">
-                    <td className="px-4 py-3"><div className="flex items-center gap-3"><MiniPreview asset={asset} /><span className="max-w-xs truncate font-medium text-foreground" title={asset.original_name ?? undefined}>{asset.original_name ?? `Asset #${asset.id}`}</span></div></td>
+                    <td className="px-4 py-3"><div className="flex items-center gap-3"><MiniPreview asset={asset} /><div className="min-w-0"><p className="max-w-xs truncate font-medium text-foreground" title={mediaLabel(asset)}>{mediaLabel(asset)}</p>{asset.title && asset.original_name && <p className="max-w-xs truncate text-xs text-subtle">{asset.original_name}</p>}</div></div></td>
                     <td className="max-w-[15rem] truncate px-4 py-3 text-muted" title={asset.folder ?? 'Unfiled'}>{asset.folder ?? 'Unfiled'}</td>
                     <td className="px-4 py-3"><Badge variant="neutral">{asset.type}</Badge></td>
                     <td className="whitespace-nowrap px-4 py-3 text-muted">{asset.created_at ? new Date(asset.created_at).toLocaleDateString() : '—'}</td>
-                    <td className="px-4 py-3"><div className="flex justify-end gap-2"><Button size="sm" variant="secondary" onClick={() => copy(asset)}>{copied === asset.id ? 'Copied ✓' : 'Copy URL'}</Button><Button size="sm" variant="outline" loading={remove.isPending && remove.variables === asset.id} onClick={() => remove.mutate(asset.id)} aria-label={`Delete ${asset.original_name ?? `asset ${asset.id}`}`}><Icon name="close" className="size-4" /></Button></div></td>
+                    <td className="px-4 py-3"><div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => setEditing(asset)}>Edit</Button><Button size="sm" variant="secondary" onClick={() => copy(asset)}>{copied === asset.id ? 'Copied ✓' : 'Copy URL'}</Button><Button size="sm" variant="outline" loading={remove.isPending && remove.variables === asset.id} onClick={() => remove.mutate(asset.id)} aria-label={`Delete ${mediaLabel(asset)}`}><Icon name="close" className="size-4" /></Button></div></td>
                   </tr>
                 ))}
               </tbody>
@@ -352,7 +355,59 @@ export function MediaPage() {
           onClose={() => setCleanupOpen(false)}
         />
       )}
+      {editing && <EditMediaModal asset={editing} onClose={() => setEditing(null)} />}
     </div>
+  )
+}
+
+function mediaLabel(asset: MediaAsset): string {
+  return asset.title?.trim() || asset.original_name?.trim() || `Asset #${asset.id}`
+}
+
+function EditMediaModal({ asset, onClose }: { asset: MediaAsset; onClose: () => void }) {
+  const update = useUpdateMedia()
+  const [title, setTitle] = useState(asset.title ?? '')
+  const [description, setDescription] = useState(asset.description ?? '')
+  const [folder, setFolder] = useState(asset.folder ?? '')
+  const [tags, setTags] = useState((asset.tags ?? []).join(', '))
+  const [error, setError] = useState<string | null>(null)
+
+  async function save(event: FormEvent) {
+    event.preventDefault()
+    setError(null)
+    try {
+      await update.mutateAsync({
+        id: asset.id,
+        input: {
+          title,
+          description,
+          folder,
+          tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+        },
+      })
+      onClose()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not update this media item.')
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Edit media details" description="These details appear anywhere this asset can be selected.">
+      <form className="flex flex-col gap-4" onSubmit={(event) => void save(event)}>
+        {error && <Alert variant="danger">{error}</Alert>}
+        <Input label="Title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder={asset.original_name ?? `Asset #${asset.id}`} />
+        <Input label="Folder" value={folder} onChange={(event) => setFolder(event.target.value)} placeholder="e.g. Yoruba / Greetings" />
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-semibold text-foreground">Description</span>
+          <textarea className="min-h-24 rounded-xl border border-border-strong bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" value={description} onChange={(event) => setDescription(event.target.value)} maxLength={2000} />
+        </label>
+        <Input label="Tags" value={tags} onChange={(event) => setTags(event.target.value)} hint="Separate tags with commas." placeholder="greeting, beginner, Yoruba" />
+        <div className="flex gap-2">
+          <Button type="button" variant="secondary" fullWidth onClick={onClose}>Cancel</Button>
+          <Button type="submit" fullWidth loading={update.isPending}>Save details</Button>
+        </div>
+      </form>
+    </Modal>
   )
 }
 

@@ -70,7 +70,32 @@ class MediaOrphanTest extends TestCase
             'file' => UploadedFile::fake()->create('lesson.mp4', 128, 'video/mp4'),
         ])->assertCreated()
             ->assertJsonPath('data.type', 'video')
+            ->assertJsonPath('data.title', 'lesson')
             ->assertJsonPath('data.url', fn ($url) => str_starts_with($url, '/storage/media/'));
+    }
+
+    public function test_media_metadata_can_be_edited_and_searched(): void
+    {
+        $this->seedRbac();
+        $this->actingAsUser($this->userWithRole('content_owner'));
+        $asset = $this->asset('camera-export');
+
+        $this->patchJson("/api/v1/media/{$asset->id}", [
+            'title' => 'Formal Yoruba greeting',
+            'description' => 'A classroom welcome for beginners.',
+            'folder' => 'Yoruba/Greetings',
+            'tags' => ['Beginner', ' greeting ', 'beginner'],
+        ])->assertOk()
+            ->assertJsonPath('data.title', 'Formal Yoruba greeting')
+            ->assertJsonPath('data.description', 'A classroom welcome for beginners.')
+            ->assertJsonPath('data.folder', 'Yoruba/Greetings')
+            ->assertJsonPath('data.tags', ['Beginner', 'greeting']);
+
+        $this->getJson('/api/v1/media?q=greeting')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.id', $asset->id)
+            ->assertJsonPath('data.0.title', 'Formal Yoruba greeting');
     }
 
     public function test_directory_upload_preserves_folder_and_library_reports_video_counts(): void

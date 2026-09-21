@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Content;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Content\UpdateMediaAssetRequest;
 use App\Http\Requests\Content\UploadMediaRequest;
 use App\Models\MediaAsset;
 use App\Services\AuditLogger;
@@ -51,7 +52,12 @@ class MediaController extends Controller
         $query = MediaAsset::query();
 
         if ($q = trim((string) $request->query('q', ''))) {
-            $query->where('original_name', 'like', "%{$q}%");
+            $query->where(function ($query) use ($q) {
+                $query->where('title', 'like', "%{$q}%")
+                    ->orWhere('original_name', 'like', "%{$q}%")
+                    ->orWhere('description', 'like', "%{$q}%")
+                    ->orWhere('tags', 'like', "%{$q}%");
+            });
         }
 
         $folders = (clone $query)
@@ -87,14 +93,7 @@ class MediaController extends Controller
         $page = $query->paginate($perPage);
 
         return response()->json([
-            'data' => collect($page->items())->map(fn (MediaAsset $a) => [
-                'id' => $a->id,
-                'type' => $a->type,
-                'url' => $this->resolveUrl($a->url),
-                'original_name' => $a->getAttribute('original_name'),
-                'folder' => $a->folder,
-                'created_at' => $a->created_at,
-            ]),
+            'data' => collect($page->items())->map(fn (MediaAsset $a) => $this->assetData($a)),
             'folders' => $folders,
             'meta' => [
                 'current_page' => $page->currentPage(),
@@ -117,6 +116,35 @@ class MediaController extends Controller
         return response()->json(null, 204);
     }
 
+    public function update(UpdateMediaAssetRequest $request, MediaAsset $asset): JsonResponse
+    {
+        $before = $asset->only(['title', 'description', 'tags', 'folder']);
+        $validated = $request->validated();
+        $updates = [];
+        foreach (['title', 'description'] as $field) {
+            if (array_key_exists($field, $validated)) {
+                $updates[$field] = $this->nullableTrim($validated[$field]);
+            }
+        }
+        if (array_key_exists('folder', $validated)) {
+            $updates['folder'] = $this->normaliseFolder((string) $validated['folder']);
+        }
+        if (array_key_exists('tags', $validated)) {
+            $updates['tags'] = collect($validated['tags'] ?? [])
+                ->map(fn (string $tag) => trim($tag))
+                ->filter()
+                ->unique(fn (string $tag) => mb_strtolower($tag))
+                ->values()
+                ->all() ?: null;
+        }
+
+        $asset->update($updates);
+        $asset->refresh();
+        $this->audit->record('media.asset_updated', $asset, $before, $asset->only(['title', 'description', 'tags', 'folder']));
+
+        return response()->json(['data' => $this->assetData($asset)]);
+    }
+
     /**
      * Orphaned assets: MediaAssets referenced by no content, submission, or invoice.
      * Paginated + filterable like the library, plus the full orphan count so the UI
@@ -133,19 +161,18 @@ class MediaController extends Controller
             $query->where('type', $type);
         }
         if ($q = trim((string) $request->query('q', ''))) {
-            $query->where('original_name', 'like', "%{$q}%");
+            $query->where(function ($query) use ($q) {
+                $query->where('title', 'like', "%{$q}%")
+                    ->orWhere('original_name', 'like', "%{$q}%")
+                    ->orWhere('description', 'like', "%{$q}%")
+                    ->orWhere('tags', 'like', "%{$q}%");
+            });
         }
 
         $page = $query->paginate($perPage);
 
         return response()->json([
-            'data' => collect($page->items())->map(fn (MediaAsset $a) => [
-                'id' => $a->id,
-                'type' => $a->type,
-                'url' => $this->resolveUrl($a->url),
-                'original_name' => $a->getAttribute('original_name'),
-                'created_at' => $a->created_at,
-            ]),
+            'data' => collect($page->items())->map(fn (MediaAsset $a) => $this->assetData($a)),
             'meta' => [
                 'current_page' => $page->currentPage(),
                 'last_page' => $page->lastPage(),
@@ -234,16 +261,34 @@ class MediaController extends Controller
             'url' => $path,
             'original_name' => $file->getClientOriginalName(),
             'folder' => $this->normaliseFolder($request->string('folder')->toString()),
+            'title' => pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
             'uploaded_by' => $request->user()->id,
         ]);
 
-        return response()->json(['data' => [
+        return response()->json(['data' => $this->assetData($asset)], 201);
+    }
+
+    /** @return array<string, mixed> */
+    private function assetData(MediaAsset $asset): array
+    {
+        return [
             'id' => $asset->id,
             'type' => $asset->type,
-            'url' => Storage::disk('public')->url($path),
+            'url' => $this->resolveUrl($asset->url),
             'original_name' => $asset->original_name,
             'folder' => $asset->folder,
-        ]], 201);
+            'title' => $asset->title,
+            'description' => $asset->description,
+            'tags' => $asset->tags ?? [],
+            'created_at' => $asset->created_at,
+        ];
+    }
+
+    private function nullableTrim(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
     }
 
     private function normaliseFolder(string $folder): ?string

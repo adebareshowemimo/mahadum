@@ -9,6 +9,7 @@ import {
   type CreateLessonInput,
   type CreateLevelInput,
   type MediaQuery,
+  type UpdateMediaAssetInput,
 } from '@/lib/api'
 
 export const contentKeys = {
@@ -72,6 +73,14 @@ export function useDeleteMedia() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => contentApi.deleteMedia(id),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: MEDIA_PREFIX }),
+  })
+}
+
+export function useUpdateMedia() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, input }: { id: number; input: UpdateMediaAssetInput }) => contentApi.updateMedia(id, input),
     onSuccess: () => void qc.invalidateQueries({ queryKey: MEDIA_PREFIX }),
   })
 }

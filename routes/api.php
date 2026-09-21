@@ -225,6 +225,8 @@ Route::prefix('v1')->group(function () {
             ->middleware('can:content.media.upload');
         Route::post('media/upload', [MediaController::class, 'upload'])
             ->middleware('can:content.media.upload');
+        Route::patch('media/{asset}', [MediaController::class, 'update'])
+            ->middleware('can:content.media.upload');
         Route::delete('media/{asset}', [MediaController::class, 'destroy'])
             ->middleware('can:content.media.upload');
 

@@ -13,6 +13,9 @@ use Illuminate\Support\Carbon;
  * @property string $url
  * @property string|null $original_name
  * @property string|null $folder
+ * @property string|null $title
+ * @property string|null $description
+ * @property array<int, string>|null $tags
  * @property array<array-key, mixed>|null $qualities
  * @property int|null $duration_seconds
  * @property array<array-key, mixed>|null $captions
@@ -46,6 +49,7 @@ class MediaAsset extends Model
     protected $casts = [
         'qualities' => 'array',
         'captions' => 'array',
+        'tags' => 'array',
     ];
 
     /**

@@ -30,7 +30,7 @@ import {
   Progress,
   Skeleton,
 } from '@/components/ui'
-import { ApiError, contentApi, type AddComponentInput, type AuthorComponent, type AuthorQuestionInput, type QuestionType } from '@/lib/api'
+import { ApiError, contentApi, type AddComponentInput, type AuthorComponent, type AuthorQuestionInput, type MediaAsset, type QuestionType } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { formatFileSize } from '@/lib/format'
 import { useConfig } from '@/lib/config/useConfig'
@@ -50,6 +50,10 @@ import { CourseContents } from '@/components/content/CourseContents'
 
 const TYPE_ICON: Record<string, string> = { video: '🎬', quiz: '❓', speaking: '🎙️', exercise: '🎯', game: '🎮', assignment: '📝' }
 const MAX_MEDIA_UPLOAD_BYTES = 300 * 1024 * 1024
+
+function mediaAssetLabel(asset: MediaAsset): string {
+  return asset.title?.trim() || asset.original_name?.trim() || `Asset #${asset.id}`
+}
 
 function componentSummary(c: AuthorComponent): string {
   const d = (c.detail ?? {}) as Record<string, unknown>
@@ -459,7 +463,9 @@ function useComponentForm(lessonId: number, editing: AuthorComponent | undefined
 
 function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editing?: AuthorComponent; onClose: () => void }) {
   const { submit, error, pending, isEdit } = useComponentForm(lessonId, editing, onClose)
-  const library = useMediaAssets({ type: 'video', per_page: 100 })
+  const [librarySearch, setLibrarySearch] = useState('')
+  const [appliedLibrarySearch, setAppliedLibrarySearch] = useState('')
+  const library = useMediaAssets({ type: 'video', per_page: 100, q: appliedLibrarySearch || undefined })
   const d = (editing?.detail ?? {}) as Record<string, unknown>
   const [source, setSource] = useState<'upload' | 'library' | 'youtube'>(d.source_type === 'youtube' ? 'youtube' : 'upload')
   const [title, setTitle] = useState((d.title as string) ?? '')
@@ -599,25 +605,52 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
             placeholder="https://www.youtube.com/watch?v=…"
             error={youtubeUrl && !youtubeUrlValid ? 'Enter a valid youtube.com or youtu.be URL.' : undefined}
           />
-        ) : library.isLoading ? (
-          <Skeleton className="h-24" />
-        ) : videoAssets.length === 0 ? (
-          <p className="rounded-xl border border-border p-4 text-center text-sm text-muted">
-            No video assets yet — upload one here or in the Media library.
-          </p>
         ) : (
-          <div className="grid max-h-56 grid-cols-3 gap-2 overflow-y-auto">
-            {videoAssets.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                onClick={() => setPickedAssetId(a.id)}
-                className={cn('overflow-hidden rounded-xl border-2 transition-colors', pickedAssetId === a.id ? 'border-primary' : 'border-border')}
-              >
-                <video src={a.url} className="aspect-video w-full bg-charcoal-900" muted preload="metadata" />
-                <span className="block px-1 py-0.5 text-[10px] text-muted">#{a.id}</span>
-              </button>
-            ))}
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-2">
+              <div className="min-w-0 flex-1">
+                <Input
+                  value={librarySearch}
+                  onChange={(event) => setLibrarySearch(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault()
+                      setAppliedLibrarySearch(librarySearch.trim())
+                    }
+                  }}
+                  placeholder="Search title, filename or tags…"
+                  aria-label="Search video library"
+                  leftIcon={<Icon name="search" />}
+                />
+              </div>
+              <Button type="button" variant="secondary" onClick={() => setAppliedLibrarySearch(librarySearch.trim())}>Search</Button>
+            </div>
+            {library.isLoading ? (
+              <Skeleton className="h-24" />
+            ) : videoAssets.length === 0 ? (
+              <p className="rounded-xl border border-border p-4 text-center text-sm text-muted">
+                {appliedLibrarySearch ? 'No videos match your search.' : 'No video assets yet — upload one here or in the Media library.'}
+              </p>
+            ) : (
+              <div className="grid max-h-56 grid-cols-3 gap-2 overflow-y-auto">
+                {videoAssets.map((asset) => (
+                  <button
+                    key={asset.id}
+                    type="button"
+                    onClick={() => {
+                      setPickedAssetId(asset.id)
+                      if (!title) setTitle(mediaAssetLabel(asset).replace(/\.[^.]+$/, ''))
+                    }}
+                    title={mediaAssetLabel(asset)}
+                    className={cn('overflow-hidden rounded-xl border-2 text-left transition-colors', pickedAssetId === asset.id ? 'border-primary' : 'border-border')}
+                  >
+                    <video src={asset.url} className="aspect-video w-full bg-charcoal-900" muted preload="metadata" />
+                    <span className="block truncate px-2 py-1 text-xs font-medium text-foreground">{mediaAssetLabel(asset)}</span>
+                    {asset.folder && <span className="block truncate px-2 pb-1 text-[10px] text-muted">{asset.folder}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
