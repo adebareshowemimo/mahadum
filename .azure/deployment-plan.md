@@ -180,6 +180,8 @@ The current plan deploys application software onto an existing VM and creates **
 
 ## 8. Validation Proof
 
+Current validated release: [Email verification enforcement validation — 2026-09-21](#email-verification-enforcement-validation--2026-09-21). This records the actual Azure/runtime, source-integrity, SMTP-authentication, test, build, and static-analysis checks for this update.
+
 ### Course table-of-contents validation — 2026-09-07
 
 - Azure validation workflow confirmed the expected subscription, Canada Central VM/IP, production marker `541320d`, five active services and successful HTTPS health check.
@@ -309,6 +311,23 @@ This section will be populated by the Azure validation workflow before deploymen
 ---
 
 ## 12. Production deployment — 2026-09-03
+
+### Email verification enforcement validation — 2026-09-21
+
+Validated under the Azure validation workflow for an application-only update to the existing `mahadum` VM in `MAHADUM`, Canada Central, subscription `4212afa5-d96d-4717-a56d-1d34956599a6`. The user's instruction to update production authorizes this existing target. No infrastructure, RBAC, schema, or environment changes are required.
+
+- [x] Azure CLI authentication and target: `az account show`, `az vm list`, `az vm show -d`; running VM at `20.151.177.171` confirmed.
+- [x] Runtime preflight through Azure VM Run Command: release `3667752`, production URLs, Apache/PHP-FPM/MySQL/queue/cron active, `/up` healthy, sufficient disk space.
+- [x] Normalized SHA-256 hashes of all modified existing runtime files and dependency manifests match the local baseline.
+- [x] Production SendGrid SMTP connection and authentication succeeded without sending a message. Nine existing accounts are unverified and no super-admin is verified; recovery remains available to every unverified account.
+- [x] `php artisan test`: 350 passed, one existing skip, 1,775 assertions. School referral test now follows email verification before purchasing.
+- [x] `npm test`: 209 passed; two additional admin/guest verification cases passed in the subsequent 28-test guard suite (211 total frontend cases).
+- [x] `npm run build`, `php vendor/bin/pint --test`, `php vendor/bin/phpstan analyse --no-progress --memory-limit=512M`, and `git diff --check` passed.
+- [x] Bicep/ARM/Docker/RBAC provisioning checks are not applicable to this existing-VM source update.
+
+Deployment uses a checksum-verified source delta, isolated frontend build, protected backup, maintenance during source/cache replacement, retained prior hashed assets, and a transactional API probe whose temporary account and token are rolled back. SMTP inbox delivery remains a user acceptance check.
+
+**Deployment result:** Release `f768aac` deployed successfully at `2026-09-21T15:45Z`. Backup: `/var/backups/mahadum/verification-f768aac-20260921T154501Z`. The live API gate returned `email_not_verified` for application access, the temporary probe account was rolled back, the verification SPA route and all referenced public assets returned 200, and Apache, PHP-FPM, MySQL, queue, and cron remained active.
 
 ### Video practice invitations release — 2026-09-07
 
