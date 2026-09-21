@@ -482,3 +482,16 @@ Deployment will use the immutable pushed commit, isolated frontend build, integr
 - **Release snapshot:** `mahadum-release-20260820-000442.tar.gz`, 20,219,677 bytes, SHA-256 `729DB2349914E16FAF2BBD2EA6D7EE79E66D3CF1F1C11A5EE42C982CC360E245`
 - **Review deployment:** Live at `http://20.151.177.171`; fresh database only, with randomized credentials stored mode `0600` on the VM
 - **Release correction:** The original archive's over-broad `vendor` exclusion omitted tracked Laravel mail views. Those tracked files were added to the new VM snapshot, the exclusion was root-anchored, and the database was recreated before the successful final seed.
+
+### Practice-contact prefetch validation — 2026-09-21
+
+- [x] Release `d0b9c27` is pushed to `origin/codex/beta-feedback-20260903`; it prefetches eligible family and school contacts and displays them immediately when the invitation search receives focus, while filtering locally as the user types.
+- [x] Backend validation passed: 357 tests, one existing skip, 1,830 assertions; the focused invitation suite passed 4 tests / 22 assertions, including empty-query eligibility boundaries; Pint and PHPStan level 5 passed.
+- [x] Frontend validation passed: 219 tests, TypeScript, accessibility coverage, and the production Vite build.
+- [x] Azure CLI confirmed subscription `4212afa5-d96d-4717-a56d-1d34956599a6`, running VM `mahadum` in Canada Central at `20.151.177.171`, the unchanged Security Center policy assignment, and exact remote commit `d0b9c27`.
+- [x] Runtime preflight confirmed release `fe8e6e6`, 99 GB free disk, Apache/PHP-FPM/MySQL/queue and scheduler active, invitation migration batch 8 applied, and HTTPS health returning 200.
+- [x] No schema, dependency, Azure infrastructure, RBAC, or environment changes are included.
+
+Deployment will use the immutable pushed commit, an isolated frontend build, integrity-checked source/assets backup, atomic source publication, cache rebuild, queue restart, and production API/bundle/public endpoint verification with rollback on failure.
+
+**Deployment result:** Release `d0b9c27` deployed successfully at `2026-09-21T22:41:03Z`. Immutable archive SHA-256 `afa771ba12141cab6606bae69b26fd364a7e1b85f19d47849df5ee55f8102d23`; source/assets backup `/var/backups/mahadum/practice-prefetch-d0b9c27-20260921T224015Z` has SHA-256 `2a044b18a024c0d06ab476c2f76e8d81e4c7cf6fe74b9c109fe30473eaf74b5e`. Deployed source verifies empty-query contact retrieval and conditional filtering, while the served learner bundle contains the instant-loading contact UI. Apache, PHP-FPM, MySQL, and the queue are active; public `/`, `/up`, `/learn`, and `/api/v1/config` returned HTTP 200 externally. One Laravel container error occurred during the maintenance/source-swap window before the application returned live; no application errors were logged after the recorded deployment completion time.
