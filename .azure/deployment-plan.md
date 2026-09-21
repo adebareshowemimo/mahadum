@@ -328,6 +328,17 @@ Deployment will use the checksum-verified source archive, isolated frontend buil
 
 **Deployment result:** Release `252a310` deployed successfully at `2026-09-21T19:37:53Z`. The first two attempts stopped safely and restored the prior release while resolving an execution-user lock and Composer-environment mismatch; neither applied the migration. The successful retry used the unchanged validated archive, skipped dependency installation because dependency manifests were unchanged, and applied migration batch 6. Verified backup: `/var/backups/mahadum/media-252a310-20260921T193537Z` (source and database SHA-256 checks passed). The release marker, folder column migration, media UI bundle strings, Apache, PHP-FPM, MySQL, queue worker, localhost health, and public `/`, `/up`, `/media`, and `/api/v1/config` endpoints all passed. The VM system identity has no Azure role assignments; this release added or changed no RBAC.
 
+### Media strict-MySQL hotfix validation — 2026-09-21
+
+- [x] Production logs confirmed `ONLY_FULL_GROUP_BY` rejected the folder aggregation because `latest()` added `ORDER BY media_assets.created_at` before the grouped queries were cloned.
+- [x] Release `70d41b5` is pushed to `origin/codex/beta-feedback-20260903`; the change is limited to the media controller and its regression test, with no dependency, schema, frontend, infrastructure, or RBAC changes.
+- [x] `composer ci` passed: Pint, PHPStan level 5, 351 tests passed, one existing skip, and 1,790 assertions. The focused media suite passed 7 tests / 34 assertions and verifies grouped queries contain no `created_at` ordering.
+- [x] Azure CLI confirmed subscription `4212afa5-d96d-4717-a56d-1d34956599a6`, running VM `mahadum` in Canada Central at `20.151.177.171`, and the exact remote commit.
+
+Deployment will back up the affected production controller, install the checksum-verified file from the pushed commit, rebuild Laravel caches, restart the queue, and exercise `MediaController@index` directly against production MySQL before checking public health.
+
+**Deployment result:** Release `70d41b5` deployed successfully at `2026-09-21T19:51:19Z`. The controller checksum matched the pushed commit, Laravel caches rebuilt, PHP-FPM reloaded, and the formerly failing `MediaController@index` path passed directly against production MySQL. Apache, PHP-FPM, MySQL, and the queue are active; public `/`, `/up`, `/media`, and `/api/v1/config` returned HTTP 200; no new production SQL errors were logged. Rollback copy: `/var/backups/mahadum/media-hotfix-70d41b5-20260921T195119Z`.
+
 ### Email verification enforcement validation — 2026-09-21
 
 Validated under the Azure validation workflow for an application-only update to the existing `mahadum` VM in `MAHADUM`, Canada Central, subscription `4212afa5-d96d-4717-a56d-1d34956599a6`. The user's instruction to update production authorizes this existing target. No infrastructure, RBAC, schema, or environment changes are required.
