@@ -339,6 +339,18 @@ Deployment will back up the affected production controller, install the checksum
 
 **Deployment result:** Release `70d41b5` deployed successfully at `2026-09-21T19:51:19Z`. The controller checksum matched the pushed commit, Laravel caches rebuilt, PHP-FPM reloaded, and the formerly failing `MediaController@index` path passed directly against production MySQL. Apache, PHP-FPM, MySQL, and the queue are active; public `/`, `/up`, `/media`, and `/api/v1/config` returned HTTP 200; no new production SQL errors were logged. Rollback copy: `/var/backups/mahadum/media-hotfix-70d41b5-20260921T195119Z`.
 
+### Learning-path stale-node hotfix validation — 2026-09-21
+
+- [x] Apache access logs confirmed repeated HTTP 500 responses from `/api/v1/learners/{learner}/path`; Laravel logs identified a null lesson passed to `LessonAccess::content()`.
+- [x] Read-only production inspection found 26 learning-path nodes referencing soft-deleted lessons across seven learner profiles, including the profiles shown in the failing requests.
+- [x] Release `af24443` filters path nodes through the active lesson and course-level relationships before rendering. It is pushed to `origin/codex/beta-feedback-20260903` and changes no dependencies, schema, frontend, infrastructure, or RBAC.
+- [x] `composer ci` passed: Pint, PHPStan level 5, 352 tests passed, one existing skip, and 1,793 assertions. The focused learning loop passed 6 tests / 30 assertions, including the deleted-lesson regression.
+- [x] Azure resource and activity checks found the expected running Canada Central VM and only successful/active Run Command operations related to diagnostics and deployment.
+
+Deployment will checksum the pushed controller, preserve a rollback copy, rebuild Laravel caches, reload PHP-FPM, and exercise every affected learner path directly against production MySQL before checking public health.
+
+**Deployment result:** Release `af24443` deployed successfully at `2026-09-21T20:05:54Z`. The controller checksum matched the pushed commit; caches rebuilt and PHP-FPM reloaded. Direct production-MySQL calls for all seven affected learner profiles returned valid learning-path payloads. Apache, PHP-FPM, MySQL, and the queue are active; public `/`, `/up`, `/learn`, and `/api/v1/config` returned HTTP 200; no learning-path exception recurred after deployment. Rollback copy: `/var/backups/mahadum/learn-hotfix-af24443-20260921T200554Z`.
+
 ### Email verification enforcement validation — 2026-09-21
 
 Validated under the Azure validation workflow for an application-only update to the existing `mahadum` VM in `MAHADUM`, Canada Central, subscription `4212afa5-d96d-4717-a56d-1d34956599a6`. The user's instruction to update production authorizes this existing target. No infrastructure, RBAC, schema, or environment changes are required.
