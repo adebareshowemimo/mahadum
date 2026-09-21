@@ -97,6 +97,9 @@ class MediaOrphanTest extends TestCase
             'original_name' => 'unfiled.mp4',
         ]);
 
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
         $this->getJson('/api/v1/media?folder=Yoruba%2FWeek%201')
             ->assertOk()
             ->assertJsonPath('meta.total', 2)
@@ -105,6 +108,14 @@ class MediaOrphanTest extends TestCase
             ->assertJsonPath('folders.1.name', 'Yoruba/Week 1')
             ->assertJsonPath('folders.1.total', 2)
             ->assertJsonPath('folders.1.video_count', 1);
+
+        $aggregateQueries = collect(DB::getQueryLog())
+            ->pluck('query')
+            ->filter(fn (string $query) => str_contains(strtolower($query), 'group by'));
+
+        $this->assertNotEmpty($aggregateQueries);
+        $aggregateQueries->each(fn (string $query) => $this->assertStringNotContainsString('created_at', strtolower($query)));
+        DB::disableQueryLog();
 
         $this->getJson('/api/v1/media?folder=__unfiled')
             ->assertOk()

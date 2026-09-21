@@ -48,7 +48,7 @@ class MediaController extends Controller
     {
         $perPage = min(max((int) $request->integer('per_page', 24), 1), 100);
 
-        $query = MediaAsset::query()->latest();
+        $query = MediaAsset::query();
 
         if ($q = trim((string) $request->query('q', ''))) {
             $query->where('original_name', 'like', "%{$q}%");
@@ -83,6 +83,7 @@ class MediaController extends Controller
             $query->where('type', $type);
         }
 
+        $query->latest();
         $page = $query->paginate($perPage);
 
         return response()->json([
