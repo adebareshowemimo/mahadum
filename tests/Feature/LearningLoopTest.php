@@ -142,4 +142,23 @@ class LearningLoopTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.lesson.id', $lesson->id);
     }
+
+    public function test_learning_path_ignores_nodes_for_deleted_lessons(): void
+    {
+        $this->seedRbac();
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $learner = $this->parentWithChild($parent);
+        $lesson = $this->publishedLesson();
+
+        $this->postJson('/api/v1/enrollments', [
+            'learner_id' => $learner->id,
+            'course_id' => $lesson->courseLevel->course_id,
+        ])->assertCreated();
+
+        $lesson->delete();
+
+        $this->getJson("/api/v1/learners/{$learner->id}/path")
+            ->assertOk()
+            ->assertJsonCount(0, 'data.units');
+    }
 }

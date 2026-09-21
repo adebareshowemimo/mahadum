@@ -15,6 +15,7 @@ class PathController extends Controller
     public function show(LearnerProfile $learner): JsonResponse
     {
         $nodes = LearnerPathNode::whereHas('enrollment', fn ($q) => $q->where('learner_profile_id', $learner->id))
+            ->whereHas('lesson.courseLevel')
             ->with(['lesson.courseLevel'])
             ->orderBy('position')
             ->get();
