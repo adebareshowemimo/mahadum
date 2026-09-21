@@ -4,6 +4,7 @@ import { learningApi, profileApi, type CourseCatalogQuery, type Me } from '@/lib
 export const learningKeys = {
   path: (learnerId: number) => ['learner-path', learnerId] as const,
   courses: (query: CourseCatalogQuery) => ['courses', 'published', query] as const,
+  practiceContacts: (learnerId: number, q: string) => ['practice-contacts', learnerId, q] as const,
 }
 
 export function usePath(learnerId: number | null | undefined) {
@@ -30,6 +31,20 @@ export function useEnroll(learnerId: number) {
       void qc.invalidateQueries({ queryKey: learningKeys.path(learnerId) })
       void qc.invalidateQueries({ queryKey: ['courses', 'published'] })
     },
+  })
+}
+
+export function usePracticeContacts(learnerId: number, q: string) {
+  return useQuery({
+    queryKey: learningKeys.practiceContacts(learnerId, q),
+    queryFn: () => learningApi.searchPracticeContacts(learnerId, q),
+    enabled: q.trim().length >= 2,
+  })
+}
+
+export function useInvitePractice() {
+  return useMutation({
+    mutationFn: (input: { learnerId: number; recipientUserId: number }) => learningApi.invitePractice(input),
   })
 }
 

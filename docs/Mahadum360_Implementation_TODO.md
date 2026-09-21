@@ -8,6 +8,16 @@ backend architecture, content model, DB layer, and UI designs already produced.
 **Legend:** ✅ done · 🟡 in progress / partial · ⬜ not started
 **Tags:** `[MVP]` ships for launch · `[POST]` deferred · `[BLOCK]` decision needed first
 
+### Pending review follow-up (2026-09-09)
+
+Source: `Mahadum pending Item.docx`. Detailed reproduction and acceptance tasks are tracked in [Beta Feedback TODO BF-17](Mahadum360_Beta_Feedback_TODO.md#bf-17--pending-items-review-added-2026-09-09).
+
+- [ ] **M3:** Post-video **Invite to Practice** action, clear invitation message, and relevant-video link (BF-17.1; extends BF-08).
+- [ ] **M4:** Reproduce the reported heart deduction and enforce the approved four-answered-questions cadence (BF-17.2). The attachment's four-**failed**-questions recommendation requires a product-rule amendment.
+- [ ] **M3:** **Repeat/Retry Quiz** at every quiz result screen, preserving attempt limits and XP rules (BF-17.3).
+- [ ] **M3:** Shuffle dropdown answer options per question/attempt without breaking grading (BF-17.4).
+- [ ] **M1/M5:** Fix **Exit to Parent** for accounts with Parent/Admin roles (BF-17.5).
+
 > **Status snapshot (2026-06-27).** The **backend API for milestones 1–9 is feature-complete, tested
 > (57 feature tests / 223 assertions), and statically clean** (Pint + PHPStan level 5, enforced in CI).
 > Hardening already landed: payout separation-of-duties, signed + idempotent payment **and** telco
@@ -98,6 +108,7 @@ Ongoing in parallel: **Design**, **Content production**, **Integrations**, **Com
 - [x] ✅ Seed roles + permissions (super_admin, content_owner, teacher, supervisor, school_admin, parent, student) + Gate policies.
 - [x] ✅ Registration with **age-gate** → branch: adult self-serve vs under-13 child-under-parent (COPPA/NDPA consent record).
 - [x] ✅ Login (username/email + password); Google login (Socialite); password reset; **email verification** (verify + resend).
+- [x] **Email verification enforcement (2026-09-21):** authenticated application APIs reject unverified accounts with `email_not_verified`; session lookup, resend, refresh, and logout remain available. The SPA directs unverified registrations/logins to `/verify-email` with resend, status check, and sign-out controls. Signed browser links return to the SPA; invalid/expired signatures offer resend recovery. Applies to existing unverified accounts as well as new registrations; no automatic verification or data migration.
 - [x] ✅ Sanctum: cookie auth (web SPA, stateful) + bearer tokens (mobile) with abilities.
 - [x] ✅ Profiles: family + learner_profiles; **child profile switch** with parental PIN.
 - [x] ✅ Device fingerprint capture (fraud groundwork); audit logging on sensitive actions (`AuditLogger`).

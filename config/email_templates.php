@@ -245,6 +245,23 @@ return [
             'action_url' => '{{brand_url}}/assignments',
         ],
     ],
+    'course_practice_invitation' => [
+        'label' => 'Practice-with-me invitation',
+        'category' => 'Learning',
+        'trigger' => 'A guardian invites a family or school contact to practice a lesson together',
+        'placeholders' => [
+            '{{inviter}}' => 'Inviter’s name',
+            '{{lesson_title}}' => 'Lesson title',
+            '{{url}}' => 'Invitation link',
+        ],
+        'default' => [
+            'subject' => '{{inviter}} invited you to practice on Mahadum.360',
+            'greeting' => 'Hello',
+            'body' => "{{inviter}} invited you to practice “{{lesson_title}}” together.\n\nFor learner privacy, sign in with this email address to open it. The learner’s contact details are never shared.\n\nThis invitation expires in 48 hours.",
+            'action_text' => 'Practice together',
+            'action_url' => '{{url}}',
+        ],
+    ],
     'support_reply' => [
         'label' => 'Support ticket reply',
         'category' => 'Support',

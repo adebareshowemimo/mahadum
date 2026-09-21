@@ -760,6 +760,23 @@ export interface TonePracticeInvitation {
   accepted: boolean
 }
 
+export interface PracticeContact {
+  id: number
+  name: string
+  email: string
+  relation: 'family' | 'school'
+  role: string
+}
+
+export interface CoursePracticeInvitation {
+  inviter_name: string
+  lesson_id: number
+  lesson_title: string
+  course_title: string | null
+  expires_at: string
+  accepted: boolean
+}
+
 // ---- Referrals & payouts ----
 
 export interface ReferralCode {

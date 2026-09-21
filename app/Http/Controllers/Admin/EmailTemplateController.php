@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateEmailTemplateRequest;
 use App\Models\AssignmentSubmission;
 use App\Models\Chore;
+use App\Models\CoursePracticeInvitation;
 use App\Models\EmailTemplateOverride;
 use App\Models\Invoice;
+use App\Models\Lesson;
 use App\Models\Organization;
 use App\Models\Payout;
 use App\Models\Plan;
@@ -18,6 +20,7 @@ use App\Models\TelcoSubscription;
 use App\Models\User;
 use App\Notifications\AssignmentApproved;
 use App\Notifications\ChoreApproved;
+use App\Notifications\CoursePracticeInvitationNotification;
 use App\Notifications\InvoiceReceipt;
 use App\Notifications\NewDeviceAlert;
 use App\Notifications\OrganizationSeatAssigned;
@@ -187,6 +190,11 @@ class EmailTemplateController extends Controller
 
         $submission = new AssignmentSubmission;
 
+        $practiceLesson = (new Lesson)->forceFill(['id' => 1, 'title' => 'Greetings at the market']);
+        $practiceInvitation = (new CoursePracticeInvitation)->forceFill(['id' => 1]);
+        $practiceInvitation->setRelation('inviter', $user);
+        $practiceInvitation->setRelation('lesson', $practiceLesson);
+
         $invoice = (new Invoice)->forceFill(['id' => 1, 'amount_minor' => 4_500_000]);
         $invoice->setRelation('organization', $organization);
 
@@ -207,6 +215,7 @@ class EmailTemplateController extends Controller
             'chore_approved' => fn () => (new ChoreApproved($chore, 50))->toMail($user),
             'assignment_approved' => fn () => (new AssignmentApproved($submission, 30))->toMail($user),
             'support_reply' => fn () => (new SupportReply($ticket, 'Thanks for reaching out — try re-downloading the lesson from the offline tab; that should clear it up.'))->toMail($user),
+            'course_practice_invitation' => fn () => (new CoursePracticeInvitationNotification($practiceInvitation, 'preview-token'))->toMail($user),
         ];
     }
 }

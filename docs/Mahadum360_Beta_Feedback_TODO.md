@@ -1,5 +1,7 @@
 # MAHADUM.360 Beta Feedback Remediation TODO
 
+> **September 9 review addendum:** See [BF-17](#bf-17--pending-items-review-added-2026-09-09) for the five findings from `Mahadum pending Item.docx`. The [September 7 learning access decision](Mahadum360_Learning_Access_Decision.md) supersedes historical heart/access statements and decision requests below, including BF-10.6, BF-10.8, BF-13.1, and BF-15.
+
 **Reviewed:** 2026-09-03
 **Feedback source:** `MAHADUM360_Post_Deployment_Beta_Testing_Feedback updated september 1.docx`
 **Scope:** Detailed code-to-feedback review and implementation backlog. This document does not itself authorize production data deletion or changes that conflict with locked product rules.
@@ -369,6 +371,53 @@ Use the non-blocking alternatives in BF-10.8 and BF-13.1 unless the product owne
 - [ ] Build idempotent queued sync with retry/backoff, rate limits, audit-safe logs, and a reconciliation command/dashboard.
 - [ ] Never sync child learner profiles or sensitive learning data unless a separately approved legal/privacy requirement exists.
 - [ ] Add contract tests against a stub, replay/idempotency tests, unsubscribe precedence tests, deletion/anonymization tests, and an end-to-end staging test.
+
+---
+
+## BF-17 — Pending items review (added 2026-09-09)
+
+**Source:** `Mahadum pending Item.docx`, supplied for addition to the TODO list. These are reported findings awaiting reproduction, not newly verified code defects. Recommendations are recorded as backlog input; this review does not supersede approved product rules. Related work is linked below so existing implementation records remain intact.
+
+### BF-17.1 Invite to practice after a language video
+
+**Reported finding:** After completing a language video, a learner has no option to invite someone when nobody is available to practise tone with them. Extends the invitation workflow recorded in BF-08.
+
+- [ ] Reproduce the post-video/no-partner flow and expose an **Invite to Practice** action at that point, reusing the existing invitation workflow where applicable.
+- [ ] Provide a clear invitation message and a direct link to the relevant language video/practice context; verify that signing in preserves the destination.
+- [ ] Retain BF-08 guardian control, eligible-recipient restrictions, expiring links, and content-access checks. Verify adult and child-profile flows, unavailable content, and expired invitations.
+
+### BF-17.2 Heart deduction cadence discrepancy
+
+**Reported finding:** One heart is deducted for each failed question. **Review recommendation:** Deduct one heart after every four failed questions. **Conflict:** The approved September 7 rule is one heart per four **answered** quiz questions, regardless of correctness; paid learners have unlimited hearts. See BF-10.6 and the linked learning access decision.
+
+- [ ] Reproduce the reported deduction in the target environment and compare it with the approved cadence, including deployed version/migration state.
+- [ ] Fix any deviation from the approved four-answered-questions rule and verify correct, incorrect, and mixed answers at the fourth/eighth-answer boundaries, duplicate submissions, paid exemptions, and the 12-hour zero-heart lock.
+- [?] Obtain an explicit product-rule amendment only if the requested **four failed questions** cadence is still desired; do not implement that recommendation from the attachment alone.
+
+### BF-17.3 Repeat or retry each quiz from its result screen
+
+**Reported finding:** Quiz completion shows the score and **Continue to Next Activity**, but no repeat/retry option. Extends BF-10.3 and BF-10.5; retry must be available at each quiz boundary, not only through failed-quiz video review.
+
+- [ ] Add or restore **Repeat/Retry Quiz** on each quiz result screen for both passing and failing results, alongside continuing to the next activity.
+- [ ] Restart the same quiz with cleared attempt UI while preserving completed progress, server attempt limits, approved heart/access rules, and XP anti-farming behavior.
+- [ ] Verify passing/failing results, multiple quizzes within one lesson, final-quiz results, and attempt-cap handling with clear feedback when a scored retry is unavailable.
+
+### BF-17.4 Shuffle dropdown answer options
+
+**Reported finding:** Dropdown options appear in correct-answer order, making answers predictable. This is distinct from the sentence-tile shuffle recorded in BF-10.9.
+
+- [ ] Shuffle each dropdown's options per question and attempt/session; keep the order stable during ordinary rerenders and generate a fresh shuffle on retry.
+- [ ] Preserve option IDs and answer-key mappings without mutating authored data; verify grading, selection persistence, duplicate labels, keyboard access, and retry behavior with deterministic shuffle tests.
+
+### BF-17.5 Exit to Parent for users with multiple roles
+
+**Reported finding:** For a user with both Parent/Admin roles, **Exit to Parent** does not return from the Admin/Learner context to the Parent profile.
+
+- [ ] Reproduce with a multi-role account and identify the active learner/profile and role-routing state that prevents returning to the parent context.
+- [ ] Restore the Parent context and destination when **Exit to Parent** is selected, clearing learner-mode state while retaining the authenticated account and its authorized roles.
+- [ ] Verify Parent/Admin and parent-only accounts, navigation/reload persistence, existing guardian checks, and continued admin-route authorization boundaries.
+
+**Plan mapping:** BF-17.1, BF-17.3, and BF-17.4 → M3 learning loop; BF-17.2 → M4 gamification; BF-17.5 → M1 identity and M5 family experience. Reproduction and acceptance checks also feed M10 launch hardening.
 
 ---
 

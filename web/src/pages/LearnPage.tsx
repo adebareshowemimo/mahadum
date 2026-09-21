@@ -16,6 +16,7 @@ import { useHearts, useStreak } from '@/lib/gamification/queries'
 import { formatDayStreak } from '@/lib/gamification/format'
 import { CourseCatalogPage } from '@/pages/CourseCatalogPage'
 import { ProfilePictureModal } from '@/components/learner/ProfilePictureModal'
+import { PracticeWithMeCard } from '@/components/learner/PracticeWithMeCard'
 
 export function LearnPage() {
   const [pictureOpen, setPictureOpen] = useState(false)
@@ -76,6 +77,7 @@ export function LearnPage() {
               </ol>
             </section>
           ))}
+          <PracticeWithMeCard learnerId={activeLearner.id} />
           <div className="flex flex-col items-start gap-3 rounded-2xl border border-border bg-surface-muted p-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="font-display font-bold text-foreground">Ready for something new?</h2>

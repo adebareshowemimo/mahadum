@@ -484,6 +484,29 @@ export const learningApi = {
     return data.data
   },
 
+  async searchPracticeContacts(learnerId: number, q: string): Promise<import('./types').PracticeContact[]> {
+    const { data } = await api.get(`/learners/${learnerId}/practice-contacts`, { params: { q } })
+    return data.data
+  },
+
+  async invitePractice(input: { learnerId: number; recipientUserId: number }): Promise<{ sent: boolean; expires_at: string }> {
+    const { data } = await api.post('/course-practice/invitations', {
+      learner_id: input.learnerId,
+      recipient_user_id: input.recipientUserId,
+    })
+    return data.data
+  },
+
+  async coursePracticeInvitation(token: string): Promise<import('./types').CoursePracticeInvitation> {
+    const { data } = await api.get(`/course-practice/invitations/${encodeURIComponent(token)}`)
+    return data.data
+  },
+
+  async acceptCoursePracticeInvitation(token: string): Promise<import('./types').CoursePracticeInvitation> {
+    const { data } = await api.post(`/course-practice/invitations/${encodeURIComponent(token)}/accept`)
+    return data.data
+  },
+
   async submitAssignment(input: {
     learnerId: number
     componentId: number

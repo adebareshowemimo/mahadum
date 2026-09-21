@@ -73,11 +73,13 @@ use App\Http\Controllers\Gamification\StreakController;
 use App\Http\Controllers\Learning\AnswerController;
 use App\Http\Controllers\Learning\AssessmentController;
 use App\Http\Controllers\Learning\AssignmentSubmissionController;
+use App\Http\Controllers\Learning\CoursePracticeInvitationController;
 use App\Http\Controllers\Learning\EnrollmentController;
 use App\Http\Controllers\Learning\LearnerAvatarController;
 use App\Http\Controllers\Learning\LessonCompletionController;
 use App\Http\Controllers\Learning\LessonPlayController;
 use App\Http\Controllers\Learning\PathController;
+use App\Http\Controllers\Learning\PracticeContactController;
 use App\Http\Controllers\Learning\ProgressController;
 use App\Http\Controllers\Learning\SpeakingSubmissionController;
 use App\Http\Controllers\Learning\TonePracticeInvitationController;
@@ -238,6 +240,7 @@ Route::prefix('v1')->group(function () {
         Route::post('enrollments', [EnrollmentController::class, 'store']);
         Route::get('learners/{learner}/path', [PathController::class, 'show'])->can('view', 'learner');
         Route::get('learners/{learner}/progress', [ProgressController::class, 'show'])->can('view', 'learner');
+        Route::get('learners/{learner}/practice-contacts', [PracticeContactController::class, 'index'])->can('view', 'learner');
         Route::post('learners/{learner}/avatar', [LearnerAvatarController::class, 'update'])->can('update', 'learner');
         Route::get('lessons/{lesson}/play', [LessonPlayController::class, 'show']);
         Route::post('lessons/{lesson}/progress', [ProgressController::class, 'store']);
@@ -249,6 +252,12 @@ Route::prefix('v1')->group(function () {
         Route::get('tone-practice/invitations/{token}', [TonePracticeInvitationController::class, 'show'])
             ->middleware('throttle:30,1');
         Route::post('tone-practice/invitations/{token}/accept', [TonePracticeInvitationController::class, 'accept'])
+            ->middleware('throttle:20,1');
+        Route::post('course-practice/invitations', [CoursePracticeInvitationController::class, 'store'])
+            ->middleware('throttle:10,1');
+        Route::get('course-practice/invitations/{token}', [CoursePracticeInvitationController::class, 'show'])
+            ->middleware('throttle:30,1');
+        Route::post('course-practice/invitations/{token}/accept', [CoursePracticeInvitationController::class, 'accept'])
             ->middleware('throttle:20,1');
         Route::post('assignment-submissions', [AssignmentSubmissionController::class, 'store']);
 
