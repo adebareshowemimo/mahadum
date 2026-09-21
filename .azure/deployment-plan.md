@@ -180,7 +180,7 @@ The current plan deploys application software onto an existing VM and creates **
 
 ## 8. Validation Proof
 
-Current validated release: [Email verification enforcement validation — 2026-09-21](#email-verification-enforcement-validation--2026-09-21). This records the actual Azure/runtime, source-integrity, SMTP-authentication, test, build, and static-analysis checks for this update.
+Current validated release: [Media folder browsing validation — 2026-09-21](#media-folder-browsing-validation--2026-09-21). This records the actual Azure/runtime, source-integrity, migration, test, build, and static-analysis checks for this update.
 
 ### Course table-of-contents validation — 2026-09-07
 
@@ -311,6 +311,22 @@ This section will be populated by the Azure validation workflow before deploymen
 ---
 
 ## 12. Production deployment — 2026-09-03
+
+### Media folder browsing validation — 2026-09-21
+
+Validated for application release `252a310` on the existing `mahadum` VM in `MAHADUM`, Canada Central, subscription `4212afa5-d96d-4717-a56d-1d34956599a6`. The user reconfirmed this exact subscription, VM, and region before deployment. No infrastructure or RBAC changes are included.
+
+- [x] Azure CLI 2.84.0 authenticated to the confirmed subscription; VM is running/succeeded at `20.151.177.171`; existing Security Center policy assignment remains present.
+- [x] Runtime preflight: production environment, Apache, PHP-FPM, MySQL, queue worker, and scheduler active; HTTPS and localhost health checks pass; 100 GB disk available.
+- [x] Release `252a310` is pushed to origin. GitHub source archive SHA-256: `8A4B86662F346F1DD64BD6F9063C05880CDE719E49AE0A919E505D0B5C6A9201`; required controller, migration, and media-page files are present.
+- [x] `php artisan test`: 351 passed, one existing skip, 1,787 assertions. Media folder upload/filter/count coverage passed.
+- [x] `npm test`: 213 passed. Media list/grid and folder-count UI coverage passed.
+- [x] `npm run build`, `vendor/bin/pint --test`, `vendor/bin/phpstan analyse --level=5`, and `git diff --check` passed.
+- [x] Bicep/ARM/Docker/static-RBAC checks are not applicable: this is an application-only snapshot release to the existing VM, with no Azure resource or identity changes.
+
+Deployment will use the checksum-verified source archive, isolated frontend build, source/database backups, maintenance mode for replacement and migration, rollback recovery, queue restart, and live health/schema/page verification.
+
+**Deployment result:** Release `252a310` deployed successfully at `2026-09-21T19:37:53Z`. The first two attempts stopped safely and restored the prior release while resolving an execution-user lock and Composer-environment mismatch; neither applied the migration. The successful retry used the unchanged validated archive, skipped dependency installation because dependency manifests were unchanged, and applied migration batch 6. Verified backup: `/var/backups/mahadum/media-252a310-20260921T193537Z` (source and database SHA-256 checks passed). The release marker, folder column migration, media UI bundle strings, Apache, PHP-FPM, MySQL, queue worker, localhost health, and public `/`, `/up`, `/media`, and `/api/v1/config` endpoints all passed. The VM system identity has no Azure role assignments; this release added or changed no RBAC.
 
 ### Email verification enforcement validation — 2026-09-21
 
