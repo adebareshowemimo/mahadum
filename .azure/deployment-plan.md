@@ -351,6 +351,19 @@ Deployment will checksum the pushed controller, preserve a rollback copy, rebuil
 
 **Deployment result:** Release `af24443` deployed successfully at `2026-09-21T20:05:54Z`. The controller checksum matched the pushed commit; caches rebuilt and PHP-FPM reloaded. Direct production-MySQL calls for all seven affected learner profiles returned valid learning-path payloads. Apache, PHP-FPM, MySQL, and the queue are active; public `/`, `/up`, `/learn`, and `/api/v1/config` returned HTTP 200; no learning-path exception recurred after deployment. Rollback copy: `/var/backups/mahadum/learn-hotfix-af24443-20260921T200554Z`.
 
+### Media metadata and picker search validation — 2026-09-21
+
+- [x] Release `20302ef` is pushed to `origin/codex/beta-feedback-20260903`; it adds media title, description, tags and folder editing, metadata-aware search, explicit search controls, and named lesson-picker results.
+- [x] Azure CLI confirmed the previously approved production target: subscription `4212afa5-d96d-4717-a56d-1d34956599a6`, running VM `mahadum` in Canada Central at `20.151.177.171`. The existing Security Center policy assignment is unchanged.
+- [x] Runtime preflight confirmed release `af24443`, production environment, Apache/PHP-FPM/MySQL/queue active, HTTPS health passing, 100 GB free disk, and migration `2026_09_21_000001` applied.
+- [x] Backend validation passed: 353 tests, one existing skip, 1,804 assertions; Pint and PHPStan level 5 passed. Metadata update, normalization, searching, and default upload-title coverage passed.
+- [x] Frontend validation passed: 215 tests, TypeScript, and the production Vite build. Local visual inspection confirmed the search button, edit actions, metadata dialog, accessible labels, and list layout.
+- [x] Bicep/ARM/Terraform/Docker and new-role checks are not applicable: this is an application-only release to the existing VM with no Azure resource or RBAC changes.
+
+Deployment will use the immutable pushed commit, isolated frontend build, source/assets and database backups, maintenance mode for source replacement and migration, cache rebuild, queue restart, rollback recovery, and production API/schema/bundle verification.
+
+**Deployment result:** Release `20302ef` deployed successfully at `2026-09-21T21:03:32Z`. Archive SHA-256 `a245d5fa743c8793f88699a1909205202728e3cb81f4546c1329eeeaf7ec7873`; migration batch 7 applied. A rollback-safe live MySQL transaction verified metadata storage and tag search, the PATCH route and served media/editor bundles were confirmed, and authenticated browser checks showed the Search controls, named video results, Edit actions, and metadata dialog. Apache, PHP-FPM, MySQL, and the queue are active; public `/`, `/up`, `/media`, `/courses/9/lessons/133`, and `/api/v1/config` returned HTTP 200 with no new production errors. Backup: `/var/backups/mahadum/media-metadata-20302ef-20260921T210332Z` (source/assets and database checksums passed). The VM identity has no role assignments, as expected; no RBAC or Azure infrastructure changed.
+
 ### Email verification enforcement validation — 2026-09-21
 
 Validated under the Azure validation workflow for an application-only update to the existing `mahadum` VM in `MAHADUM`, Canada Central, subscription `4212afa5-d96d-4717-a56d-1d34956599a6`. The user's instruction to update production authorizes this existing target. No infrastructure, RBAC, schema, or environment changes are required.
