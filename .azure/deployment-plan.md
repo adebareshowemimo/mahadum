@@ -457,6 +457,21 @@ Deployment uses a checksum-verified source delta, isolated frontend build, prote
 
 ---
 
+### Course practice invitations validation — 2026-09-21
+
+- [x] Release `fe8e6e6` is pushed to `origin/codex/beta-feedback-20260903`; it adds course-level practice-contact search, recipient-bound 48-hour invitations, a customizable email template, and a privacy-safe invitation page.
+- [x] Azure CLI confirmed subscription `4212afa5-d96d-4717-a56d-1d34956599a6`, running VM `mahadum` in Canada Central at `20.151.177.171`, the unchanged Security Center policy assignment, and the exact remote commit.
+- [x] Runtime preflight confirmed release `20302ef`, production environment, Apache/PHP-FPM/MySQL/queue and scheduler active, HTTPS health returning 200, 100 GB free disk, and migrations through media metadata batch 7 applied.
+- [x] Backend validation passed: 357 tests, one existing skip, 1,827 assertions; the four focused invitation tests passed with 19 assertions; Pint and PHPStan level 5 passed.
+- [x] Frontend validation passed: 218 tests, TypeScript, accessibility coverage for the new card, and the production Vite build.
+- [x] Bicep/ARM/Terraform/Docker and new-role checks are not applicable: this is an application-only release to the existing VM with no Azure resource or RBAC changes.
+
+Deployment will use the immutable pushed commit, isolated frontend build, integrity-checked source/assets and database backups, maintenance mode for source replacement and migration, cache rebuild, queue restart, and schema/route/bundle/public endpoint verification with automatic rollback on failure.
+
+**Deployment result:** Release `fe8e6e6` deployed successfully at `2026-09-21T22:08:23Z`. Immutable archive SHA-256 `8fb89efe390895d9524d3141d218e71f80cd4760df721005f3f4cade2ce8f643`; migration batch 8 created `course_practice_invitations`. The release marker, schema columns, three invitation API routes, learner card bundle, invitation-page bundle, and public `/`, `/up`, `/learn`, `/course-practice/test-token`, and `/api/v1/config` endpoints passed. Apache, PHP-FPM, MySQL, and the queue are active, and no recent application errors were found. Backup: `/var/backups/mahadum/course-practice-fe8e6e6-20260921T220737Z`; source archive SHA-256 `ec9b4a1f2cd0e65f21f8197cac02268a1151dc73e3f607cc4de6d430d75e68ff`, database dump SHA-256 `cae3c8e2924a7d973e96f96a581cba0aae11ef10c09ebf4a74b4e2ec166c47f5`. Earlier attempts stopped and rolled back safely while database-tool and post-restart verification assumptions were corrected; the final run started from the confirmed prior release with the orphaned empty attempt table removed.
+
+---
+
 ## 11. Functional Verification
 
 - **Status:** Verified locally on 2026-08-20
