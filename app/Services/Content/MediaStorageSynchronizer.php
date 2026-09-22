@@ -35,12 +35,20 @@ class MediaStorageSynchronizer
      *
      * @return array{created: int, updated: int, unchanged: int, unsupported: int}
      */
-    public function sync(?FilesystemAdapter $disk = null, bool $persist = true): array
+    public function sync(?FilesystemAdapter $disk = null, bool $persist = true, array $folders = []): array
     {
         $disk ??= Storage::disk('public');
         $result = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'unsupported' => 0];
+        $roots = collect($folders)
+            ->map(fn (string $folder) => trim(str_replace('\\', '/', $folder), '/'))
+            ->filter()
+            ->map(fn (string $folder) => "media/{$folder}")
+            ->values();
+        $files = $roots->isEmpty()
+            ? collect($disk->allFiles('media'))
+            : $roots->flatMap(fn (string $root) => $disk->allFiles($root));
 
-        foreach ($disk->allFiles('media') as $storedPath) {
+        foreach ($files->unique()->sort()->values() as $storedPath) {
             $path = str_replace('\\', '/', $storedPath);
             $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
             $type = self::TYPES[$extension] ?? null;

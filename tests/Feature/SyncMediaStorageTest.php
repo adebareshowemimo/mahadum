@@ -22,6 +22,21 @@ class SyncMediaStorageTest extends TestCase
         $this->assertStringContainsString('1 created', Artisan::output());
     }
 
+    public function test_it_can_limit_imports_to_named_storage_folders(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('media/Yoruba practice videos/greeting.mp4', 'yoruba');
+        Storage::disk('public')->put('media/Unrelated/private.mp4', 'other');
+
+        $this->assertSame(0, Artisan::call('media:sync-storage', [
+            '--folder' => ['Yoruba practice videos'],
+        ]));
+
+        $this->assertDatabaseCount('media_assets', 1);
+        $this->assertDatabaseHas('media_assets', ['folder' => 'Yoruba practice videos']);
+        $this->assertDatabaseMissing('media_assets', ['folder' => 'Unrelated']);
+    }
+
     public function test_it_imports_identically_named_videos_as_distinct_assets_per_folder(): void
     {
         Storage::fake('public');
