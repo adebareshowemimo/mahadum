@@ -357,8 +357,8 @@ Use the non-blocking alternatives in BF-10.8 and BF-13.1 unless the product owne
 ### BF-16.1 Amazon SES delivery
 
 - [x] SMTP host/port/scheme/username/password/from settings can be saved securely and tested from the admin portal.
-- [ ] Configure verified SES identity/domain, DKIM/SPF/DMARC, production SMTP credentials, correct region endpoint, and an approved From address.
-- [ ] Move SES out of sandbox or confirm recipient restrictions before launch.
+- [x] Verified `mahadum360.com`, enabled Easy DKIM, approved SES production access in `af-south-1`, and confirmed external Gmail delivery through the authenticated Mail Manager endpoint (2026-09-24).
+- [ ] Save the tested AWS SMTP credentials and approved `info@mahadum360.com` From address in production `.env`, remove any stale `integration.mail.*` database overrides, then rebuild the config cache and restart the queue worker.
 - [ ] Configure and monitor the queue worker; verify password reset, invitation, receipt, and campaign samples.
 - [ ] Connect SES bounce/complaint/delivery events to suppression and delivery status; SMTP acceptance alone is not final delivery.
 - [OPS] Run inbox/spam placement tests and document credential rotation and incident procedures.

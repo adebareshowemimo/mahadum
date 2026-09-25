@@ -36,13 +36,15 @@ contacts (registered or not), on demand or on a schedule.
 
 ## 0. Foundations — provider + one global branded template `[MVP]` `[BE]` (do first)
 
-- [x] 🟡 **Mail provider, swappable via env** — **decision: SendGrid (prod) +
+- [x] 🟡 **Mail provider, swappable via env** — **decision: Amazon SES (prod) +
   Mailtrap (testing/staging)**, both over SMTP, so no driver-specific code — just
   `MAIL_MAILER=smtp` with per-env host/credentials. `.env.example` documents both
-  blocks (Mailtrap `sandbox.smtp.mailtrap.io:2525`; SendGrid `smtp.sendgrid.net:587`,
-  username `apikey`). *(Remaining: drop in real creds per env, verify the SendGrid
-  sending domain + SPF/DKIM/DMARC, and add the SendGrid Event Webhook → suppression
-  in §5.)*
+  blocks (Mailtrap `sandbox.smtp.mailtrap.io:2525`; SES regional SMTP endpoint on
+  port 587). The verified production domain has Easy DKIM enabled and SES production
+  access; a Mail Manager ingress endpoint with a `Send to internet` rule passed a
+  live external delivery test on 2026-09-24. *(Remaining: save the AWS SMTP override
+  in the production app, then wire SES bounce/complaint feedback → suppression in
+  §5. The existing SendGrid webhook remains legacy compatibility only.)*
 - [x] ✅ **One global branded template.** Published Laravel's markdown mail
   components (`vendor:publish --tag=laravel-mail`) + a **"Gilded Adire" theme**
   (`resources/views/vendor/mail/html/themes/mahadum.css`: ink header band, gold

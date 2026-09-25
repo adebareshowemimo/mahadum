@@ -34,6 +34,7 @@ use App\Notifications\TelcoBillingReceipt;
 use App\Notifications\WalletFunded;
 use App\Notifications\WelcomeEmail;
 use App\Services\AuditLogger;
+use App\Services\EmailHtmlSanitizer;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Http\JsonResponse;
@@ -51,7 +52,10 @@ use Illuminate\Notifications\Messages\MailMessage;
  */
 class EmailTemplateController extends Controller
 {
-    public function __construct(private AuditLogger $audit) {}
+    public function __construct(
+        private AuditLogger $audit,
+        private EmailHtmlSanitizer $htmlSanitizer,
+    ) {}
 
     public function index(): JsonResponse
     {
@@ -84,11 +88,16 @@ class EmailTemplateController extends Controller
             'trigger' => $meta['trigger'],
             'customizable' => $customizable,
             'placeholders' => $customizable ? $meta['placeholders'] : [],
-            'default' => $customizable ? $meta['default'] : null,
+            'default' => $customizable ? array_merge([
+                'content_mode' => 'structured',
+                'html_body' => null,
+            ], $meta['default']) : null,
             'override' => $override ? [
                 'subject' => $override->subject,
+                'content_mode' => $override->content_mode,
                 'greeting' => $override->greeting,
                 'body' => $override->body,
+                'html_body' => $override->html_body,
                 'action_text' => $override->action_text,
                 'action_url' => $override->action_url,
                 'updated_at' => $override->updated_at?->toIso8601String(),
@@ -101,9 +110,15 @@ class EmailTemplateController extends Controller
         abort_unless(isset($this->builders()[$key]), 404, 'Unknown email template.');
         abort_unless($this->isCustomizable($key), 422, 'This template is framework-managed and cannot be customized.');
 
-        $before = EmailTemplateOverride::where('key', $key)->first()?->only(['subject', 'greeting', 'body', 'action_text', 'action_url']) ?? [];
+        $before = EmailTemplateOverride::where('key', $key)->first()?->only(['subject', 'content_mode', 'greeting', 'body', 'html_body', 'action_text', 'action_url']) ?? [];
 
         $data = $request->validated();
+        // The original structured body column predates HTML mode and is non-null.
+        // Keep a harmless empty fallback while rich content lives in html_body.
+        $data['body'] ??= '';
+        if ($data['content_mode'] === 'html') {
+            $data['html_body'] = $this->htmlSanitizer->sanitize((string) ($data['html_body'] ?? ''));
+        }
         $data['updated_by'] = $request->user()?->id;
 
         EmailTemplateOverride::updateOrCreate(['key' => $key], $data);
@@ -119,7 +134,7 @@ class EmailTemplateController extends Controller
 
         $override = EmailTemplateOverride::where('key', $key)->first();
         if ($override) {
-            $this->audit->record('email_template.reset', null, $override->only(['subject', 'greeting', 'body', 'action_text', 'action_url']), []);
+            $this->audit->record('email_template.reset', null, $override->only(['subject', 'content_mode', 'greeting', 'body', 'html_body', 'action_text', 'action_url']), []);
             $override->delete();
         }
 

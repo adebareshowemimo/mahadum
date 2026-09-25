@@ -12,7 +12,7 @@ const initialForm: EmailConfigurationInput = {
   mailer: 'log',
   host: '',
   port: 587,
-  scheme: 'tls',
+  scheme: 'smtp',
   username: '',
   password: '',
   from_address: '',
@@ -133,17 +133,17 @@ export function EmailConfigurationPage() {
 
             {form.mailer === 'smtp' && (
               <div className="grid gap-4 sm:grid-cols-2">
-                <Input label="SMTP host" value={form.host} error={errors.host} onChange={(event) => change('host', event.target.value)} placeholder="smtp.sendgrid.net" />
+                <Input label="SMTP host" value={form.host} error={errors.host} onChange={(event) => change('host', event.target.value)} placeholder="email-smtp.af-south-1.amazonaws.com" />
                 <Input label="SMTP port" type="number" min={1} max={65535} value={form.port} error={errors.port} onChange={(event) => change('port', Number(event.target.value))} />
                 <label className="flex flex-col gap-1.5 text-sm font-semibold text-foreground">
                   Encryption
                   <select
                     value={form.scheme ?? ''}
-                    onChange={(event) => change('scheme', (event.target.value || null) as 'tls' | 'ssl' | null)}
+                    onChange={(event) => change('scheme', (event.target.value || null) as 'smtp' | 'smtps' | null)}
                     className="h-11 rounded-xl border border-border-strong bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   >
-                    <option value="tls">TLS</option>
-                    <option value="ssl">SSL</option>
+                    <option value="smtp">SMTP + STARTTLS (usually port 587)</option>
+                    <option value="smtps">SMTPS (usually port 465)</option>
                     <option value="">None</option>
                   </select>
                 </label>

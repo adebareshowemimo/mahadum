@@ -1,7 +1,7 @@
 # MAHADUM.360 — Email System: Remaining / Hardening TODO
 
 The email system (branded template, 10 transactional emails, campaigns, contact
-lists + upload, scheduling, unsubscribe/suppression, SendGrid bounce webhook,
+lists + upload, scheduling, unsubscribe/suppression, legacy SendGrid bounce webhook,
 admin UI, email log) is **shipped and tested**
 ([`Mahadum360_Email_System_TODO.md`](Mahadum360_Email_System_TODO.md)). This doc
 tracks the **deliberately-deferred optional items** so nothing is lost.
@@ -31,15 +31,22 @@ sender-domain DNS still have to be supplied by the operator.
   `MAIL_HOST=sandbox.smtp.mailtrap.io`, `MAIL_PORT=2525`, inbox `MAIL_USERNAME` /
   `MAIL_PASSWORD` (see `.env.example`). Send a test (`php artisan mail:preview` is
   render-only; use a real notification against Mailtrap to confirm delivery).
-- [ ] **Production → SendGrid.** `MAIL_MAILER=smtp`, `MAIL_HOST=smtp.sendgrid.net`,
-  `MAIL_PORT=587`, `MAIL_USERNAME=apikey`, `MAIL_PASSWORD=<SENDGRID_API_KEY>`,
-  `MAIL_SCHEME=tls`. Set `MAIL_FROM_ADDRESS` / `BRAND_SUPPORT_EMAIL` to the real
-  domain, and a hosted PNG `BRAND_LOGO_URL`.
-- [ ] **Sender-domain auth** — verify the domain in SendGrid and publish **SPF /
-  DKIM / DMARC** DNS records. Without these, mail lands in spam.
-- [ ] **Wire the bounce webhook** — set `SENDGRID_WEBHOOK_TOKEN` and point
-  SendGrid's Event Webhook at `POST /api/v1/webhooks/sendgrid/{token}` (already
-  built). Enable bounce / dropped / spamreport events.
+- [ ] **Production → Amazon SES.** `MAIL_MAILER=smtp`, port `587`,
+  `MAIL_SCHEME=smtp` (Symfony negotiates STARTTLS), and the AWS-generated SMTP
+  host/username/password. The current
+  approved setup uses the authenticated SES Mail Manager endpoint with an
+  unconditional `Send to internet` rule. Set `MAIL_FROM_ADDRESS` /
+  `BRAND_SUPPORT_EMAIL` to `info@mahadum360.com` and configure a hosted PNG
+  `BRAND_LOGO_URL`. Production uses `.env` as the source of truth; remove any
+  `integration.mail.*` database overrides so web and queue processes do not shadow
+  those environment values.
+- [x] **Sender-domain auth and production access** — `mahadum360.com` is verified,
+  Easy DKIM is enabled, and SES production access is approved in `af-south-1`.
+  A live SMTP delivery to Gmail succeeded on 2026-09-24.
+- [ ] **Wire SES feedback** — connect SES delivery, bounce, and complaint events
+  (normally through a configuration set and SNS/EventBridge) to the suppression and
+  delivery-status flow. Keep the existing SendGrid webhook only for legacy events
+  during the provider transition.
 - [ ] **Smoke test in prod** — one transactional (welcome) + one small campaign to
   a seed list; confirm inbox delivery, the email log rows, and that an unsubscribe
   click suppresses.

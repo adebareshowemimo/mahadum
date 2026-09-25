@@ -3,6 +3,7 @@
 namespace App\Notifications\Concerns;
 
 use App\Models\EmailTemplateOverride;
+use App\Services\EmailHtmlSanitizer;
 use Illuminate\Notifications\Messages\MailMessage;
 
 /**
@@ -30,6 +31,12 @@ trait CustomizableMail
         $sub = fn (?string $text): ?string => $text === null ? null : strtr($text, $placeholders);
 
         $mail = (new MailMessage)->subject((string) $sub($override->subject));
+
+        if ($override->content_mode === 'html' && filled($override->html_body)) {
+            $html = app(EmailHtmlSanitizer::class)->sanitize((string) $sub($override->html_body));
+
+            return $mail->view('emails.custom-html', ['html' => $html]);
+        }
 
         if ($override->greeting) {
             $mail->greeting((string) $sub($override->greeting));

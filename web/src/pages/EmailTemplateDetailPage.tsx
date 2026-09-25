@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { AdminPageHeader } from '@/components/admin'
 import { Alert, Badge, Button, Card, Skeleton, Textarea } from '@/components/ui'
@@ -21,20 +21,40 @@ export function EmailTemplateDetailPage() {
   const [saved, setSaved] = useState(false)
   const [confirmingReset, setConfirmingReset] = useState(false)
   const lastFocused = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null)
+  const lastField = useRef<keyof EmailTemplateContent>('body')
+  const richEditor = useRef<HTMLDivElement | null>(null)
+  const [htmlView, setHtmlView] = useState<'visual' | 'source'>('visual')
 
   useEffect(() => {
     const source = detail.data?.override ?? detail.data?.default
     if (!source) return
-    setForm({ subject: source.subject, greeting: source.greeting, body: source.body, action_text: source.action_text, action_url: source.action_url })
+    setForm({
+      subject: source.subject,
+      content_mode: source.content_mode,
+      greeting: source.greeting,
+      body: source.body,
+      html_body: source.html_body,
+      action_text: source.action_text,
+      action_url: source.action_url,
+    })
   }, [detail.data])
 
   if (!templateKey) return <Alert variant="danger">This email template link is invalid.</Alert>
   if (detail.isError) return <Alert variant="danger">Couldn't load this email template.</Alert>
 
   function insertPlaceholder(token: string) {
+    if (!form) return
+    const field = lastField.current
+
+    if (field === 'html_body' && htmlView === 'visual' && richEditor.current) {
+      richEditor.current.focus()
+      document.execCommand('insertText', false, token)
+      setForm({ ...form, html_body: richEditor.current.innerHTML })
+      return
+    }
+
     const element = lastFocused.current
-    if (!element || !form) return
-    const field = element.name as keyof EmailTemplateContent
+    if (!element) return
     const start = element.selectionStart ?? element.value.length
     const end = element.selectionEnd ?? element.value.length
     const current = form[field] ?? ''
@@ -83,13 +103,48 @@ export function EmailTemplateDetailPage() {
           {template && form && template.customizable && (
             <div className="flex flex-col gap-5">
               <div className="grid gap-4">
-                <EditorInput label="Subject" name="subject" value={form.subject} onFocus={(element) => (lastFocused.current = element)} onChange={(value) => setForm({ ...form, subject: value })} />
-                <EditorInput label="Greeting (optional)" name="greeting" value={form.greeting ?? ''} onFocus={(element) => (lastFocused.current = element)} onChange={(value) => setForm({ ...form, greeting: value || null })} />
-                <Textarea name="body" label="Body" hint="Separate paragraphs with a blank line." rows={8} value={form.body} onFocus={(event) => (lastFocused.current = event.currentTarget)} onChange={(event) => setForm({ ...form, body: event.target.value })} />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <EditorInput label="Action button text" name="action_text" value={form.action_text ?? ''} onFocus={(element) => (lastFocused.current = element)} onChange={(value) => setForm({ ...form, action_text: value || null })} />
-                  <EditorInput label="Action button URL" name="action_url" value={form.action_url ?? ''} onFocus={(element) => (lastFocused.current = element)} onChange={(value) => setForm({ ...form, action_url: value || null })} />
-                </div>
+                <EditorInput label="Subject" name="subject" value={form.subject} onFocus={(element) => { lastFocused.current = element; lastField.current = 'subject' }} onChange={(value) => setForm({ ...form, subject: value })} />
+
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-sm font-semibold text-foreground">Content format</span>
+                  <select
+                    value={form.content_mode}
+                    onChange={(event) => {
+                      const contentMode = event.target.value as EmailTemplateContent['content_mode']
+                      setForm({
+                        ...form,
+                        content_mode: contentMode,
+                        html_body: contentMode === 'html' && !form.html_body ? structuredToHtml(form) : form.html_body,
+                      })
+                    }}
+                    className="h-11 rounded-xl border border-border-strong bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="structured">Structured branded email</option>
+                    <option value="html">Rich HTML (WYSIWYG)</option>
+                  </select>
+                  <span className="text-xs font-normal text-muted">Rich HTML keeps the MAHADUM header and footer while giving you full control of the message content.</span>
+                </label>
+
+                {form.content_mode === 'structured' ? (
+                  <>
+                    <EditorInput label="Greeting (optional)" name="greeting" value={form.greeting ?? ''} onFocus={(element) => { lastFocused.current = element; lastField.current = 'greeting' }} onChange={(value) => setForm({ ...form, greeting: value || null })} />
+                    <Textarea name="body" label="Body" hint="Separate paragraphs with a blank line." rows={8} value={form.body} onFocus={(event) => { lastFocused.current = event.currentTarget; lastField.current = 'body' }} onChange={(event) => setForm({ ...form, body: event.target.value })} />
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <EditorInput label="Action button text" name="action_text" value={form.action_text ?? ''} onFocus={(element) => { lastFocused.current = element; lastField.current = 'action_text' }} onChange={(value) => setForm({ ...form, action_text: value || null })} />
+                      <EditorInput label="Action button URL" name="action_url" value={form.action_url ?? ''} onFocus={(element) => { lastFocused.current = element; lastField.current = 'action_url' }} onChange={(value) => setForm({ ...form, action_url: value || null })} />
+                    </div>
+                  </>
+                ) : (
+                  <RichHtmlEditor
+                    editorRef={richEditor}
+                    value={form.html_body ?? ''}
+                    view={htmlView}
+                    onViewChange={setHtmlView}
+                    onFocusSource={(element) => { lastFocused.current = element; lastField.current = 'html_body' }}
+                    onFocusVisual={() => { lastFocused.current = null; lastField.current = 'html_body' }}
+                    onChange={(value) => setForm({ ...form, html_body: value })}
+                  />
+                )}
               </div>
 
               {Object.keys(template.placeholders).length > 0 && (
@@ -97,7 +152,7 @@ export function EmailTemplateDetailPage() {
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Choose a field, then insert a placeholder</p>
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(template.placeholders).map(([token, description]) => (
-                      <button key={token} type="button" title={description} onClick={() => insertPlaceholder(token)} className="min-h-10 rounded-lg border border-border bg-surface px-2.5 py-1 font-mono text-xs text-foreground hover:border-gold-400 hover:bg-gold-50">{token}</button>
+                      <button key={token} type="button" title={description} onMouseDown={(event) => { event.preventDefault(); insertPlaceholder(token) }} className="min-h-10 rounded-lg border border-border bg-surface px-2.5 py-1 font-mono text-xs text-foreground hover:border-gold-400 hover:bg-gold-50">{token}</button>
                     ))}
                   </div>
                 </div>
@@ -121,7 +176,10 @@ export function EmailTemplateDetailPage() {
         </Card>
 
         <Card className="overflow-hidden p-4 sm:p-5">
-          <h2 className="mb-3 font-semibold text-foreground">Live preview</h2>
+          <div className="mb-3">
+            <h2 className="font-semibold text-foreground">Saved preview</h2>
+            <p className="text-xs text-muted">Save changes to refresh this recipient view.</p>
+          </div>
           {preview.isLoading && <Skeleton className="h-[32rem]" />}
           {preview.isError && <Alert variant="danger">Couldn't render this template.</Alert>}
           {preview.data && <iframe title={preview.data.subject} srcDoc={preview.data.html} className="h-[70vh] min-h-[32rem] w-full rounded-xl border border-border bg-white" sandbox="" />}
@@ -129,6 +187,105 @@ export function EmailTemplateDetailPage() {
       </div>
     </div>
   )
+}
+
+type RichHtmlEditorProps = {
+  editorRef: React.RefObject<HTMLDivElement>
+  value: string
+  view: 'visual' | 'source'
+  onViewChange: (view: 'visual' | 'source') => void
+  onFocusSource: (element: HTMLTextAreaElement) => void
+  onFocusVisual: () => void
+  onChange: (value: string) => void
+}
+
+const RichHtmlEditor = ({ editorRef, value, view, onViewChange, onFocusSource, onFocusVisual, onChange }: RichHtmlEditorProps) => {
+  useEffect(() => {
+    if (view === 'visual' && editorRef.current && editorRef.current.innerHTML !== value && document.activeElement !== editorRef.current) {
+      editorRef.current.innerHTML = value
+    }
+  }, [editorRef, value, view])
+
+  function command(event: ReactMouseEvent<HTMLButtonElement>, name: string, argument?: string) {
+    event.preventDefault()
+    editorRef.current?.focus()
+    document.execCommand(name, false, argument)
+    if (editorRef.current) onChange(editorRef.current.innerHTML)
+  }
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border-strong bg-surface">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface-muted p-2">
+        <div className="flex flex-wrap gap-1" aria-label="Formatting controls">
+          {view === 'visual' && (
+            <>
+              <FormatButton label="Bold" short="B" onMouseDown={(event) => command(event, 'bold')} />
+              <FormatButton label="Italic" short="I" onMouseDown={(event) => command(event, 'italic')} />
+              <FormatButton label="Underline" short="U" onMouseDown={(event) => command(event, 'underline')} />
+              <FormatButton label="Heading" short="H2" onMouseDown={(event) => command(event, 'formatBlock', 'h2')} />
+              <FormatButton label="Bulleted list" short="• List" onMouseDown={(event) => command(event, 'insertUnorderedList')} />
+              <FormatButton label="Numbered list" short="1. List" onMouseDown={(event) => command(event, 'insertOrderedList')} />
+              <FormatButton label="Add link" short="Link" onMouseDown={(event) => {
+                const url = window.prompt('Link URL')
+                if (url) command(event, 'createLink', url)
+                else event.preventDefault()
+              }} />
+              <FormatButton label="Remove formatting" short="Clear" onMouseDown={(event) => command(event, 'removeFormat')} />
+            </>
+          )}
+        </div>
+        <div className="flex rounded-lg border border-border bg-surface p-0.5" aria-label="Editor view">
+          {(['visual', 'source'] as const).map((option) => (
+            <button key={option} type="button" aria-pressed={view === option} onClick={() => onViewChange(option)} className={`min-h-9 rounded-md px-3 text-xs font-semibold ${view === option ? 'bg-ink-900 text-white' : 'text-muted hover:text-foreground'}`}>
+              {option === 'visual' ? 'Visual' : 'HTML'}
+            </button>
+          ))}
+        </div>
+      </div>
+      {view === 'visual' ? (
+        <div
+          ref={editorRef}
+          contentEditable
+          suppressContentEditableWarning
+          role="textbox"
+          aria-multiline="true"
+          aria-label="Rich HTML email body"
+          onFocus={onFocusVisual}
+          onInput={(event) => onChange(event.currentTarget.innerHTML)}
+          className="prose prose-sm min-h-80 max-w-none px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-inset focus:ring-ring [&_a]:text-primary [&_a]:underline [&_h2]:text-xl [&_h2]:font-bold [&_li]:ml-5"
+        />
+      ) : (
+        <textarea
+          name="html_body"
+          aria-label="HTML email source"
+          value={value}
+          onFocus={(event) => onFocusSource(event.currentTarget)}
+          onChange={(event) => onChange(event.target.value)}
+          rows={16}
+          spellCheck={false}
+          className="min-h-80 w-full resize-y bg-ink-950 px-4 py-3 font-mono text-xs leading-6 text-emerald-200 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-ring"
+        />
+      )}
+    </div>
+  )
+}
+
+function FormatButton({ label, short, onMouseDown }: { label: string; short: string; onMouseDown: (event: ReactMouseEvent<HTMLButtonElement>) => void }) {
+  return <button type="button" title={label} aria-label={label} onMouseDown={onMouseDown} className="min-h-9 rounded-md border border-border bg-surface px-2.5 text-xs font-semibold text-foreground hover:border-gold-400 hover:bg-gold-50">{short}</button>
+}
+
+function structuredToHtml(content: EmailTemplateContent): string {
+  const paragraphs = content.body.split(/\n{2,}/).filter(Boolean).map((paragraph) => `<p>${escapeHtml(paragraph).replaceAll('\n', '<br>')}</p>`).join('')
+  const greeting = content.greeting ? `<h2>${escapeHtml(content.greeting)}</h2>` : ''
+  const action = content.action_text && content.action_url
+    ? `<p><a href="${escapeHtml(content.action_url)}" style="display:inline-block;background:#c7952b;color:#111827;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:700">${escapeHtml(content.action_text)}</a></p>`
+    : ''
+
+  return `${greeting}${paragraphs}${action}`
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[character] ?? character)
 }
 
 function EditorInput({ label, name, value, onFocus, onChange }: { label: string; name: string; value: string; onFocus: (element: HTMLInputElement) => void; onChange: (value: string) => void }) {

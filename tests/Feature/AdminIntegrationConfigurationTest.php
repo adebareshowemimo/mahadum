@@ -27,7 +27,7 @@ class AdminIntegrationConfigurationTest extends TestCase
             'mailer' => 'smtp',
             'host' => 'smtp.example.test',
             'port' => 587,
-            'scheme' => 'tls',
+            'scheme' => 'smtp',
             'username' => 'apikey',
             'password' => 'smtp-secret-value',
             'from_address' => 'hello@mahadum.test',

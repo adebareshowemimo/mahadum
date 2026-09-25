@@ -10,8 +10,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id
  * @property string $key
  * @property string $subject
+ * @property string $content_mode
  * @property string|null $greeting
  * @property string $body
+ * @property string|null $html_body
  * @property string|null $action_text
  * @property string|null $action_url
  * @property int|null $updated_by

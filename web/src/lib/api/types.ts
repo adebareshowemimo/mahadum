@@ -1533,7 +1533,7 @@ export interface EmailConfiguration {
   mailer: 'smtp' | 'log'
   host: string
   port: number
-  scheme: 'tls' | 'ssl' | null
+  scheme: 'smtp' | 'smtps' | null
   username: string | null
   password_set: boolean
   from_address: string
@@ -1548,7 +1548,7 @@ export interface EmailConfigurationInput {
   mailer: 'smtp' | 'log'
   host: string
   port: number
-  scheme: 'tls' | 'ssl' | null
+  scheme: 'smtp' | 'smtps' | null
   username: string
   password?: string
   from_address: string
@@ -1734,8 +1734,10 @@ export interface EmailTemplatePreview {
 
 export interface EmailTemplateContent {
   subject: string
+  content_mode: 'structured' | 'html'
   greeting: string | null
   body: string
+  html_body: string | null
   action_text: string | null
   action_url: string | null
 }

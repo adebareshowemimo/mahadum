@@ -30,7 +30,7 @@ class EmailConfigurationController extends Controller
             'mailer' => ['required', 'in:smtp,log'],
             'host' => ['required_if:mailer,smtp', 'nullable', 'string', 'max:255'],
             'port' => ['required_if:mailer,smtp', 'nullable', 'integer', 'min:1', 'max:65535'],
-            'scheme' => ['nullable', 'in:tls,ssl'],
+            'scheme' => ['nullable', 'in:smtp,smtps'],
             'username' => ['nullable', 'string', 'max:255'],
             'password' => ['nullable', 'string', 'max:1000'],
             'from_address' => ['required', 'email:rfc', 'max:255'],
