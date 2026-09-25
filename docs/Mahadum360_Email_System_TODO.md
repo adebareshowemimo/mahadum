@@ -115,8 +115,9 @@ Super_admin composes an email and sends it to a **filtered set of registered
 users**. `emails.campaigns.manage` (new, super-admin-only).
 
 - [x] ✅ `[BE]` **`EmailCampaign` + `EmailCampaignRecipient` models** — subject,
-  body (markdown → §0 template), audience_type + audience (json), status, counts,
-  `scheduled_at`, `created_by`; audited on create/send.
+  content mode + body (Markdown or sanitized rich HTML → branded template),
+  audience_type + audience (json), status, counts, `scheduled_at`, `created_by`;
+  audited on create/send. HTML is allow-list sanitized on storage and delivery.
 - [x] ✅ `[BE]` **Audience** (`CampaignSender`) — **user segment** (role / status /
   organization filters) *or* a **contact list**, resolved at send time.
 - [x] 🟡 `[BE]` **Queued send** — `CampaignMail` is `ShouldQueue`, so each send is
@@ -207,8 +208,9 @@ Non-negotiable — a broadcast tool without these is a legal/reputation risk.
 Under `/admin/*`, `AdminRoute`-guarded, in a new **"Email"** sub-nav group.
 
 - [x] ✅ **Campaigns** (`/admin/emails`) — `DataTable` list + **Compose** modal
-  (subject, Markdown body, audience picker = user-segment role *or* a contact list),
-  per-row **Test** + **Send** (send-now or schedule via a datetime). *(Verified live.)*
+  (subject, shared rich-HTML WYSIWYG/HTML-source editor or Markdown, audience picker
+  = user-segment role *or* a contact list), per-row **Test** + **Send** (send-now or
+  schedule via a datetime). Both modes use the branded wrapper and unsubscribe footer.
 - [x] ✅ **Campaign detail** (`/admin/emails/:id`) — stat cards (recipients / sent /
   failed / sent-at), recipient status breakdown, body; row-click from the list.
   *(Verified live.)* *(Cancel-if-scheduled is the remaining action.)*

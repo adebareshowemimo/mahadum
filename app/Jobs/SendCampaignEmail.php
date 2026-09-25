@@ -40,7 +40,14 @@ class SendCampaignEmail implements ShouldQueue
 
         try {
             $url = URL::signedRoute('email.unsubscribe', ['email' => $recipient->email]);
-            Mail::to($recipient->email)->send(new CampaignMail($campaign->subject, $campaign->body, $url, $campaign->id));
+            Mail::to($recipient->email)->send(new CampaignMail(
+                $campaign->subject,
+                $campaign->body,
+                $url,
+                $campaign->id,
+                $campaign->content_mode,
+                $campaign->html_body,
+            ));
             $recipient->update(['status' => 'sent']);
         } catch (\Throwable $e) {
             $recipient->update(['status' => 'failed']);

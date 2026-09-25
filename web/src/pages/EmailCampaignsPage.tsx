@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AdminPageHeader, DataTable, type Column } from '@/components/admin'
+import { AdminPageHeader, DataTable, RichHtmlEmailEditor, type Column, type RichHtmlEditorView } from '@/components/admin'
 import { Alert, Badge, Button, Input, Modal } from '@/components/ui'
 import { ApiError, type CreateCampaignInput, type EmailCampaignRow } from '@/lib/api'
 import {
@@ -104,6 +104,10 @@ function ComposeModal({ onClose }: { onClose: () => void }) {
   const { data: lists } = useContactLists()
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
+  const [contentMode, setContentMode] = useState<'markdown' | 'html'>('html')
+  const [htmlBody, setHtmlBody] = useState('')
+  const [htmlView, setHtmlView] = useState<RichHtmlEditorView>('visual')
+  const richEditor = useRef<HTMLDivElement>(null)
   const [audienceType, setAudienceType] = useState<'user_segment' | 'contact_list'>('contact_list')
   const [listId, setListId] = useState('')
   const [role, setRole] = useState('')
@@ -116,7 +120,14 @@ function ComposeModal({ onClose }: { onClose: () => void }) {
     setError(null)
     const audience =
       audienceType === 'contact_list' ? { contact_list_id: Number(listId) } : role ? { role } : {}
-    const input: CreateCampaignInput = { subject: subject.trim(), body, audience_type: audienceType, audience }
+    const input: CreateCampaignInput = {
+      subject: subject.trim(),
+      content_mode: contentMode,
+      body: contentMode === 'markdown' ? body : '',
+      html_body: contentMode === 'html' ? htmlBody : null,
+      audience_type: audienceType,
+      audience,
+    }
     try {
       await create.mutateAsync(input)
       onClose()
@@ -125,24 +136,47 @@ function ComposeModal({ onClose }: { onClose: () => void }) {
     }
   }
 
-  const canSubmit = subject.trim() && body.trim() && (audienceType === 'user_segment' || listId)
+  const content = contentMode === 'html' ? htmlBody : body
+  const canSubmit = subject.trim() && content.trim() && (audienceType === 'user_segment' || listId)
 
   return (
-    <Modal open onClose={onClose} title="New campaign" description="Saved as a draft — you can test and send it next.">
+    <Modal open onClose={onClose} title="New campaign" description="Saved as a draft — you can test and send it next." variant="workspace">
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         {error && <Alert variant="danger">{error}</Alert>}
         <Input label="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} required />
 
         <label className="flex flex-col gap-1.5 text-sm">
-          <span className="font-semibold text-foreground">Body (Markdown)</span>
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={6}
-            placeholder="Write your email… **bold**, [links](https://…), etc. It renders in the branded template."
-            className="w-full rounded-xl border border-border-strong bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          />
+          <span className="font-semibold text-foreground">Content format</span>
+          <select value={contentMode} onChange={(e) => setContentMode(e.target.value as 'markdown' | 'html')} className={selectClass}>
+            <option value="html">Rich HTML (WYSIWYG)</option>
+            <option value="markdown">Markdown</option>
+          </select>
+          <span className="text-xs text-muted">Both formats use the MAHADUM header, footer, and unsubscribe link.</span>
         </label>
+
+        {contentMode === 'html' ? (
+          <div className="flex flex-col gap-1.5 text-sm">
+            <span className="font-semibold text-foreground">Email body</span>
+            <RichHtmlEmailEditor
+              editorRef={richEditor}
+              value={htmlBody}
+              view={htmlView}
+              onViewChange={setHtmlView}
+              onChange={setHtmlBody}
+            />
+          </div>
+        ) : (
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="font-semibold text-foreground">Body (Markdown)</span>
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={10}
+              placeholder="Write your email… **bold**, [links](https://…), etc."
+              className="w-full rounded-xl border border-border-strong bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </label>
+        )}
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="flex flex-col gap-1.5 text-sm">

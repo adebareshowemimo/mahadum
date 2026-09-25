@@ -117,6 +117,55 @@ class EmailCampaignTest extends TestCase
         Mail::assertSent(CampaignMail::class);
     }
 
+    public function test_admin_can_create_and_preview_a_sanitized_html_campaign(): void
+    {
+        $this->seedRbac();
+        $list = ContactList::create(['name' => 'Rich newsletter']);
+        $this->actingAsUser($this->userWithRole('super_admin'));
+
+        $response = $this->postJson('/api/v1/admin/email-campaigns', [
+            'subject' => 'A rich update',
+            'content_mode' => 'html',
+            'html_body' => '<h2 onclick="alert(1)">Hello</h2><p><strong>Good news</strong></p><script>alert(1)</script><a href="javascript:alert(1)">Bad link</a>',
+            'audience_type' => 'contact_list',
+            'audience' => ['contact_list_id' => $list->id],
+        ])->assertCreated()
+            ->assertJsonPath('data.content_mode', 'html');
+
+        $campaign = EmailCampaign::findOrFail($response->json('data.id'));
+        $this->assertSame('', $campaign->body);
+        $this->assertStringContainsString('<strong>Good news</strong>', (string) $campaign->html_body);
+        $this->assertStringNotContainsString('onclick', (string) $campaign->html_body);
+        $this->assertStringNotContainsString('<script', (string) $campaign->html_body);
+        $this->assertStringNotContainsString('javascript:', (string) $campaign->html_body);
+
+        $preview = $this->getJson("/api/v1/admin/email-campaigns/{$campaign->id}")
+            ->assertOk()
+            ->assertJsonPath('data.content_mode', 'html')
+            ->json('data.preview_html');
+
+        $this->assertStringContainsString('<strong>Good news</strong>', $preview);
+        $this->assertStringContainsString('Unsubscribe', $preview);
+        $this->assertStringNotContainsString('<script', $preview);
+    }
+
+    public function test_html_campaign_is_sanitized_again_when_rendered(): void
+    {
+        $rendered = (string) (new CampaignMail(
+            'Unsafe campaign',
+            '',
+            'https://example.test/unsubscribe',
+            123,
+            'html',
+            '<p>Safe</p><img src="javascript:alert(1)" onerror="alert(1)"><script>alert(1)</script>',
+        ))->render();
+
+        $this->assertStringContainsString('<p>Safe</p>', $rendered);
+        $this->assertStringNotContainsString('javascript:', $rendered);
+        $this->assertStringNotContainsString('onerror', $rendered);
+        $this->assertStringNotContainsString('<script', $rendered);
+    }
+
     public function test_send_job_skips_an_already_sent_recipient(): void
     {
         Mail::fake();

@@ -27,6 +27,14 @@
                         {!! $html !!}
                     </td>
                 </tr>
+                @isset($unsubscribeUrl)
+                    <tr>
+                        <td align="center" style="border-top:1px solid #e6dfd1;padding:18px 28px;color:#6b7280;font-size:12px;line-height:1.6;">
+                            You’re receiving this because you’re on a {{ config('brand.name') }} mailing list.<br>
+                            <a href="{{ $unsubscribeUrl }}" style="color:#6b7280;text-decoration:underline;">Unsubscribe</a> at any time.
+                        </td>
+                    </tr>
+                @endisset
                 <tr>
                     <td align="center" style="border-top:1px solid #e6dfd1;padding:22px 28px;color:#6b7280;font-size:12px;line-height:1.6;">
                         {{ config('brand.tagline') }}<br>

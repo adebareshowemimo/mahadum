@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { AdminPageHeader } from '@/components/admin'
+import { AdminPageHeader, RichHtmlEmailEditor } from '@/components/admin'
 import { Alert, Badge, Button, Card, Skeleton, Textarea } from '@/components/ui'
 import { ApiError, type EmailTemplateContent } from '@/lib/api'
 import {
@@ -22,7 +22,7 @@ export function EmailTemplateDetailPage() {
   const [confirmingReset, setConfirmingReset] = useState(false)
   const lastFocused = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null)
   const lastField = useRef<keyof EmailTemplateContent>('body')
-  const richEditor = useRef<HTMLDivElement | null>(null)
+  const richEditor = useRef<HTMLDivElement>(null)
   const [htmlView, setHtmlView] = useState<'visual' | 'source'>('visual')
 
   useEffect(() => {
@@ -135,7 +135,7 @@ export function EmailTemplateDetailPage() {
                     </div>
                   </>
                 ) : (
-                  <RichHtmlEditor
+                  <RichHtmlEmailEditor
                     editorRef={richEditor}
                     value={form.html_body ?? ''}
                     view={htmlView}
@@ -187,91 +187,6 @@ export function EmailTemplateDetailPage() {
       </div>
     </div>
   )
-}
-
-type RichHtmlEditorProps = {
-  editorRef: React.RefObject<HTMLDivElement>
-  value: string
-  view: 'visual' | 'source'
-  onViewChange: (view: 'visual' | 'source') => void
-  onFocusSource: (element: HTMLTextAreaElement) => void
-  onFocusVisual: () => void
-  onChange: (value: string) => void
-}
-
-const RichHtmlEditor = ({ editorRef, value, view, onViewChange, onFocusSource, onFocusVisual, onChange }: RichHtmlEditorProps) => {
-  useEffect(() => {
-    if (view === 'visual' && editorRef.current && editorRef.current.innerHTML !== value && document.activeElement !== editorRef.current) {
-      editorRef.current.innerHTML = value
-    }
-  }, [editorRef, value, view])
-
-  function command(event: ReactMouseEvent<HTMLButtonElement>, name: string, argument?: string) {
-    event.preventDefault()
-    editorRef.current?.focus()
-    document.execCommand(name, false, argument)
-    if (editorRef.current) onChange(editorRef.current.innerHTML)
-  }
-
-  return (
-    <div className="overflow-hidden rounded-xl border border-border-strong bg-surface">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface-muted p-2">
-        <div className="flex flex-wrap gap-1" aria-label="Formatting controls">
-          {view === 'visual' && (
-            <>
-              <FormatButton label="Bold" short="B" onMouseDown={(event) => command(event, 'bold')} />
-              <FormatButton label="Italic" short="I" onMouseDown={(event) => command(event, 'italic')} />
-              <FormatButton label="Underline" short="U" onMouseDown={(event) => command(event, 'underline')} />
-              <FormatButton label="Heading" short="H2" onMouseDown={(event) => command(event, 'formatBlock', 'h2')} />
-              <FormatButton label="Bulleted list" short="• List" onMouseDown={(event) => command(event, 'insertUnorderedList')} />
-              <FormatButton label="Numbered list" short="1. List" onMouseDown={(event) => command(event, 'insertOrderedList')} />
-              <FormatButton label="Add link" short="Link" onMouseDown={(event) => {
-                const url = window.prompt('Link URL')
-                if (url) command(event, 'createLink', url)
-                else event.preventDefault()
-              }} />
-              <FormatButton label="Remove formatting" short="Clear" onMouseDown={(event) => command(event, 'removeFormat')} />
-            </>
-          )}
-        </div>
-        <div className="flex rounded-lg border border-border bg-surface p-0.5" aria-label="Editor view">
-          {(['visual', 'source'] as const).map((option) => (
-            <button key={option} type="button" aria-pressed={view === option} onClick={() => onViewChange(option)} className={`min-h-9 rounded-md px-3 text-xs font-semibold ${view === option ? 'bg-ink-900 text-white' : 'text-muted hover:text-foreground'}`}>
-              {option === 'visual' ? 'Visual' : 'HTML'}
-            </button>
-          ))}
-        </div>
-      </div>
-      {view === 'visual' ? (
-        <div
-          ref={editorRef}
-          contentEditable
-          suppressContentEditableWarning
-          role="textbox"
-          aria-multiline="true"
-          aria-label="Rich HTML email body"
-          onFocus={onFocusVisual}
-          onInput={(event) => onChange(event.currentTarget.innerHTML)}
-          className="prose prose-sm min-h-80 max-w-none px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-inset focus:ring-ring [&_a]:text-primary [&_a]:underline [&_h2]:text-xl [&_h2]:font-bold [&_li]:ml-5"
-        />
-      ) : (
-        <textarea
-          name="html_body"
-          aria-label="HTML email source"
-          value={value}
-          onFocus={(event) => onFocusSource(event.currentTarget)}
-          onChange={(event) => onChange(event.target.value)}
-          rows={16}
-          spellCheck={false}
-          className="min-h-80 w-full resize-y bg-ink-950 px-4 py-3 font-mono text-xs leading-6 text-emerald-200 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-ring"
-        />
-      )}
-    </div>
-  )
-}
-
-function FormatButton({ label, short, onMouseDown }: { label: string; short: string; onMouseDown: (event: ReactMouseEvent<HTMLButtonElement>) => void }) {
-  return <button type="button" title={label} aria-label={label} onMouseDown={onMouseDown} className="min-h-9 rounded-md border border-border bg-surface px-2.5 text-xs font-semibold text-foreground hover:border-gold-400 hover:bg-gold-50">{short}</button>
 }
 
 function structuredToHtml(content: EmailTemplateContent): string {

@@ -7,6 +7,7 @@ use App\Mail\CampaignMail;
 use App\Models\EmailCampaign;
 use App\Services\AuditLogger;
 use App\Services\Email\CampaignSender;
+use App\Services\EmailHtmlSanitizer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -19,7 +20,10 @@ use Illuminate\Validation\Rule;
  */
 class EmailCampaignController extends Controller
 {
-    public function __construct(private AuditLogger $audit) {}
+    public function __construct(
+        private AuditLogger $audit,
+        private EmailHtmlSanitizer $htmlSanitizer,
+    ) {}
 
     public function index(): JsonResponse
     {
@@ -51,8 +55,17 @@ class EmailCampaignController extends Controller
         return response()->json(['data' => [
             ...$this->row($emailCampaign),
             'body' => $emailCampaign->body,
+            'html_body' => $emailCampaign->html_body,
             'audience' => $emailCampaign->audience,
             'recipients_by_status' => $byStatus,
+            'preview_html' => (string) (new CampaignMail(
+                $emailCampaign->subject,
+                $emailCampaign->body,
+                url('/'),
+                $emailCampaign->id,
+                $emailCampaign->content_mode,
+                $emailCampaign->html_body,
+            ))->render(),
         ]]);
     }
 
@@ -60,7 +73,14 @@ class EmailCampaignController extends Controller
     public function test(Request $request, EmailCampaign $emailCampaign): JsonResponse
     {
         Mail::to($request->user()->email)->send(
-            new CampaignMail($emailCampaign->subject, $emailCampaign->body, url('/'), $emailCampaign->id)
+            new CampaignMail(
+                $emailCampaign->subject,
+                $emailCampaign->body,
+                url('/'),
+                $emailCampaign->id,
+                $emailCampaign->content_mode,
+                $emailCampaign->html_body,
+            )
         );
 
         return response()->json(['data' => ['sent_to' => $request->user()->email]]);
@@ -133,9 +153,12 @@ class EmailCampaignController extends Controller
      */
     private function validated(Request $request): array
     {
-        return $request->validate([
+        $contentMode = (string) $request->input('content_mode', 'markdown');
+        $data = $request->validate([
             'subject' => ['required', 'string', 'max:200'],
-            'body' => ['required', 'string', 'max:20000'],
+            'content_mode' => ['sometimes', Rule::in(['markdown', 'html'])],
+            'body' => [Rule::requiredIf($contentMode === 'markdown'), 'nullable', 'string', 'max:20000'],
+            'html_body' => [Rule::requiredIf($contentMode === 'html'), 'nullable', 'string', 'max:100000'],
             'audience_type' => ['required', Rule::in(['user_segment', 'contact_list'])],
             'audience' => ['nullable', 'array'],
             'audience.contact_list_id' => ['nullable', 'integer', 'exists:contact_lists,id'],
@@ -143,6 +166,16 @@ class EmailCampaignController extends Controller
             'audience.status' => ['nullable', 'string'],
             'audience.organization_id' => ['nullable', 'integer'],
         ]);
+
+        $data['content_mode'] = $contentMode;
+        $data['body'] ??= '';
+        if ($contentMode === 'html') {
+            $data['html_body'] = $this->htmlSanitizer->sanitize((string) ($data['html_body'] ?? ''));
+        } else {
+            $data['html_body'] = null;
+        }
+
+        return $data;
     }
 
     /**
@@ -153,6 +186,7 @@ class EmailCampaignController extends Controller
         return [
             'id' => $c->id,
             'subject' => $c->subject,
+            'content_mode' => $c->content_mode,
             'audience_type' => $c->audience_type,
             'status' => $c->status,
             'scheduled_at' => $c->scheduled_at?->toIso8601String(),

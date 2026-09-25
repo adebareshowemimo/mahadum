@@ -1628,6 +1628,7 @@ export interface OrgActivityReport {
 export interface EmailCampaignRow {
   id: number
   subject: string
+  content_mode: 'markdown' | 'html'
   audience_type: 'user_segment' | 'contact_list'
   status: string
   scheduled_at: string | null
@@ -1640,6 +1641,8 @@ export interface EmailCampaignRow {
 
 export interface EmailCampaignDetail extends EmailCampaignRow {
   body: string
+  html_body: string | null
+  preview_html: string
   audience: Record<string, unknown> | null
   recipients_by_status: Record<string, number>
 }
@@ -1647,6 +1650,8 @@ export interface EmailCampaignDetail extends EmailCampaignRow {
 export interface CreateCampaignInput {
   subject: string
   body: string
+  content_mode: 'markdown' | 'html'
+  html_body?: string | null
   audience_type: 'user_segment' | 'contact_list'
   audience?: Record<string, unknown>
 }

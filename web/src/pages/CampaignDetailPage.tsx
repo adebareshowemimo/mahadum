@@ -98,11 +98,17 @@ export function CampaignDetailPage() {
       )}
 
       <section className="flex flex-col gap-2">
-        <h2 className="font-display text-lg font-bold text-foreground">Body</h2>
-        <Card>
-          <CardBody>
-            <pre className="whitespace-pre-wrap font-sans text-sm text-foreground">{data.body}</pre>
-          </CardBody>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-display text-lg font-bold text-foreground">Email preview</h2>
+          <Badge variant="neutral">{data.content_mode === 'html' ? 'Rich HTML' : 'Markdown'}</Badge>
+        </div>
+        <Card className="overflow-hidden p-4 sm:p-5">
+          <iframe
+            title={`Preview: ${data.subject}`}
+            srcDoc={data.preview_html}
+            className="h-[70vh] min-h-[32rem] w-full rounded-xl border border-border bg-white"
+            sandbox=""
+          />
         </Card>
       </section>
 

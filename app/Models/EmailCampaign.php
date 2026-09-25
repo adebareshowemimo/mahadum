@@ -14,7 +14,9 @@ use Illuminate\Support\Carbon;
  *
  * @property int $id
  * @property string $subject
+ * @property string $content_mode
  * @property string $body
+ * @property string|null $html_body
  * @property string $audience_type
  * @property array<string, mixed>|null $audience
  * @property string $status
