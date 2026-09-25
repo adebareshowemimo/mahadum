@@ -35,6 +35,10 @@ rollback() {
     fi
     composer install --no-dev --optimize-autoloader --no-interaction --quiet || true
     php artisan config:cache || true
+    # Run this in its own Artisan process. If the process starts with an
+    # existing route cache, Laravel's route:cache command can otherwise reuse
+    # the already-loaded CompiledRouteCollection when booting its fresh app.
+    php artisan route:clear || true
     php artisan route:cache || true
     php artisan view:cache || true
     if [ "$MAINTENANCE_ON" = "1" ]; then
@@ -89,6 +93,10 @@ php artisan db:seed --class="Database\Seeders\RolesAndPermissionsSeeder" --force
 
 echo "==> Caching config/routes/views"
 php artisan config:cache
+# route:cache clears the cache internally, but that is too late when this
+# Artisan process booted with compiled routes. Clearing in a separate process
+# guarantees route:cache builds from a fresh RouteCollection.
+php artisan route:clear
 php artisan route:cache
 php artisan view:cache
 php artisan storage:link || true
