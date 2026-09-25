@@ -70,6 +70,12 @@ rsync -a --delete \
     --exclude='/storage/logs/*' \
     "$APP_SOURCE/" "$APP_DIR/"
 chown -R "$ADMIN_USER":"$ADMIN_USER" "$APP_DIR"
+# The deploy user owns runtime paths while www-data receives group write
+# access. Set-group-ID keeps files created by both processes in that group.
+usermod -aG "$WEB_USER" "$ADMIN_USER"
+chown -R "$ADMIN_USER":"$WEB_USER" "$APP_DIR/storage" "$APP_DIR/bootstrap/cache"
+chmod -R ug+rwX "$APP_DIR/storage" "$APP_DIR/bootstrap/cache"
+find "$APP_DIR/storage" "$APP_DIR/bootstrap/cache" -type d -exec chmod g+s {} +
 
 echo "==> Creating the local MySQL database"
 db_password="$(openssl rand -hex 24)"
@@ -132,7 +138,7 @@ systemctl enable --now php8.3-fpm apache2 mysql
 systemctl reload apache2
 
 echo "==> Deploying the application"
-SKIP_GIT_PULL=1 APP_DIR="$APP_DIR" WEB_USER="$WEB_USER" bash ./deploy/deploy.sh
+SKIP_GIT_PULL=1 APP_DIR="$APP_DIR" bash ./deploy/deploy.sh
 
 echo "==> Loading review content with randomized passwords"
 if ! php artisan tinker --execute="exit(\\App\\Models\\User::query()->exists() ? 0 : 1);"; then

@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 # Deploy/update mahadum on the staging box. Run from the app directory
-# (or set APP_DIR) as a user with sudo for the *first* run (permissions,
-# artisan storage:link); subsequent runs can be the deploy user only.
+# (or set APP_DIR) as the deploy user. The bootstrap script configures storage
+# and bootstrap/cache for shared deploy-user / web-server access.
 #
 # Usage: ./deploy/deploy.sh
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/mahadum}"
 BRANCH="${BRANCH:-main}"
-WEB_USER="${WEB_USER:-www-data}"
 LOCK_FILE="${LOCK_FILE:-/tmp/mahadum-deploy.lock}"
 SKIP_GIT_PULL="${SKIP_GIT_PULL:-0}"
 
@@ -102,9 +101,11 @@ php artisan view:cache
 php artisan storage:link || true
 
 echo "==> Fixing storage/cache permissions"
-install -d -m 0775 -o "$WEB_USER" -g "$WEB_USER" storage/app/public/media
-chown -R "$WEB_USER":"$WEB_USER" storage bootstrap/cache
+install -d -m 2775 storage/app/public/media
 chmod -R ug+rwX storage bootstrap/cache
+# Preserve the configured shared group on files created by either Artisan or
+# the web server. Ownership is provisioned once by bootstrap-ubuntu.sh.
+find storage bootstrap/cache -type d -exec chmod g+s {} +
 
 echo "==> Leaving maintenance mode"
 php artisan up
