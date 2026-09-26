@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Mail\CampaignMail;
+use App\Models\User;
+use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -84,5 +87,25 @@ class EmailBrandingTest extends TestCase
         $this->assertStringNotContainsString('Hidden Footer', $html);
         $this->assertStringContainsString('Campaign body', $html);
         $this->assertStringContainsString('Unsubscribe', $html);
+    }
+
+    public function test_framework_authentication_emails_use_managed_branding(): void
+    {
+        $this->putJson('/api/v1/admin/email-branding', [
+            'enabled' => true,
+            'header_enabled' => true,
+            'footer_enabled' => true,
+            'header_html' => '<p>Authentication Header</p>',
+            'footer_html' => '<p>Authentication Footer</p>',
+        ])->assertOk();
+
+        $user = User::factory()->create();
+        $verification = (string) (new VerifyEmail)->toMail($user)->render();
+        $reset = (string) (new ResetPassword('test-token'))->toMail($user)->render();
+
+        foreach ([$verification, $reset] as $html) {
+            $this->assertStringContainsString('Authentication Header', $html);
+            $this->assertStringContainsString('Authentication Footer', $html);
+        }
     }
 }
