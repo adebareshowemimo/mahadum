@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $key
  * @property string $subject
  * @property string $content_mode
+ * @property bool $include_branding
  * @property string|null $greeting
  * @property string $body
  * @property string|null $html_body
@@ -25,6 +26,10 @@ class EmailTemplateOverride extends Model
     use HasFactory;
 
     protected $guarded = [];
+
+    protected $casts = [
+        'include_branding' => 'boolean',
+    ];
 
     /**
      * @return BelongsTo<User, $this>

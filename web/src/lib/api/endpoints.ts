@@ -92,6 +92,8 @@ import type {
   CreateOrgInput,
   CreateSchoolLeadInput,
   EmailCampaignDetail,
+  EmailBranding,
+  EmailBrandingInput,
   EmailCampaignRow,
   EmailLogPage,
   EmailLogQuery,
@@ -1139,6 +1141,14 @@ export const adminApi = {
   },
   async resetEmailTemplate(key: string): Promise<EmailTemplateDetail> {
     const { data } = await api.delete(`/admin/email-templates/${key}`)
+    return data.data
+  },
+  async emailBranding(): Promise<EmailBranding> {
+    const { data } = await api.get('/admin/email-branding')
+    return data.data
+  },
+  async updateEmailBranding(input: EmailBrandingInput): Promise<EmailBranding> {
+    const { data } = await api.put('/admin/email-branding', input)
     return data.data
   },
 

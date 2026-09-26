@@ -211,6 +211,11 @@ Under `/admin/*`, `AdminRoute`-guarded, in a new **"Email"** sub-nav group.
   (subject, shared rich-HTML WYSIWYG/HTML-source editor or Markdown, audience picker
   = user-segment role *or* a contact list), per-row **Test** + **Send** (send-now or
   schedule via a datetime). Both modes use the branded wrapper and unsubscribe footer.
+- [x] ✅ **Email branding** (`/admin/emails/branding`) — global enable/disable,
+  independent header/footer visibility, sanitized WYSIWYG + HTML-source editing,
+  and a saved inbox-style preview. Every customizable transactional template has
+  a per-template “include system header and footer” override; campaign unsubscribe
+  controls remain present even when visual branding is disabled.
 - [x] ✅ **Campaign detail** (`/admin/emails/:id`) — stat cards (recipients / sent /
   failed / sent-at), recipient status breakdown, body; row-click from the list.
   *(Verified live.)* *(Cancel-if-scheduled is the remaining action.)*

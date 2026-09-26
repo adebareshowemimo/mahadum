@@ -16,6 +16,7 @@ import {
   type CreateOrgInput,
   type CreatePromoInput,
   type EmailLogQuery,
+  type EmailBrandingInput,
   type EmailTemplateContent,
   type InviteOrgAdminInput,
   type IncomeReportQuery,
@@ -55,6 +56,7 @@ export const adminKeys = {
   emailTemplates: ['admin-email-templates'] as const,
   emailTemplate: (key: string) => ['admin-email-template', key] as const,
   emailTemplatePreview: (key: string) => ['admin-email-template-preview', key] as const,
+  emailBranding: ['admin-email-branding'] as const,
   gateways: ['admin-gateways'] as const,
   emailConfiguration: ['admin-email-configuration'] as const,
   audit: (params: AuditLogQuery) => ['admin-audit', params] as const,
@@ -732,6 +734,21 @@ export function useResetEmailTemplate() {
       qc.setQueryData(adminKeys.emailTemplate(key), data)
       void qc.invalidateQueries({ queryKey: adminKeys.emailTemplates })
       void qc.invalidateQueries({ queryKey: adminKeys.emailTemplatePreview(key) })
+    },
+  })
+}
+
+export function useEmailBranding() {
+  return useQuery({ queryKey: adminKeys.emailBranding, queryFn: adminApi.emailBranding })
+}
+
+export function useUpdateEmailBranding() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: EmailBrandingInput) => adminApi.updateEmailBranding(input),
+    onSuccess: (data) => {
+      qc.setQueryData(adminKeys.emailBranding, data)
+      void qc.invalidateQueries({ queryKey: ['admin-email-template-preview'] })
     },
   })
 }

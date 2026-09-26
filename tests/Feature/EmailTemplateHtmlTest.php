@@ -22,6 +22,7 @@ class EmailTemplateHtmlTest extends TestCase
         $this->putJson('/api/v1/admin/email-templates/welcome', [
             'subject' => 'Hello from {{brand_name}}',
             'content_mode' => 'html',
+            'include_branding' => true,
             'greeting' => null,
             'body' => '',
             'html_body' => '<h2>Welcome to {{brand_name}}</h2><p style="color:#123456">{{brand_tagline}}</p><a href="{{brand_url}}">Begin</a>',
@@ -49,6 +50,7 @@ class EmailTemplateHtmlTest extends TestCase
         $this->putJson('/api/v1/admin/email-templates/welcome', [
             'subject' => 'Safe welcome',
             'content_mode' => 'html',
+            'include_branding' => true,
             'greeting' => null,
             'body' => '',
             'html_body' => '<script>alert(1)</script><p onclick="alert(2)" style="background:url(https://tracker.test/x)">Hello</p><a href="javascript:alert(3)">Bad link</a>',
@@ -76,6 +78,7 @@ class EmailTemplateHtmlTest extends TestCase
         $this->putJson('/api/v1/admin/email-templates/welcome', [
             'subject' => 'Incomplete',
             'content_mode' => 'html',
+            'include_branding' => true,
             'body' => '',
             'html_body' => null,
             'action_text' => null,

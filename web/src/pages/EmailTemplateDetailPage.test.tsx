@@ -22,6 +22,7 @@ const template = {
   default: {
     subject: 'Welcome to {{brand_name}}',
     content_mode: 'structured' as const,
+    include_branding: true,
     greeting: 'Welcome!',
     body: 'Your account is ready.',
     html_body: null,
@@ -56,6 +57,7 @@ describe('EmailTemplateDetailPage', () => {
     renderPage()
 
     fireEvent.change(screen.getByLabelText(/content format/i), { target: { value: 'html' } })
+    fireEvent.click(screen.getByRole('switch', { name: /include the system email header/i }))
     fireEvent.click(screen.getByRole('button', { name: 'HTML' }))
     fireEvent.change(screen.getByLabelText(/html email source/i), { target: { value: '<h2>Hello {{brand_name}}</h2>' } })
     fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
@@ -64,6 +66,7 @@ describe('EmailTemplateDetailPage', () => {
       key: 'welcome',
       input: expect.objectContaining({
         content_mode: 'html',
+        include_branding: false,
         html_body: '<h2>Hello {{brand_name}}</h2>',
       }),
     }))

@@ -1740,12 +1740,24 @@ export interface EmailTemplatePreview {
 export interface EmailTemplateContent {
   subject: string
   content_mode: 'structured' | 'html'
+  include_branding: boolean
   greeting: string | null
   body: string
   html_body: string | null
   action_text: string | null
   action_url: string | null
 }
+
+export interface EmailBranding {
+  enabled: boolean
+  header_enabled: boolean
+  footer_enabled: boolean
+  header_html: string
+  footer_html: string
+  preview_html: string
+}
+
+export type EmailBrandingInput = Omit<EmailBranding, 'preview_html'>
 
 export interface EmailTemplateOverrideContent extends EmailTemplateContent {
   updated_at: string | null

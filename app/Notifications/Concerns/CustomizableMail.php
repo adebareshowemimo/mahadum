@@ -3,6 +3,7 @@
 namespace App\Notifications\Concerns;
 
 use App\Models\EmailTemplateOverride;
+use App\Services\EmailBranding;
 use App\Services\EmailHtmlSanitizer;
 use Illuminate\Notifications\Messages\MailMessage;
 
@@ -25,7 +26,7 @@ trait CustomizableMail
         $override = EmailTemplateOverride::where('key', $key)->first();
 
         if (! $override) {
-            return $default;
+            return app(EmailBranding::class)->apply($default);
         }
 
         $sub = fn (?string $text): ?string => $text === null ? null : strtr($text, $placeholders);
@@ -35,7 +36,10 @@ trait CustomizableMail
         if ($override->content_mode === 'html' && filled($override->html_body)) {
             $html = app(EmailHtmlSanitizer::class)->sanitize((string) $sub($override->html_body));
 
-            return $mail->view('emails.custom-html', ['html' => $html]);
+            return $mail->view('emails.custom-html', [
+                'html' => $html,
+                'includeBranding' => $override->include_branding,
+            ]);
         }
 
         if ($override->greeting) {
@@ -52,6 +56,6 @@ trait CustomizableMail
             $mail->action((string) $sub($override->action_text), (string) $sub($override->action_url));
         }
 
-        return $mail;
+        return app(EmailBranding::class)->apply($mail, $override->include_branding);
     }
 }

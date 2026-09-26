@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+@php($emailBranding = app(\App\Services\EmailBranding::class)->presentation($includeBranding ?? true))
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="UTF-8">
@@ -11,17 +12,13 @@
     <tr>
         <td align="center" style="padding:28px 12px;">
             <table role="presentation" width="570" cellpadding="0" cellspacing="0" style="width:100%;max-width:570px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 28px rgba(23,32,51,.08);">
-                <tr>
-                    <td align="center" style="background:#172033;padding:24px;">
-                        <a href="{{ config('brand.url') }}" style="color:#d7ad45;text-decoration:none;font-size:24px;font-weight:800;letter-spacing:.04em;">
-                            @if (config('brand.logo_url'))
-                                <img src="{{ config('brand.logo_url') }}" alt="{{ config('brand.name') }}" style="max-height:52px;max-width:220px;">
-                            @else
-                                {{ config('brand.name') }}
-                            @endif
-                        </a>
-                    </td>
-                </tr>
+                @if ($emailBranding['show_header'])
+                    <tr>
+                        <td align="center" style="background:#172033;padding:24px;">
+                            {!! $emailBranding['header_html'] !!}
+                        </td>
+                    </tr>
+                @endif
                 <tr>
                     <td style="padding:32px;font-size:16px;line-height:1.65;">
                         {!! $html !!}
@@ -35,12 +32,13 @@
                         </td>
                     </tr>
                 @endisset
-                <tr>
-                    <td align="center" style="border-top:1px solid #e6dfd1;padding:22px 28px;color:#6b7280;font-size:12px;line-height:1.6;">
-                        {{ config('brand.tagline') }}<br>
-                        © {{ date('Y') }} {{ config('brand.name') }}. All rights reserved.
-                    </td>
-                </tr>
+                @if ($emailBranding['show_footer'])
+                    <tr>
+                        <td align="center" style="border-top:1px solid #e6dfd1;padding:22px 28px;color:#6b7280;font-size:12px;line-height:1.6;">
+                            {!! $emailBranding['footer_html'] !!}
+                        </td>
+                    </tr>
+                @endif
             </table>
         </td>
     </tr>

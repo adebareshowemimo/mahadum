@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { AdminPageHeader, RichHtmlEmailEditor } from '@/components/admin'
-import { Alert, Badge, Button, Card, Skeleton, Textarea } from '@/components/ui'
+import { Alert, Badge, Button, Card, Skeleton, Switch, Textarea } from '@/components/ui'
 import { ApiError, type EmailTemplateContent } from '@/lib/api'
 import {
   useEmailTemplate,
@@ -21,7 +21,7 @@ export function EmailTemplateDetailPage() {
   const [saved, setSaved] = useState(false)
   const [confirmingReset, setConfirmingReset] = useState(false)
   const lastFocused = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null)
-  const lastField = useRef<keyof EmailTemplateContent>('body')
+  const lastField = useRef<TemplateTextField>('body')
   const richEditor = useRef<HTMLDivElement>(null)
   const [htmlView, setHtmlView] = useState<'visual' | 'source'>('visual')
 
@@ -31,6 +31,7 @@ export function EmailTemplateDetailPage() {
     setForm({
       subject: source.subject,
       content_mode: source.content_mode,
+      include_branding: source.include_branding,
       greeting: source.greeting,
       body: source.body,
       html_body: source.html_body,
@@ -92,7 +93,12 @@ export function EmailTemplateDetailPage() {
         description={template?.trigger}
         backTo="/admin/emails/templates"
         backLabel="Back to templates"
-        actions={template && <Badge variant={template.customizable ? (template.override ? 'gold' : 'neutral') : 'neutral'}>{template.customizable ? (template.override ? 'Customized' : 'Default') : 'Framework-managed'}</Badge>}
+        actions={template && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Link to="/admin/emails/branding" className="inline-flex min-h-11 items-center rounded-xl border border-border px-3 text-sm font-semibold text-foreground hover:border-gold-400 hover:bg-gold-50">Manage branding</Link>
+            <Badge variant={template.customizable ? (template.override ? 'gold' : 'neutral') : 'neutral'}>{template.customizable ? (template.override ? 'Customized' : 'Default') : 'Framework-managed'}</Badge>
+          </div>
+        )}
       />
       {error && <Alert variant="danger">{error}</Alert>}
       {saved && !error && <Alert variant="success">Saved. New sends will use this content.</Alert>}
@@ -124,6 +130,15 @@ export function EmailTemplateDetailPage() {
                   </select>
                   <span className="text-xs font-normal text-muted">Rich HTML keeps the MAHADUM header and footer while giving you full control of the message content.</span>
                 </label>
+
+                <div className="rounded-xl border border-border bg-surface-muted px-4 py-3">
+                  <Switch
+                    checked={form.include_branding}
+                    onChange={(include_branding) => setForm({ ...form, include_branding })}
+                    label="Include the system email header and footer"
+                  />
+                  <p className="ml-[3.35rem] text-xs text-muted">Turn this off only for this template. Global header and footer content is managed from Email branding.</p>
+                </div>
 
                 {form.content_mode === 'structured' ? (
                   <>
@@ -188,6 +203,8 @@ export function EmailTemplateDetailPage() {
     </div>
   )
 }
+
+type TemplateTextField = 'subject' | 'greeting' | 'body' | 'html_body' | 'action_text' | 'action_url'
 
 function structuredToHtml(content: EmailTemplateContent): string {
   const paragraphs = content.body.split(/\n{2,}/).filter(Boolean).map((paragraph) => `<p>${escapeHtml(paragraph).replaceAll('\n', '<br>')}</p>`).join('')

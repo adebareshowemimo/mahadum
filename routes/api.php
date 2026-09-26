@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AdvertPlacementController;
 use App\Http\Controllers\Admin\AuditController;
 use App\Http\Controllers\Admin\CompetitionAdminController;
 use App\Http\Controllers\Admin\ContactListController;
+use App\Http\Controllers\Admin\EmailBrandingController;
 use App\Http\Controllers\Admin\EmailCampaignController;
 use App\Http\Controllers\Admin\EmailConfigurationController;
 use App\Http\Controllers\Admin\EmailLogController;
@@ -479,6 +480,8 @@ Route::prefix('v1')->group(function () {
             Route::get('email-configuration', [EmailConfigurationController::class, 'show'])->middleware('can:system.settings.manage');
             Route::put('email-configuration', [EmailConfigurationController::class, 'update'])->middleware('can:system.settings.manage');
             Route::post('email-configuration/test', [EmailConfigurationController::class, 'test'])->middleware('can:system.settings.manage');
+            Route::get('email-branding', [EmailBrandingController::class, 'show'])->middleware('can:emails.templates.view');
+            Route::put('email-branding', [EmailBrandingController::class, 'update'])->middleware('can:emails.templates.manage');
 
             // Reports
             Route::get('reports/income', [ReportController::class, 'income'])->middleware('can:analytics.platform.view');

@@ -63,6 +63,7 @@ const EmailLogPage = lazy(() => import('@/pages/EmailLogPage').then((m) => ({ de
 const EmailLogDetailPage = lazy(() => import('@/pages/EmailLogDetailPage').then((m) => ({ default: m.EmailLogDetailPage })))
 const EmailTemplatesPage = lazy(() => import('@/pages/EmailTemplatesPage').then((m) => ({ default: m.EmailTemplatesPage })))
 const EmailConfigurationPage = lazy(() => import('@/pages/EmailConfigurationPage').then((m) => ({ default: m.EmailConfigurationPage })))
+const EmailBrandingPage = lazy(() => import('@/pages/EmailBrandingPage').then((m) => ({ default: m.EmailBrandingPage })))
 const EmailTemplateDetailPage = lazy(() => import('@/pages/EmailTemplateDetailPage').then((m) => ({ default: m.EmailTemplateDetailPage })))
 const AuditLogPage = lazy(() => import('@/pages/AuditLogPage').then((m) => ({ default: m.AuditLogPage })))
 const FraudReviewPage = lazy(() => import('@/pages/FraudReviewPage').then((m) => ({ default: m.FraudReviewPage })))
@@ -246,6 +247,7 @@ const REAL_PAGES = new Set([
   '/admin/emails/log',
   '/admin/emails/templates',
   '/admin/emails/configuration',
+  '/admin/emails/branding',
   '/admin/settings/gateways',
   '/admin/audit',
   '/admin/settings',
@@ -388,6 +390,7 @@ export function App() {
             <Route path="/admin/emails/log/:logId" element={<EmailLogDetailPage />} />
             <Route path="/admin/emails/templates" element={<EmailTemplatesPage />} />
             <Route path="/admin/emails/configuration" element={<EmailConfigurationPage />} />
+            <Route path="/admin/emails/branding" element={<EmailBrandingPage />} />
             <Route path="/admin/emails/templates/:templateKey" element={<EmailTemplateDetailPage />} />
             <Route path="/admin/emails/:campaignId" element={<CampaignDetailPage />} />
             <Route path="/admin/settings/gateways" element={<GatewaysPage />} />

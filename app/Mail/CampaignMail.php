@@ -39,14 +39,13 @@ class CampaignMail extends Mailable
     public function content(): Content
     {
         if ($this->contentMode === 'html' && filled($this->htmlBody)) {
-            return new Content(view: 'emails.custom-html', with: [
-                'html' => app(EmailHtmlSanitizer::class)->sanitize($this->htmlBody),
-                'unsubscribeUrl' => $this->unsubscribeUrl,
-            ]);
+            $html = app(EmailHtmlSanitizer::class)->sanitize($this->htmlBody);
+        } else {
+            $html = app(EmailHtmlSanitizer::class)->sanitize(Str::markdown($this->body));
         }
 
-        return new Content(markdown: 'emails.campaign', with: [
-            'bodyHtml' => Str::markdown($this->body),
+        return new Content(view: 'emails.custom-html', with: [
+            'html' => $html,
             'unsubscribeUrl' => $this->unsubscribeUrl,
         ]);
     }

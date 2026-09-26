@@ -20,6 +20,7 @@ class UpdateEmailTemplateRequest extends FormRequest
         return [
             'subject' => ['required', 'string', 'max:255'],
             'content_mode' => ['required', Rule::in(['structured', 'html'])],
+            'include_branding' => ['required', 'boolean'],
             'greeting' => ['nullable', 'string', 'max:255'],
             'body' => [Rule::requiredIf($this->input('content_mode') === 'structured'), 'nullable', 'string', 'max:10000'],
             'html_body' => [Rule::requiredIf($this->input('content_mode') === 'html'), 'nullable', 'string', 'max:100000'],

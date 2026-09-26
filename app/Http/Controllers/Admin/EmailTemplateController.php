@@ -90,11 +90,13 @@ class EmailTemplateController extends Controller
             'placeholders' => $customizable ? $meta['placeholders'] : [],
             'default' => $customizable ? array_merge([
                 'content_mode' => 'structured',
+                'include_branding' => true,
                 'html_body' => null,
             ], $meta['default']) : null,
             'override' => $override ? [
                 'subject' => $override->subject,
                 'content_mode' => $override->content_mode,
+                'include_branding' => $override->include_branding,
                 'greeting' => $override->greeting,
                 'body' => $override->body,
                 'html_body' => $override->html_body,
@@ -110,7 +112,7 @@ class EmailTemplateController extends Controller
         abort_unless(isset($this->builders()[$key]), 404, 'Unknown email template.');
         abort_unless($this->isCustomizable($key), 422, 'This template is framework-managed and cannot be customized.');
 
-        $before = EmailTemplateOverride::where('key', $key)->first()?->only(['subject', 'content_mode', 'greeting', 'body', 'html_body', 'action_text', 'action_url']) ?? [];
+        $before = EmailTemplateOverride::where('key', $key)->first()?->only(['subject', 'content_mode', 'include_branding', 'greeting', 'body', 'html_body', 'action_text', 'action_url']) ?? [];
 
         $data = $request->validated();
         // The original structured body column predates HTML mode and is non-null.
@@ -134,7 +136,7 @@ class EmailTemplateController extends Controller
 
         $override = EmailTemplateOverride::where('key', $key)->first();
         if ($override) {
-            $this->audit->record('email_template.reset', null, $override->only(['subject', 'content_mode', 'greeting', 'body', 'html_body', 'action_text', 'action_url']), []);
+            $this->audit->record('email_template.reset', null, $override->only(['subject', 'content_mode', 'include_branding', 'greeting', 'body', 'html_body', 'action_text', 'action_url']), []);
             $override->delete();
         }
 

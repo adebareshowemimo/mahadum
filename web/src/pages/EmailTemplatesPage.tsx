@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { AdminPageHeader, DataTable, type Column } from '@/components/admin'
-import { Alert, Badge } from '@/components/ui'
+import { Alert, Badge, LinkButton } from '@/components/ui'
 import type { EmailTemplateSummary } from '@/lib/api'
 import { useEmailTemplates } from '@/lib/admin/queries'
 
@@ -63,6 +63,7 @@ export function EmailTemplatesPage() {
       <AdminPageHeader
         title="Email templates"
         description="Preview and customize the transactional messages sent by the platform."
+        actions={<LinkButton to="/admin/emails/branding" variant="secondary">Manage email branding</LinkButton>}
       />
       <DataTable columns={columns} rows={data ?? []} getRowId={(template) => template.key} isLoading={isLoading} empty="No templates found." />
     </div>
