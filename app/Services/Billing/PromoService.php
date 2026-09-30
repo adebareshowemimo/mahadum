@@ -2,6 +2,7 @@
 
 namespace App\Services\Billing;
 
+use App\Models\Invoice;
 use App\Models\Plan;
 use App\Models\PromoCode;
 use App\Models\PromoRedemption;
@@ -22,6 +23,8 @@ class PromoService
         'inactive' => 'That promo code is no longer active.',
         'not_started' => 'That promo code isn’t active yet.',
         'expired' => 'That promo code has expired.',
+        'wrong_target' => 'That promo code does not apply to this fee.',
+        'fee_unavailable' => 'This invoice has no eligible fee for that promo code.',
         'wrong_tier' => 'That promo code doesn’t apply to this plan.',
         'exhausted' => 'That promo code has reached its redemption limit.',
         'already_used' => 'You’ve already used that promo code.',
@@ -31,7 +34,7 @@ class PromoService
      * Resolve a code for a plan/user. Returns [PromoCode, discountMinor, finalMinor]
      * or throws PromoException with a reason key.
      */
-    public function evaluate(string $code, Plan $plan, User $user): PromoOutcome
+    public function evaluate(string $code, Plan $plan, User $user, ?string $target = null): PromoOutcome
     {
         $promo = PromoCode::whereRaw('LOWER(code) = ?', [mb_strtolower(trim($code))])->first();
 
@@ -46,6 +49,10 @@ class PromoService
         }
         if ($promo->valid_to && now()->gt($promo->valid_to)) {
             throw new PromoException('expired');
+        }
+        $target ??= $plan->audience === 'school' ? 'school_subscription' : 'individual_subscription';
+        if (($promo->target ?? 'all') !== 'all' && $promo->target !== $target) {
+            throw new PromoException('wrong_target');
         }
         if ($promo->applicable_tier && $promo->applicable_tier !== $plan->code) {
             throw new PromoException('wrong_tier');
@@ -63,6 +70,29 @@ class PromoService
             : min($price, max(0, $promo->value));
 
         return new PromoOutcome($promo, $discount, max(0, $price - $discount));
+    }
+
+    /** Invoice discounts use the selected fee as their base, not the total. */
+    public function evaluateInvoice(string $code, Invoice $invoice, User $user): PromoOutcome
+    {
+        $promo = PromoCode::whereRaw('LOWER(code) = ?', [mb_strtolower(trim($code))])->first();
+        if ($promo === null) {
+            throw new PromoException('not_found');
+        }
+        $target = $promo->target ?? 'all';
+        if (! in_array($target, ['all', 'school_registration', 'school_subscription'], true)) {
+            throw new PromoException('wrong_target');
+        }
+        $price = (int) $invoice->amount_minor;
+        if ($target !== 'all') {
+            $fee = $target === 'school_registration' ? InvoiceLineBuilder::REGISTRATION_FEES : InvoiceLineBuilder::STUDENT_SCHOOL_FEES;
+            $price = (int) collect($invoice->breakdownLines())->where('description', $fee)->sum('amount_minor');
+            if ($price <= 0) {
+                throw new PromoException('fee_unavailable');
+            }
+        }
+
+        return $this->evaluate($code, new Plan(['code' => 'school', 'audience' => 'school', 'price_minor' => $price]), $user, $target);
     }
 
     /** Record a consumer redemption and advance the code's counter. */

@@ -238,6 +238,13 @@ class PaymentService
         $this->referrals->reverseForSubscription($subscription);
     }
 
+    public function activateComplimentarySubscription(Subscription $subscription): void
+    {
+        abort_unless($subscription->initial_charge_minor === 0 && $subscription->status === 'pending', 422);
+        $this->activateSubscription($subscription, 0);
+        $this->audit->record('subscription.promo_activated', $subscription, ['status' => 'pending'], ['status' => 'active', 'charged_minor' => 0]);
+    }
+
     private function activateSubscription(Subscription $subscription, ?int $amountMinor = null, string $sourceEvent = ''): void
     {
         $firstActivation = $subscription->status !== 'active';

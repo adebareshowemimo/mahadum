@@ -284,6 +284,8 @@ export type NodeState = 'locked' | 'active' | 'completed'
 
 export interface PathNode {
   access_reason?: string | null
+  is_free?: boolean
+  /** Read-only compatibility alias for the level access setting. */
   is_free_preview?: boolean
   lesson_id: number
   title: string
@@ -409,6 +411,8 @@ export interface AuthorComponent {
 }
 
 export interface AuthorLesson {
+  is_free?: boolean
+  /** Read-only compatibility alias for the level access setting. */
   is_free_preview?: boolean
   id: number
   title: string
@@ -422,6 +426,7 @@ export interface AuthorLesson {
 }
 
 export interface AuthorLevel {
+  is_free?: boolean
   id: number
   title: string
   position: number
@@ -437,13 +442,13 @@ export interface CreateCourseInput {
 }
 
 export interface CreateLevelInput {
+  is_free?: boolean
   title: string
   position?: number
   has_assessment?: boolean
 }
 
 export interface CreateLessonInput {
-  is_free_preview?: boolean
   title: string
   est_minutes?: number
   position?: number
@@ -1901,7 +1906,10 @@ export interface RolesMatrix {
   matrix: Record<string, string[]>
 }
 
+export type PromoTarget = 'all' | 'school_registration' | 'school_subscription' | 'individual_subscription'
+
 export interface CreatePromoInput {
+  target?: PromoTarget
   code: string
   discount_type: 'percent' | 'fixed'
   value: number
@@ -1935,6 +1943,7 @@ export interface SchoolLead {
 }
 
 export interface PromoCode {
+  target?: PromoTarget
   id: number
   code: string
   discount_type: 'percent' | 'fixed'

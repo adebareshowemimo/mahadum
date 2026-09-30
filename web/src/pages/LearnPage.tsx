@@ -69,6 +69,7 @@ export function LearnPage() {
             <section key={`${unit.title}-${ui}`}>
               <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-wide text-subtle">
                 {unit.title}
+                {unit.nodes.length > 0 && <span className="ml-2 text-xs normal-case">{unit.nodes.every(node => node.is_free) ? 'Free' : 'Paid'}</span>}
               </h2>
               <ol className="relative flex flex-col gap-3 before:absolute before:left-5 before:top-5 before:bottom-5 before:w-px before:bg-border">
                 {unit.nodes.map((node) => (

@@ -112,7 +112,7 @@ class DemoSeeder extends Seeder
             'is_published' => true,
         ]);
 
-        $level = $course->levels()->create(['title' => 'Unit 1 — Greetings', 'position' => 1]);
+        $level = $course->levels()->create(['title' => 'Unit 1 — Greetings', 'position' => 1, 'is_free' => true]);
         $lesson = $level->lessons()->create(['title' => 'Saying hello', 'position' => 1, 'est_minutes' => 5]);
 
         $video = $lesson->components()->create(['type' => 'video', 'position' => 1, 'xp_value' => 5]);

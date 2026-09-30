@@ -14,7 +14,8 @@ class LessonResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'is_free_preview' => (bool) $this->is_free_preview,
+            'is_free' => (bool) $this->courseLevel->is_free,
+            'is_free_preview' => (bool) $this->courseLevel->is_free,
             'id' => $this->id,
             'title' => $this->title,
             'position' => $this->position,

@@ -10,6 +10,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
+ * @property string $target
  * @property string $code
  * @property string $discount_type
  * @property int $value

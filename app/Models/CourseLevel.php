@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
  * @property int $course_id
  * @property string $title
  * @property int $position
+ * @property bool $is_free
  * @property bool $has_assessment
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -42,6 +43,7 @@ class CourseLevel extends Model
 
     protected $casts = [
         'has_assessment' => 'boolean',
+        'is_free' => 'boolean',
     ];
 
     /**

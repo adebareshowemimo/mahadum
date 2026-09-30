@@ -117,7 +117,7 @@ function UnitStartCard({ courseId, level }: { courseId: number; level: AuthorLev
                 >
                   <span>
                     {index + 1}. {lesson.title}
-                    <span className="ml-2 text-xs text-muted">{level.position === 0 ? 'Free Level 0' : 'Paid lesson'}</span>
+                    <span className="ml-2 text-xs text-muted">{level.is_free ? 'Free' : 'Paid lesson'}</span>
                     {!lesson.is_published && (
                       <span className="ml-2 rounded bg-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase text-subtle">Draft</span>
                     )}

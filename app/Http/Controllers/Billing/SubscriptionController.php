@@ -209,7 +209,7 @@ class SubscriptionController extends Controller
         // payment still correlates to this subscription rather than creating a new one.
         $checkout = $gateway->initialize(
             $reference,
-            (int) $subscription->plan->price_minor,
+            (int) ($subscription->initial_charge_minor ?? $subscription->plan->price_minor),
             (string) $user->email,
             ['purpose' => 'subscription', 'subscription_id' => $subscription->id],
         );
@@ -243,6 +243,7 @@ class SubscriptionController extends Controller
 
         $subscription = new Subscription([
             'plan_id' => $plan->id,
+            'initial_charge_minor' => $chargeMinor,
             'method' => $method,
             'status' => $method === 'card' ? 'pending' : 'active',
         ]);
@@ -264,7 +265,10 @@ class SubscriptionController extends Controller
             $data['charged_minor'] = $chargeMinor;
         }
 
-        if ($method === 'card') {
+        if ($method === 'card' && $outcome !== null && $chargeMinor === 0) {
+            $this->payments->activateComplimentarySubscription($subscription);
+            $data['status'] = 'active';
+        } elseif ($method === 'card') {
             // Open the hosted checkout; the webhook activates it via this reference.
             $reference = 'sub_'.$subscription->id;
             $checkout = $this->gateways->driver()->initialize(

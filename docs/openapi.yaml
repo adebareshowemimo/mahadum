@@ -682,6 +682,7 @@ paths:
                 title: { type: string, maxLength: 255 }
                 position: { type: integer, minimum: 1, nullable: true }
                 has_assessment: { type: boolean }
+                is_free: { type: boolean, default: false, description: Free access for all published lessons in the level }
       responses:
         "201":
           description: Created
@@ -691,6 +692,39 @@ paths:
                 type: object
                 properties:
                   data: { $ref: "#/components/schemas/CourseLevel" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /levels/{level}:
+    parameters:
+      - name: level
+        in: path
+        required: true
+        schema: { type: integer }
+    patch:
+      tags: [Content]
+      summary: Update level title and free access (content.lessons.manage)
+      description: Free access is persisted independently of ordering and inherited by every published lesson. Access changes are audited.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string, maxLength: 255 }
+                is_free: { type: boolean }
+                position: { type: integer, minimum: 1 }
+                has_assessment: { type: boolean }
+      responses:
+        "200":
+          description: Saved level
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/CourseLevel" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
   /levels/{level}/lessons:
@@ -2295,7 +2329,7 @@ paths:
     post:
       tags: [School]
       summary: Apply a promo code before invoice checkout (billing.invoices.manage)
-      description: Applies one code permanently to an unpaid invoice, reserves a redemption, updates its total and invalidates the cached PDF. Codes cannot be stacked or applied after checkout starts.
+      description: Applies one eligible code permanently to an unpaid invoice, reserves a redemption, discounts only its target fee (whole total for legacy codes), recalculates existing VAT for targeted discounts and invalidates the cached PDF. Codes cannot be stacked or applied after checkout starts.
       requestBody:
         required: true
         content:
@@ -2575,7 +2609,8 @@ paths:
               properties:
                 code: { type: string, maxLength: 50 }
                 discount_type: { type: string, enum: [percent, fixed] }
-                value: { type: integer, minimum: 1 }
+                value: { type: integer, minimum: 1, description: Percentage (1-100) or fixed amount in minor currency units }
+                target: { type: string, enum: [all, school_registration, school_subscription, individual_subscription], default: all, description: Fee eligibility; existing codes retain all }
                 applicable_tier: { type: string, maxLength: 50, nullable: true }
                 valid_from: { type: string, format: date, nullable: true }
                 valid_to: { type: string, format: date, nullable: true }
@@ -3700,6 +3735,7 @@ components:
         title: { type: string }
         position: { type: integer }
         has_assessment: { type: boolean }
+        is_free: { type: boolean }
         lessons:
           type: array
           nullable: true

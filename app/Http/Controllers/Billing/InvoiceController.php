@@ -7,10 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Billing\ApplyInvoicePromoRequest;
 use App\Http\Requests\Billing\PayInvoiceRequest;
 use App\Models\Organization;
-use App\Models\Plan;
 use App\Models\PromoCode;
 use App\Models\PromoRedemption;
 use App\Services\AuditLogger;
+use App\Services\Billing\InvoiceLineBuilder;
 use App\Services\Billing\InvoicePdfRenderer;
 use App\Services\Billing\PaymentGatewayManager;
 use App\Services\Billing\PaymentService;
@@ -60,16 +60,29 @@ class InvoiceController extends Controller
             // Serialize competing invoice redemptions against the global cap.
             PromoCode::whereRaw('LOWER(code) = ?', [mb_strtolower(trim($request->string('code')->value()))])->lockForUpdate()->first();
             try {
-                $outcome = $promos->evaluate($request->string('code')->value(), new Plan(['code' => 'school', 'price_minor' => $model->amount_minor]), $request->user());
+                $outcome = $promos->evaluateInvoice($request->string('code')->value(), $model, $request->user());
             } catch (PromoException $exception) {
                 throw ValidationException::withMessages(['code' => $exception->getMessage()]);
             }
-            $lines[] = ['description' => 'Promo code: '.$outcome->promo->code, 'amount_minor' => -$outcome->discountMinor];
+            $targetLabel = match ($outcome->promo->target ?? 'all') {
+                'school_registration' => 'School registration',
+                'school_subscription' => 'School subscription',
+                default => 'All fees',
+            };
+            $lines[] = ['description' => 'Promo code: '.$outcome->promo->code.' ('.$targetLabel.')', 'amount_minor' => -$outcome->discountMinor];
+            $total = $model->amount_minor - $outcome->discountMinor;
+            if (($outcome->promo->target ?? 'all') !== 'all' && collect($lines)->contains('description', 'VAT (7.5%)')) {
+                // Use the existing invoice tax rule on the discounted subtotal.
+                $fees = array_values(array_filter($lines, fn ($line) => $line['description'] !== 'VAT (7.5%)'));
+                $breakdown = InvoiceLineBuilder::withVat($fees);
+                $lines = $breakdown['lines'];
+                $total = $breakdown['total_minor'];
+            }
             $before = ['amount_minor' => $model->amount_minor];
-            $model->update(['amount_minor' => $outcome->finalMinor, 'lines' => $lines, 'pdf_asset_id' => null]);
+            $model->update(['amount_minor' => $total, 'lines' => $lines, 'pdf_asset_id' => null]);
             PromoRedemption::create(['promo_code_id' => $outcome->promo->id, 'user_id' => $request->user()->id, 'organization_id' => $organization->id]);
             $outcome->promo->increment('redeemed_count');
-            app(AuditLogger::class)->record('invoice.promo_applied', $model, $before, ['amount_minor' => $model->amount_minor, 'code' => $outcome->promo->code], $organization->id);
+            app(AuditLogger::class)->record('invoice.promo_applied', $model, $before, ['amount_minor' => $model->amount_minor, 'code' => $outcome->promo->code, 'target' => $outcome->promo->target, 'discount_minor' => $outcome->discountMinor], $organization->id);
 
             return response()->json(['data' => ['amount_minor' => $model->amount_minor]]);
         });

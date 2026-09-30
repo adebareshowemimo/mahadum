@@ -92,20 +92,7 @@ function LessonEditor() {
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
-  const [accessBusy, setAccessBusy] = useState(false)
   const [publishErrors, setPublishErrors] = useState<string[] | null>(null)
-
-  async function toggleFreeLesson() {
-    setAccessBusy(true)
-    try {
-      await contentApi.updateLesson(id, { is_free_preview: !lesson.data?.is_free_preview })
-      await lesson.refetch()
-    } catch (err) {
-      setPublishErrors([err instanceof ApiError ? err.message : 'Could not update lesson access.'])
-    } finally {
-      setAccessBusy(false)
-    }
-  }
 
   async function onPublish() {
     setPublishErrors(null)
@@ -173,10 +160,10 @@ function LessonEditor() {
 
       <CourseContents courseId={Number(courseId)} currentLessonId={id} />
 
-      {canManage && <label className="flex items-center gap-3 rounded-xl border border-border p-4 text-sm">
-        <input type="checkbox" checked={!!lesson.data.is_free_preview} disabled={accessBusy} onChange={() => void toggleFreeLesson()} />
-        Free introductory lesson (Lesson 0). All other lessons require a paid plan.
-      </label>}
+      <div className="rounded-xl border border-border p-4 text-sm">
+        <Badge variant={lesson.data.is_free ? 'success' : 'neutral'}>{lesson.data.is_free ? 'Free access' : 'Paid access'}</Badge>
+        <p className="mt-2 text-muted">Access is set for the whole level. <Link to={`/courses/${courseId}#course-structure`} className="font-semibold text-primary underline">Edit the level’s access</Link></p>
+      </div>
 
       {publishErrors && (
         <Alert variant="warning" title="Can’t publish yet">

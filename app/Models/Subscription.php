@@ -13,6 +13,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property string $subscriber_type
  * @property int $subscriber_id
+ * @property int|null $initial_charge_minor
  * @property int $plan_id
  * @property string $status
  * @property string $method
@@ -52,6 +53,7 @@ class Subscription extends Model
     protected $guarded = [];
 
     protected $casts = [
+        'initial_charge_minor' => 'integer',
         'started_at' => 'datetime',
         'renews_at' => 'datetime',
         'renewal_reminded_at' => 'datetime',

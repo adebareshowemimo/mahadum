@@ -17,6 +17,7 @@ class UpdateCourseLevelRequest extends FormRequest
             'title' => ['sometimes', 'string', 'max:255'],
             'position' => ['sometimes', 'integer', 'min:1'],
             'has_assessment' => ['boolean'],
+            'is_free' => ['boolean'],
         ];
     }
 }

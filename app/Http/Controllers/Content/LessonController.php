@@ -9,7 +9,6 @@ use App\Http\Requests\Content\UpdateLessonRequest;
 use App\Http\Resources\LessonResource;
 use App\Models\CourseLevel;
 use App\Models\Lesson;
-use App\Services\AuditLogger;
 use App\Services\Content\LessonPublishService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,7 +19,7 @@ class LessonController extends Controller
 {
     public function index(Request $request, CourseLevel $level): AnonymousResourceCollection
     {
-        $query = $level->lessons()->orderBy('position');
+        $query = $level->lessons()->with('courseLevel')->orderBy('position');
 
         if (! $request->user()->can('content.lessons.manage')) {
             $query->whereNotNull('published_at'); // learners see published only
@@ -31,14 +30,10 @@ class LessonController extends Controller
 
     public function store(StoreLessonRequest $request, CourseLevel $level): JsonResponse
     {
-        if ($request->boolean('is_free_preview')) {
-            $this->ensureFreeLessonAvailable($level);
-        }
         $position = $request->input('position')
             ?? (($level->lessons()->max('position') ?? 0) + 1);
 
         $lesson = $level->lessons()->create([
-            'is_free_preview' => $request->boolean('is_free_preview'),
             'title' => $request->string('title'),
             'position' => $position,
             'est_minutes' => $request->input('est_minutes', 5),
@@ -68,26 +63,9 @@ class LessonController extends Controller
 
     public function update(UpdateLessonRequest $request, Lesson $lesson): LessonResource
     {
-        if ($request->boolean('is_free_preview')) {
-            $this->ensureFreeLessonAvailable($lesson->courseLevel, $lesson->id);
-        }
-        $before = (bool) $lesson->is_free_preview;
         $lesson->update($request->validated());
-        if ($before !== (bool) $lesson->is_free_preview) {
-            app(AuditLogger::class)->record('lesson.access.updated', $lesson,
-                ['is_free_preview' => $before], ['is_free_preview' => (bool) $lesson->is_free_preview]);
-        }
 
         return new LessonResource($lesson);
-    }
-
-    private function ensureFreeLessonAvailable(CourseLevel $level, ?int $except = null): void
-    {
-        $languageId = $level->course->language_id;
-        $exists = Lesson::where('is_free_preview', true)
-            ->when($except !== null, fn ($q) => $q->where('id', '!=', $except))
-            ->whereHas('courseLevel.course', fn ($q) => $q->where('language_id', $languageId))->exists();
-        abort_if($exists, 422, 'This language already has a free Lesson 0. Remove that designation before choosing another lesson.');
     }
 
     public function destroy(Lesson $lesson): JsonResponse
@@ -109,7 +87,7 @@ class LessonController extends Controller
             }
         });
 
-        return LessonResource::collection($level->lessons()->orderBy('position')->get());
+        return LessonResource::collection($level->lessons()->with('courseLevel')->orderBy('position')->get());
     }
 
     public function publish(Lesson $lesson, LessonPublishService $publisher): JsonResponse

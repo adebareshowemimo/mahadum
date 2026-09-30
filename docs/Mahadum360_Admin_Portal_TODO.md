@@ -1,5 +1,8 @@
 # MAHADUM.360 — Admin Portal (Super Admin) Frontend TODO
 
+> 2026-09-30: `/admin/promos` now supports fee targets: school registration, school subscription and individual subscription. Eligibility is enforced at invoice/subscription checkout; existing codes retain legacy behavior. Fixed UI values are entered in naira and stored in minor units. See billing architecture for discount and tax rules.
+
+
 A focused build plan to **complete the global-admin portal**. Backend for the core
 Super-Admin surface (Phase 9) is ✅; this doc tracks the **remaining frontend pages,
 the missing backend seams they need, and portal-level hardening** so the

@@ -68,6 +68,7 @@ class ShowcaseCourseSeeder extends Seeder
             'title' => 'Unit 1 — Greetings & Everyday Words',
             'position' => 1,
             'has_assessment' => false,
+            'is_free' => true,
         ]);
 
         $this->lessonIntroVideo($level, $language->id, $video->id);

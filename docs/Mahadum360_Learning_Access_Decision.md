@@ -4,7 +4,11 @@ Approved by the product owner on September 7, 2026 in this task. This amendment 
 
 ## Access rules
 
-- Superseded on 2026-09-30: all lessons in course levels with position 0 are free. Upgrade locks begin at Level 1. Airtime includes the free Level 0 plus Level 1.
+- Approved 2026-09-30: `course_levels.is_free` is the persisted access setting. Managers can designate any number of levels free through Add/Edit level. All published lessons inherit their level’s access; title and ordering never decide access. New levels default to paid. The migration preserves levels with legacy free previews, position 0, or titles beginning “Level 0”. Legacy lesson preview fields are read-only compatibility aliases derived from the level; lesson-level writes are rejected.
+- Free learners can play published content in flagged free levels, subject to existing hearts and progress sequencing. Airtime includes these free levels plus its existing Level 1 entitlement. Card/bank subscription behavior is unchanged. Access changes are audited.
+
+
+- Previous interim rule on 2026-09-30: all lessons in course levels with position 0 are free. Upgrade locks begin at Level 1. Airtime includes the free Level 0 plus Level 1.
 - Previous decision: Free learners may browse every language and play the explicitly designated introductory Lesson 0. `lessons.is_free_preview` identifies this content independently of its title or display order. Existing content is initialized to the first published lesson per language; authors must review this selection before rollout.
 - Active paid card/bank subscriptions unlock all published lessons. Individual, family-owner, and organization subscriptions are considered. Existing grace-period access continues until the subscription leaves active/grace status; cancellation/refund state changes restore Free access.
 - Airtime subscriptions are Individual plans and permit content in course Level 1 (`course_levels.position = 1`) only. A qualifying card/bank subscription takes precedence over an airtime restriction.
@@ -17,7 +21,7 @@ Approved by the product owner on September 7, 2026 in this task. This amendment 
 
 Access is enforced in the shared learning-progress boundary, lesson-play controller, answer transaction, speaking/assignment submissions, and invitation creation. Authoring payloads containing answer keys require content permissions. Path and enrollment responses report content locks without permanently rewriting progress, so subscription changes take effect immediately.
 
-The introductory lesson setting is available in the lesson builder. Pricing and billing share the Free-plan wording. Public terms and safeguarding copy explain the restrictions. The migration preserves existing progress and financial ledgers.
+The Free access switch is available in the level creation/editing modals; the lesson builder displays inherited access. Pricing and billing share the Free-plan wording. Public terms and safeguarding copy explain the restrictions. The migration preserves existing progress and financial ledgers.
 
 Rollout still requires applying pending migrations to the intended environment and reviewing the chosen Lesson 0 per language. No production accounts have been deleted. Data cleanup requires an environment-specific inventory and backup; FluentCRM/SES delivery testing requires the client's connection and mapping configuration.
 

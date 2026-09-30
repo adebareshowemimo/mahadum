@@ -159,7 +159,7 @@ class DevSeeder extends Seeder
                 ]);
 
                 foreach (range(1, 2) as $levelPos) {
-                    $level = $course->levels()->create(['title' => "Unit {$levelPos}", 'position' => $levelPos]);
+                    $level = $course->levels()->create(['title' => "Unit {$levelPos}", 'position' => $levelPos, 'is_free' => $levelPos === 1]);
                     foreach (range(1, 3) as $lessonPos) {
                         $this->buildLesson($level, $lessonPos);
                     }

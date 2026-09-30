@@ -25,7 +25,7 @@ class LessonAccessTest extends TestCase
         $lesson = $this->publishedLesson();
         $this->getJson("/api/v1/lessons/{$lesson->id}/play?learner_id={$learner->id}")->assertOk();
         $lesson->update(['is_free_preview' => false]);
-        $lesson->courseLevel->update(['position' => 1]);
+        $lesson->courseLevel->update(['position' => 1, 'is_free' => false]);
         $quiz = $lesson->components->firstWhere('type', 'quiz');
         $question = $quiz->quiz->questions->first();
         $this->getJson("/api/v1/lessons/{$lesson->id}/play?learner_id={$learner->id}")->assertForbidden();
@@ -50,7 +50,7 @@ class LessonAccessTest extends TestCase
         $learner = $this->parentWithChild($parent);
         $lesson = $this->publishedLesson();
         $lesson->update(['is_free_preview' => false]);
-        $lesson->courseLevel->update(['position' => 1]);
+        $lesson->courseLevel->update(['position' => 1, 'is_free' => false]);
         $this->subscribe(User::class, $parent->id, 'airtime');
         $this->getJson("/api/v1/lessons/{$lesson->id}/play?learner_id={$learner->id}")->assertOk();
         $lesson->courseLevel->update(['position' => 2]);
@@ -67,7 +67,7 @@ class LessonAccessTest extends TestCase
         $learner->update(['user_id' => $parent->id]);
         $lesson = $this->publishedLesson();
         $lesson->update(['is_free_preview' => false]);
-        $lesson->courseLevel->update(['position' => 1]);
+        $lesson->courseLevel->update(['position' => 1, 'is_free' => false]);
         $personal = $this->subscribe(User::class, $parent->id);
         $this->getJson("/api/v1/hearts?learner_id={$learner->id}")->assertOk()->assertJsonPath('data.current', null);
         $personal->update(['status' => 'cancelled']);

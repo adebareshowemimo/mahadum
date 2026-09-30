@@ -191,7 +191,11 @@ export function useUpdateLevel(courseId: number) {
   return useMutation({
     mutationFn: ({ levelId, input }: { levelId: number; input: Partial<CreateLevelInput> }) =>
       contentApi.updateLevel(levelId, input),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: contentKeys.levels(courseId) }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: contentKeys.levels(courseId) })
+      void qc.invalidateQueries({ queryKey: ['learner-path'] })
+      void qc.invalidateQueries({ queryKey: ['content'] })
+    },
   })
 }
 

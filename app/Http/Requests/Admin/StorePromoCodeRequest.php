@@ -15,8 +15,9 @@ class StorePromoCodeRequest extends FormRequest
     {
         return [
             'code' => ['required', 'string', 'max:50', 'unique:promo_codes,code'],
+            'target' => ['sometimes', 'in:all,school_registration,school_subscription,individual_subscription'],
             'discount_type' => ['required', 'in:percent,fixed'],
-            'value' => ['required', 'integer', 'min:1'],
+            'value' => ['required', 'integer', 'min:1', ...($this->input('discount_type') === 'percent' ? ['max:100'] : [])],
             'applicable_tier' => ['nullable', 'string', 'max:50'],
             'valid_from' => ['nullable', 'date'],
             'valid_to' => ['nullable', 'date', 'after_or_equal:valid_from'],

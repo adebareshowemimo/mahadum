@@ -9,6 +9,7 @@ use App\Http\Requests\Content\UpdateCourseLevelRequest;
 use App\Http\Resources\CourseLevelResource;
 use App\Models\Course;
 use App\Models\CourseLevel;
+use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
@@ -24,14 +25,21 @@ class CourseLevelController extends Controller
             'title' => $request->string('title'),
             'position' => $position,
             'has_assessment' => $request->boolean('has_assessment'),
+            'is_free' => $request->boolean('is_free'),
         ]);
+
+        app(AuditLogger::class)->record('level.created', $level, [], ['title' => $level->title, 'is_free' => (bool) $level->is_free]);
 
         return (new CourseLevelResource($level))->response()->setStatusCode(201);
     }
 
     public function update(UpdateCourseLevelRequest $request, CourseLevel $level): CourseLevelResource
     {
+        $before = (bool) $level->is_free;
         $level->update($request->validated());
+        if ($before !== (bool) $level->is_free) {
+            app(AuditLogger::class)->record('level.access.updated', $level, ['is_free' => $before], ['is_free' => (bool) $level->is_free]);
+        }
 
         return new CourseLevelResource($level);
     }

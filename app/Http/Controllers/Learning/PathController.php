@@ -35,7 +35,7 @@ class PathController extends Controller
 
             return ['unit' => $node->lesson->courseLevel->title,
                 'lesson_id' => $node->lesson_id, 'title' => $node->lesson->title, 'state' => $state,
-                'access_reason' => $permission['reason'], 'is_free_preview' => (bool) $node->lesson->is_free_preview,
+                'access_reason' => $permission['reason'], 'is_free' => (bool) $node->lesson->courseLevel->is_free, 'is_free_preview' => (bool) $node->lesson->courseLevel->is_free,
                 'position' => $node->position];
         });
         $units = $display->groupBy('unit')->map(fn ($group, $title) => [

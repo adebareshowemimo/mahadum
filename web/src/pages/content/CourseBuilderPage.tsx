@@ -28,6 +28,7 @@ import {
   Input,
   Modal,
   Skeleton,
+  Switch,
 } from '@/components/ui'
 import { ApiError, type AuthorLesson, type AuthorLevel, type CourseSummary } from '@/lib/api'
 import {
@@ -263,6 +264,7 @@ function LevelSection({
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="font-display text-lg font-bold text-foreground">
           <span className="text-subtle">{level.position}.</span> {level.title}
+          <Badge variant={level.is_free ? 'success' : 'neutral'} className="ml-2">{level.is_free ? 'Free' : 'Paid'}</Badge>
         </h2>
         <div className="flex items-center gap-1">
           {canDrag && (
@@ -447,14 +449,16 @@ function LessonRow({
 function NewLevelModal({ courseId, open, onClose }: { courseId: number; open: boolean; onClose: () => void }) {
   const createLevel = useCreateLevel(courseId)
   const [title, setTitle] = useState('')
+  const [isFree, setIsFree] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
     try {
-      await createLevel.mutateAsync({ title })
+      await createLevel.mutateAsync({ title, is_free: isFree })
       setTitle('')
+      setIsFree(false)
       onClose()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not add the level.')
@@ -466,6 +470,10 @@ function NewLevelModal({ courseId, open, onClose }: { courseId: number; open: bo
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         {error && <Alert variant="danger">{error}</Alert>}
         <Input label="Level title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Unit 1 — Greetings" autoFocus required />
+        <div className="rounded-xl border border-border p-3">
+          <Switch label="Free access" checked={isFree} onChange={setIsFree} />
+          <p className="mt-1 text-sm text-muted">All published lessons in this level are available without a paid plan. Free learners still use hearts.</p>
+        </div>
         <div className="flex gap-2">
           <Button type="button" variant="secondary" fullWidth onClick={onClose}>Cancel</Button>
           <Button type="submit" fullWidth loading={createLevel.isPending}>Add level</Button>
@@ -478,6 +486,7 @@ function NewLevelModal({ courseId, open, onClose }: { courseId: number; open: bo
 function EditLevelModal({ courseId, level, onClose }: { courseId: number; level: AuthorLevel | null; onClose: () => void }) {
   const updateLevel = useUpdateLevel(courseId)
   const [title, setTitle] = useState(level?.title ?? '')
+  const [isFree, setIsFree] = useState(level?.is_free ?? false)
   const [error, setError] = useState<string | null>(null)
 
   async function onSubmit(e: FormEvent) {
@@ -485,7 +494,7 @@ function EditLevelModal({ courseId, level, onClose }: { courseId: number; level:
     if (!level) return
     setError(null)
     try {
-      await updateLevel.mutateAsync({ levelId: level.id, input: { title } })
+      await updateLevel.mutateAsync({ levelId: level.id, input: { title, is_free: isFree } })
       onClose()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not update the level.')
@@ -497,7 +506,7 @@ function EditLevelModal({ courseId, level, onClose }: { courseId: number; level:
       open={level != null}
       onClose={onClose}
       title="Edit level"
-      description="Update this unit’s title."
+      description="Update this unit’s title and access."
     >
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         {error && <Alert variant="danger">{error}</Alert>}
@@ -508,6 +517,10 @@ function EditLevelModal({ courseId, level, onClose }: { courseId: number; level:
           autoFocus
           required
         />
+        <div className="rounded-xl border border-border p-3">
+          <Switch label="Free access" checked={isFree} onChange={setIsFree} />
+          <p className="mt-1 text-sm text-muted">All published lessons in this level are available without a paid plan. Free learners still use hearts.</p>
+        </div>
         <div className="flex gap-2">
           <Button type="button" variant="secondary" fullWidth onClick={onClose}>Cancel</Button>
           <Button type="submit" fullWidth loading={updateLevel.isPending}>Save changes</Button>

@@ -2,6 +2,9 @@
 
 # MAHADUM.360 — Implementation TODO
 
+> 2026-09-30 learning-access update: level editors expose a persisted **Free access** setting (`course_levels.is_free`). All published lessons inherit level access, independently of title/order. New levels default paid; migrated introductory levels retain free access. This supersedes position-based Free access checks. See `Mahadum360_Learning_Access_Decision.md`.
+
+
 A phased, trackable build plan for the MVP (web-first), stitched from the BRD,
 backend architecture, content model, DB layer, and UI designs already produced.
 

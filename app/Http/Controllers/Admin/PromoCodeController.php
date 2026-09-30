@@ -25,9 +25,12 @@ class PromoCodeController extends Controller
     public function store(StorePromoCodeRequest $request): JsonResponse
     {
         $promo = PromoCode::create($request->validated() + [
+            'target' => 'all',
             'redeemed_count' => 0,
             'status' => 'active',
         ]);
+
+        $this->audit->record('promocode.created', $promo, [], $promo->only(['code', 'target', 'discount_type', 'value', 'applicable_tier']));
 
         return response()->json(['data' => ['id' => $promo->id, 'code' => $promo->code, 'status' => $promo->status]], 201);
     }

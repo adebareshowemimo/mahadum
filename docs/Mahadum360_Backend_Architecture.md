@@ -244,7 +244,12 @@ Plus spatie tables: `roles`, `permissions`, `model_has_roles`, `model_has_permis
 **payouts** `id, beneficiary_type, beneficiary_id, amount_minor, method(bank|coins), status, requested_at, approved_by, paid_at`
 > Floor ₦5,000 cleared; cap ₦50,000/mo individuals (no cap for verified schools).
 
-**promo_codes** `id, code, discount_type(percent|fixed), value, applicable_tier, valid_from, valid_to, max_redemptions, redeemed_count, status` · **promo_redemptions** `id, promo_code_id, organization_id, payment_id`
+**promo_codes** `id, target(all|school_registration|school_subscription|individual_subscription), code, discount_type(percent|fixed), value, applicable_tier, valid_from, valid_to, max_redemptions, redeemed_count, status` · **promo_redemptions** `id, promo_code_id, organization_id, payment_id`
+
+Promo codes select a fee target. Registration codes discount only `Registration Fees`; school subscription codes discount only `Student School Fees`; individual codes apply to individual/family plan checkout. Percentage/fixed amounts are calculated against that eligible fee, capped at its value. Invoice VAT is rebuilt with the existing `InvoiceLineBuilder` rule when a fee-targeted discount changes the subtotal. Missing/waived fee categories and wrong checkout targets return 422 without reserving a redemption. Legacy codes retain `target=all` and their previous whole-total behavior. One code per invoice; normal expiry, single-use and redemption limits remain enforced. Admin creation is audited and share links route school targets to invoices.
+
+Subscriptions store `initial_charge_minor` for checkout retries; later plan price changes cannot replace the original discounted checkout amount. A validated promo reducing an individual checkout to zero activates the subscription server-side without a gateway transaction. This is a first-period discount; subsequent renewal pricing follows the plan.
+
 
 ### I. School Operations  🔒
 

@@ -44,13 +44,13 @@ class LessonAccess
         $tier ??= $this->tier($learner);
         $allowed = match ($tier) {
             'paid' => true,
-            'telco' => in_array((int) $lesson->courseLevel->position, [0, 1], true),
-            default => (int) $lesson->courseLevel->position === 0,
+            'telco' => (bool) $lesson->courseLevel->is_free || (int) $lesson->courseLevel->position === 1,
+            default => (bool) $lesson->courseLevel->is_free,
         };
 
         return ['allowed' => $allowed, 'reason' => $allowed ? null : ($tier === 'telco'
-            ? 'Your airtime subscription includes Level 1 only. Choose a card or bank plan to unlock other levels.'
-            : 'All Level 0 lessons are free. Upgrade to unlock Level 1 and subsequent levels.')];
+            ? 'Your airtime subscription includes free levels and Level 1. Choose a card or bank plan to unlock other levels.'
+            : 'This level requires a paid plan. Upgrade to unlock its lessons.')];
     }
 
     public function authorize(LearnerProfile $learner, Lesson $lesson): void

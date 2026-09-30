@@ -17,6 +17,7 @@ class CourseLevelResource extends JsonResource
             'id' => $this->id,
             'title' => $this->title,
             'position' => $this->position,
+            'is_free' => (bool) $this->is_free,
             'has_assessment' => (bool) $this->has_assessment,
             'lessons' => LessonResource::collection($this->whenLoaded('lessons')),
         ];

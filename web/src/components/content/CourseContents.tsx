@@ -42,7 +42,7 @@ function ContentsUnit({ courseId, level, currentLessonId }: { courseId: number; 
   const lessons = useLevelLessons(level.id)
   return (
     <li>
-      <p className="mb-1 text-sm font-semibold text-foreground">{level.title}</p>
+      <p className="mb-1 text-sm font-semibold text-foreground">{level.title} <Badge variant={level.is_free ? 'success' : 'neutral'}>{level.is_free ? 'Free' : 'Paid'}</Badge></p>
       {lessons.isLoading ? <Skeleton className="h-10" /> : lessons.isError ? (
         <Alert variant="danger">Couldn’t load lessons for {level.title}.</Alert>
       ) : !lessons.data?.length ? <p className="pl-3 text-sm text-muted">No lessons yet.</p> : (

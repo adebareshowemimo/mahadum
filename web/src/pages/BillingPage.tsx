@@ -123,7 +123,7 @@ export function BillingPage() {
       if (res.checkout_url) {
         window.location.href = res.checkout_url
       } else {
-        setNotice('Subscription created. Complete payment at checkout to activate — your plan unlocks once payment is confirmed.')
+        setNotice(res.status === 'active' ? 'Your subscription is active. No payment is due for this billing period.' : 'Subscription created. Complete payment at checkout to activate — your plan unlocks once payment is confirmed.')
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not start the subscription.')
@@ -156,7 +156,7 @@ export function BillingPage() {
       if (res.checkout_url) {
         window.location.href = res.checkout_url
       } else {
-        setNotice('Plan changed. Complete payment at checkout to activate — your new plan unlocks once payment is confirmed.')
+        setNotice(res.status === 'active' ? 'Your new plan is active. No payment is due for this billing period.' : 'Plan changed. Complete payment at checkout to activate — your new plan unlocks once payment is confirmed.')
       }
     } catch (err) {
       setError(friendlyBillingError(err, 'Could not change your plan.'))

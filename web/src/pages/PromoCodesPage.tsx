@@ -1,14 +1,22 @@
 import { useState, type FormEvent } from 'react'
 import { Alert, Badge, Button, Card, CardBody, CardHeader, CardTitle, ConfirmModal, Input } from '@/components/ui'
 import { DataTable, type Column } from '@/components/admin'
-import { ApiError, type CreatePromoInput, type PromoCode } from '@/lib/api'
+import { ApiError, type CreatePromoInput, type PromoCode, type PromoTarget } from '@/lib/api'
+import { formatMoney } from '@/lib/format'
 import { useCreatePromo, useDeletePromo, usePromos } from '@/lib/admin/queries'
+
+const TARGET_LABELS: Record<PromoTarget, string> = {
+  all: 'All fees (legacy)',
+  school_registration: 'School registration',
+  school_subscription: 'School subscription',
+  individual_subscription: 'Individual subscription',
+}
 
 export function PromoCodesPage() {
   const [page, setPage] = useState(1)
   const [actionNotice, setActionNotice] = useState<string | null>(null)
   async function copyOrShare(promo: PromoCode, share: boolean) {
-    const url = new URL(promo.applicable_tier === 'school' ? '/invoices' : '/billing', window.location.origin)
+    const url = new URL(promo.target?.startsWith('school_') || ((promo.target ?? 'all') === 'all' && promo.applicable_tier === 'school') ? '/invoices' : '/billing', window.location.origin)
     url.searchParams.set('promo', promo.code)
     try {
       if (share && navigator.share) await navigator.share({ title: 'MAHADUM.360 promo code', text: `Use ${promo.code} at checkout`, url: url.href })
@@ -24,6 +32,7 @@ export function PromoCodesPage() {
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [values, setValues] = useState({
     code: '',
+    target: 'individual_subscription' as PromoTarget,
     discount_type: 'percent' as 'percent' | 'fixed',
     value: '',
     applicable_tier: '',
@@ -46,15 +55,16 @@ export function PromoCodesPage() {
     try {
       const payload: CreatePromoInput = {
         code: values.code.trim(),
+        target: values.target,
         discount_type: values.discount_type,
-        value: Number(values.value),
-        applicable_tier: values.applicable_tier || undefined,
+        value: values.discount_type === 'fixed' ? Math.round(Number(values.value) * 100) : Number(values.value),
+        applicable_tier: values.target === 'individual_subscription' ? values.applicable_tier || undefined : undefined,
         valid_to: values.valid_to || undefined,
         max_redemptions: values.max_redemptions ? Number(values.max_redemptions) : undefined,
       }
       const res = await createPromo.mutateAsync(payload)
       setCreated(res.code)
-      setValues({ code: '', discount_type: 'percent', value: '', applicable_tier: '', valid_to: '', max_redemptions: '' })
+      setValues({ code: '', target: 'individual_subscription', discount_type: 'percent', value: '', applicable_tier: '', valid_to: '', max_redemptions: '' })
     } catch (err) {
       if (err instanceof ApiError) {
         setFieldErrors(err.fieldErrors)
@@ -84,9 +94,10 @@ export function PromoCodesPage() {
     {
       key: 'discount',
       header: 'Discount',
-      render: (p) => (p.discount_type === 'percent' ? `${p.value}%` : `₦${p.value}`),
+      render: (p) => (p.discount_type === 'percent' ? `${p.value}%` : formatMoney(p.value, 'NGN')),
     },
-    { key: 'tier', header: 'Tier', render: (p) => p.applicable_tier ?? 'Any', hideOnMobile: true },
+    { key: 'target', header: 'Applies to', render: (p) => TARGET_LABELS[p.target ?? 'all'] },
+    { key: 'tier', header: 'Plan restriction', render: (p) => p.applicable_tier ?? 'Any', hideOnMobile: true },
     { key: 'redemptions', header: 'Redeemed', render: (p) => `${p.redemptions_count}${p.max_redemptions ? ` / ${p.max_redemptions}` : ''}`, hideOnMobile: true },
     {
       key: 'status',
@@ -109,7 +120,7 @@ export function PromoCodesPage() {
   ]
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-8">
+    <div className="mx-auto flex max-w-5xl flex-col gap-8">
       <ConfirmModal open={deleteTarget !== null} onClose={() => setDeleteTarget(null)}
         onConfirm={() => { if (deleteTarget) void onDelete(deleteTarget) }}
         title="Delete promo code?" description={`Delete ${deleteTarget?.code ?? ''}? It will stop working immediately.`}
@@ -134,6 +145,17 @@ export function PromoCodesPage() {
               autoFocus
               required
             />
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-semibold text-foreground">Applies to</span>
+              <select aria-label="Applies to" value={values.target} onChange={e => update('target', e.target.value as PromoTarget)}
+                className="h-11 rounded-xl border border-border-strong bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
+                <option value="school_registration">School registration</option>
+                <option value="school_subscription">School subscription</option>
+                <option value="individual_subscription">Individual subscription</option>
+              </select>
+              <span className="text-xs text-muted">{values.target === 'school_registration' ? 'Discounts registration fees only. Student school fees remain payable.' : values.target === 'school_subscription' ? 'Discounts student school fees only. Registration fees remain payable.' : 'Discounts individual and family subscription plans.'}</span>
+              {fieldErrors.target && <span className="text-sm text-danger">{fieldErrors.target}</span>}
+            </label>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="flex flex-col gap-1.5">
                 <span className="text-sm font-semibold text-foreground">Discount type</span>
@@ -149,20 +171,22 @@ export function PromoCodesPage() {
               <Input
                 label={values.discount_type === 'percent' ? 'Value (%)' : 'Value (₦)'}
                 type="number"
-                min={1}
+                min={values.discount_type === 'fixed' ? 0.01 : 1}
+                max={values.discount_type === 'percent' ? 100 : undefined}
+                step={values.discount_type === 'fixed' ? 0.01 : 1}
                 value={values.value}
                 onChange={(e) => update('value', e.target.value)}
                 error={fieldErrors.value}
                 required
               />
             </div>
-            <Input
-              label="Applicable tier (optional)"
+            {values.target === 'individual_subscription' && <Input
+              label="Plan code restriction (optional)"
               value={values.applicable_tier}
               onChange={(e) => update('applicable_tier', e.target.value)}
               error={fieldErrors.applicable_tier}
-              placeholder="e.g. school"
-            />
+              placeholder="e.g. premium_individual — leave blank for all personal plans"
+            />}
             <div className="grid gap-3 sm:grid-cols-2">
               <Input
                 label="Valid until (optional)"

@@ -17,6 +17,7 @@ class StoreCourseLevelRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'position' => ['nullable', 'integer', 'min:1'],
             'has_assessment' => ['boolean'],
+            'is_free' => ['boolean'],
         ];
     }
 }
