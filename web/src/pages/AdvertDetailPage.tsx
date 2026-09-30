@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AdminPageHeader } from '@/components/admin'
-import { Alert, Badge, Button, Card, CardBody, Input, Skeleton, Switch } from '@/components/ui'
+import { Alert, Badge, Button, Card, CardBody, ConfirmModal, Input, Skeleton, Switch } from '@/components/ui'
 import { ApiError, type UpdateAdvertPlacementInput } from '@/lib/api'
 import {
   useAdminAdvertPlacement,
@@ -34,6 +34,8 @@ export function AdvertDetailPage() {
   const toggle = useToggleAdvertPlacement()
   const del = useDeleteAdvertPlacement()
 
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<UpdateAdvertPlacementInput>({})
   const [error, setError] = useState<string | null>(null)
@@ -67,13 +69,22 @@ export function AdvertDetailPage() {
   }
 
   async function onDelete() {
-    if (!confirm(`Delete “${data!.name}”? This cannot be undone.`)) return
-    await del.mutateAsync(id)
-    navigate('/admin/adverts')
+    if (del.isPending) return
+    setDeleteError(null)
+    try {
+      await del.mutateAsync(id)
+      setDeleteOpen(false)
+      navigate('/admin/adverts')
+    } catch (err) {
+      setDeleteError(err instanceof ApiError ? err.message : 'Could not delete this advert. Please try again.')
+    }
   }
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
+      <ConfirmModal open={deleteOpen} onClose={() => setDeleteOpen(false)} onConfirm={() => void onDelete()}
+        title="Delete advert?" description={`Delete “${data.name}”? This cannot be undone.`}
+        confirmLabel="Delete advert" pending={del.isPending} error={deleteError} />
       <AdminPageHeader
         title={data.name}
         description={`${data.position} · ${data.size ?? 'no size set'}`}
@@ -153,7 +164,7 @@ export function AdvertDetailPage() {
       </Card>
 
       <div className="flex justify-end">
-        <Button variant="danger" loading={del.isPending} onClick={onDelete}>
+        <Button variant="danger" loading={del.isPending} onClick={() => { setDeleteError(null); setDeleteOpen(true) }}>
           Delete advert
         </Button>
       </div>

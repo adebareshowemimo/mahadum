@@ -117,7 +117,7 @@ const TERMS_SECTIONS = [
     id: 'learning',
     title: 'Learning access',
     paragraphs: [
-      'The Free plan includes Lesson 0 in each language. Paid card and bank plans unlock all lessons; airtime subscriptions include Level 1 only. Free learners use one heart per four quiz answers. At zero hearts, lessons and quizzes pause for 12 hours, unless hearts are refilled or the learner upgrades to unlimited hearts.',
+      'The Free plan includes Level 0 in each language. Paid card and bank plans unlock all lessons; airtime subscriptions include Level 1 only. Free learners use one heart per four quiz answers. At zero hearts, lessons and quizzes pause for 12 hours, unless hearts are refilled or the learner upgrades to unlimited hearts.',
       'Courses, language availability, lesson order and features may change as content is corrected, improved or expanded. We aim to communicate material service changes appropriately.',
     ],
   },
@@ -251,7 +251,7 @@ export function ChildSafetyPage() {
               ['Supervised identity', 'A child profile can learn without an email address, public profile or independent payment access.'],
               ['Appropriate visibility', 'Parents see the information needed to supervise progress and sensitive activity.'],
               ['Reporting and response', 'People can report safety concerns. Reports are reviewed and action may include content removal, access restrictions or escalation.'],
-              ['Clear learning access', 'Lesson 0 is free in every language. Paid plans unlock more content and unlimited hearts. Free learners pause for 12 hours when hearts run out.'],
+              ['Clear learning access', 'Level 0 is free in every language. Paid plans unlock more content and unlimited hearts. Free learners pause for 12 hours when hearts run out.'],
               ['School responsibility', 'Schools and institutions receive role-based access and must use learner information only for the authorised programme.'],
             ].map(([title, body]) => (
               <Reveal key={title} className="grid gap-3 py-6 sm:grid-cols-[15rem_1fr]">

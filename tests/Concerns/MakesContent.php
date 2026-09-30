@@ -23,7 +23,7 @@ trait MakesContent
             'language_id' => $language->id, 'title' => 'Test Course',
             'status' => 'published', 'is_published' => true,
         ]);
-        $level = $course->levels()->create(['title' => 'L1', 'position' => 1]);
+        $level = $course->levels()->create(['title' => 'L0', 'position' => 0]);
         $lesson = $level->lessons()->create(['title' => 'Lesson A', 'position' => 1, 'is_free_preview' => true]);
 
         $video = $lesson->components()->create(['type' => 'video', 'position' => 1, 'xp_value' => 5]);

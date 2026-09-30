@@ -1,12 +1,19 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { InvoicesPage } from './InvoicesPage'
 
 const mocks = vi.hoisted(() => ({
+  applyInvoicePromo: vi.fn(),
+  refetch: vi.fn(),
   useInvoices: vi.fn(),
   usePayInvoice: vi.fn(),
 }))
+
+vi.mock('@/lib/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api')>()
+  return { ...actual, schoolApi: { ...actual.schoolApi, applyInvoicePromo: mocks.applyInvoicePromo } }
+})
 
 vi.mock('@/components/school/SchoolGate', () => ({
   SchoolGate: ({ children }: { children: (orgId: number) => ReactNode }) => children(9),
@@ -19,8 +26,11 @@ vi.mock('@/lib/school/queries', () => ({
 
 describe('InvoicesPage', () => {
   beforeEach(() => {
+    mocks.applyInvoicePromo.mockResolvedValue({ amount_minor: 34_400_000 })
+    mocks.refetch.mockResolvedValue({})
     mocks.usePayInvoice.mockReturnValue({ isPending: false, mutateAsync: vi.fn() })
     mocks.useInvoices.mockReturnValue({
+      refetch: mocks.refetch,
       isLoading: false,
       isError: false,
       data: [{
@@ -52,8 +62,17 @@ describe('InvoicesPage', () => {
     expect(screen.getByText('₦430,000.00')).toBeInTheDocument()
   })
 
+  it('validates an entered promo on the server and refreshes the total before payment', async () => {
+    render(<InvoicesPage />)
+    fireEvent.change(screen.getByLabelText('Have a promo code?'), { target: { value: 'SCHOOL20' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Apply promo code' }))
+    await waitFor(() => expect(mocks.applyInvoicePromo).toHaveBeenCalledWith(9, 27, 'SCHOOL20'))
+    await waitFor(() => expect(mocks.refetch).toHaveBeenCalled())
+  })
+
   it('shows waived registration fees as a zero-value line', () => {
     mocks.useInvoices.mockReturnValue({
+      refetch: mocks.refetch,
       isLoading: false,
       isError: false,
       data: [{

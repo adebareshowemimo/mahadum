@@ -25,6 +25,7 @@ class LessonAccessTest extends TestCase
         $lesson = $this->publishedLesson();
         $this->getJson("/api/v1/lessons/{$lesson->id}/play?learner_id={$learner->id}")->assertOk();
         $lesson->update(['is_free_preview' => false]);
+        $lesson->courseLevel->update(['position' => 1]);
         $quiz = $lesson->components->firstWhere('type', 'quiz');
         $question = $quiz->quiz->questions->first();
         $this->getJson("/api/v1/lessons/{$lesson->id}/play?learner_id={$learner->id}")->assertForbidden();
@@ -49,6 +50,7 @@ class LessonAccessTest extends TestCase
         $learner = $this->parentWithChild($parent);
         $lesson = $this->publishedLesson();
         $lesson->update(['is_free_preview' => false]);
+        $lesson->courseLevel->update(['position' => 1]);
         $this->subscribe(User::class, $parent->id, 'airtime');
         $this->getJson("/api/v1/lessons/{$lesson->id}/play?learner_id={$learner->id}")->assertOk();
         $lesson->courseLevel->update(['position' => 2]);
@@ -65,6 +67,7 @@ class LessonAccessTest extends TestCase
         $learner->update(['user_id' => $parent->id]);
         $lesson = $this->publishedLesson();
         $lesson->update(['is_free_preview' => false]);
+        $lesson->courseLevel->update(['position' => 1]);
         $personal = $this->subscribe(User::class, $parent->id);
         $this->getJson("/api/v1/hearts?learner_id={$learner->id}")->assertOk()->assertJsonPath('data.current', null);
         $personal->update(['status' => 'cancelled']);
@@ -74,6 +77,19 @@ class LessonAccessTest extends TestCase
         $school->plan->update(['price_minor' => 0, 'audience' => 'school', 'features' => ['priced_per_seat' => true]]);
         $this->assertTrue(app(EntitlementResolver::class)->forLearner($learner->fresh())['unlimited_hearts']);
         $this->assertTrue(app(LessonAccess::class)->content($learner->fresh(), $lesson)['allowed']);
+    }
+
+    public function test_all_level_zero_lessons_are_free_even_without_preview_flags(): void
+    {
+        $this->seedRbac();
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $learner = $this->parentWithChild($parent);
+        $lesson = $this->publishedLesson();
+        $lesson->update(['is_free_preview' => false]);
+        for ($position = 0; $position < 4; $position++) {
+            $lesson->update(['position' => $position]);
+            $this->getJson("/api/v1/lessons/{$lesson->id}/play?learner_id={$learner->id}")->assertOk();
+        }
     }
 
     private function subscribe(string $type, int $id, string $method = 'card'): Subscription

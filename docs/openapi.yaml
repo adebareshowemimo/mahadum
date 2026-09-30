@@ -2285,6 +2285,42 @@ paths:
                         has_pdf: { type: boolean }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /schools/{organization}/invoices/{invoice}/promo:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationId"
+      - name: invoice
+        in: path
+        required: true
+        schema: { type: integer }
+    post:
+      tags: [School]
+      summary: Apply a promo code before invoice checkout (billing.invoices.manage)
+      description: Applies one code permanently to an unpaid invoice, reserves a redemption, updates its total and invalidates the cached PDF. Codes cannot be stacked or applied after checkout starts.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, maxLength: 100 }
+      responses:
+        "200":
+          description: Discounted invoice total in minor currency units
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      amount_minor: { type: integer, minimum: 0 }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { description: Code is invalid or invoice cannot be discounted }
+
   /schools/{organization}/invoices/{invoice}/pdf:
     parameters:
       - $ref: "#/components/parameters/OrganizationId"

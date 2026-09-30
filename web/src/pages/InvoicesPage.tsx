@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Alert, Badge, Button, Card, CardBody, Icon, Skeleton } from '@/components/ui'
+import { useEffect, useRef, useState } from 'react'
+import { Alert, Badge, Button, Card, CardBody, Icon, Input, Skeleton } from '@/components/ui'
 import { ApiError, schoolApi, type SchoolInvoice } from '@/lib/api'
 import { formatMoney } from '@/lib/format'
 import { SchoolGate } from '@/components/school/SchoolGate'
@@ -17,8 +17,31 @@ const STATUS_TONE: Record<string, 'success' | 'gold' | 'danger' | 'neutral'> = {
 }
 
 function Invoices({ orgId }: { orgId: number }) {
-  const { data, isLoading, isError } = useInvoices(orgId)
+  const { data, isLoading, isError, refetch } = useInvoices(orgId)
   const pay = usePayInvoice(orgId)
+  const [codes, setCodes] = useState<Record<number, string>>({})
+  const [applying, setApplying] = useState<number | null>(null)
+  const sharedApplied = useRef(false)
+  const sharedCode = new URLSearchParams(window.location.search).get('promo') ?? ''
+  useEffect(() => {
+    const unpaid = data?.filter(invoice => invoice.status === 'unpaid') ?? []
+    if (sharedCode && unpaid.length === 1 && !sharedApplied.current && !unpaid[0].lines?.some(line => line.description.startsWith('Promo code:'))) {
+      sharedApplied.current = true
+      void applyCode(unpaid[0].id)
+    }
+    // Multiple invoices require selecting which invoice receives the discount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, sharedCode])
+  async function applyCode(id: number) {
+    setApplying(id)
+    setError(null)
+    try {
+      await schoolApi.applyInvoicePromo(orgId, id, codes[id] ?? sharedCode)
+      await refetch()
+    } catch (err) {
+      setError(err instanceof ApiError ? (err.fieldErrors.code ?? err.message) : 'Could not apply that promo code.')
+    } finally { setApplying(null) }
+  }
   const [downloading, setDownloading] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
@@ -42,6 +65,7 @@ function Invoices({ orgId }: { orgId: number }) {
     setCheckoutUrl(null)
     try {
       const result = await pay.mutateAsync({ invoiceId: id })
+      if (result.settled) { await refetch(); return }
       if (result.checkout_url) setCheckoutUrl(result.checkout_url)
       else setError('Payment started — the invoice will be marked paid once confirmed.')
     } catch (err) {
@@ -95,6 +119,12 @@ function Invoices({ orgId }: { orgId: number }) {
                   <InvoiceBreakdown invoice={inv} />
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-2 lg:pt-1">
+                  {inv.status === 'unpaid' && !inv.lines?.some(line => line.description.startsWith('Promo code:')) && (
+                    <div className="w-full">
+                      <Input label="Have a promo code?" value={codes[inv.id] ?? sharedCode} onChange={e => setCodes(current => ({ ...current, [inv.id]: e.target.value }))} />
+                      <Button size="sm" variant="outline" loading={applying === inv.id} disabled={!(codes[inv.id] ?? sharedCode).trim()} onClick={() => applyCode(inv.id)}>Apply promo code</Button>
+                    </div>
+                  )}
                   {inv.status === 'unpaid' && (
                     <Button
                       size="sm"

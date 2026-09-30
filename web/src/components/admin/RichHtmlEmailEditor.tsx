@@ -1,4 +1,6 @@
-import { useEffect, useRef, type MouseEvent as ReactMouseEvent, type RefObject } from 'react'
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type RefObject } from 'react'
+
+import { Button, Input, Modal } from '@/components/ui'
 
 export type RichHtmlEditorView = 'visual' | 'source'
 
@@ -21,6 +23,34 @@ export function RichHtmlEmailEditor({
   onFocusVisual,
   onChange,
 }: RichHtmlEmailEditorProps) {
+  const [linkOpen, setLinkOpen] = useState(false)
+  const [linkUrl, setLinkUrl] = useState('')
+  const [linkError, setLinkError] = useState<string | null>(null)
+  const linkSelection = useRef<Range | null>(null)
+  function openLink() {
+    const selection = window.getSelection()
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : null
+    linkSelection.current = range && activeRef.current?.contains(range.commonAncestorContainer) ? range.cloneRange() : null
+    setLinkUrl('')
+    setLinkError(null)
+    setLinkOpen(true)
+  }
+  function insertLink() {
+    const url = linkUrl.trim()
+    if (!/^(https?:\/\/|mailto:|tel:)/i.test(url)) {
+      setLinkError('Enter a link starting with https://, http://, mailto:, or tel:.')
+      return
+    }
+    activeRef.current?.focus()
+    const selection = window.getSelection()
+    if (selection && linkSelection.current) {
+      selection.removeAllRanges()
+      selection.addRange(linkSelection.current)
+    }
+    document.execCommand('createLink', false, url)
+    if (activeRef.current) onChange(activeRef.current.innerHTML)
+    setLinkOpen(false)
+  }
   const localRef = useRef<HTMLDivElement>(null)
   const activeRef = editorRef ?? localRef
 
@@ -39,6 +69,15 @@ export function RichHtmlEmailEditor({
 
   return (
     <div className="overflow-hidden rounded-xl border border-border-strong bg-surface">
+      <Modal open={linkOpen} onClose={() => setLinkOpen(false)} title="Add link" description="Enter the URL for the selected text.">
+        <form onSubmit={event => { event.preventDefault(); insertLink() }} className="flex flex-col gap-4">
+          <Input label="Link URL" value={linkUrl} onChange={event => { setLinkUrl(event.target.value); setLinkError(null) }} placeholder="https://example.com" error={linkError ?? undefined} required />
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={() => setLinkOpen(false)}>Cancel</Button>
+            <Button type="submit">Insert link</Button>
+          </div>
+        </form>
+      </Modal>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface-muted p-2">
         <div className="flex flex-wrap gap-1" aria-label="Formatting controls">
           {view === 'visual' && (
@@ -50,10 +89,8 @@ export function RichHtmlEmailEditor({
               <FormatButton label="Bulleted list" short="• List" onMouseDown={(event) => command(event, 'insertUnorderedList')} />
               <FormatButton label="Numbered list" short="1. List" onMouseDown={(event) => command(event, 'insertOrderedList')} />
               <FormatButton label="Add link" short="Link" onMouseDown={(event) => {
-                const url = window.prompt('Link URL')
-                if (url) command(event, 'createLink', url)
-                else event.preventDefault()
-              }} />
+                event.preventDefault()
+              }} onClick={openLink} />
               <FormatButton label="Remove formatting" short="Clear" onMouseDown={(event) => command(event, 'removeFormat')} />
             </>
           )}
@@ -94,6 +131,6 @@ export function RichHtmlEmailEditor({
   )
 }
 
-function FormatButton({ label, short, onMouseDown }: { label: string; short: string; onMouseDown: (event: ReactMouseEvent<HTMLButtonElement>) => void }) {
-  return <button type="button" title={label} aria-label={label} onMouseDown={onMouseDown} className="min-h-9 rounded-md border border-border bg-surface px-2.5 text-xs font-semibold text-foreground hover:border-gold-400 hover:bg-gold-50">{short}</button>
+function FormatButton({ label, short, onMouseDown, onClick }: { label: string; short: string; onMouseDown: (event: ReactMouseEvent<HTMLButtonElement>) => void; onClick?: () => void }) {
+  return <button type="button" title={label} aria-label={label} onMouseDown={onMouseDown} onClick={onClick} className="min-h-9 rounded-md border border-border bg-surface px-2.5 text-xs font-semibold text-foreground hover:border-gold-400 hover:bg-gold-50">{short}</button>
 }

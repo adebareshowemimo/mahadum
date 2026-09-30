@@ -4,13 +4,23 @@ namespace App\Http\Controllers\Billing;
 
 use App\Http\Controllers\Concerns\ResolvesOrganization;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Billing\ApplyInvoicePromoRequest;
 use App\Http\Requests\Billing\PayInvoiceRequest;
 use App\Models\Organization;
+use App\Models\Plan;
+use App\Models\PromoCode;
+use App\Models\PromoRedemption;
+use App\Services\AuditLogger;
 use App\Services\Billing\InvoicePdfRenderer;
 use App\Services\Billing\PaymentGatewayManager;
+use App\Services\Billing\PaymentService;
+use App\Services\Billing\PromoException;
+use App\Services\Billing\PromoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class InvoiceController extends Controller
@@ -37,6 +47,34 @@ class InvoiceController extends Controller
         return response()->json(['data' => $invoices]);
     }
 
+    /** Apply a validated discount once, before checkout. */
+    public function applyPromo(ApplyInvoicePromoRequest $request, Organization $organization, string $invoice, PromoService $promos): JsonResponse
+    {
+        $this->authorizeOrg($request->user(), $organization);
+
+        return DB::transaction(function () use ($request, $organization, $invoice, $promos) {
+            $model = $organization->invoices()->lockForUpdate()->findOrFail($invoice);
+            abort_unless($model->status === 'unpaid' && $model->gateway_txn_ref === null, 422, 'This invoice cannot be discounted after checkout has started.');
+            $lines = $model->breakdownLines();
+            abort_if(collect($lines)->contains(fn ($line) => str_starts_with($line['description'], 'Promo code:')), 422, 'A promo code has already been applied.');
+            // Serialize competing invoice redemptions against the global cap.
+            PromoCode::whereRaw('LOWER(code) = ?', [mb_strtolower(trim($request->string('code')->value()))])->lockForUpdate()->first();
+            try {
+                $outcome = $promos->evaluate($request->string('code')->value(), new Plan(['code' => 'school', 'price_minor' => $model->amount_minor]), $request->user());
+            } catch (PromoException $exception) {
+                throw ValidationException::withMessages(['code' => $exception->getMessage()]);
+            }
+            $lines[] = ['description' => 'Promo code: '.$outcome->promo->code, 'amount_minor' => -$outcome->discountMinor];
+            $before = ['amount_minor' => $model->amount_minor];
+            $model->update(['amount_minor' => $outcome->finalMinor, 'lines' => $lines, 'pdf_asset_id' => null]);
+            PromoRedemption::create(['promo_code_id' => $outcome->promo->id, 'user_id' => $request->user()->id, 'organization_id' => $organization->id]);
+            $outcome->promo->increment('redeemed_count');
+            app(AuditLogger::class)->record('invoice.promo_applied', $model, $before, ['amount_minor' => $model->amount_minor, 'code' => $outcome->promo->code], $organization->id);
+
+            return response()->json(['data' => ['amount_minor' => $model->amount_minor]]);
+        });
+    }
+
     /** Generate (once) and stream the invoice PDF for download. */
     public function download(Request $request, Organization $organization, string $invoice, InvoicePdfRenderer $renderer): StreamedResponse
     {
@@ -58,27 +96,33 @@ class InvoiceController extends Controller
     {
         $this->authorizeOrg($request->user(), $organization);
 
-        $invoiceModel = $organization->invoices()->findOrFail($invoice);
-        abort_unless($invoiceModel->status === 'unpaid', 422, 'This invoice is not payable.');
+        return DB::transaction(function () use ($request, $organization, $invoice) {
+            $invoiceModel = $organization->invoices()->lockForUpdate()->findOrFail($invoice);
+            abort_unless($invoiceModel->status === 'unpaid', 422, 'This invoice is not payable.');
 
-        $reference = 'invoice_'.$invoiceModel->id;
-        $checkout = $this->gateways->driver($request->string('gateway')->value() ?: null)->initialize(
-            $reference,
-            $invoiceModel->amount_minor,
-            (string) $organization->contact_email,
-            ['purpose' => 'invoice', 'invoice_id' => $invoiceModel->id],
-        );
+            if ($invoiceModel->amount_minor === 0) {
+                app(PaymentService::class)->settleZeroInvoice($invoiceModel);
 
-        // Record the gateway's own transaction id when it returns one, so a later
-        // refund that doesn't echo our `invoice_<id>` reference (e.g. Monnify) correlates.
-        if ($checkout->providerReference !== null) {
-            $invoiceModel->update(['gateway_txn_ref' => $checkout->providerReference]);
-        }
+                return response()->json(['data' => ['invoice_id' => $invoiceModel->id, 'payment_reference' => 'invoice_'.$invoiceModel->id, 'checkout_url' => null, 'settled' => true]]);
+            }
 
-        return response()->json(['data' => [
-            'invoice_id' => $invoiceModel->id,
-            'payment_reference' => $reference,
-            'checkout_url' => $checkout->checkoutUrl,
-        ]]);
+            $reference = 'invoice_'.$invoiceModel->id;
+            $checkout = $this->gateways->driver($request->string('gateway')->value() ?: null)->initialize(
+                $reference,
+                $invoiceModel->amount_minor,
+                (string) $organization->contact_email,
+                ['purpose' => 'invoice', 'invoice_id' => $invoiceModel->id],
+            );
+
+            // Record the gateway's own transaction id when it returns one, so a later
+            // refund that doesn't echo our `invoice_<id>` reference (e.g. Monnify) correlates.
+            $invoiceModel->update(['gateway_txn_ref' => $checkout->providerReference ?? $reference]);
+
+            return response()->json(['data' => [
+                'invoice_id' => $invoiceModel->id,
+                'payment_reference' => $reference,
+                'checkout_url' => $checkout->checkoutUrl,
+            ]]);
+        });
     }
 }

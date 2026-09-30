@@ -28,7 +28,7 @@ export function planFeatures(plan: PresentablePlan): string[] {
 
 export const FREE_PLAN_FEATURES = [
   'Free lessons and quiz',
-  'Lesson 0 in every language',
+  'Level 0 in every language',
   'Speaking practice',
   'XP, streaks and badges',
   'Supported by age-appropriate ads',

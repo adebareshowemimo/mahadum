@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
@@ -67,7 +67,7 @@ export function BillingPage() {
   const [retryingId, setRetryingId] = useState<number | null>(null)
   const [telcoPlan, setTelcoPlan] = useState<Plan | null>(null)
   const [bundleOpen, setBundleOpen] = useState(false)
-  const [promoInput, setPromoInput] = useState('')
+  const [promoInput, setPromoInput] = useState(() => new URLSearchParams(window.location.search).get('promo') ?? '')
   const [promo, setPromo] = useState<{ code: string; byPlan: Record<number, PromoPreview> } | null>(null)
   const [promoError, setPromoError] = useState<string | null>(null)
   const [promoBusy, setPromoBusy] = useState(false)
@@ -106,6 +106,12 @@ export function BillingPage() {
       setPromo({ code, byPlan })
     }
   }
+
+  useEffect(() => {
+    if (plans.data && new URLSearchParams(window.location.search).get('promo')) void applyPromo()
+    // Apply shared codes when plans become available.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plans.data])
 
   async function subscribe(plan: Plan) {
     setBusyPlan(plan.id)

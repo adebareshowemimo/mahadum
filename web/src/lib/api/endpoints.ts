@@ -1457,6 +1457,11 @@ export const schoolApi = {
     return data.data
   },
 
+  async applyInvoicePromo(orgId: number, invoiceId: number, code: string): Promise<{ amount_minor: number }> {
+    const { data } = await api.post(`/schools/${orgId}/invoices/${invoiceId}/promo`, { code })
+    return data.data
+  },
+
   async payInvoice(orgId: number, invoiceId: number, gateway?: string): Promise<PayInvoiceResult> {
     const { data } = await api.post(`/schools/${orgId}/invoices/${invoiceId}/pay`, gateway ? { gateway } : {})
     return data.data

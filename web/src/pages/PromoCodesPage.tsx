@@ -1,14 +1,26 @@
 import { useState, type FormEvent } from 'react'
-import { Alert, Badge, Button, Card, CardBody, CardHeader, CardTitle, Input } from '@/components/ui'
+import { Alert, Badge, Button, Card, CardBody, CardHeader, CardTitle, ConfirmModal, Input } from '@/components/ui'
 import { DataTable, type Column } from '@/components/admin'
 import { ApiError, type CreatePromoInput, type PromoCode } from '@/lib/api'
 import { useCreatePromo, useDeletePromo, usePromos } from '@/lib/admin/queries'
 
 export function PromoCodesPage() {
   const [page, setPage] = useState(1)
+  const [actionNotice, setActionNotice] = useState<string | null>(null)
+  async function copyOrShare(promo: PromoCode, share: boolean) {
+    const url = new URL(promo.applicable_tier === 'school' ? '/invoices' : '/billing', window.location.origin)
+    url.searchParams.set('promo', promo.code)
+    try {
+      if (share && navigator.share) await navigator.share({ title: 'MAHADUM.360 promo code', text: `Use ${promo.code} at checkout`, url: url.href })
+      else await navigator.clipboard.writeText(share ? url.href : promo.code)
+      setActionNotice(share ? 'Promo link ready to share.' : 'Promo code copied.')
+    } catch { setActionNotice('Could not copy or share. Please try again.') }
+  }
   const createPromo = useCreatePromo()
   const promos = usePromos(page)
   const deletePromo = useDeletePromo()
+  const [deleteTarget, setDeleteTarget] = useState<PromoCode | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [values, setValues] = useState({
     code: '',
@@ -54,10 +66,14 @@ export function PromoCodesPage() {
   }
 
   async function onDelete(promo: PromoCode) {
-    if (!window.confirm(`Delete promo code ${promo.code}? It will stop working immediately.`)) return
+    if (deletingId !== null) return
+    setDeleteError(null)
     setDeletingId(promo.id)
     try {
       await deletePromo.mutateAsync(promo.id)
+      setDeleteTarget(null)
+    } catch (err) {
+      setDeleteError(err instanceof ApiError ? err.message : 'Could not delete this promo code. Please try again.')
     } finally {
       setDeletingId(null)
     }
@@ -83,17 +99,24 @@ export function PromoCodesPage() {
       className: 'text-right',
       render: (p) =>
         p.status === 'active' ? (
-          <Button size="sm" variant="ghost" loading={deletingId === p.id} onClick={() => onDelete(p)}>
-            Delete
-          </Button>
+          <div className="flex justify-end gap-1">
+            <Button size="sm" variant="ghost" onClick={() => copyOrShare(p, false)}>Copy</Button>
+            <Button size="sm" variant="ghost" onClick={() => copyOrShare(p, true)}>Share</Button>
+            <Button size="sm" variant="ghost" loading={deletingId === p.id} onClick={() => { setDeleteError(null); setDeleteTarget(p) }}>Delete</Button>
+          </div>
         ) : null,
     },
   ]
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-8">
+      <ConfirmModal open={deleteTarget !== null} onClose={() => setDeleteTarget(null)}
+        onConfirm={() => { if (deleteTarget) void onDelete(deleteTarget) }}
+        title="Delete promo code?" description={`Delete ${deleteTarget?.code ?? ''}? It will stop working immediately.`}
+        confirmLabel="Delete promo code" pending={deletingId !== null} error={deleteError} />
       <h1 className="font-display text-2xl font-bold text-foreground">Promo codes</h1>
 
+      {actionNotice && <Alert variant="info">{actionNotice}</Alert>}
       {created && <Alert variant="success" title="Promo code created">Code <strong>{created}</strong> is now active.</Alert>}
 
       <Card className="mx-auto w-full max-w-lg">

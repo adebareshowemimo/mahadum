@@ -23,3 +23,5 @@ export { Spinner } from './Spinner'
 export { Skeleton } from './Skeleton'
 export { Icon, type IconName, type IconProps } from './Icon'
 export { Modal } from './Modal'
+
+export { ConfirmModal } from './ConfirmModal'

@@ -1007,6 +1007,7 @@ export interface SchoolInvoice {
 }
 
 export interface PayInvoiceResult {
+  settled?: boolean
   invoice_id: number
   payment_reference: string
   checkout_url: string | null

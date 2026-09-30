@@ -185,7 +185,7 @@ function Hero({
             </div>
             <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-navy-700">
               <span aria-hidden="true" className="text-leaf-600">✓</span>
-              Start with Lesson 0 free. Upgrade to unlock more.
+              Start with Level 0 free. Upgrade to unlock more.
             </p>
           </Reveal>
 
@@ -488,7 +488,7 @@ function NeverLockedBand() {
             Start your language journey for free.
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg font-medium leading-relaxed text-chore-50">
-            Lesson 0 is free in every language. Paid card and bank plans unlock all lessons
+            Level 0 is free in every language. Paid card and bank plans unlock all lessons
             and unlimited hearts. Free learners pause for 12 hours when hearts run out.
           </p>
         </Reveal>
@@ -758,7 +758,7 @@ function TrustSection() {
 const FAQS = [
   {
     q: 'Is it really free?',
-    a: 'Lesson 0 is free in every language, supported by ads. Paid card and bank plans unlock all lessons and unlimited hearts; airtime plans include Level 1 only. Free learners pause for 12 hours when hearts run out.',
+    a: 'Level 0 is free in every language, supported by ads. Paid card and bank plans unlock all lessons and unlimited hearts; airtime plans include Level 1 only. Free learners pause for 12 hours when hearts run out.',
   },
   {
     q: 'My child was born abroad and only speaks English. Is this too late?',

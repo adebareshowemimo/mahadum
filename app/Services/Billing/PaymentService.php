@@ -286,6 +286,13 @@ class PaymentService
         $this->audit->record('invoice.refunded', $invoice, ['status' => 'paid'], ['status' => 'unpaid']);
     }
 
+    public function settleZeroInvoice(Invoice $invoice): void
+    {
+        abort_unless($invoice->amount_minor === 0 && $invoice->status === 'unpaid', 422);
+        $this->settleInvoice($invoice);
+        $this->audit->record('invoice.zero_total_settled', $invoice, ['status' => 'unpaid'], ['status' => 'paid'], $invoice->organization_id);
+    }
+
     private function settleInvoice(Invoice $invoice): void
     {
         if ($invoice->status === 'paid') {

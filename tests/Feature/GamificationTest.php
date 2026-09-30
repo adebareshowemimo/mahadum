@@ -119,7 +119,7 @@ class GamificationTest extends TestCase
         $learner = $this->parentWithChild($parent);
 
         $intro = $this->publishedLesson();
-        $unit = $intro->courseLevel->lessons()->create(['title' => 'Level 1 lesson', 'position' => 2, 'published_at' => now()]);
+        $unit = $intro->courseLevel->course->levels()->create(['title' => 'Level 1', 'position' => 1])->lessons()->create(['title' => 'Level 1 lesson', 'position' => 2, 'published_at' => now()]);
         foreach ([$intro, $unit] as $lesson) {
             $learner->lessonProgress()->create(['lesson_id' => $lesson->id, 'status' => 'completed', 'completed_at' => now()]);
         }

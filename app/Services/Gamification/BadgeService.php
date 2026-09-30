@@ -69,12 +69,12 @@ class BadgeService
         ];
 
         $completedIds = $learner->lessonProgress()->where('status', 'completed')->pluck('lesson_id');
-        $conditions['tier_0'] = Lesson::whereIn('id', $completedIds)->where('is_free_preview', true)->exists();
+        $conditions['tier_0'] = Lesson::whereIn('id', $completedIds)->whereHas('courseLevel', fn ($q) => $q->where('position', 0))->exists();
         foreach (range(1, 5) as $level) {
             $conditions["tier_{$level}"] = CourseLevel::where('position', $level)
-                ->whereHas('lessons', fn ($q) => $q->whereNotNull('published_at')->where('is_free_preview', false))
+                ->whereHas('lessons', fn ($q) => $q->whereNotNull('published_at'))
                 ->whereDoesntHave('lessons', fn ($q) => $q->whereNotNull('published_at')
-                    ->where('is_free_preview', false)->whereNotIn('id', $completedIds))
+                    ->whereNotIn('id', $completedIds))
                 ->exists();
         }
 

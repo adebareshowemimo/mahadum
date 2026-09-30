@@ -4,7 +4,8 @@ Approved by the product owner on September 7, 2026 in this task. This amendment 
 
 ## Access rules
 
-- Free learners may browse every language and play the explicitly designated introductory Lesson 0. `lessons.is_free_preview` identifies this content independently of its title or display order. Existing content is initialized to the first published lesson per language; authors must review this selection before rollout.
+- Superseded on 2026-09-30: all lessons in course levels with position 0 are free. Upgrade locks begin at Level 1. Airtime includes the free Level 0 plus Level 1.
+- Previous decision: Free learners may browse every language and play the explicitly designated introductory Lesson 0. `lessons.is_free_preview` identifies this content independently of its title or display order. Existing content is initialized to the first published lesson per language; authors must review this selection before rollout.
 - Active paid card/bank subscriptions unlock all published lessons. Individual, family-owner, and organization subscriptions are considered. Existing grace-period access continues until the subscription leaves active/grace status; cancellation/refund state changes restore Free access.
 - Airtime subscriptions are Individual plans and permit content in course Level 1 (`course_levels.position = 1`) only. A qualifying card/bank subscription takes precedence over an airtime restriction.
 - Free learners lose one heart per four answered quiz questions, regardless of correctness. Re-sending an answer in an open attempt does not increment the counter again. Paid learners have unlimited hearts.
