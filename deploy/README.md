@@ -71,6 +71,17 @@ Assumes Apache2, PHP 8.3, Composer, and Node are already installed.
 cd /var/www/mahadum && ./deploy/deploy.sh
 ```
 
+When updating the deploy script itself, fetch, check out your deployment
+branch, and pull it before starting the script. A running script keeps using
+the version it started with, even after its own Git pull updates the file:
+
+```bash
+git fetch origin
+git checkout codex/beta-feedback-20260903
+git pull --ff-only origin codex/beta-feedback-20260903
+BRANCH=codex/beta-feedback-20260903 ./deploy/deploy.sh
+```
+
 Pulls `main`, reinstalls dependencies, rebuilds the SPA, migrates, **re-syncs
 RBAC roles/permissions** (idempotent — picks up any new permission a commit
 added, e.g. `emails.*`), re-caches config, and gracefully restarts the queue
@@ -84,10 +95,14 @@ The script is safe to re-run and re-trigger:
 - **Auto-rollback on failure** — any failed step (including a failed
   `/up` health check after restart) checks the code back out to the
   commit that was live before the deploy started, re-caches, and takes
-  the app back out of maintenance mode. This only reverts *code* — SPA
-  build artifacts already copied into `public/` before the failure are
-  not reverted, since they aren't version-controlled; re-run the deploy
-  once the underlying issue is fixed.
+  the app back out of maintenance mode. SPA files overwritten by the release
+  are backed up before publishing and restored with the previous code, so
+  the interface and API stay on the same release. Completed database
+  migrations are retained; rollback does not reverse migrations.
+- **Shared runtime files** — permission updates apply only to files owned
+  by the user running the deploy. Uploads and generated PDFs owned by
+  `www-data` keep their existing permissions. The shared group and directory
+  ownership are provisioned by `bootstrap-ubuntu.sh`.
 - Override `HEALTH_URL` (defaults to `http://127.0.0.1/up`) if the app
   isn't reachable on localhost, or `LOCK_FILE` if running multiple
   apps' deploys need distinct locks on the same box.

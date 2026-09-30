@@ -25,12 +25,31 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     PREVIOUS_COMMIT="$(git rev-parse HEAD)"
 fi
 MAINTENANCE_ON=0
+PUBLISH_BACKUP=""
+PUBLISHED_PATHS=()
+
+cleanup() {
+    if [ -n "$PUBLISH_BACKUP" ]; then
+        rm -rf -- "$PUBLISH_BACKUP"
+    fi
+}
+trap cleanup EXIT
 
 rollback() {
     local exit_code=$?
     echo "==> Deploy failed (exit $exit_code). Rolling back to $PREVIOUS_COMMIT" >&2
     if [ -n "$PREVIOUS_COMMIT" ]; then
         git checkout "$PREVIOUS_COMMIT" --quiet || true
+    fi
+    # Build artifacts are untracked. Restore them along with PHP so a failed
+    # deploy cannot leave a new editor talking to an older API.
+    if [ -n "$PUBLISH_BACKUP" ]; then
+        for target in "${PUBLISHED_PATHS[@]}"; do
+            rm -rf -- "$target"
+            if [ -e "$PUBLISH_BACKUP/$target" ]; then
+                cp -a "$PUBLISH_BACKUP/$target" "$target" || true
+            fi
+        done
     fi
     composer install --no-dev --optimize-autoloader --no-interaction --quiet || true
     php artisan config:cache || true
@@ -64,6 +83,20 @@ echo "==> Building the SPA"
 (cd web && npm ci && npm run build)
 
 echo "==> Publishing SPA build into public/ and resources/spa/"
+PUBLISH_BACKUP="$(mktemp -d /tmp/mahadum-spa-backup-XXXXXX)"
+while IFS= read -r -d '' source_path; do
+    target="public/$(basename "$source_path")"
+    mkdir -p "$PUBLISH_BACKUP/public"
+    if [ -e "$target" ]; then
+        cp -a "$target" "$PUBLISH_BACKUP/$target"
+    fi
+    PUBLISHED_PATHS+=("$target")
+done < <(find web/dist -mindepth 1 -maxdepth 1 ! -name 'index.html' -print0)
+mkdir -p "$PUBLISH_BACKUP/resources/spa"
+if [ -f resources/spa/index.html ]; then
+    cp -a resources/spa/index.html "$PUBLISH_BACKUP/resources/spa/index.html"
+fi
+PUBLISHED_PATHS+=("resources/spa/index.html")
 mkdir -p resources/spa
 # Vite emits bundled code under assets/ and copies every directory from
 # web/public (including images/) to the dist root. Publish both kinds of
@@ -100,12 +133,15 @@ php artisan route:cache
 php artisan view:cache
 php artisan storage:link || true
 
-echo "==> Fixing storage/cache permissions"
-install -d -m 2775 storage/app/public/media
-chmod -R ug+rwX storage bootstrap/cache
+echo "==> Preserving storage/cache permissions"
+mkdir -p storage/app/public/media
+# A shared writable group permits file access, but only the owner (or root)
+# can chmod a file. Uploaded media and invoice PDFs belong to www-data;
+# trying to chmod them as the deploy user aborts an otherwise healthy deploy.
+find storage bootstrap/cache -user "$(id -un)" \( -type f -o -type d \) -exec chmod ug+rwX {} +
 # Preserve the configured shared group on files created by either Artisan or
 # the web server. Ownership is provisioned once by bootstrap-ubuntu.sh.
-find storage bootstrap/cache -type d -exec chmod g+s {} +
+find storage bootstrap/cache -user "$(id -un)" -type d -exec chmod g+s {} +
 
 echo "==> Leaving maintenance mode"
 php artisan up
