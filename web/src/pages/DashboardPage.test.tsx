@@ -6,10 +6,12 @@ import { DashboardPage } from './DashboardPage'
 const mocks = vi.hoisted(() => ({
   useAuth: vi.fn(),
   useCoursesPerformance: vi.fn(),
+  useReferralActivations: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/AuthProvider', () => ({ useAuth: mocks.useAuth }))
 vi.mock('@/lib/content/queries', () => ({ useCoursesPerformance: mocks.useCoursesPerformance }))
+vi.mock('@/lib/referral/queries', () => ({ useReferralActivations: mocks.useReferralActivations }))
 
 const performance = {
   id: 1,
@@ -34,6 +36,7 @@ const performance = {
 
 describe('DashboardPage for a content owner', () => {
   beforeEach(() => {
+    mocks.useReferralActivations.mockReturnValue({ data: { data: [], meta: { total: 0 } } })
     mocks.useAuth.mockReturnValue({
       user: { user: { first_name: 'Amina' } },
       hasRole: (role: string) => role === 'content_owner',
@@ -67,5 +70,26 @@ describe('DashboardPage for a content owner', () => {
 
     expect(screen.queryByText('Everyday Yorùbá')).not.toBeInTheDocument()
     expect(screen.getByText('No courses match these filters.')).toBeInTheDocument()
+  })
+
+  it.each(['parent', 'teacher', 'school_admin', 'supervisor', 'student', 'content_owner'])('shows personal referral activity on the %s profile', (role) => {
+    mocks.useAuth.mockReturnValue({
+      user: { user: { id: 1, first_name: 'Amina', roles: [role] }, families: [], organizations: [] },
+      hasRole: (...roles: string[]) => roles.includes(role),
+    })
+    mocks.useReferralActivations.mockReturnValue({ data: {
+      data: [{ sn: 1, code: 'AMINA', activated_at: '2026-09-30', status: 'active', via_email: 'friend@example.test', via_phone: '+2348012345678' }],
+      meta: { total: 1, last_page: 1 },
+    } })
+    render(<MemoryRouter><DashboardPage /></MemoryRouter>)
+    expect(screen.getByRole('region', { name: 'Referral activity' })).toBeInTheDocument()
+    expect(screen.getByText('friend@example.test')).toBeInTheDocument()
+    expect(screen.getByText('+2348012345678')).toBeInTheDocument()
+    expect(screen.getByText('Active')).toBeInTheDocument()
+  })
+
+  it('hides the referral section when the profile has no activity', () => {
+    render(<MemoryRouter><DashboardPage /></MemoryRouter>)
+    expect(screen.queryByRole('region', { name: 'Referral activity' })).not.toBeInTheDocument()
   })
 })

@@ -4,6 +4,7 @@ import type { IconName } from '@/components/ui'
 import { schoolApi } from '@/lib/api'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { schoolKeys, useMyClasses } from '@/lib/school/queries'
+import { ReferralActivity } from '@/components/referral/ReferralActivity'
 
 export function TeacherProfilePage() {
   const { user } = useAuth()
@@ -46,6 +47,8 @@ export function TeacherProfilePage() {
           <Kpi icon="clipboard" label="Assignments" value={assignmentsCreated} loading={loadingStats} />
         </div>
       </div>
+
+      <ReferralActivity key={user?.user.id} hideWhenEmpty />
 
       <section>
         <h2 className="mb-3 font-display text-lg font-bold text-foreground">Classes you teach</h2>

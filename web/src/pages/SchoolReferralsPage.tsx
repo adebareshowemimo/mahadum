@@ -4,6 +4,7 @@ import { ApiError } from '@/lib/api'
 import { formatMoney } from '@/lib/format'
 import { SchoolGate } from '@/components/school/SchoolGate'
 import { useRequestSchoolReferralPayout, useSchoolReferrals } from '@/lib/school/queries'
+import { ReferralActivity } from '@/components/referral/ReferralActivity'
 
 export const SCHOOL_PAYOUT_FLOOR_NAIRA = 5000
 
@@ -146,6 +147,8 @@ function SchoolReferrals({ orgId }: { orgId: number }) {
           </CardBody>
         </Card>
       </div>
+
+      <ReferralActivity key={orgId} organizationId={orgId} />
 
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-lg font-bold text-foreground">Payouts</h2>

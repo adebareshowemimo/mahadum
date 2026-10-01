@@ -9,6 +9,7 @@ use App\Models\Payout;
 use App\Models\Referral;
 use App\Models\User;
 use App\Services\Referral\ReferralAccountExistsException;
+use App\Services\Referral\ReferralActivity;
 use App\Services\Referral\ReferralService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -64,51 +65,11 @@ class ReferralController extends Controller
      * The referrer's dashboard: all attributed sign-ups, including pending activation,
      * searchable by the invited contact or the referred user's email / phone.
      */
-    public function activations(Request $request): JsonResponse
+    public function activations(Request $request, ReferralActivity $activity): JsonResponse
     {
-        $search = trim((string) $request->query('search', ''));
-
-        $query = Referral::whereHas('referralCode', fn ($q) => $q
-            ->where('owner_type', $request->user()->getMorphClass())
-            ->where('owner_id', $request->user()->id))
-            ->with(['referredUser:id,email,phone,last_login_at', 'referralCode'])
-            ->orderByDesc('signed_up_at')->orderByDesc('id');
-
-        if ($search !== '') {
-            $like = '%'.$search.'%';
-            $query->where(fn ($q) => $q
-                ->where('contact_value', 'like', $like)
-                ->orWhereHas('referredUser', fn ($u) => $u
-                    ->where('email', 'like', $like)->orWhere('phone', 'like', $like)));
-        }
-
-        $page = $query->paginate(max(1, min(100, $request->integer('per_page', 20))));
-
-        $offset = ($page->currentPage() - 1) * $page->perPage();
-        $rows = $page->getCollection()->values()->map(function (Referral $referral, int $i) use ($offset) {
-            $email = $referral->contact_channel === 'email' ? ($referral->contact_value ?: $referral->referredUser?->email) : $referral->referredUser?->email;
-            $phone = $referral->contact_channel === 'phone' ? ($referral->contact_value ?: $referral->referredUser?->phone) : $referral->referredUser?->phone;
-
-            return [
-                'sn' => $offset + $i + 1,
-                'activated_at' => $referral->activated_at?->toDateString(),
-                'code' => $referral->referralCode->code,
-                'via_email' => $email,
-                'via_phone' => $phone,
-                'status' => $referral->activated_at === null ? 'pending'
-                    : ($this->referrals->isReferredUserActive($referral) ? 'active' : 'inactive'),
-            ];
-        });
-
-        return response()->json([
-            'data' => $rows,
-            'meta' => [
-                'current_page' => $page->currentPage(),
-                'last_page' => $page->lastPage(),
-                'per_page' => $page->perPage(),
-                'total' => $page->total(),
-            ],
-        ]);
+        return response()->json($activity->forOwner(
+            $request->user(), (string) $request->query('search', ''), $request->integer('per_page', 20),
+        ));
     }
 
     /** Invites the caller has sent, newest first. */

@@ -256,6 +256,8 @@ Ongoing in parallel: **Design**, **Content production**, **Integrations**, **Com
 
 ## Phase 7 — Referrals & commissions ⬜
 
+- [x] ✅ **Referral activity on user profiles** (2026-09-30) — home/account and teacher profiles show their own referral activity when present, including activation date/status and both contact fields. School dashboards and referral hubs show organization-owned activity, with search and pagination. Self-service activity reads are available to every authenticated account role, strictly scoped to that account’s codes; school reads require referral permission and active organization membership. Personal and school query caches are separated by signed-in user and owner.
+
 **Backend `[MVP]`**
 - [x] ✅ Referral codes (user + school); referral tracking.
 - [x] ✅ Fraud: device/IP block (FR-7.1), velocity freeze >15/24h (FR-7.5), verified-payment gate (FR-7.2).

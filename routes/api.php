@@ -325,7 +325,9 @@ Route::prefix('v1')->group(function () {
         /* ---- Referrals & payouts ---- */
         Route::get('referral-code', [ReferralController::class, 'code'])->middleware('can:referrals.view');
         Route::get('referrals/summary', [ReferralController::class, 'summary'])->middleware('can:referrals.view');
-        Route::get('referrals/activations', [ReferralController::class, 'activations'])->middleware('can:referrals.view');
+        // Any authenticated account may read activity from its own codes.
+        // Code issuance, invitations and school access retain their role guards.
+        Route::get('referrals/activations', [ReferralController::class, 'activations']);
         Route::get('referrals/invitations', [ReferralController::class, 'invitations'])->middleware('can:referrals.view');
         Route::post('referrals/invitations', [ReferralController::class, 'invite'])->middleware('can:referrals.view');
         Route::get('payouts', [PayoutController::class, 'index'])->can('viewAny', Payout::class);
@@ -353,6 +355,7 @@ Route::prefix('v1')->group(function () {
             Route::post('invoices/{invoice}/promo', [InvoiceController::class, 'applyPromo'])->middleware('can:billing.invoices.manage');
             Route::post('invoices/{invoice}/pay', [InvoiceController::class, 'pay'])->middleware('can:billing.invoices.manage');
             Route::get('referrals/summary', [SchoolReferralController::class, 'summary'])->middleware('can:referrals.view');
+            Route::get('referrals/activations', [SchoolReferralController::class, 'activations'])->middleware('can:referrals.view');
             Route::middleware('idempotency')->group(function () {
                 Route::post('referrals/payouts/request', [SchoolReferralController::class, 'requestPayout'])
                     ->middleware('can:payouts.request');

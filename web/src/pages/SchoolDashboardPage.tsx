@@ -16,6 +16,7 @@ import { ApiError, type SchoolTeacher } from '@/lib/api'
 import { formatMoney } from '@/lib/format'
 import { SchoolGate } from '@/components/school/SchoolGate'
 import { useClasses, useCreateClass, useSchoolDashboard, useTeachers, useUpdateClass } from '@/lib/school/queries'
+import { ReferralActivity } from '@/components/referral/ReferralActivity'
 
 export function SchoolDashboardPage() {
   return <SchoolGate>{(orgId) => <Dashboard orgId={orgId} />}</SchoolGate>
@@ -70,6 +71,8 @@ function Dashboard({ orgId }: { orgId: number }) {
           </div>
         </CardBody>
       </Card>
+
+      <ReferralActivity key={orgId} organizationId={orgId} hideWhenEmpty />
 
       <section>
         <div className="mb-3 flex items-center justify-between">

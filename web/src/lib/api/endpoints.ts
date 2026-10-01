@@ -1503,6 +1503,11 @@ export const schoolApi = {
     return data.data
   },
 
+  async referralActivations(orgId: number, params: ReferralActivationsQuery = {}): Promise<ReferralActivationsPage> {
+    const { data } = await api.get(`/schools/${orgId}/referrals/activations`, { params })
+    return data
+  },
+
   async requestReferralPayout(orgId: number, input: RequestPayoutInput): Promise<{ id: number; status: string }> {
     const { data } = await api.post(`/schools/${orgId}/referrals/payouts/request`, input, {
       headers: { 'Idempotency-Key': idempotencyKey() },

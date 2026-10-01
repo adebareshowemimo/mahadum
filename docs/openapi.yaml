@@ -2000,7 +2000,7 @@ paths:
   /referrals/activations:
     get:
       tags: [Referrals & Payouts]
-      summary: People who activated the caller's code (referrals.view)
+      summary: Referral activity from the authenticated caller's existing codes
       parameters:
         - { name: search, in: query, schema: { type: string }, description: Match invited contact or the referred user's email/phone }
         - { name: per_page, in: query, schema: { type: integer } }
@@ -2023,8 +2023,39 @@ paths:
                         code: { type: string }
                         via_email: { type: string, nullable: true }
                         via_phone: { type: string, nullable: true }
-                        status: { type: string, enum: [active, inactive] }
+                        status: { type: string, enum: [pending, active, inactive] }
                   meta: { type: object, additionalProperties: true }
+
+  /schools/{organization}/referrals/activations:
+    get:
+      tags: [Referrals & Payouts]
+      summary: School referral activity (referrals.view and active organization membership)
+      parameters:
+        - { name: organization, in: path, required: true, schema: { type: integer } }
+        - { name: search, in: query, schema: { type: string }, description: Match invited contact or referred user email/phone }
+        - { name: per_page, in: query, schema: { type: integer, minimum: 1, maximum: 100 } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+      responses:
+        "200":
+          description: Same paginated activity rows as GET /referrals/activations, scoped to the school's codes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        sn: { type: integer }
+                        activated_at: { type: string, format: date, nullable: true }
+                        code: { type: string }
+                        via_email: { type: string, nullable: true }
+                        via_phone: { type: string, nullable: true }
+                        status: { type: string, enum: [pending, active, inactive] }
+                  meta: { type: object, additionalProperties: true }
+        "403": { description: Missing referral permission or active organization membership }
 
   /referrals/invitations:
     get:

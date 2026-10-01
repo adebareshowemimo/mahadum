@@ -8,6 +8,7 @@ use App\Http\Requests\Referral\RequestPayoutRequest;
 use App\Models\Commission;
 use App\Models\Organization;
 use App\Models\Payout;
+use App\Services\Referral\ReferralActivity;
 use App\Services\Referral\ReferralService;
 use App\Services\Settings;
 use Illuminate\Database\Eloquent\Builder;
@@ -61,6 +62,15 @@ class SchoolReferralController extends Controller
             'available_minor' => max(0, $clearedMinor - $committedMinor),
             'payouts' => $payouts,
         ]]);
+    }
+
+    public function activations(Request $request, Organization $organization, ReferralActivity $activity): JsonResponse
+    {
+        $this->authorizeOrg($request->user(), $organization);
+
+        return response()->json($activity->forOwner(
+            $organization, (string) $request->query('search', ''), $request->integer('per_page', 20),
+        ));
     }
 
     public function requestPayout(RequestPayoutRequest $request, Organization $organization): JsonResponse

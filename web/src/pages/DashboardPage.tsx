@@ -1,6 +1,7 @@
 import { Badge, Card, CardBody, CardHeader, CardTitle, LinkButton } from '@/components/ui'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { CoursePerformanceDashboard } from '@/components/content/CoursePerformanceDashboard'
+import { ReferralActivity } from '@/components/referral/ReferralActivity'
 
 /** Authenticated landing. Rendered inside the app shell (AppLayout). */
 export function DashboardPage() {
@@ -22,6 +23,7 @@ export function DashboardPage() {
         </div>
 
         <CoursePerformanceDashboard variant="dashboard" />
+        <ReferralActivity key={user?.user.id} hideWhenEmpty />
       </div>
     )
   }
@@ -103,6 +105,8 @@ export function DashboardPage() {
           </LinkButton>
         )}
       </div>
+
+      <ReferralActivity key={user?.user.id} hideWhenEmpty />
     </div>
   )
 }

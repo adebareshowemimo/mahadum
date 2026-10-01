@@ -118,6 +118,12 @@ Blank cells under every listed role (e.g. `organizations.activate`, `finance.*`,
 `settlements.*`, `billing.plans.manage`, `analytics.platform.view`,
 `referrals.fraud.review`, `system.settings.manage`) are **super_admin-only** by design.
 
+Approved 2026-09-30: `GET /referrals/activations` is an authenticated,
+owner-scoped profile read for every account role. It lists only referrals tied
+to that account’s existing codes and never issues a code. Other referral
+operations retain `referrals.view`; school activity additionally requires
+active membership of the requested organization (or super_admin).
+
 `analytics.class.view` was removed (2026-07-04): it duplicated `schools.analytics.view`
 exactly (same 3 roles) and was never checked by any route — `GET
 /classes/{class}/analytics` now explicitly enforces `schools.analytics.view` (in

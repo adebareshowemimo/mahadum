@@ -1,15 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   referralApi,
+  schoolApi,
   type RequestPayoutInput,
   type SendReferralInvitationInput,
 } from '@/lib/api'
+import { useAuth } from '@/lib/auth/AuthProvider'
 
 export const referralKeys = {
   code: ['referral-code'] as const,
   summary: ['referral-summary'] as const,
   payouts: ['payouts'] as const,
-  activations: (search: string, page: number) => ['referral-activations', search, page] as const,
+  activations: (userId: number, organizationId: number | undefined, search: string, page: number) =>
+    ['referral-activations', userId, organizationId ?? 'personal', search, page] as const,
   invitations: ['referral-invitations'] as const,
 }
 
@@ -25,10 +28,14 @@ export function usePayouts() {
   return useQuery({ queryKey: referralKeys.payouts, queryFn: referralApi.payouts })
 }
 
-export function useReferralActivations(search: string, page = 1) {
+export function useReferralActivations(search: string, page = 1, organizationId?: number) {
+  const { user } = useAuth()
+  const userId = user?.user.id ?? 0
+  const params = { search: search || undefined, page }
   return useQuery({
-    queryKey: referralKeys.activations(search, page),
-    queryFn: () => referralApi.activations({ search: search || undefined, page }),
+    queryKey: referralKeys.activations(userId, organizationId, search, page),
+    queryFn: () => organizationId ? schoolApi.referralActivations(organizationId, params) : referralApi.activations(params),
+    enabled: userId > 0,
   })
 }
 
