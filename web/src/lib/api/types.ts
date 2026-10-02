@@ -167,9 +167,29 @@ export interface TelcoStatus {
 }
 
 export interface DataBundle {
-  bundle_mb: number
-  amount_minor: number
+  product_code: string
+  biller_code: string
+  name: string
+  amount_minor: number | null
+  price_type: string
   currency: string
+  duration: number | null
+  duration_unit: string | null
+}
+
+export interface DataBiller {
+  code: string
+  name: string
+}
+
+export interface DataBundlePurchase {
+  purchase_id: number
+  status: 'awaiting_payment' | 'processing' | 'success' | 'failed' | 'payment_failed' | 'needs_review'
+  amount_minor: number
+  product_name: string
+  phone_number: string
+  checkout_url: string | null
+  payment_reference: string
 }
 
 export interface AppLanguage {

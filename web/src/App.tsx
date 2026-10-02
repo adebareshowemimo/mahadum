@@ -22,6 +22,7 @@ const AccessibilityPage = lazy(() => import('@/pages/PublicTrustPages').then((m)
 const AssignmentsPage = lazy(() => import('@/pages/AssignmentsPage').then((m) => ({ default: m.AssignmentsPage })))
 const AssignmentDetailPage = lazy(() => import('@/pages/AssignmentDetailPage').then((m) => ({ default: m.AssignmentDetailPage })))
 const BillingPage = lazy(() => import('@/pages/BillingPage').then((m) => ({ default: m.BillingPage })))
+const MobileDataPage = lazy(() => import('@/pages/MobileDataPage').then((m) => ({ default: m.MobileDataPage })))
 const ClassesPage = lazy(() => import('@/pages/ClassesPage').then((m) => ({ default: m.ClassesPage })))
 const ClassPage = lazy(() => import('@/pages/ClassPage').then((m) => ({ default: m.ClassPage })))
 const InviteClassLearnerPage = lazy(() => import('@/pages/InviteClassLearnerPage').then((m) => ({ default: m.InviteClassLearnerPage })))
@@ -110,6 +111,7 @@ const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage').then((m
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
 
 const PAGE_TITLES: Record<string, string> = {
+  '/billing/data': 'Buy mobile data',
   '/': 'Learn Nigerian Languages',
   '/home': 'Dashboard',
   '/learn': 'My Learning',
@@ -267,6 +269,7 @@ const REAL_PAGES = new Set([
   '/admin/courses',
   '/admin/promos',
   '/billing',
+  '/billing/data',
   '/classes',
   '/assignments',
   '/earnings',
@@ -342,6 +345,7 @@ export function App() {
           <Route path="/wallet" element={<WalletPage />} />
           <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/billing" element={<BillingPage />} />
+          <Route path="/billing/data" element={<MobileDataPage />} />
           <Route element={<RoleRoute roles={['teacher', 'school_admin']} />}>
             <Route path="/classes" element={<ClassesPage />} />
             <Route path="/classes/:classId" element={<ClassPage />} />

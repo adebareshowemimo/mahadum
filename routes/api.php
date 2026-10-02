@@ -306,6 +306,9 @@ Route::prefix('v1')->group(function () {
         Route::post('subscriptions/{subscription}/cancel', [SubscriptionController::class, 'cancel'])
             ->middleware('can:billing.subscriptions.manage');
         Route::get('data-bundles', [DataBundleController::class, 'index']);
+        Route::get('data-bundles/billers', [DataBundleController::class, 'billers']);
+        Route::get('data-bundles/purchases/{purchase}', [DataBundleController::class, 'show'])
+            ->middleware('can:billing.databundles.manage');
 
         // Preview a promo code against a plan (no side effects) before checkout.
         Route::post('subscriptions/promo-preview', [SubscriptionController::class, 'promoPreview'])

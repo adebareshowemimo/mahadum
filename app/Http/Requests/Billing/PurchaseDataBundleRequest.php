@@ -14,9 +14,11 @@ class PurchaseDataBundleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'operator' => ['required', 'in:mtn,airtel,glo,t2'],
-            'bundle_mb' => ['required', 'integer', 'min:1'],
-            'consent' => ['accepted'], // explicit carrier-billing consent
+            'biller_code' => ['required', 'string', 'max:255'],
+            'product_code' => ['required', 'string', 'max:255'],
+            'phone_number' => ['required', 'regex:/^0[789][01][0-9]{8}$/'],
+            'amount_minor' => ['required', 'integer', 'min:1'],
+            'consent' => ['accepted'],
         ];
     }
 }

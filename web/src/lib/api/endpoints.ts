@@ -1,6 +1,8 @@
 import { api } from './client'
 import { deviceName } from './storage'
 import type {
+  DataBiller,
+  DataBundlePurchase,
   AddChildInput,
   AnswerResult,
   AppConfig,
@@ -827,19 +829,25 @@ export const billingApi = {
   },
 
   // --- Data bundles ---
-  async dataBundles(): Promise<DataBundle[]> {
-    const { data } = await api.get('/data-bundles')
+  async dataBillers(): Promise<DataBiller[]> {
+    const { data } = await api.get('/data-bundles/billers')
     return data.data
   },
 
-  async purchaseDataBundle(input: { operator: TelcoOperator; bundle_mb: number; consent: boolean }): Promise<{
-    purchase_id: number
-    status: string
-    amount_minor: number
-  }> {
+  async dataBundles(billerCode: string): Promise<DataBundle[]> {
+    const { data } = await api.get('/data-bundles', { params: { biller_code: billerCode } })
+    return data.data
+  },
+
+  async purchaseDataBundle(input: { biller_code: string; product_code: string; phone_number: string; amount_minor: number; consent: boolean }, key: string): Promise<DataBundlePurchase> {
     const { data } = await api.post('/data-bundles/purchase', input, {
-      headers: { 'Idempotency-Key': idempotencyKey() },
+      headers: { 'Idempotency-Key': key },
     })
+    return data.data
+  },
+
+  async dataBundlePurchase(id: number): Promise<DataBundlePurchase> {
+    const { data } = await api.get(`/data-bundles/purchases/${id}`)
     return data.data
   },
 }

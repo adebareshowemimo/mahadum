@@ -43,7 +43,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Wallet', to: '/wallet', icon: 'wallet', roles: ['parent', 'supervisor'] },
       { label: 'Reviews', to: '/reviews', icon: 'clipboard', roles: ['parent', 'supervisor'] },
       { label: 'Referrals', to: '/referrals', icon: 'gift', roles: ['parent', 'teacher'] },
-      { label: 'Billing', to: '/billing', icon: 'card', roles: ['parent'] },
+      { label: 'Billing', to: '/billing', icon: 'card', roles: ['parent'], end: true },
+      { label: 'Buy data', to: '/billing/data', icon: 'signal', roles: ['parent', 'super_admin'] },
     ],
   },
   {

@@ -31,7 +31,6 @@ import {
 } from '@/lib/billing/queries'
 import { useFamily } from '@/lib/family/queries'
 import { TelcoOptInModal } from '@/components/billing/TelcoOptInModal'
-import { DataBundleModal } from '@/components/billing/DataBundleModal'
 
 /**
  * A subscription id the SPA has cached (via /me) can go stale if it was acted
@@ -66,7 +65,6 @@ export function BillingPage() {
   const [busyPlan, setBusyPlan] = useState<number | null>(null)
   const [retryingId, setRetryingId] = useState<number | null>(null)
   const [telcoPlan, setTelcoPlan] = useState<Plan | null>(null)
-  const [bundleOpen, setBundleOpen] = useState(false)
   const [promoInput, setPromoInput] = useState(() => new URLSearchParams(window.location.search).get('promo') ?? '')
   const [promo, setPromo] = useState<{ code: string; byPlan: Record<number, PromoPreview> } | null>(null)
   const [promoError, setPromoError] = useState<string | null>(null)
@@ -345,11 +343,11 @@ export function BillingPage() {
         <CardBody className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="font-display text-lg font-bold text-foreground">Mobile data</p>
-            <p className="text-sm text-muted">Top up data, charged to your airtime balance.</p>
+            <p className="text-sm text-muted">Browse your network’s data plans and pay securely through Monnify.</p>
           </div>
-          <Button variant="billing" onClick={() => setBundleOpen(true)}>
+          <LinkButton variant="billing" to="/billing/data">
             Buy data
-          </Button>
+          </LinkButton>
         </CardBody>
       </Card>
 
@@ -424,7 +422,6 @@ export function BillingPage() {
       {telcoBillingEnabled && (
         <TelcoOptInModal plan={telcoPlan} open={telcoPlan != null} onClose={() => setTelcoPlan(null)} />
       )}
-      <DataBundleModal open={bundleOpen} onClose={() => setBundleOpen(false)} />
     </div>
   )
 }

@@ -42,6 +42,8 @@ class DataBundlePurchase extends Model
 
     protected $casts = [
         'consent_at' => 'datetime',
+        'paid_at' => 'datetime',
+        'vend_started_at' => 'datetime',
     ];
 
     /**

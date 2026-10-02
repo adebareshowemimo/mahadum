@@ -1902,13 +1902,13 @@ paths:
               schema: { $ref: "#/components/schemas/MessageError" }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  /data-bundles:
+  /data-bundles/billers:
     get:
       tags: [Billing]
-      summary: Data bundle catalogue
+      summary: Monnify data billers (cached for five minutes)
       responses:
         "200":
-          description: OK
+          description: Provider catalogue
           content:
             application/json:
               schema:
@@ -1919,14 +1919,50 @@ paths:
                     items:
                       type: object
                       properties:
-                        bundle_mb: { type: integer }
-                        amount_minor: { type: integer }
+                        code: { type: string }
+                        name: { type: string }
+        "502": { description: Monnify Bills Payment unavailable or access rejected }
+        "503": { description: Credentials missing or provider unreachable }
+
+  /data-bundles:
+    get:
+      tags: [Billing]
+      summary: Monnify products for a data biller (all provider pages; cached for five minutes)
+      parameters:
+        - in: query
+          name: biller_code
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Provider products, without fabricated fallback prices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        product_code: { type: string }
+                        biller_code: { type: string }
+                        name: { type: string }
+                        amount_minor: { type: integer, nullable: true }
+                        price_type: { type: string, example: FIXED }
                         currency: { type: string, example: NGN }
+                        duration: { type: integer, nullable: true }
+                        duration_unit: { type: string, nullable: true }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "502": { description: Provider unavailable }
+        "503": { description: Credentials missing or provider unreachable }
 
   /data-bundles/purchase:
     post:
       tags: [Billing]
-      summary: Purchase a data bundle (billing.databundles.manage)
+      summary: Validate a data product and recipient, then open Monnify checkout (billing.databundles.manage)
+      description: Prices are refreshed server-side. Data is vended only after verified NGN payment of the exact quoted amount. Reuse the same idempotency key for retries.
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
@@ -1935,27 +1971,49 @@ paths:
           application/json:
             schema:
               type: object
-              required: [operator, bundle_mb, consent]
+              required: [biller_code, product_code, phone_number, amount_minor, consent]
               properties:
-                operator: { type: string, enum: [mtn, airtel, glo, t2] }
-                bundle_mb: { type: integer, minimum: 1 }
-                consent: { type: boolean, description: "must be accepted (true)" }
+                biller_code: { type: string }
+                product_code: { type: string }
+                phone_number: { type: string, pattern: '^0[789][01][0-9]{8}$' }
+                amount_minor: { type: integer, minimum: 1, description: Quoted price in kobo }
+                consent: { type: boolean, enum: [true] }
       responses:
         "201":
-          description: Created
+          description: Purchase persisted; open checkout_url to pay. A null URL means initialization was uncertain and requires reconciliation.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  data:
-                    type: object
-                    properties:
-                      purchase_id: { type: integer }
-                      status: { type: string, example: pending }
-                      amount_minor: { type: integer }
+                  data: { $ref: "#/components/schemas/DataBundlePurchase" }
         "409": { $ref: "#/components/responses/IdempotencyConflict" }
         "422": { $ref: "#/components/responses/ValidationError" }
+        "502": { description: Provider validation unavailable }
+        "503": { description: Monnify checkout disabled or unconfigured }
+
+  /data-bundles/purchases/{purchase}:
+    get:
+      tags: [Billing]
+      summary: Check own purchase and reconcile payment/delivery (billing.databundles.manage)
+      description: An uncertain vend is only requeried using its persisted reference; this never submits a second vend.
+      parameters:
+        - in: path
+          name: purchase
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Current purchase status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/DataBundlePurchase" }
+        "403": { description: Purchase belongs to another user }
+        "502": { description: Provider unavailable }
+        "503": { description: Provider unreachable }
 
   # ----------------------------------------------------- Referrals & Payouts
   /referral-code:
@@ -3587,6 +3645,16 @@ components:
           schema: { $ref: "#/components/schemas/ErrorEnvelope" }
 
   schemas:
+    DataBundlePurchase:
+      type: object
+      properties:
+        purchase_id: { type: integer }
+        status: { type: string, enum: [awaiting_payment, processing, success, failed, payment_failed, needs_review] }
+        amount_minor: { type: integer }
+        product_name: { type: string }
+        phone_number: { type: string }
+        checkout_url: { type: string, nullable: true }
+        payment_reference: { type: string }
     ErrorEnvelope:
       type: object
       description: Coded error envelope returned by money/idempotency/version guards and explicit business rules.

@@ -4,6 +4,8 @@ import { cn } from '@/lib/cn'
 // Minimal in-house line-icon set (currentColor stroke) so the app ships without
 // an icon-library dependency. Add paths here as new nav/UI needs arise.
 const PATHS = {
+  signal: <><path d="M3 20h3v-4H3zM8 20h3v-8H8zM13 20h3V8h-3zM18 20h3V4h-3z" /></>,
+  check: <path d="m5 12 4 4L19 6" />,
   home: <path d="M3 9.8 12 3l9 6.8M5 9.5V20h5v-6h4v6h5V9.5" />,
   book: (
     <>

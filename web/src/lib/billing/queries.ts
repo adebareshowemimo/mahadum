@@ -5,7 +5,7 @@ export const billingKeys = {
   plans: ['plans'] as const,
   subscriptions: ['subscriptions'] as const,
   telcoStatus: ['telco-status'] as const,
-  dataBundles: ['data-bundles'] as const,
+  dataBundles: ['data-bundles', 'monnify'] as const,
 }
 
 export function usePlans() {
@@ -93,6 +93,10 @@ export function useTelcoSubscribe() {
   })
 }
 
-export function useDataBundles() {
-  return useQuery({ queryKey: billingKeys.dataBundles, queryFn: billingApi.dataBundles, staleTime: 10 * 60_000 })
+export function useDataBillers(enabled = true) {
+  return useQuery({ queryKey: [...billingKeys.dataBundles, 'billers'], queryFn: billingApi.dataBillers, enabled, retry: false, staleTime: 5 * 60_000 })
+}
+
+export function useDataBundles(billerCode: string, enabled = true) {
+  return useQuery({ queryKey: [...billingKeys.dataBundles, billerCode], queryFn: () => billingApi.dataBundles(billerCode), enabled: enabled && !!billerCode, retry: false, staleTime: 5 * 60_000 })
 }

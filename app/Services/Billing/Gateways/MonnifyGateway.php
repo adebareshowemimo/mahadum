@@ -29,6 +29,7 @@ class MonnifyGateway implements PaymentGateway
         // Step 2 — initialise the transaction; Monnify returns the hosted checkout URL.
         $response = Http::withToken($token)
             ->acceptJson()
+            ->connectTimeout(5)->timeout(15)
             ->post($base.'/api/v1/merchant/transactions/init-transaction', [
                 'amount' => round($amountMinor / 100, 2),   // major units (Naira)
                 'customerEmail' => $email,
@@ -59,6 +60,7 @@ class MonnifyGateway implements PaymentGateway
 
         $response = Http::withToken($token)
             ->acceptJson()
+            ->connectTimeout(5)->timeout(15)
             ->get($base.'/api/v2/merchant/transactions/query', ['paymentReference' => $reference]);
 
         // A reference the gateway has never seen a checkout for (e.g. one only
@@ -87,6 +89,7 @@ class MonnifyGateway implements PaymentGateway
     {
         return (string) Http::withBasicAuth($this->apiKey, $this->secret)
             ->acceptJson()
+            ->connectTimeout(5)->timeout(15)
             ->post($base.'/api/v1/auth/login')
             ->throw()
             ->json('responseBody.accessToken');

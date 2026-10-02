@@ -5,46 +5,44 @@ namespace App\Http\Controllers\Billing;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Billing\PurchaseDataBundleRequest;
 use App\Models\DataBundlePurchase;
+use App\Services\Billing\DataBundleService;
+use App\Services\Billing\MonnifyBills;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class DataBundleController extends Controller
 {
-    /** Catalogue of carrier data bundles (MB → price in minor units). */
-    private const BUNDLES = [
-        100 => 10000,   // 100MB  → ₦100
-        500 => 30000,   // 500MB  → ₦300
-        1024 => 50000,   // 1GB    → ₦500
-    ];
-
-    public function index(): JsonResponse
+    public function billers(MonnifyBills $bills): JsonResponse
     {
-        $bundles = collect(self::BUNDLES)->map(fn ($price, $mb) => [
-            'bundle_mb' => $mb,
-            'amount_minor' => $price,
-            'currency' => 'NGN',
-        ])->values();
-
-        return response()->json(['data' => $bundles]);
+        return response()->json(['data' => $bills->billers()]);
     }
 
-    public function purchase(PurchaseDataBundleRequest $request): JsonResponse
+    public function index(Request $request, MonnifyBills $bills): JsonResponse
     {
-        $mb = $request->integer('bundle_mb');
-        abort_unless(array_key_exists($mb, self::BUNDLES), 422, 'Unknown bundle size.');
+        $input = $request->validate(['biller_code' => ['required', 'string', 'max:255']]);
 
-        $purchase = DataBundlePurchase::create([
-            'user_id' => $request->user()->id,
-            'operator' => $request->string('operator'),
-            'bundle_mb' => $mb,
-            'amount_minor' => self::BUNDLES[$mb],
-            'status' => 'pending', // confirmed by telco DLR webhook
-            'consent_at' => now(),
-        ]);
+        return response()->json(['data' => $bills->products($input['biller_code'])]);
+    }
 
-        return response()->json(['data' => [
-            'purchase_id' => $purchase->id,
-            'status' => $purchase->status,
-            'amount_minor' => $purchase->amount_minor,
-        ]], 201);
+    public function purchase(PurchaseDataBundleRequest $request, DataBundleService $service): JsonResponse
+    {
+        $purchase = $service->purchase($request->user(), $request->validated(), (string) $request->header('Idempotency-Key'));
+
+        return response()->json(['data' => $service->response($purchase)], 201);
+    }
+
+    public function show(Request $request, DataBundlePurchase $purchase, DataBundleService $service): JsonResponse
+    {
+        abort_unless($purchase->user_id === $request->user()->id, 403);
+        try {
+            $service->refresh($purchase);
+        } catch (RequestException|ConnectionException) {
+            throw new HttpException(503, 'Monnify is unavailable. Your purchase reference is saved; check its status again later.');
+        }
+
+        return response()->json(['data' => $service->response($purchase)]);
     }
 }

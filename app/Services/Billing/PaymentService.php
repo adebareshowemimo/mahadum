@@ -2,6 +2,8 @@
 
 namespace App\Services\Billing;
 
+use App\Jobs\ProcessDataBundlePurchase;
+use App\Models\DataBundlePurchase;
 use App\Models\Family;
 use App\Models\Invoice;
 use App\Models\Plan;
@@ -17,6 +19,7 @@ use App\Services\AuditLogger;
 use App\Services\Family\WalletService;
 use App\Services\Referral\ReferralService;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
 
 /**
@@ -77,6 +80,16 @@ class PaymentService
             return 'unmatched';
         }
 
+        if ($purchase = DataBundlePurchase::where('payment_reference', $reference)->orWhere('gateway_txn_ref', $reference)->first()) {
+            // Signed notification wakes reconciliation; fulfillment still verifies with Monnify directly.
+            if ($purchase->amount_minor !== $amountMinor) {
+                return 'ignored';
+            }
+            ProcessDataBundlePurchase::dispatch($purchase->id);
+
+            return 'data_payment_received';
+        }
+
         if ($funding = $this->findFunding($reference)) {
             $this->settleFunding($funding, $amountMinor, $sourceEvent);
 
@@ -103,6 +116,15 @@ class PaymentService
     {
         if (! $reference) {
             return 'unmatched';
+        }
+
+        if ($purchase = DataBundlePurchase::where('payment_reference', $reference)->orWhere('gateway_txn_ref', $reference)->first()) {
+            Cache::lock('data-process:'.$purchase->id, 120)->block(2, function () use ($purchase) {
+                $purchase->update(['status' => 'needs_review']);
+                $this->audit->record('billing.data_bundle.refund_received', $purchase);
+            });
+
+            return 'reversed';
         }
 
         if ($funding = $this->findFunding($reference)) {
