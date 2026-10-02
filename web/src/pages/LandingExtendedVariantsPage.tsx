@@ -248,9 +248,9 @@ const ECOSYSTEM_VIEWS = [
   {
     id: 'learner',
     label: 'Learner',
-    heading: 'A playful path that never locks the next lesson.',
+    heading: 'A playful path from free Level 0 to deeper learning.',
     body: 'Five-minute listening, speaking, quiz and culture activities build toward confident use.',
-    features: ['Complete course on Free', 'XP, badges and leagues', 'Low-bandwidth activities'],
+    features: ['Beginner Level 0 stays free', 'XP, badges and leagues', 'Low-bandwidth activities'],
   },
   {
     id: 'family',
@@ -308,7 +308,7 @@ export function LandingV5Page() {
               </div>
               <ul className="mt-8 grid max-w-xl gap-3 sm:grid-cols-2">
                 <CheckLine inverse>Families and schools in one platform</CheckLine>
-                <CheckLine inverse>Complete learning stays free</CheckLine>
+                <CheckLine inverse>Beginner Level 0 stays free</CheckLine>
                 <CheckLine inverse>Child-safe roles and approvals</CheckLine>
                 <CheckLine inverse>Clubs, competitions and culture</CheckLine>
               </ul>
@@ -412,7 +412,7 @@ export function LandingV5Page() {
               <Reveal>
                 <p className="font-display text-xl font-extrabold text-rainbow-orange">Culture gives progress somewhere to go.</p>
                 <h2 className="mt-3 font-display text-4xl font-extrabold leading-tight sm:text-5xl">Stories at home. Clubs at school. A stage when they are ready.</h2>
-                <p className="mt-5 text-lg font-semibold leading-relaxed text-navy-700">Folktales, family missions, Language & Culture clubs and competitions turn a curriculum into a community children can enter.</p>
+                <p className="mt-5 text-lg font-semibold leading-relaxed text-navy-700">Folktales, family missions, language and culture clubs and competitions turn a curriculum into a community children can enter.</p>
                 <LinkButton to="/register" variant="parent" size="lg" className="mt-7">Start the first learning circle</LinkButton>
               </Reveal>
               <Reveal delay={80}>
@@ -435,7 +435,7 @@ export function LandingV5Page() {
               {[
                 ['Free learning', 'Level 0 is available without payment; paid plans unlock further learning.'],
                 ['Child-safe identity', 'Under-13 learners use profiles while adults manage consent and sensitive actions.'],
-                ['Unreliable connections', 'Low-bandwidth activities and offline options reduce dependence on constant data.'],
+                ['Reliable connection', 'Low-bandwidth activities and offline options reduce dependence on constant data.'],
                 ['Real school operations', 'Seats, rosters, classes, invoices, assignments and reporting are part of the platform.'],
               ].map(([title, body], index) => (
                 <Reveal key={title} className="grid gap-3 py-6 sm:grid-cols-[3rem_0.35fr_0.65fr] sm:items-start" delay={index * 55}>

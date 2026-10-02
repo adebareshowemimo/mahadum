@@ -6,9 +6,11 @@ import { AuthLayout } from '@/components/auth/AuthLayout'
 import { GoogleButton, OrDivider } from '@/components/auth/GoogleButton'
 import { ApiError, classInvitationApi } from '@/lib/api'
 import { useAuth } from '@/lib/auth/AuthProvider'
+import { useConfig } from '@/lib/config/useConfig'
 
 export function LoginPage() {
   const { login } = useAuth()
+  const { data: config } = useConfig()
   const navigate = useNavigate()
   const location = useLocation()
   const invitationToken = new URLSearchParams(location.search).get('class_invitation') ?? ''
@@ -110,7 +112,7 @@ export function LoginPage() {
           Sign in
         </Button>
 
-        {!invitationToken && <><OrDivider /><GoogleButton onSuccess={() => navigate(from, { replace: true })} onError={(msg) => setFormError(msg)} /></>}
+        {!invitationToken && config?.feature_flags.show_google_login === true && <><OrDivider /><GoogleButton onSuccess={() => navigate(from, { replace: true })} onError={(msg) => setFormError(msg)} /></>}
       </form>
     </AuthLayout>
   )

@@ -9,7 +9,7 @@ export function planFeatures(plan: PresentablePlan): string[] {
   const features = plan.features ?? {}
   const out: string[] = []
 
-  out.push('All lessons with card or bank billing; airtime includes Level 1 only')
+  out.push('Paid lessons start from Level 1 only')
   if (plan.audience === 'family') out.push('All Individual plan benefits')
   else if (plan.audience === 'individual') out.push('All Free plan benefits')
 
@@ -27,8 +27,7 @@ export function planFeatures(plan: PresentablePlan): string[] {
 }
 
 export const FREE_PLAN_FEATURES = [
-  'Free lessons and quiz',
-  'Level 0 in every language',
+  'All L0 lessons and quiz free',
   'Speaking practice',
   'XP, streaks and badges',
   'Supported by age-appropriate ads',

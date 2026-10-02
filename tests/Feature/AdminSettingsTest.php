@@ -12,6 +12,22 @@ class AdminSettingsTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_google_login_visibility_can_be_changed_by_admin_and_is_public(): void
+    {
+        $this->getJson('/api/v1/config')->assertOk()->assertJsonPath('data.feature_flags.show_google_login', true);
+        $this->seedRbac();
+        $this->actingAsUser($this->userWithRole('super_admin'));
+        $this->patchJson('/api/v1/admin/settings', ['values' => [
+            'auth.show_google_login' => false,
+        ]])->assertOk();
+        $this->getJson('/api/v1/config')->assertOk()->assertJsonPath('data.feature_flags.show_google_login', false);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'system.settings_updated']);
+        $this->patchJson('/api/v1/admin/settings', ['values' => [
+            'auth.show_google_login' => true,
+        ]])->assertOk();
+        $this->getJson('/api/v1/config')->assertOk()->assertJsonPath('data.feature_flags.show_google_login', true);
+    }
+
     public function test_xp_settings_have_product_defaults_and_are_visible_to_admin(): void
     {
         $this->seedRbac();

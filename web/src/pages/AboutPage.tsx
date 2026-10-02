@@ -18,7 +18,7 @@ const JOURNEY = [
   },
   {
     when: '2018',
-    title: 'MAHADUM.360 opened its online school.',
+    title: 'Mahadum360 opened its online school.',
     body: 'The early Learn Easy and Read Easy series helped children speak, read and follow culturally rooted stories without a heavy time commitment.',
   },
   {
@@ -39,7 +39,7 @@ const PRINCIPLES = [
   },
   {
     title: 'Access comes before upgrades',
-    body: 'Every learning lesson remains available on Free. Paid plans add convenience, not permission to learn.',
+    body: 'Level 0 remains free, so every child can learn basic conversations before choosing a paid plan for deeper learning.',
   },
 ]
 
@@ -99,7 +99,7 @@ const CHARACTER_STORIES = [
     role: 'Mid-teen learner',
     title: 'Teenagers should be able to recognise themselves here.',
     body: 'Aondo expands the learning circle beyond younger children. Speaking challenges, school clubs and performances give teenagers a reason to practise with confidence and peers.',
-    note: 'Age-respectful design · clubs · challenges · performance',
+    note: 'Age respectful design · clubs · challenges · performance',
     image: '/images/character-aondo-teen-learner.webp',
     alt: 'Aondo, a confident mid-teen learner in modest black-and-white Tiv-inspired attire',
     imageClass: 'object-contain object-center',
@@ -199,7 +199,7 @@ function CharacterStories() {
             Children begin the journey. Teenagers and young adults keep it moving.
           </h2>
           <p className="mt-5 max-w-3xl text-lg font-semibold leading-relaxed text-navy-700">
-            MAHADUM.360 is designed for the different moments when language matters: a child’s first greeting, a
+            Mahadum360 is designed for the different moments when language matters: a child’s first greeting, a
             teenager finding confidence with peers, or a young adult returning to words they once knew.
           </p>
         </Reveal>
@@ -271,13 +271,13 @@ function AboutHero() {
         <Reveal className="relative z-10">
           <p className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-bold text-chore-700 shadow-sm">
             <span aria-hidden="true" className="size-2 rounded-full bg-rainbow-orange" />
-            Why MAHADUM.360 exists
+            Why Mahadum360 exists
           </p>
           <h1 className="mt-6 max-w-[13ch] font-display text-[clamp(3rem,6vw,5.5rem)] font-extrabold leading-[0.98] tracking-[-0.035em] text-navy-950">
             A language should feel like home, not homework.
           </h1>
           <p className="mt-6 max-w-[39rem] text-lg font-semibold leading-relaxed text-navy-700 sm:text-xl">
-            MAHADUM.360 helps Nigerian children, young adults and families rebuild the everyday language that connects
+            Mahadum360 helps Nigerian children, young adults and families rebuild the everyday language that connects
             generations—through short lessons, native voices and culture they can recognise themselves in.
           </p>
           <p className="mt-5 max-w-[34rem] font-display text-xl font-extrabold leading-relaxed text-chore-700">
@@ -455,7 +455,7 @@ function AboutClosing() {
           Make the next family conversation feel closer.
         </h2>
         <p className="mx-auto mt-5 max-w-2xl text-lg font-semibold leading-relaxed text-chore-50">
-          Start with five joyful minutes. Keep every lesson free. Let the language become part of everyday life again.
+          Start with five joyful minutes. Every child learns basic conversations. Let the language become part of everyday life again.
         </p>
         <LinkButton to="/register" size="lg" variant="accent" className="mt-8">Start learning free</LinkButton>
       </Reveal>

@@ -1,5 +1,7 @@
 # MAHADUM.360 — Admin Portal (Super Admin) Frontend TODO
 
+> 2026-09-30: System settings includes a Login page toggle to show or hide Continue with Google and its divider on the login page. Defaults to visible; changes use the existing audited settings API and public config. Registration is unaffected.
+
 > 2026-09-30: `/admin/promos` now supports fee targets: school registration, school subscription and individual subscription. Eligibility is enforced at invoice/subscription checkout; existing codes retain legacy behavior. Fixed UI values are entered in naira and stored in minor units. See billing architecture for discount and tax rules.
 
 

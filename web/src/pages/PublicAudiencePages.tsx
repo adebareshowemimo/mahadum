@@ -10,7 +10,7 @@ import { Icon, LinkButton } from '@/components/ui'
 const FAMILY_AUDIENCES = [
   {
     title: 'Children',
-    body: 'Playful, age-respectful lessons that begin from zero and never lock learning behind hearts or payment.',
+    body: 'Playful, age-respectful free lessons in beginner Level 0 let you try the platform before committing.',
     link: '/register',
     linkLabel: 'Start a family',
   },
@@ -84,7 +84,7 @@ export function FamiliesPage() {
               Hear your child say it in your language.
             </h1>
             <p className="mt-5 max-w-[32rem] text-lg leading-relaxed text-white/86">
-              MAHADUM.360 helps families speak, listen, and learn together—through the languages that make your home, yours.
+              Mahadum360 helps families speak, listen, and learn together—through the languages that make your home yours.
             </p>
             <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center">
               <LinkButton to="/register" variant="accent" size="lg">Start your family free <span aria-hidden="true">→</span></LinkButton>
@@ -122,7 +122,7 @@ export function FamiliesPage() {
             {[
               { number: '1', title: 'Child learns', body: 'Fun, age-right lessons in their home language.', image: '/images/archive/campaign-reading-challenge.webp', alt: 'A child enjoying a short language lesson', ui: ['Lesson', 'Let’s greet!', 'Ndewo', 'Hello'] },
               { number: '2', title: 'Parent reviews', body: 'Track progress, celebrate wins, and reinforce together.', image: '/images/archive/campaign-confidence.webp', alt: 'A parent reviewing language-learning progress', ui: ['Today’s progress', '72%', 'New words', 'Great practice!'] },
-              { number: '3', title: 'Family connects', body: 'Conversations become memories in your own words.', image: '/images/archive/campaign-family-anywhere.webp', alt: 'A grandmother joining a family language conversation', ui: ['Conversation', 'Ndewo, nwanne!', 'Hello, my dear!', 'Speak together'] },
+              { number: '3', title: 'Family connects', body: 'Conversations become memories in your own words.', image: '/images/archive/campaign-family-anywhere.webp', alt: 'A grandmother joining a family language conversation', ui: ['Conversation', 'Ndewo nwa m!', 'Hello, my dear!', 'Speak together'] },
             ].map((step) => (
               <Reveal key={step.title} className="relative">
                 <div className="grid aspect-[1.72/1] grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-[0.75rem] bg-white">
@@ -177,7 +177,7 @@ export function FamiliesPage() {
             </p>
             <div className="mt-8 divide-y divide-chore-200 border-y border-chore-200">
               {[
-                ['Speaking review', 'Hear submitted practice and encourage the next attempt.'],
+                ['Speaking review', 'Hear submitted practice or choose a trusted adult to practise with the child.'],
                 ['Approve 50 coins', 'Rewards stay pending until the parent approves the completed chore.'],
                 ['Weekly progress', 'See lessons completed and words added without hovering over every session.'],
               ].map(([title, body]) => (
@@ -450,8 +450,8 @@ export function InstitutionsPage() {
           </div>
           <div className="mt-8 flex flex-wrap gap-4">
             <LinkButton to="/contact?topic=partnership" variant="parent">Discuss a partnership</LinkButton>
-            <a href="mailto:partnerships@mahadum360.app" className="inline-flex min-h-11 items-center font-display font-extrabold text-chore-700 hover:underline">
-              partnerships@mahadum360.app
+            <a href="mailto:Partnerships@Mahadum360.com" className="inline-flex min-h-11 items-center font-display font-extrabold text-chore-700 hover:underline">
+              Partnerships@Mahadum360.com
             </a>
           </div>
         </div>

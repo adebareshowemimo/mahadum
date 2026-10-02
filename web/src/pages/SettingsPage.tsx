@@ -98,7 +98,7 @@ function SettingField({
           <p className="text-sm font-semibold text-foreground">{setting.label}</p>
           {setting.help && <p className="text-xs text-muted">{setting.help}</p>}
         </div>
-        <Switch checked={Boolean(value)} onChange={onChange} />
+        <Switch checked={Boolean(value)} onChange={onChange} label={setting.label} />
       </div>
     )
   }

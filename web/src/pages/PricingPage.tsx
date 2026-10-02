@@ -75,8 +75,7 @@ function PricingHero() {
             Start with Level 0. Unlock more with a paid plan.
           </h1>
           <p className="mt-6 max-w-[38rem] text-lg font-semibold leading-relaxed text-navy-700 sm:text-xl">
-            Start with the complete learning experience at no cost. Unlock the curriculum—no ads, offline lessons,
-            unlimited hearts, and family tools—not for access to your language.
+            Start your learning journey and build basic language skills at no cost with Level 0. Only commit to a paid plan when you are satisfied. Unlock the paid curriculum for deeper learning and unlimited hearts, with family tools on Family plans.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <a
@@ -110,7 +109,7 @@ function PricingHero() {
           />
           <div className="absolute bottom-4 left-4 max-w-[15rem] rounded-xl bg-white p-4 shadow-md sm:bottom-6 sm:left-6">
             <p className="font-display text-lg font-extrabold text-navy-950">Start learning for free.</p>
-            <p className="mt-1 text-sm font-semibold text-navy-600">Upgrade to unlock Lesson 1 and beyond.</p>
+            <p className="mt-1 text-sm font-semibold text-navy-600">Upgrade to unlock Level 1 and beyond.</p>
           </div>
         </Reveal>
       </div>
@@ -131,7 +130,7 @@ function PricingBody({ data, onOpenQuote }: { data: PricingInfo; onOpenQuote: ()
             Begin free. Add what your household needs.
           </h2>
           <p className="mt-4 text-lg font-semibold leading-relaxed text-navy-600">
-            One learner or six, every plan begins with the same complete curriculum.
+            Every household can begin with free Level 0. Paid plans unlock deeper learning.
           </p>
         </div>
         <div className="inline-flex w-fit rounded-xl bg-chore-50 p-1" role="group" aria-label="Billing period">
@@ -199,7 +198,7 @@ function PricingBody({ data, onOpenQuote }: { data: PricingInfo; onOpenQuote: ()
           Start with a word your family can use today.
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-lg font-semibold text-chore-50">
-          No card. No locked course. Just Yorùbá, Igbo, Hausa and English made joyful.
+          No card needed to start with Level 0. Just Yorùbá, Igbo, Hausa and English made joyful.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <LinkButton to="/register" size="lg" variant="accent">Create a free account</LinkButton>

@@ -332,27 +332,37 @@ export function AccessibilityPage() {
   )
 }
 
+const PUBLIC_CONTACT_EMAIL = 'Partnerships@Mahadum360.com'
+
 const TOPIC_EMAILS: Record<string, string> = {
-  family: SUPPORT_EMAIL,
-  support: SUPPORT_EMAIL,
+  family: PUBLIC_CONTACT_EMAIL,
+  support: PUBLIC_CONTACT_EMAIL,
   safety: 'safety@mahadum360.app',
   accessibility: 'accessibility@mahadum360.app',
-  school: 'schools@mahadum360.app',
-  partnership: 'partnerships@mahadum360.app',
-  university: 'partnerships@mahadum360.app',
-  culture: 'partnerships@mahadum360.app',
-  government: 'partnerships@mahadum360.app',
-  telecom: 'partnerships@mahadum360.app',
+  school: PUBLIC_CONTACT_EMAIL,
+  partnership: PUBLIC_CONTACT_EMAIL,
+  university: PUBLIC_CONTACT_EMAIL,
+  culture: PUBLIC_CONTACT_EMAIL,
+  government: PUBLIC_CONTACT_EMAIL,
+  telecom: PUBLIC_CONTACT_EMAIL,
 }
 
 const CONTACT_TOPICS: { value: string; label: string; detail: string; icon: IconName }[] = [
-  { value: 'family', label: 'Family & learning', detail: 'Accounts, lessons and subscriptions', icon: 'users' },
+  { value: 'family', label: 'family & learning', detail: 'Accounts, lessons and subscriptions', icon: 'users' },
   { value: 'school', label: 'Educators/Schools', detail: 'Curriculum, seats and school plans', icon: 'cap' },
   { value: 'partnership', label: 'Partnerships', detail: 'Institutions, culture and distribution', icon: 'building' },
   { value: 'support', label: 'Technical support', detail: 'Access, devices and troubleshooting', icon: 'layers' },
   { value: 'safety', label: 'Child safety', detail: 'A concern about a learner or profile', icon: 'shield' },
   { value: 'accessibility', label: 'Accessibility', detail: 'Report a barrier to using Mahadum', icon: 'sparkles' },
 ]
+
+/** Prepare a draft in the visitor's email app; never sends a message. */
+export function contactEmailUrl(topic: string, name: string, email: string, message: string) {
+  const destination = TOPIC_EMAILS[topic] ?? PUBLIC_CONTACT_EMAIL
+  const subject = `Mahadum ${topic} enquiry from ${name || 'website visitor'}`
+  const body = [`Name: ${name}`, `Reply email: ${email}`, '', message].join('\n')
+  return `mailto:${destination}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+}
 
 export function ContactPage() {
   const [searchParams] = useSearchParams()
@@ -363,13 +373,11 @@ export function ContactPage() {
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
   const [opened, setOpened] = useState(false)
-  const destination = useMemo(() => TOPIC_EMAILS[topic] ?? SUPPORT_EMAIL, [topic])
+  const destination = useMemo(() => TOPIC_EMAILS[topic] ?? PUBLIC_CONTACT_EMAIL, [topic])
 
   function openEmail(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const subject = `Mahadum ${topic} enquiry from ${name || 'website visitor'}`
-    const body = [`Name: ${name}`, `Reply email: ${email}`, '', message].join('\n')
-    window.location.href = `mailto:${destination}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+    window.location.href = contactEmailUrl(topic, name, email, message)
     setOpened(true)
   }
 
@@ -401,7 +409,7 @@ export function ContactPage() {
                 Real people. The right team. A clear next step.
               </p>
               <p className="mt-4 max-w-md leading-relaxed text-white/80">
-                Family questions, school planning, partnerships and sensitive concerns each go to a dedicated inbox.
+                Family questions, school planning and partnerships go to our partnerships team. Sensitive concerns go to the dedicated safety or accessibility inbox.
               </p>
               <div className="mt-7 border-t border-white/20 pt-5">
                 <p className="text-sm font-bold text-white/72">Prefer to email directly?</p>

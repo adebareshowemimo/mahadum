@@ -7,6 +7,10 @@ import { LoginPage } from './LoginPage'
 import { ApiError } from '@/lib/api'
 
 const { login } = vi.hoisted(() => ({ login: vi.fn() }))
+const configState = vi.hoisted(() => ({ showGoogle: true }))
+vi.mock('@/lib/config/useConfig', () => ({
+  useConfig: () => ({ data: { feature_flags: { show_google_login: configState.showGoogle } } }),
+}))
 vi.mock('@/lib/auth/AuthProvider', () => ({
   useAuth: () => ({ login, loginWithGoogle: vi.fn(), hasRole: () => false }),
 }))
@@ -23,7 +27,23 @@ function setup() {
 }
 
 describe('LoginPage', () => {
-  beforeEach(() => login.mockReset())
+  beforeEach(() => {
+    login.mockReset()
+    configState.showGoogle = true
+  })
+
+  it('shows Google login when enabled', () => {
+    setup()
+    expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument()
+  })
+
+  it('hides Google login and its divider when disabled', () => {
+    configState.showGoogle = false
+    setup()
+    expect(screen.queryByRole('button', { name: /continue with google/i })).not.toBeInTheDocument()
+    expect(screen.queryByText(/^or$/i)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^sign in$/i })).toBeInTheDocument()
+  })
 
   it('submits the entered credentials', async () => {
     login.mockResolvedValueOnce(undefined)

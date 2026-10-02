@@ -8,7 +8,7 @@ import { TryItLesson } from '@/components/landing/TryItLesson'
 import { Logo } from '@/components/Logo'
 import { Icon, LinkButton } from '@/components/ui'
 import { cn } from '@/lib/cn'
-import { TAGLINE, WORDMARK } from '@/lib/brand'
+import { TAGLINE } from '@/lib/brand'
 import { useAuth } from '@/lib/auth/AuthProvider'
 
 export { ConceptHeader } from '@/components/landing/ConceptHeader'
@@ -65,7 +65,7 @@ export function ConceptFooter({ tone = 'light' }: { tone?: ConceptTone }) {
           )}
         >
           <p className={cn('text-xs font-semibold', dark ? 'text-white/60' : 'text-navy-500')}>
-            © {WORDMARK} · {new Date().getFullYear()} · Lagos, Nigeria
+            © Mahadum360, RC 9601595. · {new Date().getFullYear()} · Lagos, Nigeria
           </p>
           <p className={cn('text-xs font-semibold', dark ? 'text-white/60' : 'text-navy-500')}>
             Yorùbá · Igbo · Hausa · English
@@ -698,8 +698,8 @@ export function SchoolQuoteSection({ id }: { id?: string }) {
     <section id={id} className="bg-white py-20 sm:py-28">
       <div className="mx-auto grid max-w-7xl gap-14 px-4 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:px-8">
         <Reveal>
-          <p className="font-display text-xl font-extrabold text-chore-700">A school quote you can understand.</p>
-          <h2 className="mt-3 font-display text-4xl font-extrabold leading-tight sm:text-5xl">Price the roll, then see what the team gets.</h2>
+          <p className="font-display text-xl font-extrabold text-chore-700">A clear, simple school quote.</p>
+          <h2 className="mt-3 font-display text-4xl font-extrabold leading-tight sm:text-5xl">See annual subscription fees and the cost per roll.</h2>
           <p className="mt-5 text-lg font-semibold leading-relaxed text-navy-700">School plans combine annual registration with a per-student rate that steps down as enrollment grows.</p>
           <ul className="mt-7 space-y-3">
             <CheckLine>CSV roster import with row-level errors</CheckLine>

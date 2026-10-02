@@ -10,6 +10,17 @@
  */
 return [
     'groups' => [
+        'login' => [
+            'label' => 'Login page',
+            'settings' => [
+                'auth.show_google_login' => [
+                    'label' => 'Show Google login on the login page',
+                    'help' => 'Turn off to hide Continue with Google and its divider on the login page. Google registration is unchanged.',
+                    'type' => 'bool',
+                    'default' => true,
+                ],
+            ],
+        ],
         'compliance' => [
             'label' => 'Compliance',
             'settings' => [

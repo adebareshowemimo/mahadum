@@ -12,7 +12,7 @@ describe('beta feedback regression helpers', () => {
       max_profiles: 5,
       features: { offline_download: false, unlimited_hearts: true },
     })).toEqual([
-      'All lessons with card or bank billing; airtime includes Level 1 only',
+      'Paid lessons start from Level 1 only',
       'All Individual plan benefits',
       'Up to 5 profiles',
       'Supported by age-appropriate ads',
