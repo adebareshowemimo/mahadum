@@ -9,7 +9,7 @@ import axe from 'axe-core'
 vi.mock('@/lib/auth/AuthProvider', () => ({ useAuth: () => ({ user: { user: { id: 1 } } }) }))
 vi.mock('@/lib/api', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/lib/api')>()
-  return { ...original, billingApi: { dataBillers: vi.fn(), dataBundles: vi.fn(), purchaseDataBundle: vi.fn(), dataBundlePurchase: vi.fn() } }
+  return { ...original, billingApi: { dataPurchaseEvent: vi.fn().mockResolvedValue(undefined), dataBillers: vi.fn(), dataBundles: vi.fn(), purchaseDataBundle: vi.fn(), dataBundlePurchase: vi.fn() } }
 })
 const clients: QueryClient[] = []
 function show() {
@@ -26,6 +26,13 @@ beforeEach(() => {
 afterEach(() => { cleanup(); clients.splice(0).forEach((c) => c.clear()) })
 
 describe('Monnify mobile data store', () => {
+  it('records plan clicks without recipient numbers or raw searches', async () => {
+    show()
+    fireEvent.click(await screen.findByRole('button', { name: /MTN 1GB weekly/ }))
+    fireEvent.change(screen.getByLabelText('Recipient phone number'), { target: { value: '08012345678' } })
+    expect(billingApi.dataPurchaseEvent).toHaveBeenCalledWith(expect.objectContaining({ event: 'plan_selected', product_code: 'weekly' }))
+    expect(JSON.stringify(vi.mocked(billingApi.dataPurchaseEvent).mock.calls)).not.toContain('08012345678')
+  })
   it('filters by validity and sorts by price without changing provider products', async () => {
     show()
     await screen.findByRole('button', { name: /MTN 1GB weekly/ })

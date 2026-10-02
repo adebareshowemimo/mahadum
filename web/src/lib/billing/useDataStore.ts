@@ -23,6 +23,12 @@ export function useDataStore() {
   const [error, setError] = useState<string | null>(null)
   const [fields, setFields] = useState<Record<string, string>>({})
   const [purchaseId, setPurchaseId] = useState<number | null>(null)
+  const activitySession = useRef(crypto.randomUUID())
+  function track(event: string, details: { value?: string; count?: number; product_code?: string } = {}) {
+    void billingApi.dataPurchaseEvent({ event, session_id: activitySession.current,
+      purchase_id: purchaseId ?? undefined, biller_code: billerCode || undefined,
+      product_code: selected?.product_code, ...details }).catch(() => {})
+  }
   const purchaseKey = useRef<string | null>(null)
   const purchase = useQuery({
     queryKey: ['data-purchase', user?.user.id, purchaseId],
@@ -35,14 +41,32 @@ export function useDataStore() {
     setPurchaseId(Number.isSafeInteger(saved) && saved > 0 ? saved : null)
   }, [storageKey])
 
+  useEffect(() => { track('page_viewed') }, [])
+  useEffect(() => {
+    if (bundles.data) track('catalogue_loaded', { count: bundles.data.length })
+  }, [bundles.data, billerCode])
+  useEffect(() => {
+    if (billers.error || bundles.error) track('catalogue_failed')
+  }, [billers.error, bundles.error])
+  useEffect(() => {
+    if (purchase.data?.status) track('status_viewed', { value: purchase.data.status })
+  }, [purchase.data?.status])
+  useEffect(() => {
+    if (!search) return
+    const timer = setTimeout(() => track('search_changed', { count: search.length }), 700)
+    return () => clearTimeout(timer)
+  }, [search])
+
   function changed() {
     purchaseKey.current = null; setConsent(false); setError(null); setFields({})
   }
   function reset() {
+    track('reset_clicked')
     sessionStorage.removeItem(storageKey); setPurchaseId(null); setSelected(null); changed()
   }
   async function buy() {
     if (!selected || selected.amount_minor === null || !consent || busy) return
+    track('checkout_clicked')
     setBusy(true); setError(null); setFields({})
     purchaseKey.current ??= crypto.randomUUID()
     try {
@@ -52,6 +76,7 @@ export function useDataStore() {
       }, purchaseKey.current)
       sessionStorage.setItem(storageKey, String(result.purchase_id)); setPurchaseId(result.purchase_id)
     } catch (err) {
+      track('checkout_failed', { value: err instanceof ApiError ? String(err.status) : 'connection' })
       setError(dataStoreError(err))
       if (err instanceof ApiError) {
         setFields(err.fieldErrors)
@@ -68,6 +93,7 @@ export function useDataStore() {
   const status = purchase.data?.status
   const catalogueError = billers.error || bundles.error
   function chooseNetwork(code: string) {
+    track('network_selected', { value: code })
     setBiller(code)
     setSelected(null)
     setSearch('')
@@ -75,5 +101,5 @@ export function useDataStore() {
   }
   return { billers, billerCode, bundles, selected, setSelected, search, setSearch, phone, setPhone,
     consent, setConsent, busy, error, fields, purchaseId, purchase, status, catalogueError, results,
-    changed, reset, buy, chooseNetwork }
+    changed, reset, buy, chooseNetwork, track }
 }

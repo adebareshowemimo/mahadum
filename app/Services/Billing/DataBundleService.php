@@ -5,14 +5,13 @@ namespace App\Services\Billing;
 use App\Jobs\ProcessDataBundlePurchase;
 use App\Models\DataBundlePurchase;
 use App\Models\User;
-use App\Services\AuditLogger;
 use App\Services\Billing\Gateways\MonnifyGateway;
 use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class DataBundleService
 {
-    public function __construct(private MonnifyBills $bills, private AuditLogger $audit) {}
+    public function __construct(private MonnifyBills $bills) {}
 
     private function gateway(): MonnifyGateway
     {
@@ -33,6 +32,8 @@ class DataBundleService
                     && $existing->phone_number === $input['phone_number'] && $existing->amount_minor === $input['amount_minor'],
                     409, 'This purchase reference was already used for a different request.');
 
+                app(DataPurchaseActivity::class)->record('checkout_reused', $existing);
+
                 return $existing;
             }
             $gateway = $this->gateway();
@@ -47,6 +48,7 @@ class DataBundleService
                 'status' => 'awaiting_payment', 'consent_at' => now(), 'payment_reference' => $reference,
                 'vend_reference' => 'vend_'.$reference,
             ]);
+            app(DataPurchaseActivity::class)->record('purchase_created', $purchase);
             try {
                 $checkout = $gateway->initialize($reference, $purchase->amount_minor, (string) $user->email,
                     ['purpose' => 'data_bundle', 'purchase_id' => $purchase->id]);
@@ -54,16 +56,14 @@ class DataBundleService
                     throw new HttpException(502, 'Monnify did not return a checkout URL.');
                 }
                 $purchase->update(['checkout_url' => $checkout->checkoutUrl, 'gateway_txn_ref' => $checkout->providerReference]);
-            } catch (\Throwable) {
+            } catch (\Throwable $error) {
                 // Initialization can time out after Monnify accepts it. Retain the reference for reconciliation.
                 ProcessDataBundlePurchase::dispatch($purchase->id)->delay(now()->addSeconds(30));
-                $this->audit->record('billing.data_bundle.checkout_uncertain', $purchase);
+                app(DataPurchaseActivity::class)->record('checkout_uncertain', $purchase, ['error_type' => class_basename($error)]);
 
                 return $purchase;
             }
-            $this->audit->record('billing.data_bundle.checkout_created', $purchase, [], [
-                'product_code' => $purchase->product_code, 'amount_minor' => $purchase->amount_minor,
-            ]);
+            app(DataPurchaseActivity::class)->record('checkout_created', $purchase);
             ProcessDataBundlePurchase::dispatch($purchase->id)->delay(now()->addSeconds(30));
 
             return $purchase;
@@ -83,9 +83,12 @@ class DataBundleService
                 return $purchase;
             }
             if (! $purchase->paid_at) {
+                app(DataPurchaseActivity::class)->record('payment_verification_started', $purchase);
                 $verified = $this->gateway()->verify($purchase->payment_reference);
+                app(DataPurchaseActivity::class)->record('payment_verification_result', $purchase, ['provider_status' => $verified->status]);
                 if ($verified->status === 'failed') {
                     $purchase->update(['status' => 'payment_failed']);
+                    app(DataPurchaseActivity::class)->record('payment_failed', $purchase);
 
                     return $purchase;
                 }
@@ -95,15 +98,20 @@ class DataBundleService
                 if ($verified->amountMinor !== $purchase->amount_minor || ($verified->raw['responseBody']['currencyCode'] ?? null) !== 'NGN'
                     || ($verified->raw['responseBody']['paymentReference'] ?? null) !== $purchase->payment_reference) {
                     $purchase->update(['status' => 'needs_review']);
+                    app(DataPurchaseActivity::class)->record('payment_mismatch', $purchase);
 
                     return $purchase;
                 }
                 $purchase->update(['paid_at' => now(), 'status' => 'processing']);
+                app(DataPurchaseActivity::class)->record('payment_confirmed', $purchase);
             }
             if ($purchase->vend_started_at) {
+                app(DataPurchaseActivity::class)->record('delivery_requery_started', $purchase);
                 $result = $this->bills->requery($purchase->vend_reference);
             } else {
+                app(DataPurchaseActivity::class)->record('recipient_validation_started', $purchase);
                 $validation = $this->bills->validate($purchase->product_code, $purchase->phone_number);
+                app(DataPurchaseActivity::class)->record('recipient_validated', $purchase);
                 $instruction = $validation['vendInstruction'] ?? null;
                 if (! is_array($instruction) || ! array_key_exists('requireValidationRef', $instruction)) {
                     throw new HttpException(502, 'Monnify did not return vending instructions.');
@@ -119,6 +127,7 @@ class DataBundleService
                 }
                 // Persist before HTTP: crashes/timeouts can never trigger a second vend.
                 $purchase->update(['vend_started_at' => now()]);
+                app(DataPurchaseActivity::class)->record('delivery_started', $purchase);
                 $result = $this->bills->vend($payload);
             }
             $status = match ($result['vendStatus'] ?? null) {
@@ -132,12 +141,16 @@ class DataBundleService
                 || ! isset($result['vendAmount']) || (int) round((float) $result['vendAmount'] * 100) !== $purchase->amount_minor)) {
                 $status = 'needs_review';
             }
+            app(DataPurchaseActivity::class)->record('delivery_result', $purchase, ['result_status' => $status]);
             if ($status !== 'processing') {
                 $purchase->update(['status' => $status]);
-                $this->audit->record('billing.data_bundle.'.$status, $purchase, [], ['status' => $status]);
+                app(DataPurchaseActivity::class)->record($status, $purchase);
             }
 
             return $purchase;
+        } catch (\Throwable $error) {
+            app(DataPurchaseActivity::class)->record('processing_error', $purchase, ['error_type' => class_basename($error)]);
+            throw $error;
         } finally {
             $lock->release();
         }

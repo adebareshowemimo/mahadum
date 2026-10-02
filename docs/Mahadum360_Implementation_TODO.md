@@ -384,3 +384,7 @@ Ongoing in parallel: **Design**, **Content production**, **Integrations**, **Com
 
 ## How to track
 Treat each milestone as an epic; each `[ ]` as a ticket. Keep the **Decisions** block as a standing blocker list — most stalls will trace back to one of those. Update the milestone-map statuses weekly.
+
+### Mobile data sales monitoring (2026-10-02)
+
+Admin dashboard at `/admin/reports/data-sales`: delivered gross sales, verified gross payments, pending/processing/attention counts, daily delivered sales, network performance, searchable paginated purchases and activity links. Date ranges use purchase creation timestamps; verified payments are before refunds and fees, not net revenue. Read-only and super-admin guarded.

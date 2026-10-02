@@ -752,3 +752,7 @@ export function useUpdateEmailBranding() {
     },
   })
 }
+
+export function useDataSales(params: import('@/lib/api').DataSalesQuery) {
+  return useQuery({ queryKey: ['admin-data-sales', params], queryFn: () => adminApi.dataSales(params), refetchInterval: 30000 })
+}

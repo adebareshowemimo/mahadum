@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Jobs\ProcessDataBundlePurchase;
+use App\Models\AuditLog;
 use App\Models\DataBundlePurchase;
 use App\Services\Billing\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -10,6 +11,7 @@ use Illuminate\Http\Client\Factory;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class MonnifyDataBundleTest extends TestCase
@@ -31,6 +33,38 @@ class MonnifyDataBundleTest extends TestCase
         $this->seedRbac();
         $this->actingAsUser($this->userWithRole('parent'));
         $this->provider();
+    }
+
+    public function test_browser_activity_is_authenticated_validated_and_cannot_fake_success(): void
+    {
+        $payload = ['event' => 'plan_selected', 'session_id' => (string) Str::uuid(), 'product_code' => 'MTN_1GB_7D'];
+        $this->postJson('/api/v1/data-bundles/events', $payload)->assertCreated();
+        $this->assertDatabaseHas('audit_logs', ['action' => 'billing.data_bundle.ui.plan_selected']);
+        $this->postJson('/api/v1/data-bundles/events', array_merge($payload, ['event' => 'success']))->assertUnprocessable();
+        $this->postJson('/api/v1/data-bundles/events', array_merge($payload, ['session_id' => 'invalid']))->assertUnprocessable();
+    }
+
+    public function test_browser_events_cannot_be_attached_to_another_buyers_purchase(): void
+    {
+        $result = $this->buy('event-ownership')->assertCreated();
+        $this->actingAsUser($this->userWithRole('parent'));
+        $this->postJson('/api/v1/data-bundles/events', [
+            'event' => 'checkout_opened', 'session_id' => (string) Str::uuid(),
+            'purchase_id' => $result->json('data.purchase_id'),
+        ])->assertForbidden();
+        $this->assertDatabaseMissing('audit_logs', ['action' => 'billing.data_bundle.ui.checkout_opened']);
+    }
+
+    public function test_server_activity_correlates_success_without_exposing_full_recipient(): void
+    {
+        $result = $this->postJson('/api/v1/data-bundles/purchase', $this->payload, ['Idempotency-Key' => 'activity'])->assertCreated();
+        $this->getJson('/api/v1/data-bundles/purchases/'.$result->json('data.purchase_id'))->assertOk();
+        $log = AuditLog::where('action', 'billing.data_bundle.success')->firstOrFail();
+        $this->assertSame($result->json('data.purchase_id'), $log->after['purchase_id']);
+        $this->assertSame('5678', $log->after['recipient_last4']);
+        $this->assertStringNotContainsString('08012345678', json_encode($log->after));
+        $this->assertDatabaseHas('audit_logs', ['action' => 'billing.data_bundle.payment_confirmed']);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'billing.data_bundle.delivery_started']);
     }
 
     private function provider(int $price = 750, string $paymentStatus = 'PAID', int $paid = 750, string $vendStatus = 'SUCCESS', bool $validationRef = false, array $overrides = []): void

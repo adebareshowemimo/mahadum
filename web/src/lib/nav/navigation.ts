@@ -91,6 +91,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Payouts', to: '/admin/payouts', icon: 'wallet', roles: ['super_admin'] },
       { label: 'Settlements', to: '/admin/settlements', icon: 'card', roles: ['super_admin'] },
       { label: 'Plans', to: '/admin/plans', icon: 'layers', roles: ['super_admin'] },
+      { label: 'Data sales', to: '/admin/reports/data-sales', icon: 'signal', roles: ['super_admin'] },
       { label: 'Reports', to: '/admin/reports', icon: 'trophy', roles: ['super_admin'] },
       { label: 'Promo codes', to: '/admin/promos', icon: 'gift', roles: ['super_admin'] },
       { label: 'Campaigns', to: '/admin/emails', icon: 'bell', roles: ['super_admin'], end: true },

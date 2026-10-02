@@ -21,3 +21,9 @@ Network or recipient changes reset confirmation. Changing network also clears th
 - Browser checks at desktop and mobile breakpoints using the actual sandbox catalogue; selection updates the summary and the mobile review shortcut works. No horizontal overflow at the mobile breakpoint.
 - Automated checks cover search, sorting, validity filtering, network switching, error states, stable retry keys, saved purchase resumption, and axe accessibility rules supported by the test environment. Visual contrast still relies on the shared theme and browser inspection.
 - No payment was submitted during design verification.
+
+## Purchase activity logging
+
+Review events at `/admin/audit`; search `billing.data_bundle`. Browser events use `billing.data_bundle.ui.*` and a per-page session UUID. Includes page views, network/plan selections, debounced search length, filters/sort, recipient completion, confirmation, checkout and support clicks, catalogue results, failures and status views. Browser events are best effort and cannot prove payment or delivery. No raw search text or recipient number is sent.
+
+Server events independently record purchase requests/rejections, creation/reuse, checkout uncertainty, every payment verification result, payment confirmation/mismatch/failure, recipient validation, delivery submission/requery/results and processing errors. Purchase events carry user ID, purchase ID, payment reference, plan/network, amount in kobo, status and recipient last four digits. Success is only recorded after provider delivery verification. System/queue events may have no acting user, but retain the buyer ID in details. Repeated verification/requery entries represent actual attempts. Event ingestion requires authentication, validates event names, enforces purchase ownership and is limited to 120 requests/minute.

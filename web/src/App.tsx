@@ -66,6 +66,7 @@ const EmailTemplatesPage = lazy(() => import('@/pages/EmailTemplatesPage').then(
 const EmailConfigurationPage = lazy(() => import('@/pages/EmailConfigurationPage').then((m) => ({ default: m.EmailConfigurationPage })))
 const EmailBrandingPage = lazy(() => import('@/pages/EmailBrandingPage').then((m) => ({ default: m.EmailBrandingPage })))
 const EmailTemplateDetailPage = lazy(() => import('@/pages/EmailTemplateDetailPage').then((m) => ({ default: m.EmailTemplateDetailPage })))
+const DataSalesPage = lazy(() => import('@/pages/DataSalesPage').then((m) => ({ default: m.DataSalesPage })))
 const AuditLogPage = lazy(() => import('@/pages/AuditLogPage').then((m) => ({ default: m.AuditLogPage })))
 const FraudReviewPage = lazy(() => import('@/pages/FraudReviewPage').then((m) => ({ default: m.FraudReviewPage })))
 const GatewaysPage = lazy(() => import('@/pages/GatewaysPage').then((m) => ({ default: m.GatewaysPage })))
@@ -238,6 +239,7 @@ const REAL_PAGES = new Set([
   '/admin/settlements',
   '/admin/payouts',
   '/admin/reports',
+  '/admin/reports/data-sales',
   '/admin/reports/income',
   '/admin/reports/growth',
   '/admin/reports/subscriptions',
@@ -382,6 +384,7 @@ export function App() {
             <Route path="/admin/settlements" element={<SettlementsPage />} />
             <Route path="/admin/payouts" element={<PayoutsPage />} />
             <Route path="/admin/reports" element={<ReportsPage />} />
+            <Route path="/admin/reports/data-sales" element={<DataSalesPage />} />
             <Route path="/admin/reports/income" element={<AdminIncomePage />} />
             <Route path="/admin/reports/growth" element={<GrowthReportPage />} />
             <Route path="/admin/reports/subscriptions" element={<SubscriptionsReportPage />} />

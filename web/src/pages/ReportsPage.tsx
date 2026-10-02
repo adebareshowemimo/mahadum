@@ -5,6 +5,7 @@ import { Alert, Button, Card, CardBody, Icon, type IconName } from '@/components
 import { adminApi } from '@/lib/api'
 
 const REPORTS: { to: string; title: string; description: string; icon: IconName }[] = [
+  { to: '/admin/reports/data-sales', title: 'Mobile data sales', description: 'Delivered sales, payment totals, network performance, and purchases requiring attention.', icon: 'signal' },
   {
     to: '/admin/reports/income',
     title: 'Income',

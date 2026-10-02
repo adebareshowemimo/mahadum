@@ -25,6 +25,7 @@ class AuditController extends Controller
             $query->where(function ($sub) use ($q) {
                 $sub->where('action', 'like', "%{$q}%")
                     ->orWhere('ip', 'like', "%{$q}%")
+                    ->orWhere('after', 'like', "%{$q}%")
                     ->orWhereHas('actorUser', function ($u) use ($q) {
                         $u->where('first_name', 'like', "%{$q}%")
                             ->orWhere('last_name', 'like', "%{$q}%")

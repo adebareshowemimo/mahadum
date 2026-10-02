@@ -2154,3 +2154,14 @@ export interface PricingInfo {
   consumer: PricingConsumerPlan[]
   school: { term_months: number; bands: PricingBand[] }
 }
+
+export interface DataSalesQuery { from?: string; to?: string; status?: string; q?: string; page?: number }
+export interface DataSaleRow { id: number; buyer: string | null; network: string; plan: string | null; amount_minor: number; status: string; recipient_last4: string; reference: string | null; created_at: string | null; paid_at: string | null }
+export interface DataSalesReport {
+  summary: { purchases: number; successful: number; delivered_sales_minor: number; verified_payments_minor: number; awaiting_payment: number; processing: number; needs_attention: number; payment_failed: number }
+  statuses: Record<string, number>
+  networks: { network: string; purchases: number; successful: number; sales_minor: number }[]
+  daily: { date: string; purchases: number; sales_minor: number }[]
+  data: DataSaleRow[]
+  meta: { current_page: number; last_page: number; total: number }
+}

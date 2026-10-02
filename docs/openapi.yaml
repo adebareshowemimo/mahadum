@@ -1902,6 +1902,64 @@ paths:
               schema: { $ref: "#/components/schemas/MessageError" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /admin/reports/data-sales:
+    get:
+      tags: [Admin]
+      summary: Mobile data sales dashboard (super admin)
+      description: Read-only aggregates scoped by purchase creation date. Status/search filter the paginated list only. Delivered sales include only success; verified payments are gross before fees and refunds.
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+      responses:
+        "200":
+          description: Summary counts and integer minor-unit totals, status counts, daily delivered sales, network aggregates and paginated purchases with masked recipients
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  summary: { type: object }
+                  statuses: { type: object }
+                  networks: { type: array, items: { type: object } }
+                  daily: { type: array, items: { type: object } }
+                  data: { type: array, items: { type: object } }
+                  meta: { type: object }
+        "403": { description: Super administrator required }
+        "422": { description: Invalid filters }
+
+  /data-bundles/events:
+    post:
+      tags: [Billing]
+      summary: Record authenticated browser purchase activity (120 requests per minute)
+      description: Browser activity is informational; payment and delivery outcomes are logged independently by the server. Purchase IDs must belong to the caller. Unknown fields are discarded.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event, session_id]
+              properties:
+                event:
+                  type: string
+                  enum: [page_viewed, network_selected, plan_selected, search_changed, filter_changed, sort_changed, recipient_completed, consent_changed, checkout_clicked, checkout_opened, status_check_clicked, reset_clicked, support_clicked, catalogue_retry_clicked, catalogue_loaded, catalogue_failed, checkout_failed, status_viewed]
+                session_id: { type: string, format: uuid }
+                purchase_id: { type: integer, nullable: true }
+                biller_code: { type: string, maxLength: 100 }
+                product_code: { type: string, maxLength: 100 }
+                value: { type: string, maxLength: 60 }
+                count: { type: integer, minimum: 0, maximum: 100000 }
+      responses:
+        "201": { description: Activity recorded }
+        "401": { description: Authentication required }
+        "403": { description: Purchase belongs to another account }
+        "404": { description: Purchase not found }
+        "422": { description: Invalid event payload }
+        "429": { description: Too many events }
+
   /data-bundles/billers:
     get:
       tags: [Billing]

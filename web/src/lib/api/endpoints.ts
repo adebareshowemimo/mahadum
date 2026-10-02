@@ -839,6 +839,10 @@ export const billingApi = {
     return data.data
   },
 
+  async dataPurchaseEvent(input: { event: string; session_id: string; purchase_id?: number; biller_code?: string; product_code?: string; value?: string; count?: number }): Promise<void> {
+    await api.post('/data-bundles/events', input)
+  },
+
   async purchaseDataBundle(input: { biller_code: string; product_code: string; phone_number: string; amount_minor: number; consent: boolean }, key: string): Promise<DataBundlePurchase> {
     const { data } = await api.post('/data-bundles/purchase', input, {
       headers: { 'Idempotency-Key': key },
@@ -853,6 +857,10 @@ export const billingApi = {
 }
 
 export const adminApi = {
+  async dataSales(params: import('./types').DataSalesQuery): Promise<import('./types').DataSalesReport> {
+    const { data } = await api.get('/admin/reports/data-sales', { params })
+    return data
+  },
   async metrics(): Promise<AdminMetrics> {
     const { data } = await api.get('/admin/metrics')
     return data.data

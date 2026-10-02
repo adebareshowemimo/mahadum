@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AdvertPlacementController;
 use App\Http\Controllers\Admin\AuditController;
 use App\Http\Controllers\Admin\CompetitionAdminController;
 use App\Http\Controllers\Admin\ContactListController;
+use App\Http\Controllers\Admin\DataSalesController;
 use App\Http\Controllers\Admin\EmailBrandingController;
 use App\Http\Controllers\Admin\EmailCampaignController;
 use App\Http\Controllers\Admin\EmailConfigurationController;
@@ -24,7 +25,6 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SettlementController;
 use App\Http\Controllers\Admin\SupportController;
 use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\AdvertController;
 /*
 |--------------------------------------------------------------------------
 | Mahadum.360 API (v1)
@@ -41,6 +41,7 @@ use App\Http\Controllers\AdvertController;
 | Idempotency is required on money POSTs (wallet, subscriptions, payouts).
 */
 
+use App\Http\Controllers\AdvertController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\PasswordController;
@@ -307,6 +308,7 @@ Route::prefix('v1')->group(function () {
             ->middleware('can:billing.subscriptions.manage');
         Route::get('data-bundles', [DataBundleController::class, 'index']);
         Route::get('data-bundles/billers', [DataBundleController::class, 'billers']);
+        Route::post('data-bundles/events', [DataBundleController::class, 'event'])->middleware('throttle:120,1');
         Route::get('data-bundles/purchases/{purchase}', [DataBundleController::class, 'show'])
             ->middleware('can:billing.databundles.manage');
 
@@ -491,6 +493,7 @@ Route::prefix('v1')->group(function () {
             Route::put('email-branding', [EmailBrandingController::class, 'update'])->middleware('can:emails.templates.manage');
 
             // Reports
+            Route::get('reports/data-sales', [DataSalesController::class, 'index'])->middleware('can:analytics.platform.view');
             Route::get('reports/income', [ReportController::class, 'income'])->middleware('can:analytics.platform.view');
             Route::get('reports/growth', [ReportController::class, 'growth'])->middleware('can:analytics.platform.view');
             Route::get('reports/subscriptions', [ReportController::class, 'subscriptions'])->middleware('can:analytics.platform.view');

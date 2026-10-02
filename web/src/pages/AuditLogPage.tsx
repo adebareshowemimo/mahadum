@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { AdminPageHeader, AdminToolbar, DataTable, FilterSelect, type Column } from '@/components/admin'
 import { Alert, Badge, Button, Modal } from '@/components/ui'
@@ -14,7 +15,8 @@ function useDebounced<T>(value: T, ms = 300): T {
 }
 
 export function AuditLogPage() {
-  const [search, setSearch] = useState('')
+  const [urlParams] = useSearchParams()
+  const [search, setSearch] = useState(() => urlParams.get('q') ?? '')
   const [action, setAction] = useState('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
