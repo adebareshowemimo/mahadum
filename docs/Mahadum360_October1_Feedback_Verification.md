@@ -1,5 +1,13 @@
 # Mahadum360 October 1 feedback — implementation and verification
 
+## October 2 follow-up
+
+The user authorized applying the four explicit corrections in Deborah's “Mahadum360 – Pending Items Update” attachment (`Mahadum360 feedback october 2.docx`): S03 now says “Out of data? Buy data on Mahadum360.”; S05 retains “Reliable connection” and uses “Low data won’t keep you from learning, buy data directly from the website and continue learning.”; I02 now says “Discuss with a campus”; A05's title is now “Naija Voices”, with the English language label and description retained. The existing rendered-copy regression checks were updated for these corrections.
+
+These are local copy changes. Data fulfillment was not changed or verified by this follow-up. F05 (“Parents - adjust starting level”) remains pending clarification of whether it means Families-page wording or a parent control. The October 1 report below is a historical snapshot and its withheld-copy statuses are superseded for these four items. No deployment has been performed.
+
+Validation: all 14 tests in `OctoberFeedback.test.tsx` passed; `npm run build` (TypeScript and production build) and `git diff --check` passed.
+
 **21 checklist corrections are implemented and tested locally. Three items need clarification; two data-purchase items are blocked or partial. Nothing has been deployed. The CX PowerPoint remains on hold.**
 
 Source: the eight-page `Oct 1 Document feedback.docx`, received with “independent feedback” on October 1, 2026. All document text was read and checked against the supplied checklist. Comparison with the original embedded screenshot pixels remains incomplete because the original document was not available locally and its page-image references could not be displayed. No image-dependent ambiguity was guessed.

@@ -47,7 +47,7 @@ const LEARNING_PATHS = [
   { language: 'Igbo', title: 'Mụta Igbo!', line: 'Build everyday speaking confidence and reconnect words to home.' },
   { language: 'Hausa', title: 'Koyi Hausa', line: 'Hear, repeat and use practical Hausa in familiar situations.' },
   { language: 'Yorùbá', title: 'Àlà Yorùbá', line: 'Learn with accurate diacritics, native voices and living culture.' },
-  { language: 'English', title: 'Everyday English', line: 'Build confident speaking, listening and connection through everyday English.' },
+  { language: 'English', title: 'Naija Voices', line: 'Build confident speaking, listening and connection through everyday English.' },
 ]
 
 const ARCHIVE_MOMENTS = [

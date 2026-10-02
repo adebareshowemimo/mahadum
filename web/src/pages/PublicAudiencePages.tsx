@@ -46,7 +46,7 @@ const INSTITUTION_AUDIENCES = [
     title: 'Universities',
     body: 'Offer language learning, cultural enrichment and student-led programmes with structured delivery and reporting.',
     link: '/contact?topic=university',
-    linkLabel: 'Discuss a campus',
+    linkLabel: 'Discuss with a campus',
   },
   {
     title: 'Cultural organisations',

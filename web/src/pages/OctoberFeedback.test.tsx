@@ -40,7 +40,7 @@ describe('October 1 public feedback', () => {
     expect(container.textContent).not.toContain('never lock learning behind hearts or payment')
   })
 
-  it('S01/S02/S04/S05 heading/S06: shows school corrections without advertising unverified data fulfillment', async () => {
+  it('S01-S06: shows the approved school corrections', async () => {
     const user = userEvent.setup()
     show(<LandingV5Page />)
     await user.click(screen.getByRole('tab', { name: /Teacher/ }))
@@ -48,17 +48,17 @@ describe('October 1 public feedback', () => {
     expect(screen.getAllByText('Beginner Level 0 stays free')).toHaveLength(2)
     expect(screen.getByRole('heading', { name: 'A playful path from free Level 0 to deeper learning.' })).toBeInTheDocument()
     expect(screen.queryByText(/never locks the next lesson/)).not.toBeInTheDocument()
-    expect(screen.queryByText('Out of data? Buy on Mahadum360')).not.toBeInTheDocument()
+    expect(screen.getByText('Out of data? Buy data on Mahadum360.')).toBeInTheDocument()
     expect(screen.getByText(/family missions, language and culture clubs/)).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Reliable connection' })).toBeInTheDocument()
-    expect(screen.queryByText(/Buy data directly from the website and continue learning/)).not.toBeInTheDocument()
+    expect(screen.getByText('Low data won’t keep you from learning, buy data directly from the website and continue learning.')).toBeInTheDocument()
     expect(screen.getByText('A clear, simple school quote.')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'See annual subscription fees and the cost per roll.' })).toBeInTheDocument()
   })
 
   it('I01: institution CTAs keep their distinct topics and direct email agrees', () => {
     show(<InstitutionsPage />)
-    for (const [label, topic] of [['Discuss a partnership', 'partnership'], ['Discuss a campus', 'university'], ['Plan a programme', 'culture'], ['Explore delivery', 'government'], ['Discuss access', 'telecom']]) {
+    for (const [label, topic] of [['Discuss a partnership', 'partnership'], ['Discuss with a campus', 'university'], ['Plan a programme', 'culture'], ['Explore delivery', 'government'], ['Discuss access', 'telecom']]) {
       const destinations = screen.getAllByRole('link', { name: label }).map(link => link.getAttribute('href'))
       expect(destinations).toContain(`/contact?topic=${topic}`)
       expect(destinations.every(href => href === `/contact?topic=${topic}` || href === '/contact?topic=partnership')).toBe(true)
@@ -92,6 +92,7 @@ describe('October 1 public feedback', () => {
     const { container } = show(<AboutPage />)
     expect(screen.getByRole('heading', { name: 'Mahadum360 opened its online school.' })).toBeInTheDocument()
     expect(screen.getByText(/Mahadum360 is designed/)).toBeInTheDocument()
+    expect(screen.getByText('Naija Voices')).toBeInTheDocument()
     await user.click(screen.getByRole('tab', { name: 'Teen learners' }))
     expect(screen.getByText(/Age respectful design/)).toBeInTheDocument()
     expect(screen.getByText('Level 0 remains free, so every child can learn basic conversations before choosing a paid plan for deeper learning.')).toBeInTheDocument()
