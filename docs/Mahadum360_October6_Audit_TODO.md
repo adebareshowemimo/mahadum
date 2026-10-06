@@ -2,7 +2,7 @@
 
 Source: Mahadum360 Test Results - Fix by 7 Oct 2026.xlsx, Library libfile_d384814a74bc81918140bc576168a324. Both tabs read completely through Library extracted text. Original bytes could not be materialized: the current Library helper requires os.setxattr, unavailable on Windows. No screenshot-dependent finding is claimed.
 
-Gate order for EACH source ID: code/finding → tests → Adebare local confirmation → confirmed production deployment → Deborah live QA. The parent task owns QA emails. F24a/F33a and copy-batch deployment are user-reported on 6 October; parent confirms Deborah emails sent at 16:01 UTC and 17:15 UTC respectively. The agent has not deployed or sent email. Deborah acceptance remains pending. A grouped batch is not approval of every linked item. Dates are requested targets, not delivery promises. New features and consequential business-rule changes remain decision-gated.
+Gate order for EACH source ID: code/finding → tests → Adebare local confirmation → confirmed production deployment → Deborah live QA. The parent task owns QA emails. F24a/F33a, copy-batch and roster deployment are user-reported on 6 October; parent confirms Deborah emails sent at 16:01 UTC, 17:15 UTC and 17:37:33 UTC respectively. Roster QA CC includes info@mahadum360.com; acceptance pending. The agent has not deployed or sent email. Deborah acceptance remains pending. A grouped batch is not approval of every linked item. Dates are requested targets, not delivery promises. New features and consequential business-rule changes remain decision-gated.
 
 Reconciliation: 125 detail rows = 55 Met + 41 Partial + 22 Not met + 7 Cannot verify. Summary reports 124/40 Partial because it omits the unlabelled streak row. B18-A below names Test Results index 17 (Excel row 19); activity start/tiers due October 7. B18 grace/Shield is October 15. B35 is absent and stays explicitly unresolved. Detail dates override the stale all-October-7 summary: 61 October 7, four October 15, six Phase 2, 54 Done.
 
@@ -21,10 +21,10 @@ Prepared hearts work is outside the release candidate: B19/F13 request wrong-ans
   Code/change: F33a teacher assignment subset ready locally; tests: 27 relevant backend tests passed, full backend: 422 passed / one skipped out of 423, 2,270 assertions; local confirmation: pending; origin push: 1407fdf verified; production: USER-REPORTED 6 October, not independently verified live; QA email: parent-confirmed sent 16:01 UTC; Deborah acceptance pending. Other work in this group remains open.
 
 - [ ] A03 · P1 · Roster email and validation · source IDs: B28, F30 · targets: 2026-10-07
-  Code/change: B28/F30 local candidate ready; optional Email matches only existing same-school learner logins, invalid CSV rows rejected before writes; tests: 35 focused backend / 197 assertions, full 431 passed + one skipped / 2,337 assertions, 267 frontend tests, build/Pint/PHPStan passed; actual local invalid-only upload/pixels passed with unchanged profiles/seats; local confirmation and positive manual matching: pending; commit/push: explicitly authorized by Adebare on 6 October; exact remote delivery in release handoff; production: not deployed; Deborah: not requested. See Mahadum360_Roster_Local_Verification.md.
+  Code/change: B28/F30 local candidate ready; optional Email matches only existing same-school learner logins, invalid CSV rows rejected before writes; tests: 35 focused backend / 197 assertions, full 431 passed + one skipped / 2,337 assertions, 267 frontend tests, build/Pint/PHPStan passed; actual local invalid-only upload/pixels passed with unchanged profiles/seats; local confirmation and positive manual matching: pending; origin: e834d49bba3259409c586023b142c570ade44e70 verified; production: USER-REPORTED 6 October; Deborah QA email: parent-confirmed sent 17:37:33 UTC, CC info@mahadum360.com; acceptance pending. See Mahadum360_Roster_Local_Verification.md.
 
 - [ ] A04 · P1 · School join link · source IDs: F32 · targets: 2026-10-07
-  Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
+  Existing school routes provide email-bound class invitations and commission referrals; school-wide join is absent rather than an existing broken link. No join or membership flow implemented in this candidate; ownership/enrollment design remains a separate feature decision. Tests for a school-wide flow: not run; local/production/QA pending.
 
 - [ ] A05 · P1 · Assignments and teacher analytics · source IDs: B13, B30, F29, B29 · targets: 2026-10-07
   Code/change: F33a teacher assignment subset ready locally; tests: 27 relevant backend tests passed, full backend: 422 passed / one skipped out of 423, 2,270 assertions; local confirmation: pending; origin push: 1407fdf verified; production: USER-REPORTED 6 October, not independently verified live; QA email: parent-confirmed sent 16:01 UTC; Deborah acceptance pending. Other work in this group remains open.
@@ -33,13 +33,13 @@ Prepared hearts work is outside the release candidate: B19/F13 request wrong-ans
   Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
 
 - [ ] A07 · P1 · Retry XP and duplicate leaderboard · source IDs: F12, F14 · targets: 2026-10-07
-  Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
+  F14a duplicate-membership board/rank subset implemented locally; 19 focused backend tests / 190 assertions and full 433 passed + one skipped / 2,372 assertions, Pint/PHPStan passed. Live Lucy IDs unverified; local confirmation/push/deployment/QA pending. F12 retry rewards conflict with the recorded September first-correct-only rule; existing behavior reproduced, rule decision pending. See Mahadum360_F14a_Local_Verification.md.
 
 - [ ] A08 · P1 · Hearts: decision on October audit versus approved September rule · source IDs: B19, F13 · targets: 2026-10-07
   Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
 
 - [ ] A09 · P1 · Activity streak start and weekly/monthly tiers · source IDs: B18-A · targets: 2026-10-07
-  Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
+  Activity-start gap reproduced: accepted video + completed quiz still returns streak 0 before whole-lesson completion (one isolated temporary diagnostic / eight assertions). Existing StreakService starts at 1 but is called only on whole-lesson completion. Component hooks remain a separate follow-up; weekly/monthly tiers not specified or implemented; local confirmation/production/QA pending.
 
 - [ ] A10 · P2 · Leagues, cheer and badge verification · source IDs: B21, F8, B20 · targets: 2026-10-07
   Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
@@ -120,7 +120,10 @@ Prepared hearts work is outside the release candidate: B19/F13 request wrong-ans
   Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
 
 - [ ] A36 · Reconcile · Duplicate invoice investigation; missing B35 · source IDs: F31, B35 · targets: Reconcile / regression
-  Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
+  Invoice IDs 11/12 are absent locally; listing/dashboard correctly retain and total separate IDs. No transaction identity was established, so no invoice/payable total was suppressed or deleted. Missing B35 remains unresolved. Separate INV-PROMO-1 presentation/no-stacking regression reproduced and fixed locally; see A37.
+
+- [ ] A37 · P1 · INV-PROMO-1 invoice promo marker preservation · related source IDs: B43, B54; found during F31 investigation · intended remediation: 2026-10-07
+  One-model repair preserves promo labels/signed amounts during legacy fee normalization so existing no-stacking checks recognize prior discounts. Six pre-fix regressions failed; 47 focused tests / 263 assertions passed after fix; full current worktree 439 passed + one skipped / 2,435 assertions; Pint/PHPStan/whitespace passed. Commit/push of both F14a and INV-PROMO-1 explicitly authorized on 6 October; exact origin delivery in release handoff. Local manual confirmation, production and Deborah QA remain pending. Original Met/Done audit evidence retained; no invoice deletion or financial-rule change.
 
 ## Per-source evidence and tickable gates
 
@@ -301,7 +304,7 @@ Audit status: Partial. Tested: Multi-tier streaks; 48-hour grace; Streak Shield.
 Audit evidence: "0 Day Streak" and a "Protect streak" button are shown. Weekly and monthly tiers and the 48-hour grace period were not seen. Bug: the rule (confirmed by Ifeoma) is that the streak becomes "1 Day Streak" as soon as the learner completes any activity (a video, a quiz, etc.), but after Tosin watched a video and completed two quizzes on 6 Oct, Achievements still showed "0 Day Streak".
 Requested action: 1.Start the streak at '1 Day Streak' as soon as any activity is completed (video, quiz, etc.). Add weekly and monthly streak tiers
 - [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [ ] T — Requested activity-start/tier fix not implemented. Current gap reproduced in an isolated temporary diagnostic (one test / eight assertions): video+quiz complete, streak remains 0 until whole-lesson completion. No reward/heart/grace changes.
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -413,8 +416,8 @@ Requested action: Add an Email column to the roster CSV template and import; tes
 - [x] C — Roster candidate implemented locally; see Mahadum360_Roster_Local_Verification.md; same-school email matching only.
 - [x] T — 35 focused backend tests; full backend 431 passed/one skipped, 267 frontend tests, build/static checks; actual local invalid-only UI upload and pixels passed, profiles/seats unchanged. Positive local manual matching pending.
 - [ ] L — Adebare local confirmation; pending
-- [ ] D — production deployment; not deployed
-- [ ] Q — Deborah live QA; not requested
+- [x] D — USER-REPORTED roster e834d49 deployed on 6 October; not independently verified live.
+- [ ] Q — QA email parent-confirmed sent 6 October, 17:37:33 UTC, to Deborah with CC info@mahadum360.com; pass/fail and positive manual learner matching pending.
 
 ### B29 · Delivery BRD · Teacher · 2026-10-07
 Audit status: Can't verify. Tested: Speech/quiz analytics grid with drill-down.
@@ -550,6 +553,7 @@ Requested action: Add the referral payout % setting to Settlements and confirm t
 Audit status: Met. Tested: Promo codes; org activation; content/language control; fraud queue.
 Audit evidence: All present (Promo codes, Organizations, Languages, Fraud review).
 Requested action: No action needed.
+October 6 independent regression note: INV-PROMO-1 invoice fee-label normalization hid promo markers and defeated existing no-stacking guards. This local candidate fixes that narrow regression; original Met/Done source status and broader capabilities are not reclassified or automatically accepted.
 - [ ] C — code/change or documented no-change finding
 - [ ] T — automated/visual verification; evidence: not run
 - [ ] L — Adebare local confirmation; pending
@@ -660,6 +664,7 @@ Requested action: Trigger the velocity guard in test (>15 sign-ups/24h on one co
 Audit status: Met. Tested: Promo codes single-use per institution; fraud-alert screen.
 Audit evidence: Promo codes have max redemptions and an "applies to" setting, and the Fraud review screen exists.
 Requested action: No action needed.
+October 6 independent regression note: INV-PROMO-1 invoice fee-label normalization hid promo markers and defeated existing no-stacking guards. This local candidate fixes that narrow regression; original Met/Done source status and broader capabilities are not reclassified or automatically accepted.
 - [ ] C — code/change or documented no-change finding
 - [ ] T — automated/visual verification; evidence: not run
 - [ ] L — Adebare local confirmation; pending
@@ -900,8 +905,8 @@ Requested action: No action needed.
 Audit status: Partial. Tested: Quiz XP: 1 XP per correct answer, XP on repeat, score per quiz, separate quizzes (4 Sep #6).
 Audit evidence: Tested as Tosin: 4 of 10 correct gave +4 XP (1 per correct answer). The results screen shows the score per quiz (40%) with Review lesson video and Retry. Bug: retries should earn XP (rule confirmed by Ifeoma, 4 Sep), but a retry with 2 correct answers added 0 XP. Total XP stayed at 4.
 Requested action: Award XP on retries (1 XP per correct answer each attempt). Retest: a retry with correct answers must add to total XP.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [ ] C — Decision pending: October asks per-attempt rewards; September approved first-correct-per-question XP. No reward change installed.
+- [ ] T — Requested changed rule not implemented/tested. Current rule reproduced: existing QuizAttemptCapTest two tests / 19 assertions passed; already-rewarded question earns zero on permitted replay.
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -920,8 +925,8 @@ Requested action: Deduct 1 heart per 4 wrong answers only; update the Achievemen
 Audit status: Partial. Tested: Leaderboard shows cumulative XP (4 Sep).
 Audit evidence: The leaderboard now has a "total XP" field next to weekly XP. With the family account, the leaderboard shows weekly and total XP for 4 learners. Bug: Lucy Okafor appears twice (16 total XP each). Adding up across attempts could not be confirmed because retries earned no XP.
 Requested action: Remove the duplicate Lucy Okafor leaderboard entry; after the retry-XP fix, confirm totals add up across attempts.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [ ] C — F14a duplicate-membership subset ready locally; entire live Lucy reconciliation remains open until learner IDs are known. Distinct same-name profiles preserved.
+- [x] T — F14a isolated duplicate board/rank regressions passed; 19 focused tests / 190 assertions, full 433 passed + one skipped / 2,372 assertions, Pint/PHPStan. Live Lucy and authenticated browser pixels not verified; F12 totals after changed rewards pending rule decision.
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -1083,13 +1088,14 @@ Requested action: Add an Email column to the roster template (Firstname, Lastnam
 - [x] C — Roster candidate implemented locally; see Mahadum360_Roster_Local_Verification.md; same-school email matching only.
 - [x] T — 35 focused backend tests; full backend 431 passed/one skipped, 267 frontend tests, build/static checks; actual local invalid-only UI upload and pixels passed, profiles/seats unchanged. Positive local manual matching pending.
 - [ ] L — Adebare local confirmation; pending
-- [ ] D — production deployment; not deployed
-- [ ] Q — Deborah live QA; not requested
+- [x] D — USER-REPORTED roster e834d49 deployed on 6 October; not independently verified live.
+- [ ] Q — QA email parent-confirmed sent 6 October, 17:37:33 UTC, to Deborah with CC info@mahadum360.com; pass/fail and positive manual learner matching pending.
 
 ### F31 · Open feedback · Feedback · Done
 Audit status: Met. Tested: School invoice split; balance before payout (2 Aug).
 Audit evidence: Invoices show Student School Fees, Registration Fees, VAT 7.5% and Total, with Download PDF. School referrals shows the available balance before payout. Check: invoices #000011 and #000012 are identical (₦129,000 each, issued 30 Sep), so the dashboard reports ₦258,000 unpaid.
 Requested action: No action needed.
+Reconciliation: source invoice IDs 11/12 absent locally; duplicate transaction identity unverified, no payable total or record removed. Separate INV-PROMO-1 found during invoice presentation review and tracked under A37; it does not resolve those invoice IDs or missing B35.
 - [ ] C — code/change or documented no-change finding
 - [ ] T — automated/visual verification; evidence: not run
 - [ ] L — Adebare local confirmation; pending
@@ -1446,12 +1452,37 @@ Release/QA status update, 6 October: User reported deploying F24a and F33a on 6 
 - [x] C - Four implementation files and nine backend / three frontend tests; optional Email matches one existing learner already in the same school, preserving ownership/membership and seat count. No new login or parent-child inference.
 - [x] T - 35 focused backend tests / 197 assertions; full backend 431 passed + one skipped out of 432 / 2,337 assertions; 267 frontend tests in 49 files; build, Pint, PHPStan and whitespace passed. Actual local roster template and invalid-only UI result pixels inspected; errors on rows 2-5 with zero profiles/matches. Before/after local school-1 counts retained 62 profiles and active_filled 134. No valid local import performed.
 - [ ] L - Adebare confirms B28 and F30 separately; positive existing-local-learner matching pending prerequisite. No already-linked school-1 @dev.mahadum360 demo learner was available; isolated automated positive/reimport tests passed.
-- [x] Commit/push authorization - Adebare explicitly approved this tested B28/F30 batch on 6 October; current branch codex/beta-feedback-20260903, base 0e31e93. Exact commit/remote delivery is recorded in the release handoff. Local manual acceptance remains pending.
-- [ ] D - Roster not deployed.
-- [ ] Q - Roster Deborah QA email not requested; parent owns it after deployment confirmation.
+- [x] Commit/push authorization - Adebare explicitly approved this tested B28/F30 batch on 6 October; current branch codex/beta-feedback-20260903, base 0e31e93. Origin e834d49bba3259409c586023b142c570ade44e70 verified without force; no CI runs/check contexts on this branch push. Local manual acceptance remains pending.
+- [x] D - USER-REPORTED roster e834d49 deployment on 6 October; not independently verified live.
+- [x] QA email - Parent confirms roster email sent and Sent Items verified 6 October, 17:37:33 UTC, Deborah with CC info@mahadum360.com.
+- [ ] Q - Deborah roster pass/fail acceptance and positive manual matching remain pending.
 
 See Mahadum360_Roster_Local_Verification.md and docs/qa/roster-invalid-only.csv. Intended date 7 October 2026; P1. B28/F30 are still awaiting user acceptance and live QA. Wider parent/account linking requires a separate ownership decision. No migration, purchase, real notification, role move or data deletion.
 
 Latest communications, 6 October: Adebare reports copy batch 0e31e93 deployed. Parent confirms corporate Outlook QA email sent to Deborah only at 17:15 UTC for W1/F26/W11/F6/F17. Copy acceptance and prior F24a/F33a acceptance are pending. No independent live visual verification was inferred.
 
-Future Deborah QA communications: Adebare requested on 6 October that info@mahadum360.com be included in updates to Deborah. Parent will CC that address on future QA emails. This does not claim a roster email has been sent or alter the recipients of previously sent emails.
+Future Deborah QA communications: Adebare requested on 6 October that info@mahadum360.com be included in updates to Deborah. Parent will CC that address on future QA emails. Parent confirms the roster email sent 17:37:33 UTC with that CC; the earlier F24a/F33a and copy emails retain their original recipients.
+
+## Fifth local candidate - F14a duplicate membership display and rank
+
+- [x] C - LeagueService ranks each learner_profile_id once within a league, using one existing representative membership. No membership/profile deletion, name-based merge, XP award or heart rule change.
+- [x] T - Two corrected-fixture regressions failed before the fix (three rows for two learners; current rank 3 instead of 2), then passed. 19 focused backend tests / 190 assertions; full 433 passed + one skipped out of 434 / 2,372 assertions; Pint/PHPStan and whitespace passed. Browser display/manual confirmation not run. Prior 267 frontend tests/build belong to roster evidence; frontend unchanged here.
+- [ ] L - Adebare local confirmation pending; run the isolated regression and inspect /leaderboard with an existing account. Live Lucy learner IDs unavailable; if different profiles share her name, both stay visible pending ownership review.
+- [x] Commit/push authorization - Adebare explicitly approved both tested F14a and INV-PROMO-1 on 6 October ("commit and push"). Separate focused commits on codex/beta-feedback-20260903; exact SHA and origin verification in release handoff. Local manual acceptance remains pending.
+- [ ] D - F14a not deployed.
+- [ ] Q - F14a Deborah QA not requested; parent owns future email and CC info@mahadum360.com.
+
+See Mahadum360_F14a_Local_Verification.md. F12 decision remains narrow: whether October's one XP per correct answer on each permitted quiz attempt supersedes September's first-correct-per-question rule. Preserve network retry idempotence, attempt caps, one-time lesson replay XP and existing hearts gates absent separate instruction. No speculative reward change or anti-farming cap introduced. B18-A activity-start gap is independently reproduced and left for a separate component-completion fix; weekly/monthly tiers and October 15 B18 protection remain open.
+
+Latest roster communications, 6 October: Adebare reports deploying e834d49. Parent confirms Deborah QA email sent and verified in Sent Items at 17:37:33 UTC, with CC info@mahadum360.com, including invalid-row no-side-effect and positive matching checks. Deployment is user-reported, not independent live verification or local acceptance. Deborah pass/fail pending. This agent sent no email and performed no production action.
+
+## Sixth local candidate - INV-PROMO-1 invoice promo presentation and existing no-stacking guard
+
+- [x] C - app/Models/Invoice.php preserves descriptions starting with Promo code: before fee normalization. Six independent regressions in InvoicePromoPresentationTest.php; no discount, VAT, payment, reward or membership rule changed.
+- [x] T - All six tests failed on the prior model: three lost labels and three second-code HTTP 200 responses instead of 422. After repair, 47 focused backend tests / 263 assertions passed. Full current working tree: 439 passed + one skipped out of 440 / 2,435 assertions, including held F14a tests. Full Pint and PHPStan (zero errors) plus whitespace passed. F14a implementation/test/guide hashes unchanged. No frontend changes/rerun or authenticated invoice pixel claim.
+- [ ] L - Adebare local confirmation pending. Run the isolated six-case test; inspect an existing discounted local invoice only if one is already available. Read-only inventory found no local promo invoice and neither source invoice ID 11 nor 12; browser positive fixture is unavailable. No local customer records or redemptions created for QA.
+- [x] Commit/push authorization - Adebare explicitly approved both tested candidates on 6 October ("commit and push"). Separate focused commits; exact origin delivery in release handoff. Continue alone was not used as approval, and no XP/hearts/streak rule approval is inferred.
+- [ ] D - INV-PROMO-1 not deployed; user owns server.
+- [ ] Q - No INV-PROMO-1 Deborah email; parent owns QA after confirmed deployment and will CC info@mahadum360.com.
+
+See Mahadum360_INV_PROMO_1_Local_Verification.md. F31 original Met/Done and missing B35 reconciliation remain explicit. No invoices, balances or seat allocations suppressed/deleted; no real code applied, charge, payout or notification. Existing overwritten invoice lines and cached PDFs require evidence-backed review rather than automatic repair. F12 rewards and B18-A activity triggers remain undecided/separate; hearts are unchanged. F32 school-wide join would be a new enrollment flow. A wording-only F34 Individual-label subset is identifiable but not changed in this candidate.

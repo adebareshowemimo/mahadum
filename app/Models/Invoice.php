@@ -65,10 +65,14 @@ class Invoice extends Model
         $lines = collect($this->lines ?? [])->map(function (array $line): array {
             $description = strtolower(trim($line['description']));
 
-            if (str_contains($description, 'student') && str_contains($description, 'school')) {
-                $line['description'] = InvoiceLineBuilder::STUDENT_SCHOOL_FEES;
-            } elseif (str_contains($description, 'registration')) {
-                $line['description'] = InvoiceLineBuilder::REGISTRATION_FEES;
+            // Promo descriptions also contain fee words (or codes named after fees).
+            // Keep their marker so the invoice UI and no-stacking guard recognize them.
+            if (! str_starts_with($description, 'promo code:')) {
+                if (str_contains($description, 'student') && str_contains($description, 'school')) {
+                    $line['description'] = InvoiceLineBuilder::STUDENT_SCHOOL_FEES;
+                } elseif (str_contains($description, 'registration')) {
+                    $line['description'] = InvoiceLineBuilder::REGISTRATION_FEES;
+                }
             }
 
             return [
