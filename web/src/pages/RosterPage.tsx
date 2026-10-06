@@ -4,7 +4,7 @@ import { ApiError, type RosterImportResult } from '@/lib/api'
 import { SchoolGate } from '@/components/school/SchoolGate'
 import { useImportRoster } from '@/lib/school/queries'
 
-const ROSTER_TEMPLATE = ['Firstname,Lastname,Level', 'Amara,Okafor,A1', 'Bello,Musa,A2', 'Chinwe,Eze,'].join('\n')
+const ROSTER_TEMPLATE = ['Firstname,Lastname,Email,Level', 'Amara,Okafor,,A1', 'Bello,Musa,,A2', 'Chinwe,Eze,,'].join('\n')
 
 function downloadRosterTemplate() {
   const blob = new Blob([ROSTER_TEMPLATE], { type: 'text/csv;charset=utf-8' })
@@ -26,6 +26,8 @@ function Roster({ orgId }: { orgId: number }) {
   const [result, setResult] = useState<RosterImportResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const matched = result?.matched ?? 0
+  const imported = (result?.created ?? 0) + matched
 
   async function submit() {
     if (!file) return
@@ -55,7 +57,8 @@ function Roster({ orgId }: { orgId: number }) {
         <CardBody className="flex flex-col gap-4">
           <Alert variant="info" title="CSV format">
             <p>
-              One student per row with a header: <code>Firstname,Lastname,Level</code>. The <code>Level</code> column is optional.
+              One student per row with a header: <code>Firstname,Lastname,Email,Level</code>. <code>Email</code> and <code>Level</code> are optional.
+              If provided, Email must be the learner's existing login already linked to this school. Leave it blank for a school-managed profile without a login.
             </p>
             <button
               type="button"
@@ -92,7 +95,8 @@ function Roster({ orgId }: { orgId: number }) {
       </Card>
 
       {result && (
-        <Alert variant={result.errors.length ? 'warning' : 'success'} title={`${result.created} student${result.created === 1 ? '' : 's'} imported`}>
+        <Alert variant={result.errors.length ? 'warning' : 'success'} title={`${imported} row${imported === 1 ? '' : 's'} imported`}>
+          <p>{result.created} new profile{result.created === 1 ? '' : 's'} created. {matched} existing learner row{matched === 1 ? '' : 's'} matched.</p>
           {result.errors.length === 0 ? (
             'All rows imported successfully.'
           ) : (

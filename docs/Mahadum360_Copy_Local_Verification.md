@@ -1,6 +1,6 @@
 # October 6 local verification: existing branding and copy
 
-Distinct copy batch authorized for commit/push by Adebare on 6 October on codex/beta-feedback-20260903, reviewed base 1407fdf1e400d8a7bafe9599bdacf0fe274aed8d. User owns production deployment. No email or deployment is performed by this task. EACH source ID remains pending user local acceptance; the user instructed "push to origin and continue with next fix"; exact remote delivery is verified in the task handoff.
+Distinct copy batch authorized for commit/push by Adebare on 6 October on codex/beta-feedback-20260903, reviewed base 1407fdf1e400d8a7bafe9599bdacf0fe274aed8d. User owns production deployment. No email or deployment is performed by this task. EACH source ID remains pending user local acceptance; the user instructed "push to origin and continue with next fix"; exact origin delivery is 0e31e9318b97534c9ad6e4683aa022d4313a0e97, verified. No CI run/check contexts were triggered on this branch push. Adebare subsequently reported deploying this copy batch on 6 October. Parent confirms its Deborah-only QA email sent at 17:15 UTC; acceptance pending. This is not independent live verification or user local acceptance.
 
 | Source ID | Reproduced defect and resulting text | Local check | Verification state |
 |---|---|---|---|
@@ -28,7 +28,7 @@ Use a signed-out or private local browser for public/auth routes; do not log out
 4. F6: http://127.0.0.1:5173/pricing - the Free card subtitle must read Level 0 free, forever. Ad-supported. Paid prices and features remain unchanged. Do not purchase a plan.
 5. F17: Sign in using your existing local author/Admin account; open an existing lesson through /courses. Inspect Generate ... with AI (ChatGPT / Claude) in quiz/flashcard/game controls. Expect a sparkle, not literal backslash-u2728. Do not import data, save content or invoke an external AI service during this display check. Route shape: /courses/{courseId}/lessons/{lessonId}.
 
-Report PASS/FAIL separately for W1, F26, W11, F6 and F17. Adebare authorized this batch commit/push on 6 October. Local acceptance and production deployment remain separate pending states.
+Report PASS/FAIL separately for W1, F26, W11, F6 and F17. Adebare authorized this batch commit/push on 6 October. Local acceptance remains pending per ID. Copy deployment is USER-REPORTED on 6 October; independent live verification and Deborah acceptance remain pending. Parent confirms its QA email sent at 17:15 UTC.
 
 ## Scope and earlier release states
 

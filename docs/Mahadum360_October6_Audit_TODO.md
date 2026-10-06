@@ -2,7 +2,7 @@
 
 Source: Mahadum360 Test Results - Fix by 7 Oct 2026.xlsx, Library libfile_d384814a74bc81918140bc576168a324. Both tabs read completely through Library extracted text. Original bytes could not be materialized: the current Library helper requires os.setxattr, unavailable on Windows. No screenshot-dependent finding is claimed.
 
-Gate order for EACH source ID: code/finding → tests → Adebare local confirmation → confirmed production deployment → Deborah live QA. The parent task owns QA emails. F24a/F33a deployment is now user-reported on 6 October; parent confirms their QA email sent at 16:01 UTC. The agent has not deployed or sent email. Deborah acceptance remains pending. A grouped batch is not approval of every linked item. Dates are requested targets, not delivery promises. New features and consequential business-rule changes remain decision-gated.
+Gate order for EACH source ID: code/finding → tests → Adebare local confirmation → confirmed production deployment → Deborah live QA. The parent task owns QA emails. F24a/F33a and copy-batch deployment are user-reported on 6 October; parent confirms Deborah emails sent at 16:01 UTC and 17:15 UTC respectively. The agent has not deployed or sent email. Deborah acceptance remains pending. A grouped batch is not approval of every linked item. Dates are requested targets, not delivery promises. New features and consequential business-rule changes remain decision-gated.
 
 Reconciliation: 125 detail rows = 55 Met + 41 Partial + 22 Not met + 7 Cannot verify. Summary reports 124/40 Partial because it omits the unlabelled streak row. B18-A below names Test Results index 17 (Excel row 19); activity start/tiers due October 7. B18 grace/Shield is October 15. B35 is absent and stays explicitly unresolved. Detail dates override the stale all-October-7 summary: 61 October 7, four October 15, six Phase 2, 54 Done.
 
@@ -21,7 +21,7 @@ Prepared hearts work is outside the release candidate: B19/F13 request wrong-ans
   Code/change: F33a teacher assignment subset ready locally; tests: 27 relevant backend tests passed, full backend: 422 passed / one skipped out of 423, 2,270 assertions; local confirmation: pending; origin push: 1407fdf verified; production: USER-REPORTED 6 October, not independently verified live; QA email: parent-confirmed sent 16:01 UTC; Deborah acceptance pending. Other work in this group remains open.
 
 - [ ] A03 · P1 · Roster email and validation · source IDs: B28, F30 · targets: 2026-10-07
-  Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
+  Code/change: B28/F30 local candidate ready; optional Email matches only existing same-school learner logins, invalid CSV rows rejected before writes; tests: 35 focused backend / 197 assertions, full 431 passed + one skipped / 2,337 assertions, 267 frontend tests, build/Pint/PHPStan passed; actual local invalid-only upload/pixels passed with unchanged profiles/seats; local confirmation and positive manual matching: pending; commit/push: explicitly authorized by Adebare on 6 October; exact remote delivery in release handoff; production: not deployed; Deborah: not requested. See Mahadum360_Roster_Local_Verification.md.
 
 - [ ] A04 · P1 · School join link · source IDs: F32 · targets: 2026-10-07
   Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
@@ -75,10 +75,10 @@ Prepared hearts work is outside the release candidate: B19/F13 request wrong-ans
   Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
 
 - [ ] A21 · P2 · Browser/auth branding and RC footers · source IDs: W1, F26 · targets: 2026-10-07
-  Copy fix implemented; public/auth pixels and existing checks passed; local confirmation: pending per source ID; commit/push: authorized for this copy batch; exact delivery in task handoff; production: not deployed; Deborah: not requested for this copy batch.
+  Copy fix implemented; public/auth pixels and existing checks passed; local confirmation: pending per source ID; origin 0e31e9318b97534c9ad6e4683aa022d4313a0e97 verified; production: USER-REPORTED 6 October; Deborah QA email: parent-confirmed sent 17:15 UTC to Deborah only; acceptance pending. F17 authenticated editor manual pixels remain pending.
 
 - [ ] A22 · P2 · Free subtitle and school quote wording · source IDs: F6, W11 · targets: 2026-10-07
-  Copy fix implemented; public/auth pixels and existing checks passed; local confirmation: pending per source ID; commit/push: authorized for this copy batch; exact delivery in task handoff; production: not deployed; Deborah: not requested for this copy batch.
+  Copy fix implemented; public/auth pixels and existing checks passed; local confirmation: pending per source ID; origin 0e31e9318b97534c9ad6e4683aa022d4313a0e97 verified; production: USER-REPORTED 6 October; Deborah QA email: parent-confirmed sent 17:15 UTC to Deborah only; acceptance pending. F17 authenticated editor manual pixels remain pending.
 
 - [ ] A23 · Decision · Starting-level parent control · source IDs: W5 · targets: 2026-10-07
   Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
@@ -114,7 +114,7 @@ Prepared hearts work is outside the release candidate: B19/F13 request wrong-ans
   Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
 
 - [ ] A34 · Reconcile · Literal sparkle label despite Met · source IDs: F17 · targets: Reconcile / regression
-  Literal sparkle corrected; source/build checks passed, authenticated editor visual confirmation not run; local confirmation: pending per source ID; commit/push: authorized for this copy batch; exact delivery in task handoff; production: not deployed; Deborah: not requested for this copy batch.
+  Literal sparkle corrected; source/build checks passed; authenticated editor/manual acceptance pending; origin copy batch 0e31e9318b97534c9ad6e4683aa022d4313a0e97 verified; deployment USER-REPORTED 6 October; QA email parent-confirmed sent 17:15 UTC to Deborah only; Deborah acceptance pending.
 
 - [ ] A35 · Reconcile · Performance count definitions despite Met · source IDs: F25 · targets: Reconcile / regression
   Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
@@ -410,8 +410,8 @@ Requested action: Add push notifications, then trigger and verify the automatic 
 Audit status: Partial. Tested: Class roster + bulk CSV import.
 Audit evidence: CSV import with a template exists (school admin). There is no email column, and row validation was not tested.
 Requested action: Add an Email column to the roster CSV template and import; test row-level validation with a file containing errors.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — Roster candidate implemented locally; see Mahadum360_Roster_Local_Verification.md; same-school email matching only.
+- [x] T — 35 focused backend tests; full backend 431 passed/one skipped, 267 frontend tests, build/static checks; actual local invalid-only UI upload and pixels passed, profiles/seats unchanged. Positive local manual matching pending.
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -843,8 +843,8 @@ Requested action: Change the Free card subtitle 'Full learning, forever' to matc
 - [x] C — Copy batch: reproduced and corrected locally; see Mahadum360_Copy_Local_Verification.md
 - [x] T — Actual local browser DOM/pixels inspected; 264 frontend tests/build and relevant pricing/static checks passed.
 - [ ] L — Adebare local confirmation; pending
-- [ ] D — production deployment; not deployed
-- [ ] Q — Deborah live QA; not requested
+- [x] D — USER-REPORTED copy batch 0e31e93 deployed on 6 October; not independently verified live.
+- [ ] Q — QA email parent-confirmed sent 6 October, 17:15 UTC, Deborah only; acceptance pending.
 
 ### F7 · Open feedback · Feedback · Done
 Audit status: Met. Tested: Individual option at sign-up (1 Sep).
@@ -953,8 +953,8 @@ Requested action: No action needed.
 - [x] C — Copy batch: reproduced and corrected locally; see Mahadum360_Copy_Local_Verification.md
 - [ ] T — Source/compiler/full frontend checks passed; authenticated editor pixel confirmation not run. Original Met/Done audit status retained; embedded sparkle defect reconciled.
 - [ ] L — Adebare local confirmation; pending
-- [ ] D — production deployment; not deployed
-- [ ] Q — Deborah live QA; not requested
+- [x] D — USER-REPORTED copy batch 0e31e93 deployed on 6 October; not independently verified live.
+- [ ] Q — QA email parent-confirmed sent 6 October, 17:15 UTC, Deborah only; acceptance pending.
 
 ### F18 · Open feedback · Feedback · 2026-10-07
 Audit status: Partial. Tested: Sign-up: country code dropdown, unique email and phone (4 Sep #8).
@@ -1043,8 +1043,8 @@ Requested action: Add 'Mahadum360, RC 9601595' to the sign-in and register page 
 - [x] C — Copy batch: reproduced and corrected locally; see Mahadum360_Copy_Local_Verification.md
 - [x] T — Actual local browser DOM/pixels inspected; 264 frontend tests/build and relevant pricing/static checks passed.
 - [ ] L — Adebare local confirmation; pending
-- [ ] D — production deployment; not deployed
-- [ ] Q — Deborah live QA; not requested
+- [x] D — USER-REPORTED copy batch 0e31e93 deployed on 6 October; not independently verified live.
+- [ ] Q — QA email parent-confirmed sent 6 October, 17:15 UTC, Deborah only; acceptance pending.
 
 ### F27 · Open feedback · Feedback · Done
 Audit status: Met. Tested: Annual plans "Get 2 months free" (2 Aug).
@@ -1080,8 +1080,8 @@ Requested action: Add a 'Create assignment' button for class teachers (and schoo
 Audit status: Partial. Tested: Roster template: Firstname, Lastname, Level, plus email (14 Aug; raised during this review).
 Audit evidence: The template is now Firstname, Lastname, Level, as asked on 14 Aug. It has no email column, although email is the account identifier everywhere else, so imported students can't be matched to logins or parents.
 Requested action: Add an Email column to the roster template (Firstname, Lastname, Email, Level) and match imported students to accounts by email.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — Roster candidate implemented locally; see Mahadum360_Roster_Local_Verification.md; same-school email matching only.
+- [x] T — 35 focused backend tests; full backend 431 passed/one skipped, 267 frontend tests, build/static checks; actual local invalid-only UI upload and pixels passed, profiles/seats unchanged. Positive local manual matching pending.
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -1133,8 +1133,8 @@ Requested action: Change the site title tag and the sign-in/register footer to "
 - [x] C — Copy batch: reproduced and corrected locally; see Mahadum360_Copy_Local_Verification.md
 - [x] T — Actual local browser DOM/pixels inspected; 264 frontend tests/build and relevant pricing/static checks passed.
 - [ ] L — Adebare local confirmation; pending
-- [ ] D — production deployment; not deployed
-- [ ] Q — Deborah live QA; not requested
+- [x] D — USER-REPORTED copy batch 0e31e93 deployed on 6 October; not independently verified live.
+- [ ] Q — QA email parent-confirmed sent 6 October, 17:15 UTC, Deborah only; acceptance pending.
 
 ### W2 · Website copy (1 Oct) · Families · Done
 Audit status: Met. Tested: "the languages that make your home yours" (no comma).
@@ -1233,8 +1233,8 @@ Requested action: Change it to "language and culture club and competition entry"
 - [x] C — Copy batch: reproduced and corrected locally; see Mahadum360_Copy_Local_Verification.md
 - [x] T — Actual local browser DOM/pixels inspected; 264 frontend tests/build and relevant pricing/static checks passed.
 - [ ] L — Adebare local confirmation; pending
-- [ ] D — production deployment; not deployed
-- [ ] Q — Deborah live QA; not requested
+- [x] D — USER-REPORTED copy batch 0e31e93 deployed on 6 October; not independently verified live.
+- [ ] Q — QA email parent-confirmed sent 6 October, 17:15 UTC, Deborah only; acceptance pending.
 
 ### W12 · Website copy (1 Oct) · Schools · Done
 Audit status: Met. Tested: Reliable connection: "Low data won't keep you from learning…".
@@ -1431,11 +1431,27 @@ Source IDs W1/F26 (browser/auth legal branding), W11 (school quote wording), F6 
 - [x] Existing checks - 264 frontend tests across 48 files; TypeScript + Vite production build; PricingTest two tests / 11 assertions; full Pint and PHPStan (zero errors); whitespace passed.
 - [x] Public/auth browser - Five routes inspected in isolated local headless Chrome; four screenshot pairs inspected as actual pixels. No login, form submission, account creation or live-user mutation.
 - [ ] Local acceptance - W1 [ ]; F26 [ ]; W11 [ ]; F6 [ ]; F17 [ ].
-- [x] Commit/push authorization - Adebare instructed "push to origin and continue with next fix" for this tested copy batch on 6 October; reviewed base 1407fdf, exact delivery recorded in task handoff.
-- [ ] Production - User owns deployment; this batch not deployed.
-- [ ] Deborah - No new batch email sent; parent handles after deployment confirmation.
+- [x] Commit/push authorization - Adebare instructed "push to origin and continue with next fix" for this tested copy batch on 6 October; reviewed base 1407fdf; exact origin delivery 0e31e9318b97534c9ad6e4683aa022d4313a0e97 verified; no CI run/check contexts on this branch push.
+- [x] Production - USER-REPORTED copy batch 0e31e93 deployment on 6 October; not independently verified live.
+- [x] QA email - Parent confirms copy-batch email sent 6 October, 17:15 UTC, Deborah only; W1/F26/W11/F6/F17 pass/fail requested.
+- [ ] Deborah acceptance - Pending; F17 authenticated editor display remains a manual QA step.
 
 See Mahadum360_Copy_Local_Verification.md for individual local URLs, expected text, scope, checks and screenshot evidence. All source rows, October15/Phase2 dates, B18-A and missing B35 remain tracked.
 
 
 Release/QA status update, 6 October: User reported deploying F24a and F33a on 6 October 2026. This is user-reported deployment, not independent live verification or local manual acceptance. Parent confirmed the corporate Outlook QA email to Deborah was sent on 6 October at 16:01 UTC, with no CC. It covers F24a/F33a controlled live checks and a separate Lucy retest. Deborah acceptance is pending. Parent-reported sent-message suffix: AAJ2zw1BAAA=.
+
+## Fourth candidate - B28/F30 roster Email and row validation
+
+- [x] C - Four implementation files and nine backend / three frontend tests; optional Email matches one existing learner already in the same school, preserving ownership/membership and seat count. No new login or parent-child inference.
+- [x] T - 35 focused backend tests / 197 assertions; full backend 431 passed + one skipped out of 432 / 2,337 assertions; 267 frontend tests in 49 files; build, Pint, PHPStan and whitespace passed. Actual local roster template and invalid-only UI result pixels inspected; errors on rows 2-5 with zero profiles/matches. Before/after local school-1 counts retained 62 profiles and active_filled 134. No valid local import performed.
+- [ ] L - Adebare confirms B28 and F30 separately; positive existing-local-learner matching pending prerequisite. No already-linked school-1 @dev.mahadum360 demo learner was available; isolated automated positive/reimport tests passed.
+- [x] Commit/push authorization - Adebare explicitly approved this tested B28/F30 batch on 6 October; current branch codex/beta-feedback-20260903, base 0e31e93. Exact commit/remote delivery is recorded in the release handoff. Local manual acceptance remains pending.
+- [ ] D - Roster not deployed.
+- [ ] Q - Roster Deborah QA email not requested; parent owns it after deployment confirmation.
+
+See Mahadum360_Roster_Local_Verification.md and docs/qa/roster-invalid-only.csv. Intended date 7 October 2026; P1. B28/F30 are still awaiting user acceptance and live QA. Wider parent/account linking requires a separate ownership decision. No migration, purchase, real notification, role move or data deletion.
+
+Latest communications, 6 October: Adebare reports copy batch 0e31e93 deployed. Parent confirms corporate Outlook QA email sent to Deborah only at 17:15 UTC for W1/F26/W11/F6/F17. Copy acceptance and prior F24a/F33a acceptance are pending. No independent live visual verification was inferred.
+
+Future Deborah QA communications: Adebare requested on 6 October that info@mahadum360.com be included in updates to Deborah. Parent will CC that address on future QA emails. This does not claim a roster email has been sent or alter the recipients of previously sent emails.

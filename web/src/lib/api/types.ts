@@ -1040,6 +1040,7 @@ export interface PayInvoiceResult {
 
 export interface RosterImportResult {
   created: number
+  matched?: number
   errors: { row: number; error: string }[]
 }
 
