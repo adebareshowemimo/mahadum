@@ -42,7 +42,11 @@ class LeagueService
     {
         $weekStart = Carbon::parse($league->week_start)->startOfDay();
 
-        $memberships = $league->memberships()->with('learnerProfile')->get();
+        // A learner can have legacy duplicate membership rows. Rank each profile
+        // once, keeping distinct profiles even when their display names match.
+        // Preserve the underlying records; XP still comes from that profile's ledger.
+        $memberships = $league->memberships()->with('learnerProfile')->orderBy('id')->get()
+            ->unique('learner_profile_id')->values();
 
         foreach ($memberships as $membership) {
             $xp = XpLedger::where('learner_profile_id', $membership->learner_profile_id)
