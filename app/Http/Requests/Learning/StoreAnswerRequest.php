@@ -16,6 +16,7 @@ class StoreAnswerRequest extends FormRequest
         return [
             'learner_id' => ['required', 'integer', 'exists:learner_profiles,id'],
             'question_id' => ['required', 'integer', 'exists:questions,id'],
+            'request_id' => ['required', 'string', 'max:128'],
             'answer' => ['required', 'array'], // {option_id} | {option_ids:[]} | {text}
             'time_ms' => ['nullable', 'integer', 'min:0'],
         ];

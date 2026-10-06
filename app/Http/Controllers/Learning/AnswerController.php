@@ -11,6 +11,7 @@ use App\Models\LessonComponent;
 use App\Models\Question;
 use App\Models\QuestionResponse;
 use App\Models\Quiz;
+use App\Models\QuizAnswerReceipt;
 use App\Models\QuizAttempt;
 use App\Models\XpLedger;
 use App\Services\Billing\EntitlementResolver;
@@ -44,6 +45,29 @@ class AnswerController extends Controller
             LearnerProfile::whereKey($learner->id)->lockForUpdate()->firstOrFail();
             $progress = $this->lessonProgress($learner, $component->lesson);
 
+            $requestId = (string) $request->input('request_id');
+            $fingerprint = hash('sha256', json_encode([
+                'component_id' => $component->id,
+                'question_id' => $question->id,
+                'answer' => $request->array('answer'),
+                'time_ms' => $request->integer('time_ms'),
+            ], JSON_THROW_ON_ERROR));
+            $receipt = QuizAnswerReceipt::where('learner_profile_id', $learner->id)
+                ->where('request_id', $requestId)->first();
+
+            // Durable replay protection must precede opening the next attempt.
+            // Learner authorization and current lesson/hearts access still apply.
+            if ($receipt !== null) {
+                if (! hash_equals($receipt->fingerprint, $fingerprint)) {
+                    return response()->json(['error' => [
+                        'code' => 'answer_request_conflict',
+                        'message' => 'This answer request ID has already been used for a different submission.',
+                    ]], 409);
+                }
+
+                return response()->json(['data' => $receipt->response])->header('Idempotency-Replayed', 'true');
+            }
+
             $attempt = $this->resolveAttempt($learner->id, $quiz);
 
             // Attempt cap reached (a replay past `max_attempts`): grade for practice
@@ -54,7 +78,7 @@ class AnswerController extends Controller
                     ? ['current' => null, 'practice_mode' => false, 'competitive_paused_until' => null]
                     : $practice->applyMistake($learner, false);
 
-                return response()->json(['data' => [
+                return $this->recordAnswer($learner->id, $requestId, $fingerprint, null, [
                     'correct' => $verdict['is_correct'],
                     'correct_answer' => $verdict['correct_answer'],
                     'explanation' => $verdict['explanation'],
@@ -64,7 +88,7 @@ class AnswerController extends Controller
                     'competitive_paused_until' => $heartState['competitive_paused_until'],
                     'xp_awarded' => 0,
                     'attempts_exhausted' => true,
-                ]]);
+                ]);
             }
 
             $existingResponse = QuestionResponse::where('quiz_attempt_id', $attempt->id)->where('question_id', $question->id)->first();
@@ -75,12 +99,9 @@ class AnswerController extends Controller
                 : $practice->applyMistake($learner, $countAnswer);
             $heartsLost = $unlimitedHearts ? 0 : max(0, $beforeHearts - $heartState['current']);
 
-            // XP for a question is earned once per learner, never re-farmed on replay.
-            $alreadyEarned = XpLedger::where('learner_profile_id', $learner->id)
-                ->where('source', 'quiz')
-                ->where('reference_type', Question::class)
-                ->where('reference_id', $question->id)
-                ->exists();
+            // Each permitted attempt earns one XP per correct question, including
+            // retries. Corrections/repeated answers inside that attempt earn once.
+            $alreadyEarned = ($existingResponse->xp_awarded ?? 0) > 0;
 
             QuestionResponse::updateOrCreate(
                 ['learner_profile_id' => $learner->id, 'question_id' => $question->id, 'quiz_attempt_id' => $attempt->id],
@@ -121,7 +142,7 @@ class AnswerController extends Controller
                 'score' => ['scaled' => $verdict['is_correct'] ? 1.0 : 0.0],
             ]);
 
-            return response()->json(['data' => [
+            return $this->recordAnswer($learner->id, $requestId, $fingerprint, $attempt->id, [
                 'correct' => $verdict['is_correct'],
                 'correct_answer' => $verdict['correct_answer'],
                 'explanation' => $verdict['explanation'],
@@ -131,8 +152,22 @@ class AnswerController extends Controller
                 'competitive_paused_until' => $heartState['competitive_paused_until'],
                 'xp_awarded' => $xpAwarded,
                 'attempts_exhausted' => false,
-            ]]);
+            ]);
         });
+    }
+
+    /** @param array<string, mixed> $data */
+    private function recordAnswer(int $learnerId, string $requestId, string $fingerprint, ?int $attemptId, array $data): JsonResponse
+    {
+        QuizAnswerReceipt::create([
+            'learner_profile_id' => $learnerId,
+            'request_id' => $requestId,
+            'fingerprint' => $fingerprint,
+            'quiz_attempt_id' => $attemptId,
+            'response' => $data,
+        ]);
+
+        return response()->json(['data' => $data]);
     }
 
     /**

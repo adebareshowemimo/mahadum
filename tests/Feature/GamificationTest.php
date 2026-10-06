@@ -37,7 +37,7 @@ class GamificationTest extends TestCase
         $correct = $question->options->firstWhere('is_correct', true);
 
         $this->postJson('/api/v1/enrollments', ['learner_id' => $learner->id, 'course_id' => $courseId])->assertCreated();
-        $this->postJson("/api/v1/components/{$quizC->id}/answer", [
+        $this->answerJson("/api/v1/components/{$quizC->id}/answer", [
             'learner_id' => $learner->id, 'question_id' => $question->id, 'answer' => ['option_id' => $correct->id],
         ])->assertOk();
         $this->postJson("/api/v1/lessons/{$lesson->id}/progress", [
@@ -80,12 +80,12 @@ class GamificationTest extends TestCase
         $question = $quiz->quiz->questions->first();
         $correct = $question->options->firstWhere('is_correct', true);
         foreach (range(1, 20) as $number) {
-            $this->postJson("/api/v1/components/{$quiz->id}/answer", [
+            $this->answerJson("/api/v1/components/{$quiz->id}/answer", [
                 'learner_id' => $learner->id, 'question_id' => $question->id,
                 'answer' => ['option_id' => $correct->id],
             ])->assertOk()->assertJsonPath('data.hearts_remaining', 5 - intdiv($number, 4));
         }
-        $this->postJson("/api/v1/components/{$quiz->id}/answer", [
+        $this->answerJson("/api/v1/components/{$quiz->id}/answer", [
             'learner_id' => $learner->id, 'question_id' => $question->id,
             'answer' => ['option_id' => $correct->id],
         ])->assertStatus(423)->assertJsonPath('error.code', 'hearts_exhausted');

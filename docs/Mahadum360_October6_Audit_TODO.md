@@ -33,7 +33,7 @@ Prepared hearts work is outside the release candidate: B19/F13 request wrong-ans
   Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
 
 - [ ] A07 · P1 · Retry XP and duplicate leaderboard · source IDs: F12, F14 · targets: 2026-10-07
-  F14a duplicate-membership board/rank subset implemented locally; 19 focused backend tests / 190 assertions and full 433 passed + one skipped / 2,372 assertions, Pint/PHPStan passed. Live Lucy IDs unverified; local confirmation/push/deployment/QA pending. F12 retry rewards conflict with the recorded September first-correct-only rule; existing behavior reproduced, rule decision pending. See Mahadum360_F14a_Local_Verification.md.
+  F14a duplicate-membership board/rank subset implemented locally; 19 focused backend tests / 190 assertions and full 433 passed + one skipped / 2,372 assertions, Pint/PHPStan passed. Live Lucy IDs unverified; local confirmation/push/deployment/QA pending. F12 now has explicit user approval for per-attempt quiz XP and a separate tested local candidate. See Mahadum360_F12_Local_Verification.md; F12 commit/push explicitly authorized at 21:05 UTC on 6 October; delivery recorded in release handoff. Local acceptance/deployment/QA pending. See Mahadum360_F14a_Local_Verification.md.
 
 - [ ] A08 · P1 · Hearts: decision on October audit versus approved September rule · source IDs: B19, F13 · targets: 2026-10-07
   Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
@@ -926,7 +926,7 @@ Audit status: Partial. Tested: Leaderboard shows cumulative XP (4 Sep).
 Audit evidence: The leaderboard now has a "total XP" field next to weekly XP. With the family account, the leaderboard shows weekly and total XP for 4 learners. Bug: Lucy Okafor appears twice (16 total XP each). Adding up across attempts could not be confirmed because retries earned no XP.
 Requested action: Remove the duplicate Lucy Okafor leaderboard entry; after the retry-XP fix, confirm totals add up across attempts.
 - [ ] C — F14a duplicate-membership subset ready locally; entire live Lucy reconciliation remains open until learner IDs are known. Distinct same-name profiles preserved.
-- [x] T — F14a isolated duplicate board/rank regressions passed; 19 focused tests / 190 assertions, full 433 passed + one skipped / 2,372 assertions, Pint/PHPStan. Live Lucy and authenticated browser pixels not verified; F12 totals after changed rewards pending rule decision.
+- [x] T — F14a isolated duplicate board/rank regressions passed; 19 focused tests / 190 assertions, full 433 passed + one skipped / 2,372 assertions, Pint/PHPStan. Live Lucy and authenticated browser pixels not verified; F12 isolated leaderboard totals verified at 6 after +4/+2; human local/live acceptance remains pending.
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -1472,7 +1472,7 @@ Future Deborah QA communications: Adebare requested on 6 October that info@mahad
 - [ ] D - F14a not deployed.
 - [ ] Q - F14a Deborah QA not requested; parent owns future email and CC info@mahadum360.com.
 
-See Mahadum360_F14a_Local_Verification.md. F12 decision remains narrow: whether October's one XP per correct answer on each permitted quiz attempt supersedes September's first-correct-per-question rule. Preserve network retry idempotence, attempt caps, one-time lesson replay XP and existing hearts gates absent separate instruction. No speculative reward change or anti-farming cap introduced. B18-A activity-start gap is independently reproduced and left for a separate component-completion fix; weekly/monthly tiers and October 15 B18 protection remain open.
+See Mahadum360_F14a_Local_Verification.md. F12's previously pending narrow rule decision was explicitly resolved by the user on 6 October; the separate F12 candidate below implements that supersession. Preserve network retry idempotence, attempt caps, one-time lesson replay XP and existing hearts gates absent separate instruction. No speculative reward change or anti-farming cap introduced. B18-A activity-start gap is independently reproduced and left for a separate component-completion fix; weekly/monthly tiers and October 15 B18 protection remain open.
 
 Latest roster communications, 6 October: Adebare reports deploying e834d49. Parent confirms Deborah QA email sent and verified in Sent Items at 17:37:33 UTC, with CC info@mahadum360.com, including invalid-row no-side-effect and positive matching checks. Deployment is user-reported, not independent live verification or local acceptance. Deborah pass/fail pending. This agent sent no email and performed no production action.
 
@@ -1485,4 +1485,17 @@ Latest roster communications, 6 October: Adebare reports deploying e834d49. Pare
 - [ ] D - INV-PROMO-1 not deployed; user owns server.
 - [ ] Q - No INV-PROMO-1 Deborah email; parent owns QA after confirmed deployment and will CC info@mahadum360.com.
 
-See Mahadum360_INV_PROMO_1_Local_Verification.md. F31 original Met/Done and missing B35 reconciliation remain explicit. No invoices, balances or seat allocations suppressed/deleted; no real code applied, charge, payout or notification. Existing overwritten invoice lines and cached PDFs require evidence-backed review rather than automatic repair. F12 rewards and B18-A activity triggers remain undecided/separate; hearts are unchanged. F32 school-wide join would be a new enrollment flow. A wording-only F34 Individual-label subset is identifiable but not changed in this candidate.
+See Mahadum360_INV_PROMO_1_Local_Verification.md. F31 original Met/Done and missing B35 reconciliation remain explicit. No invoices, balances or seat allocations suppressed/deleted; no real code applied, charge, payout or notification. Existing overwritten invoice lines and cached PDFs require evidence-backed review rather than automatic repair. F12 rewards are explicitly approved and implemented in the separate local candidate below; B18-A activity triggers remain separate; hearts are unchanged. F32 school-wide join would be a new enrollment flow. A wording-only F34 Individual-label subset is identifiable but not changed in this candidate.
+
+## Seventh local candidate - F12 permitted quiz retry XP
+
+- [x] C - Explicit user rule approval: one XP per correct answer on each permitted quiz attempt, including retries. Implemented with durable learner-scoped answer receipts and client request identity renewal for deliberate retries. Local empty receipt-table migration applied; all 109 existing local table counts unchanged, receipts zero. No historical reward backfill.
+- [x] T - Eight new F12 backend regressions; initial six failed before repair. Full backend 447 passed + one skipped out of 448 / 2,570 assertions; final focused 32 / 375. Full frontend 271 passed / 50 files; typecheck/build, Pint/PHPStan and whitespace passed. Authenticated player pixels not run; no local customer answer submitted.
+- [ ] L - Adebare local confirmation pending. See Mahadum360_F12_Local_Verification.md for eight-case isolated test and local /learn +4 then +2 UI steps; fixture gaps must be marked BLOCKED.
+- [x] Commit/push authorization - Adebare explicitly instructed “commit and push” for this completed F12 candidate at 21:05 UTC on 6 October. Separate focused release; exact delivery SHA and origin verification in release handoff. This authorization does not fabricate local human acceptance or production deployment. Prior F14a ba96ac7 and INV-PROMO-1 0f66c3f remain intact; deployment/live acceptance pending.
+- [ ] D - F12 not deployed; user owns production. Migration must precede coordinated API/SPA release; old clients need reload for required request_id. Keep receipts and legitimate XP history on rollback.
+- [ ] Q - F12 live QA not requested by this agent; parent owns email with CC info@mahadum360.com after the deployment gate.
+
+October 6 communications update: parent reports a Deborah readiness email for the already-pushed F14a/INV-PROMO-1 candidates with CC info@mahadum360.com at 19:52 UTC. That email explicitly says deployment confirmation is pending and XP is still in progress. It is recorded as readiness communication only, not a production release, local acceptance or Deborah live QA pass. This agent sent no email and made no production change.
+
+F12 QA source reference verified from the full Library extraction: workbook Mahadum360 Test Results - Fix by 7 Oct 2026.xlsx, sheet Test Results, audit ID F12, extracted zero-based index 77. Physical Excel row is UNVERIFIED: the extraction has no certified coordinate mapping and original XLSX materialization is blocked by the Windows os.setxattr transfer-helper limitation. Do not infer a physical row from the audit ID/index. Future handoffs must include these references or the explicit coordinate limitation.

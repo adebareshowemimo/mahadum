@@ -1,11 +1,15 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SlideDeck } from './SlideDeck'
 import type { PlayerService, QuizSlide } from './types'
 
+const grading = vi.hoisted(() => ({ correct: true }))
+
+beforeEach(() => { grading.correct = true })
+
 vi.mock('./slides', () => ({
   SlideView: ({ onGraded, onAdvance }: { onGraded: (correct: boolean, xp: number) => void; onAdvance: () => void }) => (
-    <button onClick={() => { onGraded(true, 1); onAdvance() }}>Answer correctly</button>
+    <button onClick={() => { onGraded(grading.correct, grading.correct ? 1 : 0); onAdvance() }}>Answer correctly</button>
   ),
 }))
 
@@ -15,8 +19,8 @@ const questions: QuizSlide[] = [1, 2].map((id) => ({
   passThreshold: 0.7, completed: id === 1, wasCorrect: id === 1,
 }))
 
-function mount() {
-  render(<SlideDeck title="Quiz" slides={questions} service={{} as PlayerService} initialHearts={5}
+function mount(service = {} as PlayerService) {
+  render(<SlideDeck title="Quiz" slides={questions} service={service} initialHearts={5}
     startIndex={1} initialCorrect={1} onExit={() => {}} renderComplete={() => <p>Lesson finished</p>} />)
 }
 
@@ -36,5 +40,28 @@ describe('quiz summaries', () => {
     fireEvent.click(screen.getByText('Answer correctly'))
     expect(screen.getByText('2 out of 2 correct')).toBeInTheDocument()
     expect(screen.getByText(/100% · 2 answered/)).toBeInTheDocument()
+  })
+})
+
+describe('deliberate retry identity resets', () => {
+  it('keeps resumed requests but renews quiz requests when Retry is chosen', () => {
+    const retryQuiz = vi.fn()
+    mount({ retryQuiz } as unknown as PlayerService)
+    fireEvent.click(screen.getByRole('button', { name: /resume/i }))
+    expect(retryQuiz).not.toHaveBeenCalled()
+    grading.correct = false
+    fireEvent.click(screen.getByText('Answer correctly'))
+    fireEvent.click(screen.getByRole('button', { name: /^retry quiz$/i }))
+    expect(retryQuiz).toHaveBeenCalledTimes(1)
+    expect(retryQuiz).toHaveBeenCalledWith(10)
+    expect(screen.getByText('Answer correctly')).toBeInTheDocument()
+  })
+
+  it('renews each quiz once when starting over', () => {
+    const retryQuiz = vi.fn()
+    mount({ retryQuiz } as unknown as PlayerService)
+    fireEvent.click(screen.getByRole('button', { name: /start over/i }))
+    expect(retryQuiz).toHaveBeenCalledTimes(1)
+    expect(retryQuiz).toHaveBeenCalledWith(10)
   })
 })

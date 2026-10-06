@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\QuizAttempt;
 use App\Models\XpLedger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\Concerns\MakesContent;
 use Tests\TestCase;
 
@@ -27,13 +28,13 @@ class QuizScoringFeedbackTest extends TestCase
         }
         $questions = $quiz->questions()->with('options')->orderBy('position')->get();
         foreach ($questions as $index => $question) {
-            $payload = ['learner_id' => $learner->id, 'question_id' => $question->id,
+            $payload = ['request_id' => Str::uuid()->toString(), 'learner_id' => $learner->id, 'question_id' => $question->id,
                 'answer' => ['option_id' => $question->options->firstWhere('is_correct', $index < 9)->id]];
-            $this->postJson("/api/v1/components/{$component->id}/answer", $payload)->assertOk()
+            $this->answerJson("/api/v1/components/{$component->id}/answer", $payload)->assertOk()
                 ->assertJsonPath('data.xp_awarded', $index < 9 ? 1 : 0);
             if ($index === 0) {
                 // Network retry within the open attempt must not double-count hearts or XP.
-                $this->postJson("/api/v1/components/{$component->id}/answer", $payload)->assertOk()->assertJsonPath('data.xp_awarded', 0);
+                $this->answerJson("/api/v1/components/{$component->id}/answer", $payload)->assertOk()->assertHeader('Idempotency-Replayed', 'true')->assertJsonPath('data.xp_awarded', 1);
                 $this->getJson("/api/v1/lessons/{$lesson->id}/play?learner_id={$learner->id}")->assertOk()
                     ->assertJsonPath('data.components.1.quiz.questions.0.xp_awarded', 1)
                     ->assertJsonPath('data.components.1.quiz.questions.0.was_correct', true);

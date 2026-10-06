@@ -411,12 +411,14 @@ export const learningApi = {
     componentId: number
     learnerId: number
     questionId: number
+    requestId: string
     answer: Record<string, unknown>
     timeMs?: number
   }): Promise<AnswerResult> {
     const { data } = await api.post(`/components/${input.componentId}/answer`, {
       learner_id: input.learnerId,
       question_id: input.questionId,
+      request_id: input.requestId,
       answer: input.answer,
       time_ms: input.timeMs ?? 0,
     })

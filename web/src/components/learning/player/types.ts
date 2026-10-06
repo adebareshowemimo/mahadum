@@ -320,6 +320,8 @@ export interface VideoTrack {
 
 export interface PlayerService {
   readonly isPreview: boolean
+  /** Begin a deliberate quiz retry with fresh answer request identities. */
+  retryQuiz?(componentId: number): void
   gradeQuiz(slide: QuizSlide, answer: Answer): Promise<Verdict>
   completeStep(slide: Slide): Promise<void>
   submitSpeaking(slide: SpeakingSlide, audio: Blob | null): Promise<void>
@@ -339,14 +341,26 @@ function answerPayload(answer: Answer): Record<string, unknown> {
 }
 
 export function createLiveService(lessonId: number, learnerId: number): PlayerService {
+  const requests = new Map<number, Map<string, string>>()
   return {
     isPreview: false,
+    retryQuiz(componentId) {
+      requests.delete(componentId)
+    },
     async gradeQuiz(slide, answer) {
+      const payload = answerPayload(answer)
+      const key = JSON.stringify([slide.questionId, payload])
+      const componentRequests = requests.get(slide.componentId) ?? new Map<string, string>()
+      requests.set(slide.componentId, componentRequests)
+      // Keep the ID after a lost response; explicit Retry/Start over renews it.
+      const requestId = componentRequests.get(key) ?? crypto.randomUUID()
+      componentRequests.set(key, requestId)
       const res: AnswerResult = await learningApi.answer({
         componentId: slide.componentId,
         learnerId,
         questionId: slide.questionId,
-        answer: answerPayload(answer),
+        answer: payload,
+        requestId,
       })
       return {
         correct: res.correct,

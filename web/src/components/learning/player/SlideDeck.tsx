@@ -74,6 +74,11 @@ export function SlideDeck({
   const canResume = startIndex > 0 && startIndex < total
 
   function begin(fromIndex: number, fromCorrect: number) {
+    if (fromIndex === 0) {
+      for (const componentId of new Set(slides.filter((slide) => slide.kind === 'quiz').map((slide) => slide.componentId))) {
+        service.retryQuiz?.(componentId)
+      }
+    }
     const resumed: Record<number, QuizRun> = {}
     for (const slide of slides.slice(0, fromIndex)) {
       if (slide.kind !== 'quiz' || !slide.completed) continue
@@ -128,6 +133,7 @@ export function SlideDeck({
   }
 
   function retryQuiz(componentId: number, fromIndex: number) {
+    service.retryQuiz?.(componentId)
     const run = quizRuns[componentId]
     if (run) setCorrect((value) => Math.max(0, value - run.correct))
     setQuizRuns((runs) => {

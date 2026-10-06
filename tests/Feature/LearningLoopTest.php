@@ -33,7 +33,7 @@ class LearningLoopTest extends TestCase
             ->assertCreated()->assertJsonPath('data.path.0.state', 'active');
 
         // answer correct → graded server-side, xp awarded
-        $this->postJson("/api/v1/components/{$quizC->id}/answer", [
+        $this->answerJson("/api/v1/components/{$quizC->id}/answer", [
             'learner_id' => $learner->id, 'question_id' => $question->id, 'answer' => ['option_id' => $correct->id],
         ])->assertOk()->assertJsonPath('data.correct', true)->assertJsonPath('data.xp_awarded', 1);
 
@@ -67,7 +67,7 @@ class LearningLoopTest extends TestCase
         $question = $quizC->quiz->questions->first();
         $wrong = $question->options->firstWhere('is_correct', false);
 
-        $this->postJson("/api/v1/components/{$quizC->id}/answer", [
+        $this->answerJson("/api/v1/components/{$quizC->id}/answer", [
             'learner_id' => $learner->id, 'question_id' => $question->id, 'answer' => ['option_id' => $wrong->id],
         ])->assertOk()->assertJsonPath('data.correct', false)->assertJsonPath('data.xp_awarded', 0);
     }
@@ -102,7 +102,7 @@ class LearningLoopTest extends TestCase
             'started_at' => now(),
         ]);
 
-        $this->postJson("/api/v1/components/{$quizComponent->id}/answer", [
+        $this->answerJson("/api/v1/components/{$quizComponent->id}/answer", [
             'learner_id' => $learner->id,
             'question_id' => $question->id,
             'answer' => ['option_id' => $wrong->id],

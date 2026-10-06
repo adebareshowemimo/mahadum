@@ -1081,16 +1081,21 @@ paths:
     post:
       tags: [Learning]
       summary: Submit a quiz answer (graded)
+      description: One XP per correct question per permitted attempt, including quiz retries. Identical request replay returns the original result without another award; learner and current access checks still apply.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [learner_id, question_id, answer]
+              required: [learner_id, question_id, request_id, answer]
               properties:
                 learner_id: { type: integer }
                 question_id: { type: integer }
+                request_id:
+                  type: string
+                  maxLength: 128
+                  description: Stable unique identity for this submission. Reuse on transport retry; renew for a deliberate quiz retry. Reusing it with different content returns 409.
                 answer:
                   type: object
                   description: "One of { option_id } | { option_ids: [] } | { text }"
@@ -1113,6 +1118,8 @@ paths:
                       hearts_remaining: { type: integer, nullable: true, description: "Null when the learner has unlimited hearts" }
                       unlimited_hearts: { type: boolean }
                       xp_awarded: { type: integer }
+        "409":
+          description: Answer request identity reused with different content.
         "422": { $ref: "#/components/responses/ValidationError" }
 
   /lessons/{lesson}/complete:

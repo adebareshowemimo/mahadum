@@ -30,7 +30,7 @@ class CoursePerformanceTest extends TestCase
         $question = $quizC->quiz->questions->first();
         $correct = $question->options->firstWhere('is_correct', true);
         $this->actingAsUser($parent);
-        $this->postJson("/api/v1/components/{$quizC->id}/answer", [
+        $this->answerJson("/api/v1/components/{$quizC->id}/answer", [
             'learner_id' => $learner->id, 'question_id' => $question->id, 'answer' => ['option_id' => $correct->id],
         ])->assertOk();
 

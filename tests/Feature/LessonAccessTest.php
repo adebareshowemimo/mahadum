@@ -29,7 +29,7 @@ class LessonAccessTest extends TestCase
         $quiz = $lesson->components->firstWhere('type', 'quiz');
         $question = $quiz->quiz->questions->first();
         $this->getJson("/api/v1/lessons/{$lesson->id}/play?learner_id={$learner->id}")->assertForbidden();
-        $this->postJson("/api/v1/components/{$quiz->id}/answer", [
+        $this->answerJson("/api/v1/components/{$quiz->id}/answer", [
             'learner_id' => $learner->id, 'question_id' => $question->id,
             'answer' => ['option_id' => $question->options->first()->id],
         ])->assertForbidden();

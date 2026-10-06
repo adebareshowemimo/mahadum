@@ -38,7 +38,7 @@ class QuizResumeTest extends TestCase
         $this->assertNull($before->json('data.components.1.quiz.questions.0.was_correct'));
 
         // Answer the first question correctly (attempt stays open — 1 of 2).
-        $this->postJson("/api/v1/components/{$quizComponent->id}/answer", [
+        $this->answerJson("/api/v1/components/{$quizComponent->id}/answer", [
             'learner_id' => $learner->id,
             'question_id' => $first->id,
             'answer' => ['option_id' => $firstCorrect->id],

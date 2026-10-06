@@ -23,7 +23,7 @@ class QuizAttemptCapTest extends TestCase
         $question = $quizC->quiz->questions->first();
         $correct = $question->options->firstWhere('is_correct', true);
 
-        $answer = fn () => $this->postJson("/api/v1/components/{$quizC->id}/answer", [
+        $answer = fn () => $this->answerJson("/api/v1/components/{$quizC->id}/answer", [
             'learner_id' => $learner->id, 'question_id' => $question->id, 'answer' => ['option_id' => $correct->id],
         ]);
 
@@ -45,7 +45,7 @@ class QuizAttemptCapTest extends TestCase
         $this->assertSame(1, XpLedger::where('source', 'quiz')->count());
     }
 
-    public function test_unlimited_attempts_start_a_new_attempt_but_never_re_farm_xp(): void
+    public function test_unlimited_attempts_start_a_new_attempt_and_earn_correct_answer_xp_again(): void
     {
         $this->seedRbac();
         $parent = $this->actingAsUser($this->userWithRole('parent'));
@@ -56,15 +56,15 @@ class QuizAttemptCapTest extends TestCase
         $question = $quizC->quiz->questions->first();
         $correct = $question->options->firstWhere('is_correct', true);
 
-        $answer = fn () => $this->postJson("/api/v1/components/{$quizC->id}/answer", [
+        $answer = fn () => $this->answerJson("/api/v1/components/{$quizC->id}/answer", [
             'learner_id' => $learner->id, 'question_id' => $question->id, 'answer' => ['option_id' => $correct->id],
         ]);
 
         $answer()->assertOk()->assertJsonPath('data.xp_awarded', 1)->assertJsonPath('data.attempts_exhausted', false);
-        // A replay starts a second scored attempt, but XP for the question isn't re-earned.
-        $answer()->assertOk()->assertJsonPath('data.xp_awarded', 0)->assertJsonPath('data.attempts_exhausted', false);
+        // An intentional permitted retry earns one XP per correct question again.
+        $answer()->assertOk()->assertJsonPath('data.xp_awarded', 1)->assertJsonPath('data.attempts_exhausted', false);
 
         $this->assertDatabaseCount('quiz_attempts', 2);
-        $this->assertSame(1, XpLedger::where('source', 'quiz')->count());
+        $this->assertSame(2, XpLedger::where('source', 'quiz')->count());
     }
 }

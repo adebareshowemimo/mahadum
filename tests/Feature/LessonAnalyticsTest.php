@@ -22,7 +22,7 @@ class LessonAnalyticsTest extends TestCase
         $correct = $question->options->firstWhere('is_correct', true);
 
         // A learner answers the quiz question → generates progress + a response.
-        $this->postJson("/api/v1/components/{$quizC->id}/answer", [
+        $this->answerJson("/api/v1/components/{$quizC->id}/answer", [
             'learner_id' => $learner->id, 'question_id' => $question->id, 'answer' => ['option_id' => $correct->id],
         ])->assertOk();
 
