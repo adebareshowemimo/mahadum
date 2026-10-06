@@ -737,7 +737,7 @@ function AiPromptDisclosure({ label, prompt }: { label: string; prompt: string }
   }
   return (
     <details className="rounded-xl border border-border bg-surface-muted px-3 py-2 text-sm">
-      <summary className="cursor-pointer font-medium text-foreground">\u2728 {label} with AI (ChatGPT / Claude)</summary>
+      <summary className="cursor-pointer font-medium text-foreground">✨ {label} with AI (ChatGPT / Claude)</summary>
       <div className="mt-2 flex flex-col gap-2">
         <p className="text-muted">
           Copy this prompt, fill in the [bracketed] parts, and paste it into ChatGPT or Claude. Paste the reply back into the

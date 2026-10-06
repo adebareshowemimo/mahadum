@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { ConceptHeader } from '@/components/landing/ConceptHeader'
 import { Logo } from '@/components/Logo'
-import { TAGLINE, WORDMARK } from '@/lib/brand'
+import { DISPLAY_NAME, TAGLINE } from '@/lib/brand'
 import { cn } from '@/lib/cn'
 
 /**
@@ -102,7 +102,7 @@ export function AuthLayout({
                 {TAGLINE}
               </p>
               <p className="mt-2 text-center text-xs text-navy-400">
-                © {WORDMARK} · {new Date().getFullYear()} · Lagos, Nigeria
+                © {DISPLAY_NAME}, RC 9601595 · {new Date().getFullYear()} · Lagos, Nigeria
               </p>
             </div>
           </section>
@@ -127,7 +127,7 @@ export function AuthLayout({
 
         {footer && <div className="mt-6 text-center text-sm text-muted">{footer}</div>}
         <p className="mt-6 text-center text-xs text-muted">
-          © {WORDMARK} · {new Date().getFullYear()} · Lagos, Nigeria
+          © {DISPLAY_NAME}, RC 9601595 · {new Date().getFullYear()} · Lagos, Nigeria
         </p>
       </div>
     </div>

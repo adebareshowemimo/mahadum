@@ -38,7 +38,7 @@ class PricingController extends Controller
         return response()->json(['data' => [
             'free' => [
                 'name' => 'Free',
-                'blurb' => 'Full learning, forever. Ad-supported.',
+                'blurb' => 'Level 0 free, forever. Ad-supported.',
             ],
             'consumer' => $consumer,
             'school' => [

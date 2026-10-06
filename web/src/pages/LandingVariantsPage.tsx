@@ -705,7 +705,7 @@ export function SchoolQuoteSection({ id }: { id?: string }) {
             <CheckLine>CSV roster import with row-level errors</CheckLine>
             <CheckLine>Classes, seats, assignments and learner analytics</CheckLine>
             <CheckLine>Invoices, receipts and referral earnings</CheckLine>
-            <CheckLine>Language & Culture club and competition entry</CheckLine>
+            <CheckLine>language and culture club and competition entry</CheckLine>
           </ul>
         </Reveal>
         <Reveal delay={80}>

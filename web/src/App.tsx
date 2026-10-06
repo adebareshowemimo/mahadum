@@ -8,6 +8,7 @@ import { Spinner } from '@/components/ui/Spinner'
 // .map() below, so lazy-loading it would mean one chunk request per placeholder.
 import { ComingSoon } from '@/pages/ComingSoon'
 import { allNavItems } from '@/lib/nav/navigation'
+import { DISPLAY_NAME } from '@/lib/brand'
 
 // Every real page is route-split. All page components are named exports, hence
 // the `.then(m => ({ default: m.X }))` shim React.lazy requires.
@@ -136,7 +137,7 @@ function PageTitleManager() {
     if (!title && /^\/assignments\/\d+/.test(pathname)) title = 'Assignment Review'
     if (!title && pathname.startsWith('/admin/')) title = 'Administration'
     if (!title && pathname.startsWith('/courses/')) title = 'Course'
-    document.title = `${title ?? 'MAHADUM.360'} · MAHADUM.360`
+    document.title = title ? `${title} · ${DISPLAY_NAME}` : DISPLAY_NAME
   }, [pathname])
 
   return null

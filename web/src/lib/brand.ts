@@ -1,6 +1,9 @@
 // Canonical brand strings. Import these instead of hardcoding copy so the
 // wordmark and tagline stay consistent everywhere (auth screens, landing, meta).
 
+/** Public display name used in browser titles and legal footers. */
+export const DISPLAY_NAME = 'Mahadum360'
+
 /** Canonical wordmark (with the dot). */
 export const WORDMARK = 'MAHADUM.360'
 

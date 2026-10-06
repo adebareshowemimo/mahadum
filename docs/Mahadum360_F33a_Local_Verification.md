@@ -1,6 +1,6 @@
 # F33a local confirmation: Assign teacher validation
 
-Ready local implementation on 6 October 2026, based on verified origin commit e183525efad014a0e75285781ac03d078ba61190 on codex/beta-feedback-20260903. This is a distinct follow-up to F24a. Adebare authorized its commit and origin push with "commit and push to origin"; manual local acceptance and live deployment are still pending. The exact commit SHA and remote verification result are reported in the task handoff. The user owns server deployment. Parent sends Deborah QA only after confirmed live deployment.
+Ready local implementation on 6 October 2026, based on verified origin commit e183525efad014a0e75285781ac03d078ba61190 on codex/beta-feedback-20260903. This is a distinct follow-up to F24a. Adebare authorized its commit and origin push with "commit and push to origin"; manual local acceptance is still pending; deployment is user-reported on 6 October and not independently verified live. The exact commit SHA and remote verification result are reported in the task handoff. The user owns server deployment. Parent sends Deborah QA only after confirmed live deployment.
 
 Source F33: assignment control subset, priority P1, intended date 7 October. Dependencies B13/B30/F29 remain open beyond this unblocker; no teacher invitation/onboarding or school-admin assignment creation access is added.
 
@@ -8,8 +8,10 @@ Source F33: assignment control subset, priority P1, intended date 7 October. Dep
 - [x] T - 27 relevant backend tests passed (125 assertions). Full Pint and PHPStan passed. Full backend suite passed: 422 passed and one skipped out of 423; 2,270 assertions. The existing environment-dependent SendGrid/OpenSSL EC verification limitation remains recorded in the F24a baseline. Whitespace checks passed. Local /up and SPA /school returned HTTP 200. Browser assignment remains pending.
 - [ ] L - Adebare's local acceptance.
 - [x] Origin authorization - Adebare authorized this commit/push; verify remote delivery against the task handoff.
-- [ ] D - User deployment and live release confirmation.
-- [ ] Q - Deborah QA through parent after live deployment confirmation.
+- [x] Origin push - 1407fdf1e400d8a7bafe9599bdacf0fe274aed8d verified on codex/beta-feedback-20260903; no branch-push CI run triggered.
+- [x] D - USER-REPORTED deployment on 6 October; not independently verified live.
+- [x] QA email - Parent confirms sent 6 October, 16:01 UTC.
+- [ ] Q - Deborah live acceptance pending.
 
 ## Reproduction and scope
 
@@ -41,3 +43,6 @@ SHA-256 of tested files:
 - ClassTeacherAssignmentTest.php: EDADF771AD6ECAED72273C8B6126D7C63AA6F84979512953D4AF02F9047C1E68
 
 F24a remote remains e183525efad014a0e75285781ac03d078ba61190; F33a commit/push is authorized; the final task handoff records the exact delivery result. No production deployment or email is performed by this task. Independent tmp/ and the hearts patch outside the repository are preserved.
+
+
+Release/QA status update, 6 October: User reported deploying F24a and F33a on 6 October 2026. This is user-reported deployment, not independent live verification or local manual acceptance. Parent confirmed the corporate Outlook QA email to Deborah was sent on 6 October at 16:01 UTC, with no CC. It covers F24a/F33a controlled live checks and a separate Lucy retest. Deborah acceptance is pending. Parent-reported sent-message suffix: AAJ2zw1BAAA=.

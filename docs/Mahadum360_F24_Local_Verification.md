@@ -6,8 +6,9 @@ Ready locally on 6 October 2026. This is the first independently confirmable par
 - [x] T — Six new regressions pass within the 35-test relevant backend run (139 assertions). Pint and PHPStan pass. All 264 frontend tests pass; TypeScript and build pass; whitespace check passes.
 - [x] Origin push - `e183525efad014a0e75285781ac03d078ba61190` verified on `origin/codex/beta-feedback-20260903`, 6 October; non-force push.
 - [ ] L — Adebare confirms this specific local fix.
-- [ ] D — User deploys the pushed candidate and confirms the live release.
-- [ ] Q — Parent sends Deborah's live test steps; Deborah reports acceptance.
+- [x] D — USER-REPORTED deployment on 6 October; not independently verified live.
+- [x] QA email — Parent confirms sent 6 October, 16:01 UTC.
+- [ ] Q — Deborah live acceptance pending, including Lucy retest.
 
 ## What was reproduced
 
@@ -46,4 +47,7 @@ After explicit local confirmation and authorized host access, inspect the live c
 - Hearts changed rule, W5, W15 and other decision-gated roadmap work are outside this candidate.
 
 
-CI handoff: no Actions runs, check runs or status contexts were attached to e183525 at verification. `.github/workflows/ci.yml` triggers pushes only on main/develop, plus pull requests. This is not a CI pass. Local acceptance and live deployment/QA remain pending. The follow-up F33a teacher assignment change is separate; Adebare has now authorized its commit and origin push. Its exact delivery result is recorded in the task handoff; local acceptance and live deployment/QA remain pending.
+CI handoff: no Actions runs, check runs or status contexts were attached to e183525 at verification. `.github/workflows/ci.yml` triggers pushes only on main/develop, plus pull requests. This is not a CI pass. Local acceptance is pending; deployment is user-reported on 6 October; independent live verification and Deborah acceptance remain pending. The follow-up F33a teacher assignment change is separate; Adebare has now authorized its commit and origin push. Its exact delivery result is recorded in the task handoff; local acceptance remains pending; deployment is user-reported, and live verification/Deborah acceptance remain pending.
+
+
+Release/QA status update, 6 October: User reported deploying F24a and F33a on 6 October 2026. This is user-reported deployment, not independent live verification or local manual acceptance. Parent confirmed the corporate Outlook QA email to Deborah was sent on 6 October at 16:01 UTC, with no CC. It covers F24a/F33a controlled live checks and a separate Lucy retest. Deborah acceptance is pending. Parent-reported sent-message suffix: AAJ2zw1BAAA=.
