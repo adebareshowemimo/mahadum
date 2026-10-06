@@ -12,6 +12,7 @@ use App\Models\Referral;
 use App\Models\ReferralCode;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Family\ParentFamilyProvisioner;
 use App\Services\Referral\ReferralService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
@@ -108,6 +109,10 @@ class UserController extends Controller
             ]);
 
             $user->assignRole($data['role']);
+
+            if ($data['role'] === 'parent') {
+                app(ParentFamilyProvisioner::class)->ensureFor($user);
+            }
 
             if ($organizationId !== null) {
                 OrganizationUser::create([
@@ -224,7 +229,16 @@ class UserController extends Controller
         }
 
         $before = $user->getRoleNames()->all();
-        $action === 'assign' ? $user->assignRole($role) : $user->removeRole($role);
+        DB::transaction(function () use ($user, $role, $action): void {
+            if ($action === 'assign') {
+                $user->assignRole($role);
+                if ($role === 'parent') {
+                    app(ParentFamilyProvisioner::class)->ensureFor($user);
+                }
+            } else {
+                $user->removeRole($role);
+            }
+        });
 
         $this->audit->record(
             'user.role_'.$action,
