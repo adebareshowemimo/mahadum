@@ -6,7 +6,7 @@ Gate order for EACH source ID: code/finding → tests → Adebare local confirma
 
 Reconciliation: 125 detail rows = 55 Met + 41 Partial + 22 Not met + 7 Cannot verify. Summary reports 124/40 Partial because it omits the unlabelled streak row. B18-A below names Test Results index 17 (Excel row 19); activity start/tiers due October 7. B18 grace/Shield is October 15. B35 is absent and stays explicitly unresolved. Detail dates override the stale all-October-7 summary: 61 October 7, four October 15, six Phase 2, 54 Done.
 
-Release handoff update (6 October): Adebare instructed "Just push to origin, I will deploy myself on the server." Commit and origin push are authorized now. Local acceptance, user-performed production deployment and Deborah QA remain pending and are separate states. The agent will not deploy or seek host credentials. The parent sends Deborah QA only after live deployment is confirmed.
+Release handoff update (6 October): Adebare instructed "Just push to origin, I will deploy myself on the server." The F24a commit and origin push were authorized and completed; this is not blanket push authorization for later candidates. Local acceptance, user-performed production deployment and Deborah QA remain pending and are separate states. The agent will not deploy or seek host credentials. The parent sends Deborah QA only after live deployment is confirmed.
 
 First local release candidate: F24 parent provisioning on Admin create/grant. It addresses a reproduced missing-family path, not a verified repair of live Lucy. Existing household ownership, learners, wallets and deleted households are preserved. No production record is automatically relinked.
 
@@ -18,7 +18,7 @@ Prepared hearts work is outside the release candidate: B19/F13 request wrong-ans
   Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
 
 - [ ] A02 · P1 · School teachers, membership and identities · source IDs: B33, F33, F34 · targets: 2026-10-07
-  Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
+  Code/change: F33a teacher assignment subset ready locally; tests: 27 relevant backend tests passed, full backend: 422 passed / one skipped out of 423, 2,270 assertions; local confirmation: pending; origin push: authorized by Adebare; exact delivery result in task handoff; production: not deployed; Deborah: not requested. Other work in this group remains open.
 
 - [ ] A03 · P1 · Roster email and validation · source IDs: B28, F30 · targets: 2026-10-07
   Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
@@ -27,7 +27,7 @@ Prepared hearts work is outside the release candidate: B19/F13 request wrong-ans
   Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
 
 - [ ] A05 · P1 · Assignments and teacher analytics · source IDs: B13, B30, F29, B29 · targets: 2026-10-07
-  Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
+  Code/change: F33a teacher assignment subset ready locally; tests: 27 relevant backend tests passed, full backend: 422 passed / one skipped out of 423, 2,270 assertions; local confirmation: pending; origin push: authorized by Adebare; exact delivery result in task handoff; production: not deployed; Deborah: not requested. Other work in this group remains open.
 
 - [ ] A06 · P1 · Buy data and coordinated adverts · source IDs: B48, F23, F22 · targets: 2026-10-07
   Code/change: pending; tests: not run; local confirmation: pending; production: not deployed; Deborah: not requested.
@@ -1383,7 +1383,7 @@ Requested action: No action needed.
 
 ## Release and rollback
 
-Verified local repository C:/xampp/htdocs/mahamu360, branch codex/beta-feedback-20260903, origin https://github.com/adebareshowemimo/mahadum.git, worktree HEAD e82c1bf. Independent untracked tmp/ preserved. No .agents or nested AGENTS.md found; root AGENTS.md read.
+Verified local repository C:/xampp/htdocs/mahamu360, branch codex/beta-feedback-20260903, origin https://github.com/adebareshowemimo/mahadum.git, F24a base e82c1bf; F33a reviewed base e183525 (verified F24a origin push). Independent untracked tmp/ preserved. No .agents or nested AGENTS.md found; root AGENTS.md read.
 
 Read-only production inspection on 6 October confirmed the Azure subscription is enabled and VM `mahadum` in resource group `MAHADUM` is running in Canada Central at `20.151.177.171`, admin user `adebareshowemimo`. Repository `.azure/deployment-plan.md` and Apache configuration identify `https://mahadum360.com` and `/var/www/mahadum/public` (application `/var/www/mahadum`). Public `/up` returned HTTP 200. The existing SSH identity was rejected (`Permission denied (publickey,password)`), with strict host-key checking retained. Therefore current live code SHA, branch/worktree state, service status and available rollback backups remain unverified. No keys, credentials, network rules or server state were changed.
 
@@ -1393,6 +1393,7 @@ Provider credentials, live purchases/payouts, recipient messages, intentional da
 
 ## First candidate status — F24a
 
+- [x] Origin push: F24a `e183525efad014a0e75285781ac03d078ba61190` verified on codex/beta-feedback-20260903; CI not triggered on this branch push.
 - [x] Local implementation: Admin-created/newly granted Parent provisions one family.
 - [x] Relevant tests: 35 backend tests, 139 assertions; Pint/PHPStan; 264 frontend tests and build passed.
 - [ ] Adebare's local confirmation.
@@ -1402,8 +1403,19 @@ Provider credentials, live purchases/payouts, recipient messages, intentional da
 See Mahadum360_F24_Local_Verification.md for reproducible local URLs and test steps. The overall F24 checkbox remains open: live Lucy ownership/relinking has not been examined. Full backend suite passed: 413 passed and one skipped out of 414; 2,225 assertions. The skipped SendGrid ECDSA test requires unavailable OpenSSL EC key generation. All 264 frontend tests and the frontend build, Pint, PHPStan and whitespace checks passed.
 
 
-## Next defect diagnosis: teacher assignment (read-only)
+## Second candidate status - F33a: Assign teacher validation
 
-The school dashboard already has an Assign teacher control. Its request sends only `teacher_user_id` (`web/src/pages/SchoolDashboardPage.tsx`, AssignTeacher). `SchoolClassController::update` uses StoreSchoolClassRequest, whose `name` rule is required even on update. A read-only Laravel validator check of that exact payload shape against the actual name rule returns "The name field is required." This explains a deterministic validation failure before the assignment can save. No class/role was mutated, and the authenticated full endpoint was not exercised. Candidate next fix: distinguish create-required and partial-update validation while preserving active teacher membership and tenant restrictions; reproduce with isolated endpoint regression before changing code.
+Source: F33 assignment control subset; dependent chain B13, B30 and F29. Priority P1; intended audit date 7 October 2026. Teacher onboarding/invite, signup roles and school-admin assignment authoring remain open; no full source row is closed by this subset.
 
-Other chain findings remain separate: public signup has no Teacher role; teacher lists require active organization teacher membership; class detail offers no assignment control, although the school dashboard does; assignments are routed to teachers and restricted by assigned-class ownership. School-admin permissions and UI/controller checks need reconciliation before widening access. No teacher-chain implementation is included in F24a.
+- [x] C - Local implementation: dedicated UpdateSchoolClassRequest permits omitted name on PUT/PATCH, while explicit names remain required/valid and StoreSchoolClassRequest stays unchanged.
+- [x] T - 27 relevant backend tests / 125 assertions passed, including the exact dashboard payload, class/roster preservation, assigned teacher class visibility and assignment creation, inactive/foreign/non-teacher rejection, authorization and tenant isolation. Full Pint/PHPStan passed. Full backend suite passed: 422 passed / one skipped out of 423, 2,270 assertions. Frontend unchanged; previous F24a frontend checks are historical evidence, not rerun for this candidate. Local /up and SPA /school both returned HTTP 200; authenticated browser assignment remains pending.
+- [ ] L - Adebare confirms F33a locally.
+- [x] Origin authorization - Adebare instructed "commit and push to origin" for this distinct F33a candidate on e183525; exact commit/remote result is recorded in task handoff. Local acceptance, live deployment and QA remain separate pending states.
+- [ ] D - User deploys the pushed candidate and confirms the live release.
+- [ ] Q - Parent emails Deborah only after live deployment confirmation; QA not requested.
+
+Authenticated reproduction before the fix returned 422, "The name field is required", for the dashboard teacher-only PUT and partial level PATCH. Authorization controls passed. The new cross-school test initially expected 404, but the existing route correctly denies with 403; the expectation was corrected without changing production authorization.
+
+Implementation files: app/Http/Controllers/School/SchoolClassController.php; new app/Http/Requests/School/UpdateSchoolClassRequest.php; new tests/Feature/ClassTeacherAssignmentTest.php. No frontend, policy, membership rule, schema, provider, credential or live-data change. Automated tests use isolated SQLite and disabled outbound gateways. Actual local demo accounts/classes were inventoried read-only; browser assignment has not been performed by the agent.
+
+See Mahadum360_F33a_Local_Verification.md for specific local steps. Existing teacher onboarding, school-admin authoring permissions and the held hearts/business-rule changes remain separate.

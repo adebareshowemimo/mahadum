@@ -4,8 +4,9 @@ Ready locally on 6 October 2026. This is the first independently confirmable par
 
 - [x] C — Missing-family provisioning implemented atomically in Admin create/Parent grant; existing households reused; intentional deleted households require review.
 - [x] T — Six new regressions pass within the 35-test relevant backend run (139 assertions). Pint and PHPStan pass. All 264 frontend tests pass; TypeScript and build pass; whitespace check passes.
+- [x] Origin push - `e183525efad014a0e75285781ac03d078ba61190` verified on `origin/codex/beta-feedback-20260903`, 6 October; non-force push.
 - [ ] L — Adebare confirms this specific local fix.
-- [ ] D — Release this confirmed candidate to the verified production target.
+- [ ] D — User deploys the pushed candidate and confirms the live release.
 - [ ] Q — Parent sends Deborah's live test steps; Deborah reports acceptance.
 
 ## What was reproduced
@@ -43,3 +44,6 @@ After explicit local confirmation and authorized host access, inspect the live c
 - Lucy's live family ownership and account history: not inspected; no production relinking attempted.
 - Compliant XLSX materialization: blocked by required Library helper's Windows `os.setxattr` incompatibility. Both tabs and all 125 audit detail rows were read through Library extracted text.
 - Hearts changed rule, W5, W15 and other decision-gated roadmap work are outside this candidate.
+
+
+CI handoff: no Actions runs, check runs or status contexts were attached to e183525 at verification. `.github/workflows/ci.yml` triggers pushes only on main/develop, plus pull requests. This is not a CI pass. Local acceptance and live deployment/QA remain pending. The follow-up F33a teacher assignment change is separate; Adebare has now authorized its commit and origin push. Its exact delivery result is recorded in the task handoff; local acceptance and live deployment/QA remain pending.

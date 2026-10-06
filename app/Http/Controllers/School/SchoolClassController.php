@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\ResolvesOrganization;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\School\StoreClassLearnerRequest;
 use App\Http\Requests\School\StoreSchoolClassRequest;
+use App\Http\Requests\School\UpdateSchoolClassRequest;
 use App\Models\ClassAssignmentSubmission;
 use App\Models\ClassEnrollment;
 use App\Models\LearnerProfile;
@@ -156,7 +157,7 @@ class SchoolClassController extends Controller
         return response()->json(['data' => ['id' => $class->id, 'name' => $class->name]], 201);
     }
 
-    public function update(StoreSchoolClassRequest $request, SchoolClass $class): JsonResponse
+    public function update(UpdateSchoolClassRequest $request, SchoolClass $class): JsonResponse
     {
         $values = $request->validated();
         if ($request->user()->hasRole('teacher') && ! $request->user()->hasRole('school_admin')) {
