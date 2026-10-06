@@ -62,6 +62,7 @@ export function useManageableClasses() {
   return useQuery({
     queryKey: ['school-classes', 'manageable', orgId, mine],
     queryFn: () => schoolApi.classes({ mine }),
+    enabled: orgId != null,
   })
 }
 
@@ -118,11 +119,11 @@ export function useCreateClass() {
   })
 }
 
-export function useTeachers(orgId: number | null) {
+export function useTeachers(orgId: number | null, enabled = true) {
   return useQuery({
     queryKey: ['school-teachers', orgId ?? 0],
     queryFn: () => schoolApi.teachers(orgId as number),
-    enabled: !!orgId,
+    enabled: !!orgId && enabled,
   })
 }
 

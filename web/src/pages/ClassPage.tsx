@@ -4,6 +4,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Alert, Avatar, Badge, Button, Input, LinkButton, Skeleton } from '@/components/ui'
 import { ApiError, schoolApi, type ClassAnalyticsStudent } from '@/lib/api'
 import { useAuth } from '@/lib/auth/AuthProvider'
+import { ClassManagementActions } from '@/components/school/ClassManagementActions'
 import {
   useAddClassLearner,
   useAssignClassCourse,
@@ -52,7 +53,10 @@ export function ClassPage() {
             </div>
             <p className="mt-1 text-muted">Manage this class from one workspace.</p>
           </div>
-          <LinkButton to={`/classes/${classId}/invite`}>Invite learner</LinkButton>
+          <div className="flex flex-wrap gap-2">
+            <ClassManagementActions classroom={detail.data} />
+            <LinkButton to={`/classes/${classId}/invite`}>Invite learner</LinkButton>
+          </div>
         </div>
       </div>
 

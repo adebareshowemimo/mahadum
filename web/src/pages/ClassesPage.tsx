@@ -2,12 +2,15 @@ import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Alert, Badge, Button, Card, CardBody, Input, Modal, Skeleton } from '@/components/ui'
 import { ApiError } from '@/lib/api'
-import { useCreateClass, useManageableClasses } from '@/lib/school/queries'
+import { useCreateClass, useManageableClasses, useSchoolOrgId } from '@/lib/school/queries'
 
 export function ClassesPage() {
-  const { data, isLoading, isError } = useManageableClasses()
+  const orgId = useSchoolOrgId()
+  const { data, isLoading, isError, error } = useManageableClasses()
   const [showCreate, setShowCreate] = useState(false)
 
+  if (!orgId) return <Alert>No school linked. Ask a school administrator to link your teacher account to an active school membership before managing classes.</Alert>
+  if (error instanceof ApiError && error.status === 403) return <Alert variant="danger">Your account cannot access classes in this school. Ask a school administrator to check your active teacher membership.</Alert>
   if (isLoading) return <Skeleton className="h-48" />
   if (isError || !data) return <Alert variant="danger">We couldn’t load your classes. Please refresh and try again.</Alert>
 

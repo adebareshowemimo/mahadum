@@ -70,15 +70,21 @@ class SchoolClassController extends Controller
         return response()->json(['data' => $classes]);
     }
 
-    public function show(SchoolClass $class): JsonResponse
+    public function show(Request $request, SchoolClass $class): JsonResponse
     {
         $class->load('teacherUser', 'enrollments.learnerProfile');
+        $canUpdate = $request->user()->can('update', $class);
+        $teacherOnly = $request->user()->hasRole('teacher') && ! $request->user()->hasRole('school_admin');
 
         return response()->json(['data' => [
             'id' => $class->id,
             'name' => $class->name,
             'level' => $class->level,
             'teacher' => $class->teacherUser?->name,
+            'organization_id' => $class->organization_id,
+            'teacher_user_id' => $class->teacher_user_id,
+            // Expose existing policy decisions for the class workspace controls.
+            'capabilities' => ['update' => $canUpdate, 'assign_teacher' => $canUpdate && ! $teacherOnly],
             'students' => $class->enrollments->map(fn ($e) => [
                 'learner_id' => $e->learner_profile_id,
                 'display_name' => $e->learnerProfile?->display_name,

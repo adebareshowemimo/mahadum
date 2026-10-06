@@ -946,6 +946,9 @@ export interface SchoolClassRow {
 }
 
 export interface SchoolClassDetail {
+  organization_id?: number
+  teacher_user_id?: number | null
+  capabilities?: { update: boolean; assign_teacher: boolean }
   id: number
   name: string
   level: string | null

@@ -2596,6 +2596,13 @@ paths:
                       name: { type: string }
                       level: { type: string, nullable: true }
                       teacher: { type: string, nullable: true }
+                      organization_id: { type: integer }
+                      teacher_user_id: { type: integer, nullable: true }
+                      capabilities:
+                        type: object
+                        properties:
+                          update: { type: boolean }
+                          assign_teacher: { type: boolean }
                       students:
                         type: array
                         items:
