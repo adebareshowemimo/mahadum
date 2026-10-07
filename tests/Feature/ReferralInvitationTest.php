@@ -6,6 +6,7 @@ use App\Models\Referral;
 use App\Models\User;
 use App\Services\Referral\ReferralService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class ReferralInvitationTest extends TestCase
@@ -32,6 +33,7 @@ class ReferralInvitationTest extends TestCase
 
     public function test_cannot_invite_an_existing_active_account(): void
     {
+        Notification::fake();
         $this->seedRbac();
         $referrer = $this->userWithRole('parent');
         $existing = $this->userWithRole('parent', ['email' => 'already@here.com', 'phone' => '+2348099998888']);
@@ -45,6 +47,9 @@ class ReferralInvitationTest extends TestCase
         $this->postJson('/api/v1/referrals/invitations', ['channel' => 'phone', 'contact' => '08099998888'])
             ->assertStatus(422)
             ->assertJsonPath('error.code', 'account_exists');
+
+        $this->assertDatabaseCount('referral_invitations', 0);
+        Notification::assertNothingSent();
     }
 
     public function test_signup_is_matched_back_to_the_invitation(): void

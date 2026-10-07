@@ -222,7 +222,7 @@ function BadgeTile({
       <span className={cn('text-3xl', !earned && 'grayscale')} aria-hidden="true">
         {badge.icon ?? (earned ? '🏅' : '🔒')}
       </span>
-      <span className="text-sm font-semibold text-foreground">{badge.name}</span>
+      <span className={cn('text-sm font-semibold', earned ? 'text-charcoal-900' : 'text-foreground')}>{badge.name}</span>
       {earned ? (
         <Badge variant="gold">Earned</Badge>
       ) : (

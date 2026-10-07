@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Course;
 use App\Models\Family;
 use App\Models\FamilyHeroAward;
+use App\Models\LearnerBadge;
 use App\Models\LearnerProfile;
 use App\Models\XpLedger;
 use App\Notifications\LearningLevelUp;
@@ -22,6 +23,7 @@ class GamificationTest extends TestCase
 
     public function test_completing_a_lesson_bumps_streak_and_awards_badges(): void
     {
+        Notification::fake();
         $this->seedRbac();
         $this->seed(BadgeSeeder::class);
 
@@ -53,10 +55,16 @@ class GamificationTest extends TestCase
         $codes = collect($complete->json('data.badges_unlocked'))->pluck('code');
         $this->assertTrue($codes->contains('first_lesson'));
         $this->assertTrue($codes->contains('sharp_shooter'));
+        $this->assertTrue($codes->contains('tier_0'));
+        Notification::assertSentTo($parent, LearningLevelUp::class, fn ($notification, $channels) => $notification->toArray($parent)['badge_name'] === 'Star Starter'
+            && $notification->toArray($parent)['level'] === 0
+            && in_array('database', $channels, true));
 
         $this->getJson("/api/v1/learners/{$learner->id}/streak")->assertOk()->assertJsonPath('data.count', 1);
         $this->getJson("/api/v1/learners/{$learner->id}/badges")->assertOk()
             ->assertJsonFragment(['code' => 'first_lesson']);
+        $this->assertNotNull(LearnerBadge::where('learner_profile_id', $learner->id)
+            ->whereHas('badge', fn ($q) => $q->where('code', 'tier_0'))->firstOrFail()->earned_at);
     }
 
     public function test_hearts_never_block_and_refill(): void

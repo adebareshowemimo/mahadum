@@ -656,8 +656,8 @@ Requested action: Test 14-day escrow, chargeback cancellation and the N50k indiv
 Audit status: Partial. Tested: Fraud controls (fingerprinting, velocity >15/24h, payment gate).
 Audit evidence: The fraud review queue cites the velocity guard. It could not be triggered.
 Requested action: Trigger the velocity guard in test (>15 sign-ups/24h on one code) and confirm the code is frozen and appears in Fraud review.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — Batch 1 local code/change or no-change finding recorded; see [verification record](Mahadum360_Batch1_Verification.md).
+- [x] T — Local PASS: 15 versus 16 recent-signup threshold, review queue, flagged/frozen blocking, audited freeze/clear, parent denial, free-plan gate and reused-device rejection verified. Full batch checks: 457 backend passes + 1 skip, 286 frontend passes, build/Pint/PHPStan passed. Production QA pending.
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -697,8 +697,8 @@ Requested action: Confirm the referrer is credited 5% of the first-month purchas
 Audit status: Can't verify. Tested: Referring an already-active account shows "account already exists".
 Audit evidence: Not tested, because it would send a real invite to an existing user.
 Requested action: Invite an existing test account's email and confirm the 'account already exists' prompt.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — Batch 1 local code/change or no-change finding recorded; see [verification record](Mahadum360_Batch1_Verification.md).
+- [x] T — Local PASS: existing active email/phone rejected with account_exists; no invitation or notification created; prompt inspected in disposable browser fixtures. Full batch checks: 457 backend passes + 1 skip, 286 frontend passes, build/Pint/PHPStan passed. Production QA pending.
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -707,8 +707,8 @@ Requested action: Invite an existing test account's email and confirm the 'accou
 Audit status: Partial. Tested: Referrer dashboard: activation date, code, via email, via phone, status; search by email or phone.
 Audit evidence: Referral activity list and a "Search by email or phone" box are live. The columns can't be confirmed until a referral exists.
 Requested action: After one test referral activates, confirm the dashboard shows activation date, code, via email, via phone and status, and that search works.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — Batch 1 local code/change or no-change finding recorded; see [verification record](Mahadum360_Batch1_Verification.md).
+- [x] T — Local PASS: contacts/date/code/status, email/phone search, pagination and owner isolation verified; populated desktop/mobile fixtures inspected. Full batch checks: 457 backend passes + 1 skip, 286 frontend passes, build/Pint/PHPStan passed. Production QA pending.
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -717,8 +717,8 @@ Requested action: After one test referral activates, confirm the dashboard shows
 Audit status: Partial. Tested: Super Admin view per code: count activated, via email, via phone, active, inactive.
 Audit evidence: Shows Code, Activated, Active, Inactive. The Via Email and Via Phone columns are missing.
 Requested action: Add 'Via Email' and 'Via Phone' columns to Admin › Referral codes.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — Batch 1 local code/change or no-change finding recorded; see [verification record](Mahadum360_Batch1_Verification.md).
+- [x] T — Local PASS: existing channel counts verified; mobile-hidden email/phone columns repaired and pixels inspected at desktop/mobile widths. Full batch checks: 457 backend passes + 1 skip, 286 frontend passes, build/Pint/PHPStan passed. Production QA pending.
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -817,8 +817,8 @@ Requested action: Retest with a sandbox paid subscription (see Expanded BRD #1�
 Audit status: Partial. Tested: Super Admin referral view per code (1 Sep).
 Audit evidence: Admin › Referral codes shows Code, Activated, Active, Inactive. The Via Email and Via Phone columns from the sample are missing, although the page description promises them.
 Requested action: Add 'Via Email' and 'Via Phone' columns to Admin › Referral codes.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — Batch 1 local code/change or no-change finding recorded; see [verification record](Mahadum360_Batch1_Verification.md).
+- [x] T — Local PASS: shares X5 channel-count/mobile repair and verification; retained as a separate acceptance row. Full batch checks: 457 backend passes + 1 skip, 286 frontend passes, build/Pint/PHPStan passed. Production QA pending.
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -867,8 +867,8 @@ Requested action: No action needed.
 Audit status: Partial. Tested: Badges: Level 0–5 names, award and notification, badge detail with date (4 Sep #4).
 Audit evidence: Achievements lists Star Starter to Culture Master, plus First Steps, Week Warrior, Sharp Shooter and Family Hero. The award, the notification and the badge detail (date earned) could not be seen because no badge has been earned on the tested accounts.
 Requested action: Complete Level 0 on a test learner; confirm the Star Starter badge is awarded, the notification shows, and the badge detail shows the date earned.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — Batch 1 local code/change or no-change finding recorded; see [verification record](Mahadum360_Batch1_Verification.md).
+- [x] T — Local PASS: Level 0 completion awards Star Starter with earned date and correct parent notification payload (fake); detail pixels verified; stale cache and dark-mode title contrast repaired. Full batch checks: 457 backend passes + 1 skip, 286 frontend passes, build/Pint/PHPStan passed. Production QA pending.
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -967,8 +967,8 @@ Requested action: No action needed.
 Audit status: Partial. Tested: Sign-up: country code dropdown, unique email and phone (4 Sep #8).
 Audit evidence: The country code dropdown is live (defaults to Nigeria +234). Phone uniqueness was not tested because that needs creating duplicate accounts.
 Requested action: Enforce unique phone and email at sign-up; test by registering the same phone twice.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — Batch 1 local code/change or no-change finding recorded; see [verification record](Mahadum360_Batch1_Verification.md).
+- [x] T — Local PASS: duplicate email, canonical Nigerian phone and diaspora +1/001 phone rejected; country selector inspected. AuthTest and frontend checks passed. Full batch checks: 457 backend passes + 1 skip, 286 frontend passes, build/Pint/PHPStan passed. Production QA pending.
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested

@@ -7,6 +7,7 @@ import { useActiveProfile } from '@/lib/profile/ActiveProfile'
 import { useEntitlements } from '@/lib/billing/entitlements'
 import { formatDayStreak } from '@/lib/gamification/format'
 import { learningKeys } from '@/lib/learning/queries'
+import { gamificationKeys } from '@/lib/gamification/queries'
 import { AdModal } from '@/components/gamification/AdModal'
 import { SlideDeck, createLiveService, playToSlides, resumePlan } from '@/components/learning/player'
 
@@ -88,6 +89,9 @@ function LessonComplete({ lessonId, learnerId, onExit }: { lessonId: number; lea
         if (cancelled) return
         setResult(r)
         void qc.invalidateQueries({ queryKey: learningKeys.path(learnerId) })
+        for (const key of [gamificationKeys.badges(learnerId), gamificationKeys.streak(learnerId), gamificationKeys.hearts(learnerId), gamificationKeys.league(learnerId)]) {
+          void qc.invalidateQueries({ queryKey: key })
+        }
       })
       .catch((err) => !cancelled && setError(err instanceof ApiError ? err.message : 'Could not finish the lesson.'))
     return () => {

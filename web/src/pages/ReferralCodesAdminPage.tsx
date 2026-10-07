@@ -17,8 +17,8 @@ const columns: Column<AdminReferralCodeRow>[] = [
     ),
   },
   { key: 'count_activated', header: 'Activated', className: 'tabular-nums text-right', render: (r) => r.count_activated },
-  { key: 'via_email', header: 'Via email', className: 'tabular-nums text-right', hideOnMobile: true, render: (r) => r.via_email },
-  { key: 'via_phone', header: 'Via phone', className: 'tabular-nums text-right', hideOnMobile: true, render: (r) => r.via_phone },
+  { key: 'via_email', header: 'Via email', className: 'tabular-nums text-right', render: (r) => r.via_email },
+  { key: 'via_phone', header: 'Via phone', className: 'tabular-nums text-right', render: (r) => r.via_phone },
   {
     key: 'active',
     header: 'Active',

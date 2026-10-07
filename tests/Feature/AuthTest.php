@@ -52,6 +52,38 @@ class AuthTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'ada.twin@test.local']);
     }
 
+    public function test_register_rejects_a_duplicate_email_without_creating_another_account(): void
+    {
+        $this->seedRbac();
+        User::factory()->create(['email' => 'taken@test.local']);
+
+        $this->postJson('/api/v1/auth/register', [
+            'first_name' => 'Ada', 'last_name' => 'Twin', 'email' => 'taken@test.local',
+            'dial_code' => '+1', 'phone' => '4165550123',
+            'password' => 'Password123!', 'password_confirmation' => 'Password123!', 'device_name' => 'Laptop',
+        ])->assertStatus(422)->assertJsonValidationErrors('email');
+
+        $this->assertSame(1, User::count());
+        $this->assertDatabaseMissing('users', ['phone' => '+14165550123']);
+    }
+
+    public function test_register_enforces_phone_uniqueness_with_a_diaspora_calling_code(): void
+    {
+        $this->seedRbac();
+        $details = [
+            'first_name' => 'Ada', 'last_name' => 'Canada', 'email' => 'ada.ca@test.local',
+            'dial_code' => '+1', 'phone' => '4165550123',
+            'password' => 'Password123!', 'password_confirmation' => 'Password123!', 'device_name' => 'Laptop',
+        ];
+        $this->postJson('/api/v1/auth/register', $details)->assertCreated();
+        $this->assertDatabaseHas('users', ['email' => $details['email'], 'phone' => '+14165550123']);
+
+        $this->postJson('/api/v1/auth/register', array_replace($details, [
+            'email' => 'ada.ca.twin@test.local', 'phone' => '001 416 555 0123',
+        ]))->assertStatus(422)->assertJsonValidationErrors('phone');
+        $this->assertSame(1, User::count());
+    }
+
     public function test_learner_registration_creates_a_direct_profile_exposed_by_me(): void
     {
         $this->seedRbac();
