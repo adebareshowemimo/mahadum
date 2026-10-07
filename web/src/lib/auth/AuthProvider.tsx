@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { clearLocalPush } from '@/lib/notifications/browserPush'
 import {
   authApi,
   orgStore,
@@ -59,10 +60,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // When a session is established, persist the token + abilities and load /me.
   const adoptSession = useCallback(
     async (session: AuthSession) => {
+      await clearLocalPush().catch(() => {})
       tokenStore.set(session.token)
-      if (session.user.active_organization_id != null) {
-        orgStore.set(session.user.active_organization_id)
-      }
+      orgStore.set(session.user.active_organization_id ?? null)
       setHasToken(true)
       // Seed the cache from the lighter token payload, then fetch the full /me.
       await queryClient.invalidateQueries({ queryKey: ME_KEY })
@@ -87,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     tokenStore.clear()
     orgStore.set(null)
     setHasToken(false)
-    queryClient.removeQueries({ queryKey: ME_KEY })
+    queryClient.clear()
   }, [queryClient])
 
   const logout = useCallback(async () => {
@@ -97,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Even if the revoke call fails (offline / already-expired token), drop
       // the local session — the user asked to leave.
     } finally {
+      await clearLocalPush().catch(() => {})
       clearSession()
     }
   }, [clearSession])
@@ -105,7 +106,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setUnauthorizedHandler(() => {
       setHasToken(false)
-      queryClient.removeQueries({ queryKey: ME_KEY })
+      orgStore.set(null)
+      queryClient.clear()
+      void clearLocalPush().catch(() => {})
     })
     return () => setUnauthorizedHandler(null)
   }, [queryClient])

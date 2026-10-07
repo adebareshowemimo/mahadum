@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\Family\ParentFamilyProvisioner;
 use App\Services\Referral\ReferralService;
+use App\Services\UserAccountType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -32,7 +33,7 @@ class UserController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = User::query()->with('roles:id,name');
+        $query = User::query()->with('roles:id,name')->withCount('ownedFamilies');
 
         if ($q = trim((string) $request->query('q', ''))) {
             $query->where(function ($sub) use ($q) {
@@ -57,12 +58,9 @@ class UserController extends Controller
         }
 
         if ($type = $request->query('type')) {
-            match ($type) {
-                'school' => $query->whereHas('organizations'),
-                'family' => $query->whereDoesntHave('organizations')->whereHas('ownedFamilies'),
-                'single' => $query->whereDoesntHave('organizations')->whereDoesntHave('ownedFamilies'),
-                default => null,
-            };
+            if (in_array($type, ['school', 'institution', 'teacher', 'family', 'single'], true)) {
+                UserAccountType::filter($query, $type);
+            }
         }
 
         $page = $query->latest()->paginate(20);
@@ -283,7 +281,7 @@ class UserController extends Controller
         }
 
         $grouped = [];
-        foreach (OrganizationUser::with('organization:id,name')->whereIn('user_id', $userIds)->get() as $m) {
+        foreach (OrganizationUser::with('organization:id,name,type')->whereIn('user_id', $userIds)->get() as $m) {
             $grouped[$m->user_id][] = $m;
         }
 
@@ -297,11 +295,15 @@ class UserController extends Controller
     private function row(User $u, ?array $memberships = null): array
     {
         $memberships ??= $this->membershipsFor([$u->id])[$u->id] ?? [];
+        $type = collect($memberships)->contains(fn ($m) => $m->organization?->type === 'institution') ? 'institution'
+            : ($memberships !== [] ? 'school' : ($u->signup_account_type === 'teacher' ? 'teacher'
+                : (($u->owned_families_count ?? $u->ownedFamilies()->count()) > 0 ? 'family' : 'single')));
 
         return [
             'id' => $u->id,
             'name' => $u->name,
             'email' => $u->email,
+            'account_type' => $type,
             'phone' => $u->phone,
             'status' => $u->status,
             'roles' => $u->getRoleNames()->all(),

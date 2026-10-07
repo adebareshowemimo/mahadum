@@ -7,6 +7,7 @@ use App\Models\Chore;
 use App\Models\ChoreSubmission;
 use App\Models\ClassAssignment;
 use App\Models\LearnerProfile;
+use App\Services\Family\FamilyAlertService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -56,6 +57,8 @@ class LearnerTasksController extends Controller
             ]);
             $chore->update(['status' => 'pending_review']);
         });
+
+        app(FamilyAlertService::class)->forLearner($learner);
 
         return response()->json(['data' => ['chore_id' => $chore->id, 'status' => 'pending_review']], 201);
     }

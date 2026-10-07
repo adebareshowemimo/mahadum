@@ -9,6 +9,7 @@ use App\Models\AssignmentSubmission;
 use App\Models\ComponentProgress;
 use App\Models\LessonComponent;
 use App\Models\MediaAsset;
+use App\Services\Family\FamilyAlertService;
 use App\Services\Learning\LessonAccess;
 use App\Services\Learning\XapiRecorder;
 use Illuminate\Http\JsonResponse;
@@ -62,6 +63,7 @@ class AssignmentSubmissionController extends Controller
         });
 
         $xapi->record($learner->id, XapiRecorder::VERB_RESPONDED, 'components', $component->id, $component->title ?? 'Assignment', XapiRecorder::ACTIVITY_INTERACTION);
+        app(FamilyAlertService::class)->forLearner($learner);
 
         return response()->json(['data' => [
             'id' => $submission->id,

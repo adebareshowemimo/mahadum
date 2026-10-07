@@ -32,6 +32,9 @@ class LessonPlayController extends Controller
         $lesson->load([
             'components' => fn ($q) => $q->orderBy('position'),
             'components.video.sourceAsset',
+            'components.video.renditions',
+            'components.video.posterAsset',
+            'components.video.captions',
             'components.quiz.questions' => fn ($q) => $q->orderBy('position'),
             'components.quiz.questions.options' => fn ($q) => $q->orderBy('position'),
             'components.quiz.questions.promptAudioAsset',
@@ -62,6 +65,7 @@ class LessonPlayController extends Controller
                 // Video gate: when true the learner must finish the clip to advance.
                 'require_watch' => (bool) data_get($c->settings, 'require_watch', false),
                 // Resume support — saved playhead + whether already completed.
+                'watched_ranges' => data_get($cp?->data, 'watched_ranges', []),
                 'resume_position' => (float) data_get($cp?->data, 'position_seconds', 0),
                 'completed' => $cp?->status === 'complete',
                 $c->type => $this->payloadFor($c, $learner),
@@ -129,8 +133,12 @@ class LessonPlayController extends Controller
                     : null,
                 'external_url' => $component->video->external_url,
                 'hls' => null,
-                'poster' => null,
-                'captions' => [],
+                'poster' => $this->assetUrl($component->video->posterAsset),
+                'renditions' => $component->video->renditions
+                    ->where('ready', true)->where('protocol', 'mp4')
+                    ->map(fn ($r) => ['quality' => $r->quality, 'src' => $r->manifest_url])->values(),
+                'captions' => $component->video->captions->where('format', 'vtt')
+                    ->map(fn ($c) => ['language' => $c->language_code, 'src' => $c->url, 'default' => $c->is_default])->values(),
             ] : null,
             'quiz' => $component->quiz ? $this->quizPayload($component->quiz, $learner) : null,
             'speaking' => $component->speakingPrompt ? [

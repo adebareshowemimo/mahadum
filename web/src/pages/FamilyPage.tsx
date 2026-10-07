@@ -49,6 +49,7 @@ export function FamilyPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
+        <Card className="sm:col-span-2"><CardBody className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-muted">Set shared lesson goals, manage family coin pools and send encouragement.</p><LinkButton to="/family/goals" variant="outline">Family goals</LinkButton></CardBody></Card>
         <Card>
           <CardHeader>
             <CardTitle>Wallet</CardTitle>

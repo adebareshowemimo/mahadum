@@ -5,6 +5,7 @@ namespace App\Notifications\Channels;
 use App\Models\User;
 use App\Notifications\Contracts\SendsPush;
 use App\Services\Messaging\MessagingManager;
+use App\Services\Messaging\WebPushService;
 use Illuminate\Notifications\Notification;
 
 class PushChannel
@@ -17,6 +18,8 @@ class PushChannel
             return;
         }
 
+        $payload = $notification->toPush($notifiable);
+        app(WebPushService::class)->send($notifiable, $payload);
         $tokens = $notifiable->devices()
             ->whereNotNull('push_token')
             ->pluck('push_token')
@@ -26,8 +29,6 @@ class PushChannel
         if ($tokens === []) {
             return;
         }
-
-        $payload = $notification->toPush($notifiable);
 
         $this->messaging->gateway()->sendPush(
             $tokens,

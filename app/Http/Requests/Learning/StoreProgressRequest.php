@@ -26,6 +26,10 @@ class StoreProgressRequest extends FormRequest
             'play_delta' => ['nullable', 'integer', 'min:0'],
             'position_seconds' => ['nullable', 'numeric', 'min:0'],
             'duration_seconds' => ['nullable', 'numeric', 'min:0'],
+            'watched_ranges' => ['sometimes', 'array', 'max:500'],
+            'watched_ranges.*' => ['required', 'array', 'size:2'],
+            'watched_ranges.*.0' => ['required', 'numeric', 'min:0'],
+            'watched_ranges.*.1' => ['required', 'numeric', 'min:0'],
         ];
     }
 }

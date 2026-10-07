@@ -13,6 +13,7 @@ use App\Models\MediaAsset;
 use App\Models\SchoolClass;
 use App\Notifications\ClassAssignmentGraded;
 use App\Services\AuditLogger;
+use App\Services\Family\FamilyAlertService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -227,6 +228,9 @@ class ClassAssignmentController extends Controller
 
         // Sent after commit so a queued mail job never races a rolled-back transaction.
         $learner?->user?->notify(new ClassAssignmentGraded($submission->refresh(), $coinsReleased));
+        if ($learner) {
+            app(FamilyAlertService::class)->forLearner($learner);
+        }
 
         return response()->json(['data' => [
             'submission_id' => $submission->id,

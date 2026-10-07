@@ -8,12 +8,13 @@ use App\Models\LearnerProfile;
 use App\Models\XpLedger;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
- * Weekly leagues. For this slice everyone joins a single tier-1 league for the
- * current week; weekly_xp is recomputed from the xp_ledger on read and used to
- * rank members. The 30-learner bucketing + tier promotion/relegation is a
- * scheduled-job concern (EvaluateStreaks / league rollover) added later.
+ * Weekly leagues of at most 30 distinct learners. Existing current-week
+ * membership IDs and XP ledgers are retained when oversized groups are split.
+ * Tier promotion/relegation is not introduced by cohort assignment.
  */
 class LeagueService
 {
@@ -26,15 +27,29 @@ class LeagueService
     {
         $weekStart = $this->currentWeekStart();
 
-        $league = League::firstOrCreate(
-            ['week_start' => $weekStart->toDateString(), 'tier' => 1],
-            ['name' => 'Week of '.$weekStart->toDateString()],
-        );
+        return Cache::lock('league-cohort:'.$weekStart->toDateString(), 30)->block(10, fn () => DB::transaction(function () use ($weekStart, $learner) {
+            $leagues = League::whereDate('week_start', $weekStart)->where('tier', 1)->orderBy('id')->lockForUpdate()->get();
+            if ($leagues->isEmpty()) {
+                $leagues->push(League::create(['week_start' => $weekStart->toDateString(), 'tier' => 1, 'name' => 'Week of '.$weekStart->toDateString().' · Group 1']));
+            }
+            $members = LeagueMembership::whereIn('league_id', $leagues->pluck('id'))->orderBy('id')->lockForUpdate()->get();
+            $learners = $members->unique('learner_profile_id')->pluck('learner_profile_id');
+            foreach ($learners->chunk(30)->values() as $index => $chunk) {
+                if (! isset($leagues[$index])) {
+                    $leagues->push(League::create(['week_start' => $weekStart->toDateString(), 'tier' => 1, 'name' => 'Week of '.$weekStart->toDateString().' · Group '.($index + 1)]));
+                }
+                LeagueMembership::whereIn('id', $members->whereIn('learner_profile_id', $chunk)->pluck('id'))->update(['league_id' => $leagues[$index]->id]);
+            }
+            if ($existing = $members->firstWhere('learner_profile_id', $learner->id)) {
+                return $existing->refresh();
+            }
+            $index = intdiv($learners->count(), 30);
+            if (! isset($leagues[$index])) {
+                $leagues->push(League::create(['week_start' => $weekStart->toDateString(), 'tier' => 1, 'name' => 'Week of '.$weekStart->toDateString().' · Group '.($index + 1)]));
+            }
 
-        return LeagueMembership::firstOrCreate(
-            ['league_id' => $league->id, 'learner_profile_id' => $learner->id],
-            ['weekly_xp' => 0],
-        );
+            return LeagueMembership::create(['league_id' => $leagues[$index]->id, 'learner_profile_id' => $learner->id, 'weekly_xp' => 0]);
+        }));
     }
 
     /** Recompute weekly_xp for every member of the league, then rank them. */
@@ -51,11 +66,12 @@ class LeagueService
         foreach ($memberships as $membership) {
             $xp = XpLedger::where('learner_profile_id', $membership->learner_profile_id)
                 ->where('created_at', '>=', $weekStart)
+                ->where('created_at', '<', $weekStart->copy()->addWeek())
                 ->sum('amount');
             $membership->weekly_xp = max(0, (int) $xp);
         }
 
-        $ranked = $memberships->sortByDesc('weekly_xp')->values();
+        $ranked = $memberships->sortBy([['weekly_xp', 'desc'], ['learner_profile_id', 'asc']])->values();
 
         $ranked->each(function ($membership, $i) {
             $membership->rank = $i + 1;

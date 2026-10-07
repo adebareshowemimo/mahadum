@@ -33,11 +33,12 @@ function setup() {
 }
 
 describe('RegisterPage age gate', () => {
-  it('starts with the four distinct account type choices', () => {
+  it('starts with separate teacher and school account choices', () => {
     setup()
     expect(screen.getByRole('radio', { name: /Individual/i })).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: /Family/i })).toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: /Educator\/School/i })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: /^Teacher/i })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: /^School/i })).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: /Institution/i })).toBeInTheDocument()
   })
 
@@ -78,9 +79,9 @@ describe('RegisterPage age gate', () => {
     expect(await screen.findByText(/enter your date of birth/i)).toBeInTheDocument()
   })
 
-  it('requires an adult for an Educator/School account', async () => {
+  it('requires an adult for a School account', async () => {
     setup()
-    await userEvent.click(screen.getByRole('radio', { name: /Educator\/School/i }))
+    await userEvent.click(screen.getByRole('radio', { name: /^School/i }))
     await userEvent.click(screen.getByRole('button', { name: /continue/i }))
     fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: yearsAgo(8) } })
     await userEvent.click(screen.getByRole('button', { name: /continue/i }))

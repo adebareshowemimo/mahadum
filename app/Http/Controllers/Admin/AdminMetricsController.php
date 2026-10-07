@@ -16,6 +16,7 @@ use App\Models\TelcoBillingAttempt;
 use App\Models\User;
 use App\Models\WalletFundingTransaction;
 use App\Services\Settings;
+use App\Services\UserAccountType;
 use Illuminate\Http\JsonResponse;
 
 class AdminMetricsController extends Controller
@@ -47,9 +48,11 @@ class AdminMetricsController extends Controller
         return response()->json(['data' => [
             'users' => User::count(),
             'users_by_type' => [
-                'school' => User::whereHas('organizations')->count(),
-                'family' => User::whereDoesntHave('organizations')->whereHas('ownedFamilies')->count(),
-                'single' => User::whereDoesntHave('organizations')->whereDoesntHave('ownedFamilies')->count(),
+                'school' => UserAccountType::filter(User::query(), 'school')->count(),
+                'institution' => UserAccountType::filter(User::query(), 'institution')->count(),
+                'teacher' => UserAccountType::filter(User::query(), 'teacher')->count(),
+                'family' => UserAccountType::filter(User::query(), 'family')->count(),
+                'single' => UserAccountType::filter(User::query(), 'single')->count(),
             ],
             'organizations' => Organization::selectRaw('status, COUNT(*) c')->groupBy('status')->pluck('c', 'status'),
             'subscriptions' => Subscription::selectRaw('status, COUNT(*) c')->groupBy('status')->pluck('c', 'status'),

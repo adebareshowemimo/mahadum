@@ -79,6 +79,9 @@ export interface VideoSlide extends SlideBase {
   resumeAt: number
   /** The learner already finished this video before (gate starts unlocked). */
   alreadyCompleted: boolean
+  watchedRanges?: [number, number][]
+  renditions?: { quality: string; src: string }[]
+  captions?: { language: string; src: string; default: boolean }[]
 }
 
 export interface SpeakingSlide extends SlideBase {
@@ -169,6 +172,7 @@ function playComponentToSlides(c: PlayComponent, lessonTitle?: string): Slide[] 
     return [{
       ...base, id: `v${c.id}`, kind: 'video', title: null, src: c.video?.src ?? null, poster: c.video?.poster ?? null,
       sourceType: c.video?.source_type ?? 'upload', externalUrl: c.video?.external_url ?? null,
+      watchedRanges: c.watched_ranges ?? [], renditions: c.video?.renditions ?? [], captions: c.video?.captions ?? [],
       requireWatch: !!c.require_watch, resumeAt: c.resume_position ?? 0, alreadyCompleted: !!c.completed,
     }]
   }
@@ -312,6 +316,7 @@ export function authorToSlides(lesson: AuthorLesson): { slides: Slide[]; key: Ma
 export interface VideoTrack {
   event: 'played' | 'paused' | 'seeked' | 'heartbeat' | 'completed'
   watchedDelta: number
+  watchedRanges?: [number, number][]
   playDelta: number
   positionSeconds: number
   durationSeconds: number | null
@@ -394,6 +399,7 @@ export function createLiveService(lessonId: number, learnerId: number): PlayerSe
         componentId: slide.componentId,
         event: d.event,
         watchedDelta: d.watchedDelta,
+        watchedRanges: d.watchedRanges,
         playDelta: d.playDelta,
         positionSeconds: d.positionSeconds,
         durationSeconds: d.durationSeconds ?? undefined,

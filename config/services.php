@@ -93,6 +93,11 @@ return [
             'base_url' => env('WHATSAPP_BASE_URL'),
             'token' => env('WHATSAPP_TOKEN'),
         ],
+        'web_push' => [
+            'subject' => env('WEB_PUSH_SUBJECT'),
+            'public_key' => env('WEB_PUSH_PUBLIC_KEY'),
+            'private_key' => env('WEB_PUSH_PRIVATE_KEY'),
+        ],
         'push' => [
             'fcm_url' => env('FCM_URL', 'https://fcm.googleapis.com/fcm/send'),
             'key' => env('FCM_SERVER_KEY'),

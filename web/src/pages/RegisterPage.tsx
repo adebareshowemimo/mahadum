@@ -10,7 +10,7 @@ import { useAuth } from '@/lib/auth/AuthProvider'
 import { useDigitalAge } from '@/lib/config/useConfig'
 
 type Step = 'account' | 'age' | 'guardian' | 'form'
-type SignupAccountType = 'individual' | 'family' | 'educator_school' | 'institution'
+type SignupAccountType = 'individual' | 'family' | 'teacher' | 'school' | 'institution'
 type SignupMethod = 'email' | 'google'
 
 const ACCOUNT_TYPES: Array<{
@@ -32,11 +32,12 @@ const ACCOUNT_TYPES: Array<{
     icon: 'users',
   },
   {
-    value: 'educator_school',
-    label: 'Educator/School',
-    description: 'Teach learners, manage classes, or set up a school.',
+    value: 'teacher',
+    label: 'Teacher',
+    description: 'Join a school through an email invitation from its administrator.',
     icon: 'cap',
   },
+  { value: 'school', label: 'School', description: 'Set up and manage a school, its teachers and classes.', icon: 'building' },
   {
     value: 'institution',
     label: 'Institution',
@@ -46,12 +47,12 @@ const ACCOUNT_TYPES: Array<{
 ]
 
 function isOrganizationAccount(type: SignupAccountType | null): boolean {
-  return type === 'educator_school' || type === 'institution'
+  return type === 'school' || type === 'institution'
 }
 
 function postSignupPath(type: SignupAccountType | null): string {
   if (type === 'individual') return '/learn'
-  if (type === 'family') return '/home'
+  if (type === 'family' || type === 'teacher') return '/home'
   return '/school'
 }
 
@@ -71,6 +72,7 @@ export function RegisterPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const invitationToken = searchParams.get('class_invitation') ?? ''
+  const teacherToken = searchParams.get('teacher_invitation') ?? ''
   const referralCode = (searchParams.get('ref') ?? '').trim().toUpperCase()
   const invitation = useQuery({
     queryKey: ['class-invitation', invitationToken],
@@ -81,7 +83,7 @@ export function RegisterPage() {
   const digitalAge = useDigitalAge()
 
   const [step, setStep] = useState<Step>(invitationToken ? 'age' : 'account')
-  const [accountType, setAccountType] = useState<SignupAccountType | null>(null)
+  const [accountType, setAccountType] = useState<SignupAccountType | null>(teacherToken ? 'teacher' : null)
   const [accountTypeError, setAccountTypeError] = useState<string | null>(null)
   const [dob, setDob] = useState('')
   const [isGuardianFlow, setIsGuardianFlow] = useState(false)
@@ -201,7 +203,7 @@ export function RegisterPage() {
         ...(!isGuardianFlow && dob ? { date_of_birth: dob } : {}),
       }
       await register(payload)
-      navigate(invitationToken ? '/learn' : postSignupPath(accountType), { replace: true })
+      navigate(teacherToken ? `/teacher-invitations/${teacherToken}` : invitationToken ? '/learn' : postSignupPath(accountType), { replace: true })
     } catch (err) {
       if (err instanceof ApiError) {
         setFieldErrors(err.fieldErrors)
@@ -245,7 +247,7 @@ export function RegisterPage() {
   return (
     <AuthLayout
       eyebrow={step === 'account' ? 'One platform, built around your role' : step === 'age' ? 'A safe start for every learner' : step === 'guardian' ? 'Designed with guardians in control' : 'Your learning circle starts here'}
-      title={accountType === 'educator_school' ? 'Create your Educator/School account.' : accountType === 'institution' ? 'Create your Institution account.' : 'Create your account.'}
+      title={accountType === 'school' ? 'Create your School account.' : accountType === 'teacher' ? 'Create your Teacher account.' : accountType === 'institution' ? 'Create your Institution account.' : 'Create your account.'}
       subtitle={subtitle}
       image="/images/landing-v1-family-call.webp"
       imageAlt="Amara practising a family greeting with Iya while relatives join by video call"
@@ -578,7 +580,7 @@ export function RegisterPage() {
                   ...(isOrganizationAccount(accountType) ? { organization_name: values.organization_name.trim() } : {}),
                   ...(referralCode ? { referral_code: referralCode } : {}),
                 }}
-                onSuccess={() => navigate(postSignupPath(accountType), { replace: true })}
+                onSuccess={() => navigate(teacherToken ? `/teacher-invitations/${teacherToken}` : postSignupPath(accountType), { replace: true })}
                 onError={(msg) => setFormError(msg)}
               />
             )}

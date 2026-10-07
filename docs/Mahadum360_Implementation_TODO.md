@@ -11,6 +11,8 @@ backend architecture, content model, DB layer, and UI designs already produced.
 **Legend:** ✅ done · 🟡 in progress / partial · ⬜ not started
 **Tags:** `[MVP]` ships for launch · `[POST]` deferred · `[BLOCK]` decision needed first
 
+**7 October 2026 Batch 4 local candidate (milestones 5–8):** [Verification and release handover](Mahadum360_Batch4_Verification.md) covers teacher directories/invitation onboarding, distinct Teacher/School/Institution account handling, weekly 30-learner cohorts/private cheers, shared lesson goals, parent-managed conserved-coin pools and configurable parent alerts/browser notifications. Threshold and pool decisions were confirmed by Adebare. New migrations were applied locally; commit/push, deployment, live delivery and reviewer acceptance remain pending. No historical identities, balances, rewards or approved learning-access rules were changed.
+
 ### Pending review follow-up (2026-09-09)
 
 Source: `Mahadum pending Item.docx`. Detailed reproduction and acceptance tasks are tracked in [Beta Feedback TODO BF-17](Mahadum360_Beta_Feedback_TODO.md#bf-17--pending-items-review-added-2026-09-09).
@@ -398,3 +400,5 @@ Treat each milestone as an epic; each `[ ]` as a ticket. Keep the **Decisions** 
 ### Mobile data sales monitoring (2026-10-02)
 
 Admin dashboard at `/admin/reports/data-sales`: delivered gross sales, verified gross payments, pending/processing/attention counts, daily delivered sales, network performance, searchable paginated purchases and activity links. Date ranges use purchase creation timestamps; verified payments are before refunds and fees, not net revenue. Read-only and super-admin guarded.
+
+7 October 2026 local Batch 5 continuation: [verification report](Mahadum360_Batch5_Verification.md) documents required-video watch coverage, available rendition/caption selection and read-only account/cleanup/provider diagnostics. All nine audit IDs retain separate pending acceptance; production identity/assets, provider fulfillment and the airtime-retirement decision remain open.

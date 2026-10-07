@@ -55,7 +55,7 @@ export function AdminOverviewPage() {
             <CardTitle>Users by type</CardTitle>
           </CardHeader>
           <CardBody>
-            <StatusChips map={m.users_by_type} labels={{ single: 'Individual' }} />
+            <StatusChips map={m.users_by_type} labels={{ single: 'Individual', institution: 'Institution', teacher: 'Teacher signup (unlinked)' }} />
           </CardBody>
         </Card>
         <Card>

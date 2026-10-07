@@ -345,8 +345,8 @@ Requested action: No action needed.
 Audit status: Partial. Tested: Weekly leagues (30 users) + family cheer.
 Audit evidence: The weekly leaderboard exists. League size could not be seen because only one learner was in the league.
 Requested action: Group learners into 30-user weekly leagues and add the family-cheer element; seed test users to confirm league size.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — Batch 4 local candidate: weekly cohorts of 30 distinct learners and private parent cheers; no tier/reward changes. See Mahadum360_Batch4_Verification.md.
+- [x] T — 61-learner fixture splits 30/30/1, retains duplicate IDs and prior history; full 492 backend passed/one skipped and 308 frontend passed. Family goal/cheer screen pixels inspected; local/deployment/live acceptance pending.
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -395,8 +395,8 @@ Requested action: Confirm chore submissions appear in Reviews; add speaking and 
 Audit status: Partial. Tested: Coin transfer, family challenges, low-balance alerts.
 Audit evidence: Send coins to a child is present, but it can't be used with 0 coins. Family challenges and low-balance alerts were not seen.
 Requested action: Test coin transfer with a funded wallet; add family challenges and low-balance alerts.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — Batch 4 local candidate: shared lesson challenges and parent-selected, initially disabled low-balance alerts; funded transfer uses existing code. See Mahadum360_Batch4_Verification.md.
+- [x] T — Funded 100-coin wallet transfer, overdraft denial, challenge time/participant scope and low-balance recovery/deduplication verified. Full backend/frontend and responsive goal/alert screens passed; acceptance pending.
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -405,8 +405,8 @@ Requested action: Test coin transfer with a funded wallet; add family challenges
 Audit status: Partial. Tested: Notifications (push, SMS, WhatsApp, email).
 Audit evidence: Working (confirmed by Ifeoma): SMS, WhatsApp and email for sharing referral codes; email for practice invites and for inviting a child to a class. Not yet seen: push notifications, and the automatic alerts for inactivity, achievements, low balance and review needed.
 Requested action: Add push notifications, then trigger and verify the automatic alerts (inactivity, achievement, low balance, review needed) on push, SMS, WhatsApp and email.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — Batch 4 local candidate: browser Web Push opt-in, inbox, parent alert scheduler/submission hooks and badge-event fan-out. Credentials/keys remain environment-controlled; native FCM seam preserved. See Mahadum360_Batch4_Verification.md.
+- [x] T — HTTP/client fakes cover browser/native push, SMS and WhatsApp separately with database/email channels; parent trigger/deduplication, private subscription ownership, refresh/logout and provider-off UI verified. Live delivery NOT RUN; B27 remains partial until configured provider/browser/device QA.
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -465,8 +465,8 @@ Requested action: Add average quiz and speaking scores, completion rate, and top
 Audit status: Partial. Tested: Student and teacher rosters; class enrolment.
 Audit evidence: Learners can be added or invited by email per class. There is no student list page, no teacher list and no teacher invite.
 Requested action: Add Students and Teachers list pages under the school console, with teacher invite by email.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — Batch 4 local candidate: school Students/Teachers pages, email invite/revoke and verified recipient acceptance; existing class assignment controls preserved. See Mahadum360_Batch4_Verification.md.
+- [x] T — Same-school/admin/active-account checks, intended-email verification, expiry/revocation/replay and existing parent-family preservation tested; directory/invite screens inspected on desktop/mobile. Queued mail is not delivery acceptance.
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -586,8 +586,8 @@ Requested action: Set up the telco plan (N50/day, 02:00 charge, grace, soft-down
 Audit status: Partial. Tested: Coin economy, parent wallet, group coin pools.
 Audit evidence: The parent wallet and child coin balances work. Group coin pools were not seen.
 Requested action: Add group coin pools for families.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — Batch 4 local candidate: Adebare-approved parent-managed pools with existing coin contribution, return and child allocation; audited append-only movements. See Mahadum360_Batch4_Verification.md.
+- [x] T — Locked wallets conserve 100 original coins across family/pool/child; durable replay, identity conflict, overdraft, foreign-family/child and student denial pass. Pool form/allocation ledger inspected on phone; no automatic rewards.
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -1118,18 +1118,18 @@ Requested action: Add a shareable school join link/code that students and parent
 Audit status: Not met. Tested: Create or invite teachers, and assign one after the class is made (raised during this review).
 Audit evidence: There is no Teachers page and no way to invite a teacher. Teacher is optional in "New class", and once skipped, the class shows "Teacher: Not assigned" with no control to assign one.
 Requested action: Add a Teachers page with invite by email, and an 'Assign teacher' control on each class.
-- [ ] C - F33a partial-update validator and F33b authorized class Edit/Assign teacher controls implemented and pushed. Teachers page/invite/onboarding remains open; full F33 is not complete.
-- [x] T - F33b subset: 28 focused backend tests / 151 assertions; full 451 passed + one skipped / 2,603 assertions; 280 frontend tests; build/Pint/PHPStan and five isolated SPA screenshots passed. Actual production class-loading root cause remains unverified.
+- [x] C - Batch 4 requested onboarding scope implemented locally: Teachers page, email invitation/revoke and verified intended-recipient acceptance. Shipped F33a/F33b controls preserved. Production class-loading diagnosis and full live acceptance remain open; see Mahadum360_Batch4_Verification.md.
+- [x] T - Batch 4 full run: 492 backend passed/one skipped, 308 frontend passed; invitation/tenant/family regressions and desktop/mobile onboarding screens pass. Earlier F33b subset evidence remains in its verification record. Actual production class-loading root cause remains unverified.
 - [ ] L — Adebare local confirmation; pending
-- [x] D - F33a earlier deployment and F33b 6e7cedb latest-branch deployment at 22:55 UTC are USER-REPORTED. Full teacher onboarding is not implemented; independent live verification pending.
+- [x] D - F33a earlier deployment and F33b 6e7cedb latest-branch deployment at 22:55 UTC are USER-REPORTED and cover those subfixes only. Batch 4 teacher onboarding is not deployed; independent live verification pending.
 - [ ] Q - Deborah reported live failures at 21:14:45 UTC; parent preparing F33b retest and sanitized class-loading evidence request. No acceptance inferred.
 
 ### F34 · Open feedback · Feedback · 2026-10-07
 Audit status: Not met. Tested: Sign-up account types match admin profiles (raised during this review).
 Audit evidence: Sign-up offers Individual, Family, Educator/School and Institution. The admin users filter and overview only have Single, Family and School: "Individual" is called "Single", and Institution sign-ups have no user type. Educator/School does not separate a teacher from a school admin: both accounts tested (Ifeoma, ngozi) received school_admin, so no teacher profile exists in practice. The supervisor role has no sign-up path.
 Requested action: Split Educator/School sign-up into Teacher and School; rename 'Single' to 'Individual' in admin; add Institution as a user type.
-- [ ] C - F34a admin Individual labels repaired locally. Teacher/School signup separation, Institution classification and supervisor onboarding remain open; no permission/classification change.
-- [x] T - F34a subset: two new UI regressions failed before repair; focused 10/10 and full frontend 282/282 passed, typecheck/build and whitespace passed. Two actual SPA screenshots inspected with isolated read-only API fixtures; type=single contract retained.
+- [x] C - Batch 4 requested scope implemented locally: distinct Teacher/School signup, Institution classification and retained Individual labels. Teacher intent grants no privileges; school invitation acceptance is required. Supervisor stays under existing administered role controls; no public supervisor grant. See Mahadum360_Batch4_Verification.md.
+- [x] T - Signup and disjoint account filters tested; 308 frontend passed, full backend/static/build checks passed and actual five-choice signup inspected. Legacy type=single and educator_school contracts preserved; prior F34a regression evidence retained in its record. Deployment/live acceptance pending.
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -1523,3 +1523,7 @@ F33b source references: workbook Mahadum360 Test Results - Fix by 7 Oct 2026.xls
 - [ ] Q - F34a live QA not requested; parent owns email with CC info@mahadum360.com after the deployment gate.
 
 Source: workbook Mahadum360 Test Results - Fix by 7 Oct 2026.xlsx; Library libfile_d384814a74bc81918140bc576168a324; sheet Test Results; audit ID F34, extracted zero-based index 99. Physical Excel row UNVERIFIED because the extraction has no certified coordinate mapping and original bytes materialization remains blocked by the Windows os.setxattr helper limitation. Full F34 remains open for Teacher/School sign-up separation and Institution classification. Those require a bounded implementation/ownership decision; this candidate does not alter registration or manufacture teacher memberships. Hearts, streak and tier rules remain unchanged.
+
+## Batch 5 local continuation — 7 October 2026
+
+[Per-ID verification report](Mahadum360_Batch5_Verification.md) covers F24, F14, F16, F28, B10, B48, F23, B45 and F20. Required-upload watch gating and real-rendition/caption selection are implemented locally. Read-only diagnosis and cleanup dependency inventory are tested. Fresh Monnify sandbox catalogue access succeeded; no purchase was made. All original audit statuses, deadlines and acceptance gates remain intact; none of these complete parent IDs has production/human acceptance. Lucy identity, cleanup targets, real assets, payment/carrier delivery and the retired-airtime conflict remain open.

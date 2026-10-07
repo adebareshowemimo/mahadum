@@ -41,6 +41,7 @@ export const NAV_SECTIONS: NavSection[] = [
     title: 'Family',
     items: [
       { label: 'Family', to: '/family', icon: 'users', roles: ['parent', 'supervisor'] },
+      { label: 'Family goals', to: '/family/goals', icon: 'trophy', roles: ['parent'] },
       { label: 'Wallet', to: '/wallet', icon: 'wallet', roles: ['parent', 'supervisor'] },
       { label: 'Reviews', to: '/reviews', icon: 'clipboard', roles: ['parent', 'supervisor'] },
       { label: 'Referrals', to: '/referrals', icon: 'gift', roles: ['parent', 'teacher'] },
@@ -60,8 +61,10 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Educator/School',
     items: [
-      { label: 'Dashboard', to: '/school', icon: 'building', roles: ['school_admin'] },
+      { label: 'Dashboard', to: '/school', icon: 'building', roles: ['school_admin'], end: true },
       { label: 'Roster', to: '/roster', icon: 'users', roles: ['school_admin'] },
+      { label: 'Students', to: '/school/students', icon: 'users', roles: ['school_admin'] },
+      { label: 'Teachers', to: '/school/teachers', icon: 'cap', roles: ['school_admin'] },
       { label: 'Seats', to: '/seats', icon: 'layers', roles: ['school_admin'] },
       { label: 'Invoices', to: '/invoices', icon: 'card', roles: ['school_admin'] },
       { label: 'Referrals', to: '/school/referrals', icon: 'gift', roles: ['school_admin'] },
@@ -112,6 +115,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: 'System',
     items: [
+      { label: 'Notifications', to: '/notifications', icon: 'bell' },
       { label: 'Help & support', to: '/support', icon: 'bell' },
       {
         label: 'Design system',

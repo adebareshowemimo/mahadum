@@ -9,8 +9,10 @@ use App\Models\ComponentProgress;
 use App\Models\LearnerProfile;
 use App\Models\Lesson;
 use App\Models\LessonComponent;
+use App\Services\Learning\VideoCoverage;
 use App\Services\Learning\XapiRecorder;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class ProgressController extends Controller
 {
@@ -38,54 +40,68 @@ class ProgressController extends Controller
 
         $progress = $this->lessonProgress($learner, $lesson);
 
-        $cp = ComponentProgress::firstOrCreate(
-            ['lesson_progress_id' => $progress->id, 'lesson_component_id' => $component->id],
-            ['status' => 'in_progress'],
-        );
+        return DB::transaction(function () use ($request, $component, $progress, $learner, $xapi) {
+            $cp = ComponentProgress::firstOrCreate(
+                ['lesson_progress_id' => $progress->id, 'lesson_component_id' => $component->id],
+                ['status' => 'in_progress'],
+            );
+            $cp = ComponentProgress::whereKey($cp->id)->lockForUpdate()->firstOrFail();
 
-        $data = $cp->data ?? [];
+            $data = $cp->data ?? [];
 
-        // Cumulative watch time + play count accumulate from per-beat deltas; the
-        // playhead position and length are absolute snapshots.
-        if ($request->filled('watched_delta')) {
-            $data['watched_seconds'] = ($data['watched_seconds'] ?? 0) + (int) round((float) $request->input('watched_delta'));
-        } elseif ($request->filled('watched_seconds')) {
-            $data['watched_seconds'] = $request->integer('watched_seconds');
-        }
-        if ($request->filled('play_delta')) {
-            $data['play_count'] = ($data['play_count'] ?? 0) + $request->integer('play_delta');
-        }
-        if ($request->filled('position_seconds')) {
-            $data['position_seconds'] = round((float) $request->input('position_seconds'), 2);
-        }
-        if ($request->filled('duration_seconds')) {
-            $data['duration_seconds'] = round((float) $request->input('duration_seconds'), 2);
-        }
-        $event = $request->input('event');
-        if ($event) {
-            $data['last_event'] = $event;
-        }
+            // Cumulative watch time + play count accumulate from per-beat deltas; the
+            // playhead position and length are absolute snapshots.
+            if ($request->filled('watched_delta')) {
+                $data['watched_seconds'] = ($data['watched_seconds'] ?? 0) + (int) round((float) $request->input('watched_delta'));
+            } elseif ($request->filled('watched_seconds')) {
+                $data['watched_seconds'] = $request->integer('watched_seconds');
+            }
+            if ($request->filled('play_delta')) {
+                $data['play_count'] = ($data['play_count'] ?? 0) + $request->integer('play_delta');
+            }
+            if ($request->filled('position_seconds')) {
+                $data['position_seconds'] = round((float) $request->input('position_seconds'), 2);
+            }
+            if ($request->filled('duration_seconds')) {
+                $data['duration_seconds'] = round((float) $request->input('duration_seconds'), 2);
+            }
+            if ($component->type === 'video' && $request->has('watched_ranges')) {
+                $data['watched_ranges'] = VideoCoverage::merge(array_merge(
+                    $data['watched_ranges'] ?? [], $request->input('watched_ranges', []),
+                ));
+            }
+            $event = $request->input('event');
+            if ($event) {
+                $data['last_event'] = $event;
+            }
 
-        if ($request->boolean('completed')) {
-            $cp->status = 'complete';
-            $cp->score = 1.0;
-        }
-        $cp->data = $data;
-        $cp->save();
+            if ($request->boolean('completed')) {
+                if ($component->type === 'video' && data_get($component->settings, 'require_watch', false)
+                    && $component->video?->source_type !== 'youtube' && $cp->status !== 'complete') {
+                    $duration = (float) ($component->video?->duration_seconds ?: ($data['duration_seconds'] ?? 0));
+                    abort_unless(VideoCoverage::complete($data['watched_ranges'] ?? [], $duration),
+                        422, 'Watch the full video before continuing.');
+                }
+                $cp->status = 'complete';
+                $cp->score = 1.0;
+            }
+            $cp->data = $data;
+            $cp->save();
 
-        $progress->update([
-            'components_completed' => $progress->componentProgress()->where('status', 'complete')->count(),
-        ]);
+            $progress->update([
+                'components_completed' => $progress->componentProgress()->where('status', 'complete')->count(),
+            ]);
 
-        $this->recordStatement($xapi, $learner->id, $component, $cp, $data, $event);
+            $this->recordStatement($xapi, $learner->id, $component, $cp, $data, $event);
 
-        return response()->json(['data' => [
-            'component_id' => $component->id,
-            'status' => $cp->status,
-            'watched_seconds' => $data['watched_seconds'] ?? 0,
-            'play_count' => $data['play_count'] ?? 0,
-            'position_seconds' => $data['position_seconds'] ?? 0,
-        ]]);
+            return response()->json(['data' => [
+                'component_id' => $component->id,
+                'status' => $cp->status,
+                'watched_seconds' => $data['watched_seconds'] ?? 0,
+                'play_count' => $data['play_count'] ?? 0,
+                'position_seconds' => $data['position_seconds'] ?? 0,
+            ]]);
+        });
     }
 
     /**

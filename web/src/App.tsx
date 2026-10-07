@@ -39,6 +39,11 @@ const MediaPage = lazy(() => import('@/pages/content/MediaPage').then((m) => ({ 
 const EarningsPage = lazy(() => import('@/pages/EarningsPage').then((m) => ({ default: m.EarningsPage })))
 const DashboardPage = lazy(() => import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
 const FamilyPage = lazy(() => import('@/pages/FamilyPage').then((m) => ({ default: m.FamilyPage })))
+const FamilyGoalsPage = lazy(() => import('@/pages/FamilyGoalsPage').then((m) => ({ default: m.FamilyGoalsPage })))
+const SchoolStudentsPage = lazy(() => import('@/pages/SchoolDirectoriesPage').then((m) => ({ default: m.SchoolStudentsPage })))
+const SchoolTeachersPage = lazy(() => import('@/pages/SchoolDirectoriesPage').then((m) => ({ default: m.SchoolTeachersPage })))
+const TeacherInvitationPage = lazy(() => import('@/pages/TeacherInvitationPage').then((m) => ({ default: m.TeacherInvitationPage })))
+const NotificationsPage = lazy(() => import('@/pages/NotificationsPage').then((m) => ({ default: m.NotificationsPage })))
 const ChildPage = lazy(() => import('@/pages/ChildPage').then((m) => ({ default: m.ChildPage })))
 const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })))
 const VerifyEmailPage = lazy(() => import('@/pages/VerifyEmailPage').then((m) => ({ default: m.VerifyEmailPage })))
@@ -120,6 +125,10 @@ const PAGE_TITLES: Record<string, string> = {
   '/learn': 'My Learning',
   '/learn/courses': 'Courses',
   '/family': 'Family',
+  '/family/goals': 'Family goals',
+  '/school/students': 'Students',
+  '/school/teachers': 'Teachers',
+  '/notifications': 'Notifications',
   '/tasks': 'My tasks',
   '/classes': 'Classes',
   '/assignments': 'Assignments',
@@ -219,6 +228,7 @@ function ShellSuspense() {
 // Destinations that already have real screens; everything else in the nav
 // resolves to a ComingSoon placeholder so links never dead-end.
 const REAL_PAGES = new Set([
+  '/family/goals', '/school/students', '/school/teachers', '/notifications',
   '/verify-email',
   '/home',
   '/components',
@@ -315,6 +325,7 @@ export function App() {
       <Route path="/child-safety" element={<ChildSafetyPage />} />
       <Route path="/accessibility" element={<AccessibilityPage />} />
       <Route path="/class-invitations/:token" element={<ClassInvitationPage />} />
+      <Route path="/teacher-invitations/:token" element={<TeacherInvitationPage />} />
       {/* Referral share links (mahadum360.com/r/CODE) → sign-up with the code applied. */}
       <Route path="/r/:code" element={<ReferralLanding />} />
 
@@ -347,6 +358,12 @@ export function App() {
           <Route path="/achievements" element={<AchievementsPage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/family" element={<FamilyPage />} />
+          <Route element={<RoleRoute roles={['parent']} />}><Route path="/family/goals" element={<FamilyGoalsPage />} /></Route>
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route element={<RoleRoute roles={['school_admin', 'super_admin']} />}>
+            <Route path="/school/students" element={<SchoolStudentsPage />} />
+            <Route path="/school/teachers" element={<SchoolTeachersPage />} />
+          </Route>
           <Route path="/family/children/:learnerId" element={<ChildPage />} />
           <Route path="/wallet" element={<WalletPage />} />
           <Route path="/reviews" element={<ReviewsPage />} />

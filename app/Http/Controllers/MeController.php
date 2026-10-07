@@ -41,6 +41,7 @@ class MeController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'email_verified' => $user->hasVerifiedEmail(),
+                'signup_account_type' => $user->signup_account_type,
                 'roles' => $user->getRoleNames(),
             ],
             'families' => FamilyResource::collection($user->ownedFamilies),

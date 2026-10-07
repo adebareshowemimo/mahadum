@@ -3,6 +3,9 @@ import { cn } from '@/lib/cn'
 import type { LearnerProfile } from '@/lib/api'
 import { ActiveLearnerGate } from '@/components/learner/ActiveLearnerGate'
 import { useLeaderboard, useLeagueCurrent } from '@/lib/gamification/queries'
+import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '@/lib/auth/AuthProvider'
+import { batch4Api } from '@/lib/batch4/api'
 
 export function LeaderboardPage() {
   return <ActiveLearnerGate>{(learner) => <Leaderboard learner={learner} />}</ActiveLearnerGate>
@@ -13,6 +16,8 @@ const MEDALS: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' }
 function Leaderboard({ learner }: { learner: LearnerProfile }) {
   const league = useLeagueCurrent(learner.id)
   const board = useLeaderboard(learner.id)
+  const { user, hasRole } = useAuth()
+  const cheers = useQuery({ queryKey: ['family-cheers', user?.user.id, learner.id], queryFn: () => batch4Api.cheers(learner.id), enabled: hasRole('parent', 'student') })
 
   return (
     <div className="flex flex-col gap-6">
@@ -29,6 +34,7 @@ function Leaderboard({ learner }: { learner: LearnerProfile }) {
             <>
               <div>
                 <p className="text-sm font-medium text-primary">{league.data?.league?.name ?? 'Your league'}</p>
+                {league.data?.league?.members != null && <p className="text-xs text-muted">{league.data.league.members} / {league.data.league.capacity ?? 30} learners this week</p>}
                 <p className="font-display text-lg font-bold text-foreground">
                   {league.data?.learning_level
                     ? `Level ${league.data.learning_level.number} · ${league.data.learning_level.name}`
@@ -51,6 +57,7 @@ function Leaderboard({ learner }: { learner: LearnerProfile }) {
         </CardBody>
       </Card>
 
+      {!!cheers.data?.length && <Card><CardBody><h2 className="font-semibold">Your family is cheering you on</h2>{cheers.data.map(c => <p className="mt-2 text-primary" key={c.id}>{c.message}</p>)}</CardBody></Card>}
       {board.isLoading ? (
         <Skeleton className="h-64" />
       ) : board.isError ? (

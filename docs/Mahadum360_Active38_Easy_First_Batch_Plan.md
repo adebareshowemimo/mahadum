@@ -152,9 +152,11 @@ Shared regressions: Parent+Teacher and parent-school-parent transitions retain f
 
 Local/manual QA: School rosters/teacher setup, /classes and signup/admin classifications; family challenge/pool/cheer surfaces and notifications using isolated fixtures. Deborah's failed /classes status/error, X-Organization-Id, /me context and deployed revision are required for her live diagnosis. Release independent confirmed sub-scopes separately if that evidence is still pending; do not mark full F33/F34 closed.
 
-- [ ] Per-ID reproduction or no-change evidence recorded.
-- [ ] Bounded code changes and applicable regression/static/build checks complete.
-- [ ] Actual UI pixels inspected where relevant; blocked prerequisites explicitly recorded.
+**7 October local candidate:** [Batch 4 verification](Mahadum360_Batch4_Verification.md) records all seven IDs. Adebare confirmed parent-selected, initially disabled alert thresholds and parent-managed, conserved-coin pools. Directory/invite, Teacher/School/Institution, weekly cohorts/cheers, challenges/pools and notification code/fakes are implemented locally. F33 production diagnosis and B27 real provider/browser/device delivery remain unverified. Earlier dependency statements above record the starting assessment; they are superseded for the implemented local scopes, not production acceptance.
+
+- [x] Per-ID reproduction or no-change evidence recorded.
+- [x] Bounded code changes and applicable regression/static/build checks complete.
+- [x] Actual UI pixels inspected where relevant; blocked prerequisites explicitly recorded.
 - [ ] Adebare local confirmation recorded separately for every included fix.
 - [ ] Concrete batch commit/push authorized and origin SHA verified.
 - [ ] Confirmed changes deployed by Adebare; migration/version evidence recorded if required.
@@ -183,6 +185,8 @@ Evidence/decisions before dependent work: F24a prevention and F14a learner-membe
 Shared regressions: Read-only ownership/learner identity comparison; no membership/profile deletion or same-name merge; cleanup dry-run and reversible target isolation; video seek/pause/resume/watch coverage plus server acceptance and genuine rendition switching. Catalog/error handling, payment-versus-delivery separation, signed/idempotent events, retries/timeouts and no false fulfillment. Approved telco access/STOP/sandbox schedules preserve existing household roles and ownership.
 
 Local/manual QA: Affected family/leaderboard diagnosis and cleanup preview; actual lesson-player pixels/assets; /billing/data, telco billing and Plans with authorized sandbox evidence. Record catalog loaded, payment verified and delivery confirmed separately. Missing production evidence/assets/provider contracts mean BLOCKED or NOT-RUN, never a fabricated pass; no real purchase, deletion, account repair or credential change during planning/tests.
+
+**7 October local continuation:** [Batch 5 verification](Mahadum360_Batch5_Verification.md) records all nine IDs. Required-upload watch coverage and real-rendition/caption selection are repaired and tested locally. Read-only account, ledger, demo-record/dependency, asset and provider diagnostics are available. Fresh Monnify sandbox catalogue access succeeded. Lucy production identity, exact cleanup targets, missing encoded assets, payment/carrier delivery and the conflict with retired airtime enrollment remain open. No deletion, relink, production write, credential change, purchase, commit or push occurred.
 
 - [ ] Per-ID reproduction or no-change evidence recorded.
 - [ ] Bounded code changes and applicable regression/static/build checks complete.

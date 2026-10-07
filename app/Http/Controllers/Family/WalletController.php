@@ -9,6 +9,7 @@ use App\Http\Requests\Family\TransferRequest;
 use App\Models\LearnerProfile;
 use App\Models\WalletFundingTransaction;
 use App\Services\Billing\PaymentGatewayManager;
+use App\Services\Family\FamilyAlertService;
 use App\Services\Family\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -90,6 +91,7 @@ class WalletController extends Controller
         }
 
         $this->wallets->transfer($familyWallet, $learnerWallet, $request->integer('coins'), 'transfer', $learner->id);
+        rescue(fn () => app(FamilyAlertService::class)->evaluate($family), report: true);
 
         return response()->json(['data' => [
             'family_balance' => $familyWallet->fresh()->coin_balance,

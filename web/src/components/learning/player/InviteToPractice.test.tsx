@@ -22,7 +22,13 @@ describe('Invite to Practice after video', () => {
   it('appears when the video ends and sends the exact video component with a clear message', async () => {
     const { container, invite } = mount()
     expect(screen.queryByRole('button', { name: 'Invite to Practice' })).not.toBeInTheDocument()
-    fireEvent.ended(container.querySelector('video')!)
+    const clip = container.querySelector('video')!
+    Object.defineProperty(clip, 'duration', { configurable: true, value: 2 })
+    fireEvent.loadedMetadata(clip)
+    fireEvent.play(clip)
+    for (const time of [0.5, 1, 1.5, 2]) { clip.currentTime = time; fireEvent.timeUpdate(clip) }
+    fireEvent.ended(clip)
+    await screen.findByRole('button', { name: 'Invite to Practice' })
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Invite to Practice' }))
     expect(screen.getByText(/Invitation message:/)).toHaveTextContent('Greetings')

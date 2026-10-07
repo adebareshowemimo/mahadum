@@ -38,6 +38,7 @@ export function DashboardPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
+        {user?.user.signup_account_type === 'teacher' && !hasRole('teacher') && <Card className="sm:col-span-2"><CardBody><h2 className="font-semibold">Join your teaching team</h2><p className="mt-2 text-sm text-muted">Ask your school administrator for a teacher invitation. Verify your email, then open the invitation link to accept. Teaching access begins after acceptance.</p></CardBody></Card>}
         <Card>
           <CardHeader>
             <CardTitle>Your account</CardTitle>

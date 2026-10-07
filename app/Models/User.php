@@ -36,6 +36,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $username
  * @property string|null $phone
  * @property Carbon|null $date_of_birth
+ * @property string|null $signup_account_type
  * @property string|null $google_id
  * @property string $locale
  * @property string $status

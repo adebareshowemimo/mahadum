@@ -21,6 +21,8 @@ all.
 
 ## Status snapshot (2026-07-04, updated after §0–§3 all shipped — plan complete)
 
+**7 October 2026 Batch 4 local candidate:** [Teacher onboarding verification](Mahadum360_Batch4_Verification.md) adds school-admin Students/Teachers directories and expiring email invitations. Public Teacher signup records intent without a privileged role or a school; only verified recipient acceptance of an authorized school invitation adds teaching access. Existing families and class Edit/Assign teacher controls remain available. No historical teacher relink or public supervisor grant; deployment, real email delivery and Deborah's production class-loading diagnosis remain pending.
+
 **Landed (✅):**
 
 | Page | Route | Component | Backend |

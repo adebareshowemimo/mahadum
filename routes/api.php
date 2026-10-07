@@ -65,6 +65,7 @@ use App\Http\Controllers\Content\QuizImportController;
 use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\Family\ChoreController;
 use App\Http\Controllers\Family\FamilyController;
+use App\Http\Controllers\Family\FamilyGoalsController;
 use App\Http\Controllers\Family\ReviewController;
 use App\Http\Controllers\Family\WalletController;
 use App\Http\Controllers\Gamification\AdController;
@@ -72,6 +73,7 @@ use App\Http\Controllers\Gamification\BadgeController;
 use App\Http\Controllers\Gamification\HeartController;
 use App\Http\Controllers\Gamification\LeaderboardController;
 use App\Http\Controllers\Gamification\StreakController;
+use App\Http\Controllers\Identity\WebPushController;
 use App\Http\Controllers\Learning\AnswerController;
 use App\Http\Controllers\Learning\AssessmentController;
 use App\Http\Controllers\Learning\AssignmentSubmissionController;
@@ -99,6 +101,7 @@ use App\Http\Controllers\School\ClassLearnerInvitationController;
 use App\Http\Controllers\School\RosterController;
 use App\Http\Controllers\School\SchoolClassController;
 use App\Http\Controllers\School\SchoolDashboardController;
+use App\Http\Controllers\School\SchoolDirectoryController;
 use App\Http\Controllers\School\SchoolReferralController;
 use App\Http\Controllers\School\SeatController;
 use App\Http\Controllers\School\TeacherCompensationController;
@@ -134,6 +137,7 @@ Route::prefix('v1')->group(function () {
     });
     Route::get('class-invitations/{token}', [ClassLearnerInvitationController::class, 'show'])
         ->middleware('throttle:60,1');
+    Route::get('teacher-invitations/{token}', [SchoolDirectoryController::class, 'showInvitation'])->middleware('throttle:60,1');
 
     // Email verification link (clicked from the inbox; proven by the signature
     // + hash, so no bearer token is required).
@@ -171,6 +175,10 @@ Route::prefix('v1')->group(function () {
         Route::get('me/notifications', [NotificationController::class, 'index']);
         Route::post('me/notifications/read-all', [NotificationController::class, 'markAllRead']);
         Route::post('me/notifications/{id}/read', [NotificationController::class, 'markRead']);
+        Route::post('teacher-invitations/{token}/accept', [SchoolDirectoryController::class, 'acceptInvitation'])->middleware('throttle:10,1');
+        Route::get('me/push', [WebPushController::class, 'show']);
+        Route::post('me/push', [WebPushController::class, 'store'])->middleware('throttle:10,1');
+        Route::delete('me/push', [WebPushController::class, 'destroy']);
 
         /* ---- Content / CMS (content_owner) ---- */
         Route::get('courses', [CourseController::class, 'index']);
@@ -277,6 +285,13 @@ Route::prefix('v1')->group(function () {
 
         /* ---- Family & wallet (parent) ---- */
         Route::get('family', [FamilyController::class, 'show'])->middleware('can:family.manage');
+        Route::get('family/goals', [FamilyGoalsController::class, 'index'])->middleware('can:family.manage');
+        Route::post('family/challenges', [FamilyGoalsController::class, 'createChallenge'])->middleware('can:family.manage');
+        Route::post('family/pools', [FamilyGoalsController::class, 'createPool'])->middleware('can:family.manage');
+        Route::post('family/pools/{pool}/movements', [FamilyGoalsController::class, 'movePool'])->middleware('can:family.wallet.fund');
+        Route::put('family/alerts', [FamilyGoalsController::class, 'preferences'])->middleware('can:family.manage');
+        Route::post('family/learners/{learner}/cheers', [FamilyGoalsController::class, 'cheer'])->middleware('can:family.manage');
+        Route::get('learners/{learner}/cheers', [FamilyGoalsController::class, 'cheers']);
         Route::post('family/children', [FamilyController::class, 'addChild'])->middleware('can:family.manage');
         Route::get('family/children/{learner}', [FamilyController::class, 'child'])
             ->middleware('can:family.manage');
@@ -356,6 +371,10 @@ Route::prefix('v1')->group(function () {
         Route::prefix('schools/{organization}')->group(function () {
             Route::get('dashboard', [SchoolDashboardController::class, 'show'])->middleware('can:schools.dashboard.view');
             Route::get('teachers', [SchoolClassController::class, 'teachers'])->middleware('can:schools.classes.manage');
+            Route::get('students', [SchoolDirectoryController::class, 'students'])->middleware('can:schools.roster.view');
+            Route::get('teacher-directory', [SchoolDirectoryController::class, 'teachers'])->middleware('can:schools.classes.manage');
+            Route::post('teacher-invitations', [SchoolDirectoryController::class, 'invite'])->middleware('can:schools.classes.manage');
+            Route::post('teacher-invitations/{invitation}/revoke', [SchoolDirectoryController::class, 'revoke'])->middleware('can:schools.classes.manage');
             Route::post('students/import', [RosterController::class, 'import'])->middleware('can:schools.roster.import');
             Route::get('seats', [SeatController::class, 'index'])->middleware('can:schools.seats.view');
             Route::post('seats/purchase', [SeatController::class, 'purchase'])->middleware('can:schools.seats.purchase');

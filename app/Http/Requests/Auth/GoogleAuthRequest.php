@@ -27,8 +27,8 @@ class GoogleAuthRequest extends FormRequest
         return [
             'id_token' => ['required', 'string'],
             'device_name' => ['required', 'string', 'max:255'],
-            'account_type' => ['nullable', Rule::in(['individual', 'family', 'educator_school', 'institution'])],
-            'organization_name' => ['required_if:account_type,educator_school,institution', 'nullable', 'string', 'max:255'],
+            'account_type' => ['nullable', Rule::in(['individual', 'family', 'teacher', 'school', 'educator_school', 'institution'])],
+            'organization_name' => ['required_if:account_type,school,educator_school,institution', 'nullable', 'string', 'max:255'],
             'dial_code' => ['nullable', 'string', 'max:6'],
             'phone' => ['required_with:account_type', 'nullable', 'string', 'regex:/^\+[1-9][0-9]{7,14}$/', 'max:20', Rule::unique('users', 'phone')],
             'date_of_birth' => ['nullable', 'date', 'before:today'],

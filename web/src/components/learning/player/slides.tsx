@@ -5,6 +5,7 @@ import { ApiError } from '@/lib/api'
 import type { Answer, AssignmentSlide, ExerciseSlide, GameSlide, GenericSlide, PlayerService, QType, QuizSlide, Slide, SpeakingSlide, Verdict, VideoSlide } from './types'
 import { youtubeEmbedUrl } from './types'
 import { InviteToPractice } from './InviteToPractice'
+import { mergeWatchedRanges, hasFullCoverage, type WatchedRange } from './videoCoverage'
 
 export interface SlideProps {
   slide: Slide
@@ -502,6 +503,15 @@ function VideoSlideView({ slide, service, onAdvance }: SlideProps & { slide: Vid
   const [watchedToEnd, setWatchedToEnd] = useState(slide.alreadyCompleted)
   const [resumedFrom, setResumedFrom] = useState(0)
   const [busy, setBusy] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [quality, setQuality] = useState('original')
+  const renditions = (slide.renditions ?? []).filter(r => ['240p', '360p', '720p', '240', '360', '720'].includes(r.quality))
+  const selectedSrc = renditions.find(r => r.quality === quality)?.src ?? slide.src ?? renditions[0]?.src
+  const switchingRef = useRef<{ position: number; playing: boolean } | null>(null)
+  const rangesRef = useRef<WatchedRange[]>(slide.watchedRanges ?? [])
+  const queueRef = useRef<Promise<void>>(Promise.resolve())
+  const playingRef = useRef(false)
+  const seekingRef = useRef(false)
 
   // Unsent deltas + last playhead, kept in refs so listeners stay stable.
   const watchedDeltaRef = useRef(0)
@@ -520,28 +530,34 @@ function VideoSlideView({ slide, service, onAdvance }: SlideProps & { slide: Vid
       if (event === 'heartbeat' && watchedDelta < 1 && playDelta === 0) return
       watchedDeltaRef.current = 0
       playDeltaRef.current = 0
-      void service
-        .trackVideo(slide, {
-          event,
-          watchedDelta,
-          playDelta,
-          positionSeconds: v?.currentTime ?? lastTimeRef.current,
-          durationSeconds: durationRef.current,
-          completed: event === 'completed',
-        })
-        .catch(() => {})
+      const beat = {
+        event,
+        watchedDelta,
+        watchedRanges: rangesRef.current.map(r => [...r] as WatchedRange),
+        playDelta,
+        positionSeconds: v?.currentTime ?? lastTimeRef.current,
+        durationSeconds: durationRef.current,
+        completed: event === 'completed',
+      }
+      // Keep progress requests in order. Every beat carries the full coverage
+      // snapshot so a failed heartbeat cannot lose an already-watched span.
+      const pending = queueRef.current.catch(() => {}).then(() => service.trackVideo(slide, beat))
+      queueRef.current = pending
+      void pending.catch(() => {})
+      return pending
     },
     [service, slide],
   )
 
   useEffect(() => {
     const v = videoRef.current
-    if (!v || !slide.src) return
+    if (!v || !selectedSrc) return
 
     const onLoaded = () => {
       durationRef.current = Number.isFinite(v.duration) ? v.duration : null
       // Resume from the saved playhead (unless already finished or near the end).
-      const resumeAt = slide.resumeAt
+      const switching = switchingRef.current
+      const resumeAt = switching?.position ?? slide.resumeAt
       const dur = durationRef.current
       if (!slide.alreadyCompleted && resumeAt > 1 && (dur === null || resumeAt < dur - 1)) {
         resumingRef.current = true
@@ -549,8 +565,13 @@ function VideoSlideView({ slide, service, onAdvance }: SlideProps & { slide: Vid
         lastTimeRef.current = resumeAt
         setResumedFrom(resumeAt)
       }
+      if (switching) {
+        switchingRef.current = null
+        if (switching.playing) void v.play().catch(() => {})
+      }
     }
     const onPlay = () => {
+      playingRef.current = true
       playDeltaRef.current += 1
       lastTimeRef.current = v.currentTime
       flush('played')
@@ -560,12 +581,24 @@ function VideoSlideView({ slide, service, onAdvance }: SlideProps & { slide: Vid
       const dt = now - lastTimeRef.current
       lastTimeRef.current = now
       // Count only contiguous playback (ignore seeks / large jumps).
-      if (dt > 0 && dt < 2) watchedDeltaRef.current += dt
+      if (playingRef.current && !seekingRef.current && !v.seeking && dt > 0 && dt < 2) {
+        watchedDeltaRef.current += dt
+        rangesRef.current = mergeWatchedRanges([...rangesRef.current, [now - dt, now]])
+      }
+      // Native playback spans remain accurate when background tabs throttle
+      // timeupdate events or playback speed changes. Seeks add no played span.
+      const nativeRanges: WatchedRange[] = []
+      for (let i = 0; i < v.played.length; i++) nativeRanges.push([v.played.start(i), v.played.end(i)])
+      rangesRef.current = mergeWatchedRanges([...rangesRef.current, ...nativeRanges])
     }
     const onPause = () => {
+      onTimeUpdate()
+      playingRef.current = false
       if (!v.ended) flush('paused')
     }
+    const onSeeking = () => { seekingRef.current = true }
     const onSeeked = () => {
+      seekingRef.current = false
       lastTimeRef.current = v.currentTime
       // Don't record the automatic resume seek as a learner action.
       if (resumingRef.current) {
@@ -575,8 +608,17 @@ function VideoSlideView({ slide, service, onAdvance }: SlideProps & { slide: Vid
       flush('seeked')
     }
     const onEnded = () => {
-      setWatchedToEnd(true)
-      flush('completed')
+      onTimeUpdate()
+      playingRef.current = false
+      if (slide.requireWatch && !hasFullCoverage(rangesRef.current, durationRef.current)) {
+        flush('paused')
+        return
+      }
+      setBusy(true)
+      setSaveError(null)
+      void flush('completed')?.then(() => setWatchedToEnd(true))
+        .catch(() => setSaveError('Your progress could not be saved. Press Continue to retry.'))
+        .finally(() => setBusy(false))
     }
     const onError = () => setFailed(true)
 
@@ -584,6 +626,7 @@ function VideoSlideView({ slide, service, onAdvance }: SlideProps & { slide: Vid
     v.addEventListener('play', onPlay)
     v.addEventListener('timeupdate', onTimeUpdate)
     v.addEventListener('pause', onPause)
+    v.addEventListener('seeking', onSeeking)
     v.addEventListener('seeked', onSeeked)
     v.addEventListener('ended', onEnded)
     v.addEventListener('error', onError)
@@ -598,28 +641,34 @@ function VideoSlideView({ slide, service, onAdvance }: SlideProps & { slide: Vid
       v.removeEventListener('play', onPlay)
       v.removeEventListener('timeupdate', onTimeUpdate)
       v.removeEventListener('pause', onPause)
+      v.removeEventListener('seeking', onSeeking)
       v.removeEventListener('seeked', onSeeked)
       v.removeEventListener('ended', onEnded)
       v.removeEventListener('error', onError)
       // Best-effort final flush when leaving mid-clip.
       if (watchedDeltaRef.current >= 1 || playDeltaRef.current > 0) flush('paused')
     }
-  }, [slide.src, flush])
+  }, [selectedSrc, flush])
 
   async function onContinue() {
     setBusy(true)
+    setSaveError(null)
     try {
+      if (saveError) await flush('completed')
+      await queueRef.current
       await service.completeStep(slide)
       onAdvance()
+    } catch {
+      setSaveError('Your progress could not be saved. Press Continue to retry.')
     } finally {
       setBusy(false)
     }
   }
 
-  const hasVideo = (isYoutube ? !!embedUrl : !!slide.src) && !failed
-  // The gate only applies to a real, playable clip the learner could finish —
-  // YouTube embeds fire no trackable events, so they're never gated.
-  const locked = !isYoutube && slide.requireWatch && hasVideo && !watchedToEnd
+  const hasVideo = (isYoutube ? !!embedUrl : !!selectedSrc) && !failed
+  // Required uploads stay gated on errors. YouTube embeds are handled
+  // separately because they do not expose playback events here.
+  const locked = !isYoutube && slide.requireWatch && !watchedToEnd && !(saveError && hasFullCoverage(rangesRef.current, durationRef.current))
 
   return (
     <>
@@ -636,12 +685,14 @@ function VideoSlideView({ slide, service, onAdvance }: SlideProps & { slide: Vid
         ) : hasVideo ? (
           <video
             ref={videoRef}
-            src={slide.src ?? undefined}
+            src={selectedSrc ?? undefined}
             controls
             playsInline
             poster={slide.poster ?? undefined}
             className="aspect-video w-full rounded-2xl bg-charcoal-900 ring-1 ring-gold-500/20"
-          />
+          >
+            {(slide.captions ?? []).map(c => <track key={c.language} kind="subtitles" srcLang={c.language} label={c.language} src={c.src} default={c.default} />)}
+          </video>
         ) : (
           <div className="flex aspect-video items-center justify-center rounded-2xl border border-gold-500/20 bg-charcoal-900 text-foreground/70">
             <div className="flex flex-col items-center gap-2">
@@ -650,6 +701,17 @@ function VideoSlideView({ slide, service, onAdvance }: SlideProps & { slide: Vid
             </div>
           </div>
         )}
+        {renditions.length > 0 && !isYoutube && <label className="text-sm text-muted">Video quality
+          <select aria-label="Video quality" value={quality} onChange={e => {
+            const v = videoRef.current
+            if (v) { switchingRef.current = { position: v.currentTime, playing: !v.paused }; flush('paused') }
+            setQuality(e.target.value)
+          }} className="ml-2 rounded border border-gold-500/20 bg-charcoal-900 p-2">
+            {slide.src && <option value="original">Original</option>}
+            {renditions.map(r => <option key={r.quality} value={r.quality}>{r.quality.replace(/p$/, '')}p</option>)}
+          </select>
+        </label>}
+        {saveError && <Alert variant="danger">{saveError}</Alert>}
         <p className="text-sm text-muted">
           {resumedFrom > 0 && !watchedToEnd && (
             <span className="font-semibold text-gold-300">Resumed from {fmtClock(resumedFrom)}. </span>

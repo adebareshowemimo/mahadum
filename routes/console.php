@@ -19,6 +19,7 @@ Schedule::command('referrals:sync-activations')->hourly();
 
 // Family-local daily XP winners (ties are intentionally all awarded).
 Schedule::command('gamification:award-family-heroes')->dailyAt('00:30');
+Schedule::command('family:send-alerts')->everyFifteenMinutes()->withoutOverlapping();
 
 // Teacher class compensation — accrue for the prior month on the 1st.
 Schedule::command('compensation:accrue-teachers')->monthlyOn(1, '03:00');

@@ -13,6 +13,7 @@ use App\Models\LearnerProfile;
 use App\Models\Organization;
 use App\Models\OrganizationUser;
 use App\Models\User;
+use App\Models\WebPushSubscription;
 use App\Notifications\NewDeviceAlert;
 use App\Services\AuditLogger;
 use App\Services\Referral\ReferralService;
@@ -210,9 +211,10 @@ class AuthController extends Controller
         $name = $current->name;
         $abilities = $current->abilities ?: $user->getRoleNames()->all();
 
-        $current->delete(); // revoke the old token
-
         $token = $user->createToken($name, $abilities, now()->addDays(self::TOKEN_TTL_DAYS));
+        WebPushSubscription::where('user_id', $user->id)->where('personal_access_token_id', $current->id)
+            ->update(['personal_access_token_id' => $token->accessToken->id]);
+        $current->delete(); // revoke the old token, preserving this browser's opt-in
 
         return response()->json(['data' => [
             'token' => $token->plainTextToken,
@@ -265,6 +267,12 @@ class AuthController extends Controller
         ?string $organizationName = null,
         ?string $familyName = null,
     ): ?Organization {
+        $user->update(['signup_account_type' => $accountType]);
+        if ($accountType === 'teacher') {
+            // Public intent creates no school role/membership. Access follows
+            // verified acceptance of an authorized school's invitation.
+            return null;
+        }
         if (in_array($accountType, ['individual', 'learner'], true)) {
             $user->assignRole('student');
             LearnerProfile::create([
@@ -275,7 +283,7 @@ class AuthController extends Controller
             return null;
         }
 
-        if (in_array($accountType, ['educator_school', 'institution'], true)) {
+        if (in_array($accountType, ['school', 'educator_school', 'institution'], true)) {
             $name = trim((string) $organizationName);
             $organization = Organization::create([
                 'name' => $name,

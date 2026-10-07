@@ -458,6 +458,7 @@ export const learningApi = {
     componentId: number
     completed?: boolean
     watchedSeconds?: number
+    watchedRanges?: [number, number][]
     event?: 'played' | 'paused' | 'seeked' | 'heartbeat' | 'completed'
     watchedDelta?: number
     playDelta?: number
@@ -469,6 +470,7 @@ export const learningApi = {
       component_id: input.componentId,
     }
     if (input.completed != null) body.completed = input.completed
+    if (input.watchedRanges) body.watched_ranges = input.watchedRanges
     if (input.watchedSeconds != null) body.watched_seconds = input.watchedSeconds
     if (input.event) body.event = input.event
     if (input.watchedDelta != null) body.watched_delta = input.watchedDelta

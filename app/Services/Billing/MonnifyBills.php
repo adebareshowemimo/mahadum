@@ -12,11 +12,13 @@ class MonnifyBills
 {
     private ?string $token = null;
 
-    public function billers(): array
+    public function billers(bool $fresh = false): array
     {
-        return Cache::remember($this->cacheKey('billers:DATA_BUNDLE'), 300, fn () => array_map(fn ($b) => [
+        $fetch = fn () => array_map(fn ($b) => [
             'code' => (string) $b['code'], 'name' => (string) $b['name'],
-        ], $this->pages('billers', ['category_code' => 'DATA_BUNDLE'])));
+        ], $this->pages('billers', ['category_code' => 'DATA_BUNDLE']));
+
+        return $fresh ? $fetch() : Cache::remember($this->cacheKey('billers:DATA_BUNDLE'), 300, $fetch);
     }
 
     public function products(string $billerCode, bool $fresh = false): array

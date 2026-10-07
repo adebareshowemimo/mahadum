@@ -3,7 +3,10 @@
 namespace App\Notifications;
 
 use App\Notifications\Concerns\CustomizableMail;
+use App\Notifications\Concerns\DeliversOverMessagingChannels;
 use App\Notifications\Concerns\TagsEmail;
+use App\Notifications\Contracts\SendsPush;
+use App\Notifications\Contracts\SendsSms;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -14,9 +17,9 @@ use Illuminate\Notifications\Notification;
  * (BadgeService). Goes to the learner's own account when they have a login,
  * otherwise to the family owner (COPPA-safe — never a login-less child).
  */
-class LearningLevelUp extends Notification implements ShouldQueue
+class LearningLevelUp extends Notification implements SendsPush, SendsSms, ShouldQueue
 {
-    use CustomizableMail, Queueable, TagsEmail;
+    use CustomizableMail, DeliversOverMessagingChannels, Queueable, TagsEmail;
 
     public function __construct(
         private string $learnerName,
@@ -24,12 +27,14 @@ class LearningLevelUp extends Notification implements ShouldQueue
         private string $badgeName,
     ) {}
 
-    /**
-     * @return array<int, string>
-     */
-    public function via(object $notifiable): array
+    public function toSms(object $notifiable): string
     {
-        return ['mail', 'database'];
+        return "{$this->learnerName} has earned the {$this->badgeName} badge. See achievements in your account.";
+    }
+
+    public function toPush(object $notifiable): array
+    {
+        return ['title' => 'New learning achievement', 'body' => $this->toSms($notifiable), 'data' => ['url' => '/achievements']];
     }
 
     public function toMail(object $notifiable): MailMessage

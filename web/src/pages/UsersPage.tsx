@@ -47,6 +47,7 @@ export function UsersPage() {
   }
 
   const columns: Column<AdminUserRow>[] = [
+    { key: 'type', header: 'Account type', render: u => ({ single: 'Individual', family: 'Family', school: 'School', institution: 'Institution', teacher: 'Teacher signup (unlinked)' }[u.account_type ?? 'single']) },
     {
       key: 'name',
       header: 'User',
@@ -152,6 +153,8 @@ export function UsersPage() {
                 { label: 'Individual', value: 'single' },
                 { label: 'Family', value: 'family' },
                 { label: 'Educator/School', value: 'school' },
+                { label: 'Institution', value: 'institution' },
+                { label: 'Teacher signup (unlinked)', value: 'teacher' },
               ]}
               allLabel="All types"
             />

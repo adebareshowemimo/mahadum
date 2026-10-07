@@ -1,5 +1,7 @@
 # MAHADUM.360 — Admin Portal (Super Admin) Frontend TODO
 
+> 7 October 2026 Batch 4 local candidate: user filters, overview and directory expose Institution and unlinked Teacher intent alongside School, Family and Individual. Classification grants no authority; Teacher signup needs verified acceptance of a school-admin invitation before teaching access. Existing administered supervisor roles remain unchanged. See [Batch 4 verification](Mahadum360_Batch4_Verification.md); deployment/live acceptance pending.
+
 > 2026-09-30: System settings includes a Login page toggle to show or hide Continue with Google and its divider on the login page. Defaults to visible; changes use the existing audited settings API and public config. Registration is unaffected.
 
 > 2026-09-30: `/admin/promos` now supports fee targets: school registration, school subscription and individual subscription. Eligibility is enforced at invoice/subscription checkout; existing codes retain legacy behavior. Fixed UI values are entered in naira and stored in minor units. See billing architecture for discount and tax rules.

@@ -28,7 +28,7 @@ class LeaderboardController extends Controller
         $mine = $ranked->firstWhere('learner_profile_id', $learner->id);
 
         return response()->json(['data' => [
-            'league' => ['id' => $league->id, 'name' => $league->name, 'tier' => $league->tier, 'week_start' => $league->week_start],
+            'league' => ['id' => $league->id, 'name' => $league->name, 'tier' => $league->tier, 'week_start' => $league->week_start, 'members' => $ranked->count(), 'capacity' => 30],
             'rank' => $mine?->rank,
             'weekly_xp' => $mine?->weekly_xp,
             'learning_level' => $this->levels->forLearner($learner),

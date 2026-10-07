@@ -110,6 +110,7 @@ export interface Me {
     name: string
     email: string
     email_verified: boolean
+    signup_account_type?: string | null
     roles: Role[]
   }
   families: Family[]
@@ -591,7 +592,8 @@ export interface VideoPayload {
   external_url: string | null
   hls: string | null
   poster: string | null
-  captions: unknown[]
+  captions: { language: string; src: string; default: boolean }[]
+  renditions?: { quality: string; src: string }[]
 }
 
 export interface QuizPayload {
@@ -632,6 +634,7 @@ export interface PlayComponent {
   require_watch?: boolean
   /** Saved playhead (seconds) for the active learner, for resume. */
   resume_position?: number
+  watched_ranges?: [number, number][]
   /** Whether the active learner already completed this component. */
   completed?: boolean
   video?: VideoPayload | null
@@ -776,7 +779,7 @@ export interface AwardBadgeResult {
 }
 
 export interface LeagueStanding {
-  league: { id: number; name: string; tier: number | string; week_start: string | null }
+  league: { id: number; name: string; tier: number | string; week_start: string | null; members?: number; capacity?: number }
   rank: number | null
   weekly_xp: number | null
   learning_level?: LearningLevel
@@ -1172,7 +1175,7 @@ export interface GradeSubmissionResult {
 
 export interface AdminMetrics {
   users: number
-  users_by_type: { school: number; family: number; single: number }
+  users_by_type: { school: number; institution?: number; teacher?: number; family: number; single: number }
   organizations: Record<string, number>
   subscriptions: Record<string, number>
   revenue_minor: number
@@ -1882,6 +1885,7 @@ export interface AdminUserOrg {
 }
 
 export interface AdminUserRow {
+  account_type?: 'single' | 'family' | 'school' | 'institution' | 'teacher'
   id: number
   name: string
   email: string
@@ -1932,7 +1936,7 @@ export interface AdminUsersQuery {
   q?: string
   role?: string
   status?: string
-  type?: 'single' | 'family' | 'school'
+  type?: 'single' | 'family' | 'school' | 'institution' | 'teacher'
   organization_id?: number
   page?: number
 }
@@ -2049,7 +2053,7 @@ export interface RegisterInput {
   password_confirmation: string
   username?: string
   /** Public signup choice; parent/learner support legacy and invitation flows. */
-  account_type?: 'individual' | 'family' | 'educator_school' | 'institution' | 'parent' | 'learner'
+  account_type?: 'individual' | 'family' | 'teacher' | 'school' | 'educator_school' | 'institution' | 'parent' | 'learner'
   organization_name?: string
   family_name?: string
   date_of_birth?: string
@@ -2059,7 +2063,7 @@ export interface RegisterInput {
 
 export interface GoogleAuthInput {
   id_token: string
-  account_type?: 'individual' | 'family' | 'educator_school' | 'institution'
+  account_type?: 'individual' | 'family' | 'teacher' | 'school' | 'educator_school' | 'institution'
   organization_name?: string
   phone?: string
   dial_code?: string
