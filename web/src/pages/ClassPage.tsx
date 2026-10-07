@@ -88,7 +88,7 @@ export function ClassPage() {
 
       {tab === 'learners' && <LearnersPanel classId={classId} students={detail.data.students} />}
       {tab === 'courses' && <CoursesPanel classId={classId} />}
-      {tab === 'assignments' && <AssignmentsPanel classId={classId} />}
+      {tab === 'assignments' && <AssignmentsPanel classId={classId} canCreate={detail.data.capabilities?.create_assignment ?? false} />}
       {tab === 'analytics' && <AnalyticsPanel classId={classId} />}
     </div>
   )
@@ -239,9 +239,9 @@ function CourseList({ courses, busyId, actionLabel, onAction }: {
   )
 }
 
-function AssignmentsPanel({ classId }: { classId: number }) {
+function AssignmentsPanel({ classId, canCreate }: { classId: number; canCreate: boolean }) {
   const { hasRole } = useAuth()
-  const canManageAssignments = hasRole('teacher')
+  const canManageAssignments = canCreate || hasRole('school_admin')
   const assignments = useClassAssignments(classId)
   if (assignments.isLoading) return <Skeleton className="h-56" />
   if (assignments.isError || !assignments.data) return <Alert variant="danger">We couldn’t load assignments for this class.</Alert>
@@ -251,15 +251,15 @@ function AssignmentsPanel({ classId }: { classId: number }) {
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div>
           <h2 id="assignments-title" className="text-lg font-semibold text-foreground">Class assignments</h2>
-          <p className="mt-1 text-sm text-muted">Create work, review submissions, grade learners, and award badges.</p>
+          <p className="mt-1 text-sm text-muted">Create class work. The assigned teacher grades submissions; parents approve coin rewards.</p>
         </div>
         {canManageAssignments && <LinkButton to={`/assignments?class=${classId}`}>Manage assignments</LinkButton>}
       </div>
       {assignments.data.length === 0 ? (
         <EmptyState
           title="No assignments yet"
-          body={canManageAssignments ? 'Create the first assignment for this class from the assignment workspace.' : 'The assigned teacher has not created an assignment for this class yet.'}
-          action={canManageAssignments ? <LinkButton to={`/assignments?class=${classId}`}>Create assignment</LinkButton> : undefined}
+          body={canCreate ? 'Create the first assignment for this class from the assignment workspace.' : 'The assigned teacher has not created an assignment for this class yet.'}
+          action={canCreate ? <LinkButton to={`/assignments?class=${classId}`}>Create assignment</LinkButton> : undefined}
         />
       ) : (
         <ul className="divide-y divide-border rounded-xl border border-border bg-surface">

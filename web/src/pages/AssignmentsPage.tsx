@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Alert, Avatar, Badge, Button, Card, CardBody, Input, Modal, Skeleton, Textarea } from '@/components/ui'
 import { ApiError, type ClassAssignmentRosterEntry } from '@/lib/api'
+import { useAuth } from '@/lib/auth/AuthProvider'
 import { useBadges } from '@/lib/gamification/queries'
 import {
   useAwardBadge,
@@ -10,11 +11,11 @@ import {
   useClassCompletion,
   useCreateClassAssignment,
   useGradeSubmission,
-  useMyClasses,
+  useManageableClasses,
 } from '@/lib/school/queries'
 
 export function AssignmentsPage() {
-  const { data: classes, isLoading, isError } = useMyClasses()
+  const { data: classes, isLoading, isError } = useManageableClasses()
   const [searchParams] = useSearchParams()
   const [classId, setClassId] = useState<number | null>(null)
   const [showCreate, setShowCreate] = useState(false)
@@ -31,9 +32,9 @@ export function AssignmentsPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold text-foreground">Assignments</h1>
-          <p className="mt-1 text-muted">Create class assignments and grade submissions.</p>
+          <p className="mt-1 text-muted">Create class assignments. The assigned teacher grades the work, then parents approve coin rewards.</p>
         </div>
-        {activeClassId && <Button onClick={() => setShowCreate(true)}>New assignment</Button>}
+        {activeClassId && <Button onClick={() => setShowCreate(true)}>Create assignment</Button>}
       </div>
 
       {classes.length === 0 ? (
@@ -141,6 +142,7 @@ function CreateAssignmentModal({ classId, open, onClose }: { classId: number; op
   const [values, setValues] = useState({ title: '', instructions: '', due_at: '', coin_reward: '' })
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
+  const [step, setStep] = useState(1)
 
   function update<K extends keyof typeof values>(key: K, val: (typeof values)[K]) {
     setValues((v) => ({ ...v, [key]: val }))
@@ -150,6 +152,12 @@ function CreateAssignmentModal({ classId, open, onClose }: { classId: number; op
     e.preventDefault()
     setFieldErrors({})
     setFormError(null)
+    if (!values.title.trim()) {
+      setFieldErrors({ title: 'Enter an assignment title.' })
+      setStep(1)
+      return
+    }
+    if (step === 1) { setStep(2); return }
     try {
       await createAssignment.mutateAsync({
         title: values.title.trim(),
@@ -158,10 +166,12 @@ function CreateAssignmentModal({ classId, open, onClose }: { classId: number; op
         coin_reward: values.coin_reward ? Number(values.coin_reward) : undefined,
       })
       setValues({ title: '', instructions: '', due_at: '', coin_reward: '' })
+      setStep(1)
       onClose()
     } catch (err) {
       if (err instanceof ApiError) {
         setFieldErrors(err.fieldErrors)
+        if (err.fieldErrors.title || err.fieldErrors.instructions) setStep(1)
         if (!Object.keys(err.fieldErrors).length) setFormError(err.message)
       } else {
         setFormError('Something went wrong. Please try again.')
@@ -170,24 +180,26 @@ function CreateAssignmentModal({ classId, open, onClose }: { classId: number; op
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="New assignment">
+    <Modal open={open} onClose={onClose} title="Create assignment" description={`Step ${step} of 2 · ${step === 1 ? 'Describe the work' : 'Set the due date and reward'}`}>
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         {formError && <Alert variant="danger">{formError}</Alert>}
-        <Input
+        {step === 1 ? <><Input
           label="Title"
           value={values.title}
           onChange={(e) => update('title', e.target.value)}
           error={fieldErrors.title}
           autoFocus
           required
+          maxLength={255}
         />
         <Textarea
           label="Instructions (optional)"
           value={values.instructions}
           onChange={(e) => update('instructions', e.target.value)}
           error={fieldErrors.instructions}
+          maxLength={5000}
         />
-        <div className="grid gap-3 sm:grid-cols-2">
+        </> : <><p className="font-semibold text-foreground">{values.title}</p><div className="grid gap-3 sm:grid-cols-2">
           <Input
             label="Due date (optional)"
             type="date"
@@ -199,14 +211,19 @@ function CreateAssignmentModal({ classId, open, onClose }: { classId: number; op
             label="Coin reward"
             type="number"
             min={0}
+            max={10000}
             value={values.coin_reward}
             onChange={(e) => update('coin_reward', e.target.value)}
             error={fieldErrors.coin_reward}
           />
         </div>
+        <p className="text-sm text-muted">Coins wait for parent approval after the teacher marks the work as passed.</p></>}
+        <div className="flex gap-2">
+        {step === 2 && <Button type="button" variant="outline" onClick={() => setStep(1)}>Back</Button>}
         <Button type="submit" loading={createAssignment.isPending}>
-          Create assignment
+          {step === 1 ? 'Next' : 'Create assignment'}
         </Button>
+        </div>
       </form>
     </Modal>
   )
@@ -214,6 +231,7 @@ function CreateAssignmentModal({ classId, open, onClose }: { classId: number; op
 
 export function AssignmentDetailContent({ classId, assignmentId }: { classId: number; assignmentId: number }) {
   const detail = useClassAssignmentDetail(classId, assignmentId)
+  const { hasRole } = useAuth()
 
   if (detail.isLoading) return <Skeleton className="h-64" />
   if (detail.isError || !detail.data) return <Alert variant="danger">Couldn’t load this assignment.</Alert>
@@ -241,6 +259,7 @@ export function AssignmentDetailContent({ classId, assignmentId }: { classId: nu
               classId={classId}
               assignmentId={assignmentId}
               coinReward={detail.data!.coin_reward}
+              canGrade={detail.data!.can_grade ?? hasRole('teacher')}
             />
           ))}
         </ul>
@@ -255,11 +274,13 @@ function RosterRow({
   classId,
   assignmentId,
   coinReward,
+  canGrade,
 }: {
   entry: ClassAssignmentRosterEntry
   classId: number
   assignmentId: number
   coinReward: number
+  canGrade: boolean
 }) {
   const [grading, setGrading] = useState(false)
   const [awarding, setAwarding] = useState(false)
@@ -293,12 +314,12 @@ function RosterRow({
         ) : (
           <Badge variant="neutral">Not submitted</Badge>
         )}
-        {entry.status === 'submitted' && !grading && (
+        {entry.status === 'submitted' && !grading && canGrade && (
           <Button size="sm" variant="outline" onClick={() => setGrading(true)}>
             Grade
           </Button>
         )}
-        {!awarding && (
+        {!awarding && canGrade && (
           <Button size="sm" variant="ghost" onClick={() => setAwarding(true)}>
             🏅 Award badge
           </Button>
@@ -316,7 +337,7 @@ function RosterRow({
         <AwardBadgePicker classId={classId} learnerId={entry.learner_id} onClose={() => setAwarding(false)} />
       )}
 
-      {grading && (
+      {grading && canGrade && (
         <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
           {error && <Alert variant="danger">{error}</Alert>}
           <div className="grid gap-2 sm:grid-cols-2">

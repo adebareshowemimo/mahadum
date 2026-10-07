@@ -31,7 +31,7 @@ class AdvertController extends Controller
         return response()->json(['data' => [
             'id' => $advert->id,
             'image_url' => $this->resolveUrl((string) $advert->mediaAsset->url),
-            'target_url' => $advert->target_url,
+            'target_url' => $advert->position === 'profile_data_topup' ? '/billing/data' : $advert->target_url,
             'position' => $advert->position,
             'size' => $advert->size,
         ]]);

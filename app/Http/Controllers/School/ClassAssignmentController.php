@@ -14,6 +14,7 @@ use App\Models\SchoolClass;
 use App\Notifications\ClassAssignmentGraded;
 use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -22,8 +23,8 @@ use Illuminate\Support\Facades\Storage;
  * Teacher-authored class assignments (schools.assignments.{create,review}),
  * distinct from the CMS `Assignment` (lesson-component) and the family
  * `AssignmentSubmission`/parent-review flow. Only the class's own teacher may
- * create or grade — enforced here (not via a class-wide policy) because these
- * two permissions are granted to `teacher` alone.
+ * grade. School admins can also create work in their own school; creation is
+ * enforced by the class policy as well as the existing permission guard.
  */
 class ClassAssignmentController extends Controller
 {
@@ -89,7 +90,7 @@ class ClassAssignmentController extends Controller
 
     public function store(StoreClassAssignmentRequest $request, SchoolClass $class): JsonResponse
     {
-        abort_unless($class->teacher_user_id === $request->user()->id, 403, 'Only this class\'s teacher can create assignments.');
+        Gate::authorize('createAssignment', $class);
 
         $assignment = ClassAssignment::create([
             ...$request->validated(),
@@ -97,11 +98,13 @@ class ClassAssignmentController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
+        $this->audit->record('class_assignment.created', $assignment, [], $assignment->only(['title', 'school_class_id', 'coin_reward', 'due_at']), $class->organization_id);
+
         return response()->json(['data' => ['id' => $assignment->id, 'title' => $assignment->title]], 201);
     }
 
     /** Assignment detail + a roster of every enrolled student and their submission status. */
-    public function show(SchoolClass $class, ClassAssignment $assignment): JsonResponse
+    public function show(Request $request, SchoolClass $class, ClassAssignment $assignment): JsonResponse
     {
         abort_unless($assignment->school_class_id === $class->id, 404);
 
@@ -132,6 +135,7 @@ class ClassAssignmentController extends Controller
             'instructions' => $assignment->instructions,
             'due_at' => $assignment->due_at,
             'coin_reward' => $assignment->coin_reward,
+            'can_grade' => $class->teacher_user_id === $request->user()->id && $request->user()->can('schools.assignments.review'),
             'roster' => $roster->values(),
         ]]);
     }

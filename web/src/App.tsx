@@ -357,10 +357,10 @@ export function App() {
             <Route path="/classes" element={<ClassesPage />} />
             <Route path="/classes/:classId" element={<ClassPage />} />
             <Route path="/classes/:classId/invite" element={<InviteClassLearnerPage />} />
-          </Route>
-          <Route element={<TeacherRoute />}>
             <Route path="/assignments" element={<AssignmentsPage />} />
             <Route path="/assignments/:assignmentId" element={<AssignmentDetailPage />} />
+          </Route>
+          <Route element={<TeacherRoute />}>
             <Route path="/earnings" element={<EarningsPage />} />
             <Route path="/teacher/profile" element={<TeacherProfilePage />} />
           </Route>

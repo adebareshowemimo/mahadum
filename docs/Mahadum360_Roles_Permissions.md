@@ -134,6 +134,8 @@ permission story has one source of truth instead of two.
 
 ## 5. Wiring (assignment is simple; org comes from membership)
 
+7 October 2026 local candidate ([Batch 3 evidence](Mahadum360_Batch3_Verification.md)): the existing `schools.assignments.create` grant now authorizes assigned teachers or school admins within the active tenant through `SchoolClassPolicy::createAssignment`. No new role grant or RBAC reseed is required; school admins already hold the permission. This adds school-admin authoring, not grading authority: grading remains assigned-teacher-only and reward release remains family-parent-only. Foreign-tenant access is denied. Production acceptance is pending.
+
 Assigning a role is a one-liner — no team context to juggle:
 
 ```php

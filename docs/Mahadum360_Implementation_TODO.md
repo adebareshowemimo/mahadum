@@ -232,6 +232,8 @@ Ongoing in parallel: **Design**, **Content production**, **Integrations**, **Com
 
 ## Phase 6 — Monetisation & billing ⬜
 
+7 October 2026 local candidate: [Batch 3 evidence](Mahadum360_Batch3_Verification.md) records actual known-amount subscription payment/refund events idempotently in an additive receipt table, without historical plan-price estimates. Consumer pages replace lesson banners with a managed data top-up advert: parent store link, child-only grown-up prompt, premium/staff suppression. Targeted data-ad seed and migration applied locally; production/provider delivery remain pending. Historical shipped labels below are retained.
+
 **Backend `[MVP]`**
 - [x] ✅ Plans + subscriptions (user/family/org polymorphic).
 - [x] ✅ **Flutterwave + Paystack**: **signed, idempotent webhooks** (incl. refund/chargeback reversal) + **outbound hosted-checkout** via swappable `PaymentGatewayManager` (live calls opt-in per env; NullGateway otherwise).
@@ -282,6 +284,8 @@ Ongoing in parallel: **Design**, **Content production**, **Integrations**, **Com
 
 ## Phase 8 — School operations ⬜
 
+7 October 2026 local candidate: [Batch 3 evidence](Mahadum360_Batch3_Verification.md) adds school-admin authoring through the shared two-step assignment wizard while retaining assigned-teacher grading and parent reward approval. School dashboard metrics include weighted quiz scores, existing speaking scores, enrolled published lesson completion and bounded top classes/students. B30/F29/B32 local checks pass; teacher onboarding remains Batch 4 and production acceptance remains pending.
+
 6 October 2026 local candidate: [Batch 2 evidence](Mahadum360_Batch2_Verification.md) records learner written class work, teacher answer/feedback review, parent-only coin release and enrolled-student analytics drill-down. Existing staff read/RBAC and teacher ownership rules remain. School-admin assignment management stays in Batch 3; this candidate has not been deployed.
 
 **Backend `[MVP]`**
@@ -302,6 +306,8 @@ Ongoing in parallel: **Design**, **Content production**, **Integrations**, **Com
 ---
 
 ## Phase 9 — Super Admin 🟡
+
+7 October 2026 local candidate: [Batch 3 evidence](Mahadum360_Batch3_Verification.md) adds language analytics, recorded NGN revenue channels, existing speaking/AI-state counts and an audited referral percentage control plus daily telco success. AI scoring/provider telemetry remain deferred/unavailable; contractual telco split is not configured. B41/B42 remain partial; no production acceptance is implied.
 
 **Backend `[MVP]`**
 - [x] ✅ Platform metrics (revenue, users, language analytics, billing rates).

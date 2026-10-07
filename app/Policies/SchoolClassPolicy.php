@@ -51,6 +51,12 @@ class SchoolClassPolicy
         return $this->update($user, $class);
     }
 
+    public function createAssignment(User $user, SchoolClass $class): bool
+    {
+        return $user->can('schools.assignments.create') && $this->sameTenant($class)
+            && ($user->hasRole('school_admin') || (int) $class->teacher_user_id === (int) $user->id);
+    }
+
     private function sameTenant(SchoolClass $class): bool
     {
         $tenantId = app()->bound('currentTenantId') ? app('currentTenantId') : null;

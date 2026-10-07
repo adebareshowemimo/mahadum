@@ -531,6 +531,7 @@ export function useUpdateSettings() {
     mutationFn: (values: Record<string, SettingValue>) => adminApi.updateSettings(values),
     onSuccess: (data) => {
       qc.setQueryData(adminKeys.settings, data)
+      void qc.invalidateQueries({ queryKey: adminKeys.settlements })
       void qc.invalidateQueries({ queryKey: ['config'] })
     },
   })

@@ -16,6 +16,12 @@ class AdvertPlacementTest extends TestCase
         return MediaAsset::create(['type' => 'image', 'url' => 'media/advert.png', 'original_name' => 'advert.png']);
     }
 
+    public function test_data_topup_placement_resolves_to_the_data_store_for_legacy_targets(): void
+    {
+        AdvertPlacement::create(['name' => 'Data', 'position' => 'profile_data_topup', 'media_asset_id' => $this->creative()->id, 'target_url' => '/billing', 'is_active' => true, 'activated_at' => now()]);
+        $this->getJson('/api/v1/adverts/active?position=profile_data_topup')->assertOk()->assertJsonPath('data.target_url', '/billing/data');
+    }
+
     public function test_super_admin_can_create_and_list_advert_placements(): void
     {
         $this->seedRbac();

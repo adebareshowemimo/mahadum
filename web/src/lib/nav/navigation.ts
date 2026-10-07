@@ -52,7 +52,7 @@ export const NAV_SECTIONS: NavSection[] = [
     title: 'Teaching',
     items: [
       { label: 'Classes', to: '/classes', icon: 'cap', roles: ['teacher'] },
-      { label: 'Assignments', to: '/assignments', icon: 'clipboard', roles: ['teacher'] },
+      { label: 'Assignments', to: '/assignments', icon: 'clipboard', roles: ['teacher', 'school_admin'] },
       { label: 'Earnings', to: '/earnings', icon: 'wallet', roles: ['teacher'] },
       { label: 'Teacher profile', to: '/teacher/profile', icon: 'users', roles: ['teacher'] },
     ],

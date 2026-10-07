@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { ConsumerPageAdvert, isConsumerAdvertRoute } from './ConsumerPageAdvert'
 
-vi.mock('./InlineAdvert', () => ({ InlineAdvert: () => <div data-testid="inline-advert" /> }))
+vi.mock('./InlineAdvert', () => ({ InlineAdvert: ({ position }: { position: string }) => <div data-testid="inline-advert" data-position={position} /> }))
 
 describe('ConsumerPageAdvert', () => {
   it.each([
@@ -36,6 +36,7 @@ describe('ConsumerPageAdvert', () => {
     )
 
     expect(screen.getByTestId('inline-advert')).toBeInTheDocument()
+    expect(screen.getByTestId('inline-advert')).toHaveAttribute('data-position', 'profile_data_topup')
   })
 
   it('does not reserve advert space on billing', () => {

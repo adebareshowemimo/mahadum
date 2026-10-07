@@ -2,6 +2,7 @@ import { Alert, Badge, Card, CardBody, CardHeader, CardTitle, Icon, Skeleton } f
 import type { IconName } from '@/components/ui'
 import { formatMoney } from '@/lib/format'
 import { useAdminMetrics, useBillingHealth } from '@/lib/admin/queries'
+import { DataTable } from '@/components/admin/DataTable'
 
 function sum(map: Record<string, number>): number {
   return Object.values(map ?? {}).reduce((a, b) => a + b, 0)
@@ -37,10 +38,16 @@ export function AdminOverviewPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi icon="users" label="Users" value={m.users.toLocaleString()} />
-        <Kpi icon="wallet" label="Revenue" value={formatMoney(m.revenue_minor, 'NGN')} />
+        <Kpi icon="wallet" label="Recorded revenue" value={formatMoney(m.revenue_minor, 'NGN')} />
         <Kpi icon="building" label="Organizations" value={sum(m.organizations)} />
         <Kpi icon="book" label="Languages" value={m.languages} />
       </div>
+
+      {m.revenue_channels && <Card><CardBody className="flex flex-col gap-3">
+        <h2 className="font-semibold text-foreground">Recorded receipts · NGN</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{Object.entries(m.revenue_channels).map(([key, amount]) => <div key={key}><p className="text-xs text-muted">{{wallet_funding_minor: 'Wallet funding', school_invoices_minor: 'Paid school invoices', telco_minor: 'Telco billing', subscription_payments_minor: 'Subscription payments, less refunds'}[key] ?? key}</p><p className="font-semibold text-foreground">{formatMoney(amount, 'NGN')}</p></div>)}</div>
+        <p className="text-xs text-muted">Subscription receipts are recorded from this release onward; earlier subscription charges are unavailable. Data sales are excluded. These receipts are not profit or provider settlement totals.</p>
+      </CardBody></Card>}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>
@@ -68,6 +75,23 @@ export function AdminOverviewPage() {
           </CardBody>
         </Card>
       </div>
+
+      <section className="flex flex-col gap-3" aria-labelledby="language-analytics-title">
+        <h2 id="language-analytics-title" className="font-display text-lg font-bold text-foreground">Language analytics</h2>
+        <p className="text-sm text-muted">All-time enrolled learners, completed lessons and completed scored quiz attempts, including inactive languages.</p>
+        <DataTable rows={m.language_analytics ?? []} getRowId={row => row.id} empty="No language activity recorded." columns={[
+          { key: 'language', header: 'Language', render: row => <span className="font-semibold">{row.name}{!row.active && <span className="ml-2 text-xs text-muted">Inactive</span>}</span> },
+          { key: 'learners', header: 'Learners', render: row => row.learners },
+          { key: 'lessons', header: 'Completed lessons', render: row => row.lessons_completed },
+          { key: 'quizzes', header: 'Scored quizzes', render: row => row.quizzes_scored },
+          { key: 'score', header: 'Average quiz score', render: row => row.avg_quiz_score == null ? '—' : `${row.avg_quiz_score}%` },
+        ]} />
+      </section>
+      <Card><CardHeader><CardTitle>AI pronunciation analytics</CardTitle></CardHeader><CardBody className="flex flex-col gap-3">
+        <p className="text-sm text-muted">AI scoring is deferred. The feature flag is {m.ai_analytics?.enabled ? 'on' : 'off'}; it does not prove that scoring is available.</p>
+        {m.ai_analytics ? <dl className="grid gap-4 sm:grid-cols-4">{Object.entries({Submissions: m.ai_analytics.submissions, 'Scored submissions': m.ai_analytics.scored, 'Needs review': m.ai_analytics.needs_review, 'Average stored score': m.ai_analytics.avg_stored_score ?? '—'}).map(([label, value]) => <div key={label}><dt className="text-xs text-muted">{label}</dt><dd className="mt-1 text-xl font-bold text-foreground">{value}</dd></div>)}</dl> : <p className="text-sm text-muted">No scoring data available.</p>}
+        <p className="text-xs text-muted">Existing stored scores only. Provider usage, cost and latency are not recorded.</p>
+      </CardBody></Card>
 
       <section>
         <h2 className="mb-3 font-display text-lg font-bold text-foreground">Billing health</h2>

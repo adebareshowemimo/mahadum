@@ -120,9 +120,11 @@ Shared regressions: Own-class/same-tenant permissions, school-admin/teacher crea
 
 Local/manual QA: Class Assignments, school dashboard, /admin, Settlements and parent/child banners. Inspect actual pixels and known-data totals; show per-ID acceptance and any metric-definition/provider dependency. B32 speaking averages use only permitted existing data, with no new minors recording.
 
-- [ ] Per-ID reproduction or no-change evidence recorded.
-- [ ] Bounded code changes and applicable regression/static/build checks complete.
-- [ ] Actual UI pixels inspected where relevant; blocked prerequisites explicitly recorded.
+Execution record: [Batch 3 local verification](Mahadum360_Batch3_Verification.md), 7 October 2026 America/New_York, on Batch 2 origin baseline `943d4499e26a810635df9cdbe4aa2649be6763a7`. B30/F29/B32/F22 local PASS; B41 PARTIAL (deferred AI and unavailable historical subscription receipts), B42 PARTIAL (approved telco split absent). Recorded-data definitions, desktop/mobile evidence, required receipt migration and targeted data-ad seeder are documented. Local migration/seed completed. Adebare subsequently authorized this concrete Batch 3 commit and origin push; remote verification is recorded in the delivery response. Production deployment and reviewer email remain pending. Original row labels and individual acceptance gates remain.
+
+- [x] Per-ID reproduction or no-change evidence recorded.
+- [x] Bounded code changes and applicable regression/static/build checks complete for implemented scope; B41/B42 limitations remain explicit.
+- [x] Actual UI pixels inspected where relevant; blocked prerequisites explicitly recorded.
 - [ ] Adebare local confirmation recorded separately for every included fix.
 - [ ] Concrete batch commit/push authorized and origin SHA verified.
 - [ ] Confirmed changes deployed by Adebare; migration/version evidence recorded if required.

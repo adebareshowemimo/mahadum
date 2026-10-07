@@ -29,12 +29,18 @@ class AdvertPlacementSeeder extends Seeder
             svg: $this->inlineSvg(),
         );
 
+        $this->seedDataTopup();
+    }
+
+    /** Install just the consumer data promotion without resetting other campaigns. */
+    public function seedDataTopup(): void
+    {
         $this->seedAdvert(
             name: 'Data top-up for parent and child profiles',
             position: 'profile_data_topup',
             size: '300x250',
             path: 'adverts/profile-data-topup.svg',
-            targetUrl: '/billing',
+            targetUrl: '/billing/data',
             svg: $this->dataTopupSvg(),
         );
     }

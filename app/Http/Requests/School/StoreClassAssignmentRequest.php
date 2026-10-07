@@ -8,7 +8,7 @@ class StoreClassAssignmentRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // route guard: can:schools.assignments.create + controller ownership check
+        return true; // route permission guard plus createAssignment class policy
     }
 
     public function rules(): array

@@ -8,6 +8,7 @@ use App\Models\Family;
 use App\Models\Invoice;
 use App\Models\Plan;
 use App\Models\Subscription;
+use App\Models\SubscriptionPaymentReceipt;
 use App\Models\User;
 use App\Models\WalletFundingTransaction;
 use App\Models\WebhookEvent;
@@ -63,7 +64,7 @@ class PaymentService
         $sourceEvent = $source.':'.$eventKey;
 
         $outcome = match ($kind) {
-            'refund' => $this->reverse($reference, $amountMinor),
+            'refund' => $this->reverse($reference, $amountMinor, $sourceEvent),
             'failed' => $this->fail($reference),
             default => $this->settle($reference, $amountMinor, $sourceEvent),
         };
@@ -112,7 +113,7 @@ class PaymentService
     }
 
     /** Reversal path (refund/chargeback): claw back a funding or cancel a subscription. */
-    private function reverse(?string $reference, ?int $amountMinor): string
+    private function reverse(?string $reference, ?int $amountMinor, string $sourceEvent): string
     {
         if (! $reference) {
             return 'unmatched';
@@ -135,6 +136,7 @@ class PaymentService
 
         if ($subscription = $this->findSubscription($reference)) {
             $this->cancelSubscription($subscription);
+            $this->recordSubscriptionReceipt($subscription, $sourceEvent, 'refund', $amountMinor);
 
             return 'reversed';
         }
@@ -269,6 +271,7 @@ class PaymentService
 
     private function activateSubscription(Subscription $subscription, ?int $amountMinor = null, string $sourceEvent = ''): void
     {
+        $this->recordSubscriptionReceipt($subscription, $sourceEvent, 'payment', $amountMinor);
         $firstActivation = $subscription->status !== 'active';
 
         if ($firstActivation) {
@@ -344,5 +347,16 @@ class PaymentService
             'week' => now()->addWeek(),
             default => now()->addMonth(),
         };
+    }
+
+    private function recordSubscriptionReceipt(Subscription $subscription, string $sourceEvent, string $direction, ?int $amountMinor): void
+    {
+        if ($sourceEvent === '' || $amountMinor === null || $amountMinor < 0) {
+            return;
+        }
+        SubscriptionPaymentReceipt::firstOrCreate(['source_event' => $sourceEvent], [
+            'subscription_id' => $subscription->id, 'direction' => $direction,
+            'amount_minor' => $amountMinor, 'currency' => $subscription->plan->currency,
+        ]);
     }
 }

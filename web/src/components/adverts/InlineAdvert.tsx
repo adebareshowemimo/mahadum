@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAdsAllowed, useActiveAdvert, useRecordClick, useRecordImpression } from '@/lib/adverts/queries'
 import type { AdvertPosition } from '@/lib/api'
+import { useAuth } from '@/lib/auth/AuthProvider'
 
 /**
  * Reveal-on-scroll banner slot, droppable into any page's content flow.
@@ -10,6 +11,8 @@ import type { AdvertPosition } from '@/lib/api'
  */
 export function InlineAdvert({ position = 'inline' }: { position?: AdvertPosition }) {
   const adsAllowed = useAdsAllowed()
+  const { hasRole } = useAuth()
+  const childOnly = hasRole('student') && !hasRole('parent')
   const { data: advert } = useActiveAdvert(position)
   const [visible, setVisible] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -45,15 +48,16 @@ export function InlineAdvert({ position = 'inline' }: { position?: AdvertPositio
       }`}
       data-testid="advert-inline"
     >
-      <a
-        href={advert.target_url}
+      {position === 'profile_data_topup' && childOnly ? <div className="flex flex-col items-center gap-2 text-center"><img src={advert.image_url} alt="Top up mobile data" className="mx-auto max-h-64 w-full rounded-xl object-contain" /><p className="text-sm text-muted">Ask your grown-up to buy a mobile data bundle so you can keep learning online.</p></div> : <a
+        href={position === 'profile_data_topup' ? '/billing/data' : advert.target_url}
         target="_blank"
         rel="noopener sponsored"
         onClick={() => recordClick.mutate(advert.id)}
         className="block w-full"
       >
-        <img src={advert.image_url} alt="Advertisement" className="mx-auto max-h-64 w-full rounded-xl object-contain" />
-      </a>
+        <img src={advert.image_url} alt={position === 'profile_data_topup' ? 'Buy data / top-up' : 'Advertisement'} className="mx-auto max-h-64 w-full rounded-xl object-contain" />
+      </a>}
+      {position === 'profile_data_topup' && !childOnly && <p className="text-center text-xs text-muted">Browse mobile data plans. Availability is shown in the store.</p>}
       <span className="text-[10px] uppercase tracking-wide text-subtle">Advertisement</span>
     </div>
   )

@@ -25,7 +25,7 @@ export function ConsumerPageAdvert() {
 
   if (!isConsumerAdvertRoute(pathname)) return null
 
-  const position = /^\/family(?:\/children\/\d+)?$/.test(pathname) ? 'profile_data_topup' : 'inline'
+  const position = 'profile_data_topup'
 
   return (
     <aside className="mt-8" aria-label="Sponsored content">

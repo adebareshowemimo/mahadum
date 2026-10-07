@@ -181,6 +181,8 @@ filters and complete control over which courses are published**.
 
 ## 5. Income reporting & Reports hub ⭐ `[MVP]` `[BE]`  *(review #5, #7)*
 
+7 October 2026 local candidate: [Batch 3 evidence](Mahadum360_Batch3_Verification.md) adds detailed language and recorded speaking/AI-state metrics to `/admin`, with NGN receipt channels including newly recorded subscription charges/refunds. Historical subscription charges and AI provider usage/cost/latency are unavailable. `/admin/settlements` exposes the existing audited referral percentage and seven-day telco success; contractual share remains unconfigured pending an approved split. Receipt migration is required. These changes are local; the historical shipped report claims below remain unchanged, and monthly Income is not expanded with subscription receipts here.
+
 Only aggregates exist today (`metrics.revenue_minor`, settlements telco revenue). Admin
 wants an **income reporting table** and a general **reports** area.
 

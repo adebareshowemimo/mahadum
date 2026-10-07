@@ -12,7 +12,7 @@ import {
   LinkButton,
   Skeleton,
 } from '@/components/ui'
-import { ApiError, type SchoolTeacher } from '@/lib/api'
+import { ApiError, type SchoolTeacher, type SchoolDashboard } from '@/lib/api'
 import { formatMoney } from '@/lib/format'
 import { SchoolGate } from '@/components/school/SchoolGate'
 import { useClasses, useCreateClass, useSchoolDashboard, useTeachers, useUpdateClass } from '@/lib/school/queries'
@@ -56,6 +56,8 @@ function Dashboard({ orgId }: { orgId: number }) {
           sub={formatMoney(data.invoices.unpaid_minor, 'NGN')}
         />
       </div>
+
+      {data.learning && <SchoolLearning learning={data.learning} />}
 
       <Card>
         <CardBody className="flex flex-wrap items-center gap-x-8 gap-y-2">
@@ -111,6 +113,29 @@ function Dashboard({ orgId }: { orgId: number }) {
       <NewClassModal open={newOpen} onClose={() => setNewOpen(false)} orgId={orgId} />
     </div>
   )
+}
+
+function SchoolLearning({ learning }: { learning: NonNullable<SchoolDashboard['learning']> }) {
+  const percent = (value: number | null) => value == null ? '—' : `${value}%`
+  return <section className="flex flex-col gap-4" aria-labelledby="learning-performance-title">
+    <div><h2 id="learning-performance-title" className="font-display text-lg font-bold text-foreground">Learning performance</h2>
+      <p className="mt-1 text-sm text-muted">All-time activity for this school. Quiz averages use completed scored attempts. Completion includes unstarted published lessons in enrolled courses.</p></div>
+    <div className="grid gap-4 sm:grid-cols-3">
+      <Kpi icon="cap" label="Average quiz score" value={percent(learning.avg_quiz_score)} sub={`${learning.quiz_scored} scored attempts`} />
+      <Kpi icon="users" label="Average speaking score" value={learning.avg_speaking_score ?? '—'} sub={learning.speaking_scored ? `${learning.speaking_scored} scores · stored units` : 'No scoring data yet'} />
+      <Kpi icon="layers" label="Lesson completion" value={percent(learning.completion_rate)} sub={`${learning.lessons_completed}/${learning.lesson_targets} enrolled lesson targets`} />
+    </div>
+    <p className="text-xs text-muted">Speaking scoring is deferred. Existing scores retain their stored scale. Rankings use completion rate, then quiz score; up to five results.</p>
+    <div className="grid gap-4 lg:grid-cols-2">
+      {(['top_classes', 'top_students'] as const).map(kind => <Card key={kind}><CardBody>
+        <h3 className="mb-3 font-semibold text-foreground">{kind === 'top_classes' ? 'Top classes' : 'Top students'}</h3>
+        {!learning[kind].length ? <p className="text-sm text-muted">No eligible learning activity yet.</p> : <ol className="flex flex-col gap-3">{learning[kind].map((row, index) => <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3 last:border-0">
+          <span className="font-medium text-foreground">{index + 1}. {kind === 'top_classes' ? <Link className="text-primary hover:underline" to={`/classes/${row.id}?tab=analytics`}>{row.name}</Link> : row.name}</span>
+          <span className="text-sm text-muted">{percent(row.completion_rate)} complete · {percent(row.avg_quiz_score)} quiz</span>
+        </li>)}</ol>}
+      </CardBody></Card>)}
+    </div>
+  </section>
 }
 
 function Kpi({ icon, label, value, sub }: { icon: 'cap' | 'users' | 'layers' | 'card'; label: string; value: string | number; sub?: string }) {

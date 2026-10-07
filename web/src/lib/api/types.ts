@@ -928,6 +928,20 @@ export interface SchoolDashboard {
   seats: { purchased: number; filled: number }
   invoices: { unpaid: number; unpaid_minor: number }
   subscription: { status: string | null; last_payment_at: string | null }
+  learning?: LearningStatistics & {
+    top_students: (LearningStatistics & { id: number; name: string | null })[]
+    top_classes: (LearningStatistics & { id: number; name: string })[]
+  }
+}
+
+export interface LearningStatistics {
+  lesson_targets: number
+  lessons_completed: number
+  completion_rate: number | null
+  quiz_scored: number
+  avg_quiz_score: number | null
+  speaking_scored: number
+  avg_speaking_score: number | null
 }
 
 export interface SeatAllocation {
@@ -962,7 +976,7 @@ export interface SchoolClassRow {
 export interface SchoolClassDetail {
   organization_id?: number
   teacher_user_id?: number | null
-  capabilities?: { update: boolean; assign_teacher: boolean }
+  capabilities?: { update: boolean; assign_teacher: boolean; create_assignment?: boolean }
   id: number
   name: string
   level: string | null
@@ -1125,6 +1139,7 @@ export interface ClassAssignmentRosterEntry {
 }
 
 export interface ClassAssignmentDetail {
+  can_grade?: boolean
   id: number
   title: string
   instructions: string | null
@@ -1162,6 +1177,9 @@ export interface AdminMetrics {
   subscriptions: Record<string, number>
   revenue_minor: number
   languages: number
+  revenue_channels?: Record<string, number>
+  language_analytics?: { id: number; name: string; active: boolean; learners: number; lessons_completed: number; quizzes_scored: number; avg_quiz_score: number | null }[]
+  ai_analytics?: { enabled: boolean; scoring_status: string; submissions: number; scored: number; needs_review: number; avg_stored_score: number | null }
 }
 
 export interface BillingHealth {
@@ -1175,6 +1193,9 @@ export interface Settlements {
   payouts: Record<string, CommissionStat>
   telco_revenue_minor: number
   clawback: { pending_count: number; pending_minor: number }
+  referral_commission_bps?: number
+  daily_telco?: { timezone: string; days: { date: string; attempts: number; success: number; success_rate: number | null }[] }
+  telco_share?: { status: string; platform_bps: number | null; platform_minor: number | null }
 }
 
 export interface AdminOrg {

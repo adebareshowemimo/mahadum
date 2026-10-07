@@ -435,8 +435,8 @@ Requested action: Once a teacher can be assigned, verify the class Analytics tab
 Audit status: Not met. Tested: Assignment creation wizard.
 Audit evidence: There is no create button. Assignments need an assigned teacher, and none can be assigned.
 Requested action: Add a 'Create assignment' button and wizard for the class teacher (and school admin), after fixing teacher assignment.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — shared two-step teacher/school-admin wizard and audited tenant/ownership policy; [Batch 3 evidence](Mahadum360_Batch3_Verification.md)
+- [x] T — create/access, teacher-only grading, parent-reward regressions and desktop/mobile wizard passed; teacher onboarding remains Batch 4
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -455,8 +455,8 @@ Requested action: No action needed.
 Audit status: Partial. Tested: Dashboard KPIs (avg quiz/speaking score, completion, active seats, top classes/students).
 Audit evidence: Shows classes, students, seats, unpaid invoices and subscription. No quiz or speaking averages, completion or top performers.
 Requested action: Add average quiz and speaking scores, completion rate, and top classes/students to the school dashboard.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — recorded quiz/speaking averages, enrolled-target completion and bounded top lists; [Batch 3 evidence](Mahadum360_Batch3_Verification.md)
+- [x] T — weighted attempts, unstarted/draft/foreign targets, duplicate membership and empty states verified; desktop/mobile inspected; existing speaking only
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -535,8 +535,8 @@ Requested action: No action needed.
 Audit status: Partial. Tested: Platform metrics (revenue, users, language/AI/billing analytics).
 Audit evidence: Shows users by type, revenue, orgs, subscriptions and billing health. No language or AI analytics, and revenue is ₦0.
 Requested action: Add language and AI analytics to the platform overview; confirm revenue populates once payments run.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — language metrics, recorded subscription receipt/refund channel and honest deferred-AI state; [Batch 3 evidence](Mahadum360_Batch3_Verification.md)
+- [ ] T — PARTIAL: known-amount/replay and language metrics plus desktop/mobile pass; AI provider telemetry, historical subscription receipts and live payment acceptance unavailable
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -545,8 +545,8 @@ Requested action: Add language and AI analytics to the platform overview; confir
 Audit status: Partial. Tested: Settlements: referral payout %, commissions, telco share, billing success.
 Audit evidence: Shows telco revenue, clawback, commissions and payouts. No payout % setting was seen.
 Requested action: Add the referral payout % setting to Settlements and confirm telco revenue-share and daily billing success figures.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — existing audited referral percentage control and daily telco billing; share explicitly unconfigured; [Batch 3 evidence](Mahadum360_Batch3_Verification.md)
+- [ ] T — PARTIAL: percentage conversion/validation and seven-day denominators plus desktop/mobile pass; approved contractual split and provider settlement pending
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -1007,8 +1007,8 @@ Requested action: Confirm with Ifeoma whether the built-in email module replaces
 Audit status: Not met. Tested: Parent and child adverts should promote data (1 Sep #11).
 Audit evidence: The parent dashboard still shows the "Hear your child say it in your language" lesson banner.
 Requested action: Replace the lesson banner on parent and child pages with the Buy data / top-up advert.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — consumer data placement, parent store link, child grown-up prompt and targeted seed; [Batch 3 evidence](Mahadum360_Batch3_Verification.md)
+- [x] T — placement routes, legacy target, premium/staff suppression, idempotent targeted seed and desktop/mobile rendering verified; live data delivery remains Batch 5
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -1077,8 +1077,8 @@ Requested action: Delete the inactive demo adverts from Admin › Adverts.
 Audit status: Not met. Tested: Teacher can create assignments (2 Aug, 14 Aug).
 Audit evidence: No one can create assignments. The class Assignments tab has no create button and says "The assigned teacher has not created an assignment", but no teacher can be assigned (row 33), and both Educator/School accounts tested got only the school_admin role.
 Requested action: Add a 'Create assignment' button for class teachers (and school admins); depends on #33.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — shared B30 creation repair for assigned teachers and active-school admins; [Batch 3 evidence](Mahadum360_Batch3_Verification.md)
+- [x] T — isolated RBAC/tenant/ownership, shared wizard and teacher-only grading passed; separate F29 acceptance pending; onboarding remains Batch 4
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested

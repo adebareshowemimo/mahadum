@@ -85,7 +85,7 @@ class SchoolClassController extends Controller
             'organization_id' => $class->organization_id,
             'teacher_user_id' => $class->teacher_user_id,
             // Expose existing policy decisions for the class workspace controls.
-            'capabilities' => ['update' => $canUpdate, 'assign_teacher' => $canUpdate && ! $teacherOnly],
+            'capabilities' => ['update' => $canUpdate, 'assign_teacher' => $canUpdate && ! $teacherOnly, 'create_assignment' => $request->user()->can('createAssignment', $class)],
             'students' => $class->enrollments->map(fn ($e) => [
                 'learner_id' => $e->learner_profile_id,
                 'display_name' => $e->learnerProfile?->display_name,
