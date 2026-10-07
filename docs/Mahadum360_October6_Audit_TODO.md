@@ -12,6 +12,8 @@ First local release candidate: F24 parent provisioning on Admin create/grant. It
 
 Prepared hearts work is outside the release candidate: B19/F13 request wrong-answer deduction, while September 7 approval and repository instructions require all answers. Resolve the changed rule with Adebare before installing or releasing it. W15 preserves the previously approved “Discuss with a campus”; W5 stays unresolved. Minors recording and the separate CX/14-feature roadmap stay gated.
 
+October 6, 22:55 UTC deployment update: Adebare reports deploying the latest branch, verified origin commit 6e7cedb9b6452143b319697e9f73a63bd7458c04. This is USER-REPORTED deployment of that branch, including the preceding F12/F14a/INV-PROMO-1 and F33b commits, not independent live verification or individual local/QA acceptance. F12's production receipt migration was not directly observed. This status supersedes earlier not-deployed entries for those published subsets. Parent is preparing F12/F33 QA communication; send completion and Deborah acceptance have not been confirmed to this agent. No production action or email was performed here.
+
 ## Deduplicated work groups
 
 - [ ] A01 · P1 · Family links and parent pages · source IDs: F24, B3, B22, B25 · targets: 2026-10-07, Phase 2
@@ -905,11 +907,11 @@ Requested action: No action needed.
 Audit status: Partial. Tested: Quiz XP: 1 XP per correct answer, XP on repeat, score per quiz, separate quizzes (4 Sep #6).
 Audit evidence: Tested as Tosin: 4 of 10 correct gave +4 XP (1 per correct answer). The results screen shows the score per quiz (40%) with Review lesson video and Retry. Bug: retries should earn XP (rule confirmed by Ifeoma, 4 Sep), but a retry with 2 correct answers added 0 XP. Total XP stayed at 4.
 Requested action: Award XP on retries (1 XP per correct answer each attempt). Retest: a retry with correct answers must add to total XP.
-- [ ] C — Decision pending: October asks per-attempt rewards; September approved first-correct-per-question XP. No reward change installed.
-- [ ] T — Requested changed rule not implemented/tested. Current rule reproduced: existing QuizAttemptCapTest two tests / 19 assertions passed; already-rewarded question earns zero on permitted replay.
+- [x] C - F12 explicitly approved per-attempt quiz XP implemented in f871e90 with durable request receipts; prior pending-rule wording is superseded. No hearts/streak/tier rule changed.
+- [x] T - F12 eight new isolated reward/retry regressions; focused 32 / 375; release suite 447 passed + one skipped / 2,570 assertions and 271 frontend tests, build/Pint/PHPStan passed. See F12 local verification guide; live +4 then +2 acceptance pending.
 - [ ] L — Adebare local confirmation; pending
-- [ ] D — production deployment; not deployed
-- [ ] Q — Deborah live QA; not requested
+- [x] D - USER-REPORTED latest-branch deployment 22:55 UTC, 6 October, including F12 f871e90. Not independently verified; production receipt migration not directly observed.
+- [ ] Q - Parent preparing F12 live QA steps after user-reported deployment; email completion and Deborah acceptance unconfirmed here.
 
 ### F13 · Open feedback · Feedback · 2026-10-07
 Audit status: Partial. Tested: Hearts: 1 heart per 4 questions, 12-hour lock, message, unlimited on paid plans (4 Sep #6).
@@ -928,7 +930,7 @@ Requested action: Remove the duplicate Lucy Okafor leaderboard entry; after the 
 - [ ] C — F14a duplicate-membership subset ready locally; entire live Lucy reconciliation remains open until learner IDs are known. Distinct same-name profiles preserved.
 - [x] T — F14a isolated duplicate board/rank regressions passed; 19 focused tests / 190 assertions, full 433 passed + one skipped / 2,372 assertions, Pint/PHPStan. Live Lucy and authenticated browser pixels not verified; F12 isolated leaderboard totals verified at 6 after +4/+2; human local/live acceptance remains pending.
 - [ ] L — Adebare local confirmation; pending
-- [ ] D — production deployment; not deployed
+- [x] D - F14a ba96ac7 is included in USER-REPORTED latest-branch 6e7cedb deployment at 22:55 UTC, 6 October. Not independently verified; live Lucy reconciliation remains open.
 - [ ] Q — Deborah live QA; not requested
 
 ### F15 · Open feedback · Feedback · Done
@@ -1116,18 +1118,18 @@ Requested action: Add a shareable school join link/code that students and parent
 Audit status: Not met. Tested: Create or invite teachers, and assign one after the class is made (raised during this review).
 Audit evidence: There is no Teachers page and no way to invite a teacher. Teacher is optional in "New class", and once skipped, the class shows "Teacher: Not assigned" with no control to assign one.
 Requested action: Add a Teachers page with invite by email, and an 'Assign teacher' control on each class.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [ ] C - F33a partial-update validator and F33b authorized class Edit/Assign teacher controls implemented and pushed. Teachers page/invite/onboarding remains open; full F33 is not complete.
+- [x] T - F33b subset: 28 focused backend tests / 151 assertions; full 451 passed + one skipped / 2,603 assertions; 280 frontend tests; build/Pint/PHPStan and five isolated SPA screenshots passed. Actual production class-loading root cause remains unverified.
 - [ ] L — Adebare local confirmation; pending
-- [ ] D — production deployment; not deployed
-- [ ] Q — Deborah live QA; not requested
+- [x] D - F33a earlier deployment and F33b 6e7cedb latest-branch deployment at 22:55 UTC are USER-REPORTED. Full teacher onboarding is not implemented; independent live verification pending.
+- [ ] Q - Deborah reported live failures at 21:14:45 UTC; parent preparing F33b retest and sanitized class-loading evidence request. No acceptance inferred.
 
 ### F34 · Open feedback · Feedback · 2026-10-07
 Audit status: Not met. Tested: Sign-up account types match admin profiles (raised during this review).
 Audit evidence: Sign-up offers Individual, Family, Educator/School and Institution. The admin users filter and overview only have Single, Family and School: "Individual" is called "Single", and Institution sign-ups have no user type. Educator/School does not separate a teacher from a school admin: both accounts tested (Ifeoma, ngozi) received school_admin, so no teacher profile exists in practice. The supervisor role has no sign-up path.
 Requested action: Split Educator/School sign-up into Teacher and School; rename 'Single' to 'Individual' in admin; add Institution as a user type.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [ ] C - F34a admin Individual labels repaired locally. Teacher/School signup separation, Institution classification and supervisor onboarding remain open; no permission/classification change.
+- [x] T - F34a subset: two new UI regressions failed before repair; focused 10/10 and full frontend 282/282 passed, typecheck/build and whitespace passed. Two actual SPA screenshots inspected with isolated read-only API fixtures; type=single contract retained.
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -1469,7 +1471,7 @@ Future Deborah QA communications: Adebare requested on 6 October that info@mahad
 - [x] T - Two corrected-fixture regressions failed before the fix (three rows for two learners; current rank 3 instead of 2), then passed. 19 focused backend tests / 190 assertions; full 433 passed + one skipped out of 434 / 2,372 assertions; Pint/PHPStan and whitespace passed. Browser display/manual confirmation not run. Prior 267 frontend tests/build belong to roster evidence; frontend unchanged here.
 - [ ] L - Adebare local confirmation pending; run the isolated regression and inspect /leaderboard with an existing account. Live Lucy learner IDs unavailable; if different profiles share her name, both stay visible pending ownership review.
 - [x] Commit/push authorization - Adebare explicitly approved both tested F14a and INV-PROMO-1 on 6 October ("commit and push"). Separate focused commits on codex/beta-feedback-20260903; exact SHA and origin verification in release handoff. Local manual acceptance remains pending.
-- [ ] D - F14a not deployed.
+- [x] D - F14a included in USER-REPORTED latest-branch 6e7cedb deployment at 22:55 UTC, 6 October; not independently verified.
 - [ ] Q - F14a Deborah QA not requested; parent owns future email and CC info@mahadum360.com.
 
 See Mahadum360_F14a_Local_Verification.md. F12's previously pending narrow rule decision was explicitly resolved by the user on 6 October; the separate F12 candidate below implements that supersession. Preserve network retry idempotence, attempt caps, one-time lesson replay XP and existing hearts gates absent separate instruction. No speculative reward change or anti-farming cap introduced. B18-A activity-start gap is independently reproduced and left for a separate component-completion fix; weekly/monthly tiers and October 15 B18 protection remain open.
@@ -1482,7 +1484,7 @@ Latest roster communications, 6 October: Adebare reports deploying e834d49. Pare
 - [x] T - All six tests failed on the prior model: three lost labels and three second-code HTTP 200 responses instead of 422. After repair, 47 focused backend tests / 263 assertions passed. Full current working tree: 439 passed + one skipped out of 440 / 2,435 assertions, including held F14a tests. Full Pint and PHPStan (zero errors) plus whitespace passed. F14a implementation/test/guide hashes unchanged. No frontend changes/rerun or authenticated invoice pixel claim.
 - [ ] L - Adebare local confirmation pending. Run the isolated six-case test; inspect an existing discounted local invoice only if one is already available. Read-only inventory found no local promo invoice and neither source invoice ID 11 nor 12; browser positive fixture is unavailable. No local customer records or redemptions created for QA.
 - [x] Commit/push authorization - Adebare explicitly approved both tested candidates on 6 October ("commit and push"). Separate focused commits; exact origin delivery in release handoff. Continue alone was not used as approval, and no XP/hearts/streak rule approval is inferred.
-- [ ] D - INV-PROMO-1 not deployed; user owns server.
+- [x] D - INV-PROMO-1 included in USER-REPORTED latest-branch 6e7cedb deployment at 22:55 UTC, 6 October; not independently verified. User owns server.
 - [ ] Q - No INV-PROMO-1 Deborah email; parent owns QA after confirmed deployment and will CC info@mahadum360.com.
 
 See Mahadum360_INV_PROMO_1_Local_Verification.md. F31 original Met/Done and missing B35 reconciliation remain explicit. No invoices, balances or seat allocations suppressed/deleted; no real code applied, charge, payout or notification. Existing overwritten invoice lines and cached PDFs require evidence-backed review rather than automatic repair. F12 rewards are explicitly approved and implemented in the separate local candidate below; B18-A activity triggers remain separate; hearts are unchanged. F32 school-wide join would be a new enrollment flow. A wording-only F34 Individual-label subset is identifiable but not changed in this candidate.
@@ -1493,7 +1495,7 @@ See Mahadum360_INV_PROMO_1_Local_Verification.md. F31 original Met/Done and miss
 - [x] T - Eight new F12 backend regressions; initial six failed before repair. Full backend 447 passed + one skipped out of 448 / 2,570 assertions; final focused 32 / 375. Full frontend 271 passed / 50 files; typecheck/build, Pint/PHPStan and whitespace passed. Authenticated player pixels not run; no local customer answer submitted.
 - [ ] L - Adebare local confirmation pending. See Mahadum360_F12_Local_Verification.md for eight-case isolated test and local /learn +4 then +2 UI steps; fixture gaps must be marked BLOCKED.
 - [x] Commit/push authorization - Adebare explicitly instructed “commit and push” for this completed F12 candidate at 21:05 UTC on 6 October. Separate focused release; exact delivery SHA and origin verification in release handoff. This authorization does not fabricate local human acceptance or production deployment. Prior F14a ba96ac7 and INV-PROMO-1 0f66c3f remain intact; deployment/live acceptance pending.
-- [ ] D - F12 not deployed; user owns production. Migration must precede coordinated API/SPA release; old clients need reload for required request_id. Keep receipts and legitimate XP history on rollback.
+- [x] D - USER-REPORTED latest-branch deployment at 22:55 UTC, 6 October, including F12. User owns production; receipt migration not directly observed. Retest requires coordinated API/SPA and client reload; preserve receipts/XP on rollback.
 - [ ] Q - F12 live QA not requested by this agent; parent owns email with CC info@mahadum360.com after the deployment gate.
 
 October 6 communications update: parent reports a Deborah readiness email for the already-pushed F14a/INV-PROMO-1 candidates with CC info@mahadum360.com at 19:52 UTC. That email explicitly says deployment confirmation is pending and XP is still in progress. It is recorded as readiness communication only, not a production release, local acceptance or Deborah live QA pass. This agent sent no email and made no production change.
@@ -1506,7 +1508,18 @@ F12 QA source reference verified from the full Library extraction: workbook Maha
 - [x] T - Seven new frontend cases failed before repair (two guardrails already passed); three of four new backend cases failed on missing capability metadata (403 membership guard already passed). Focused backend 28 / 151; recovered full backend 451 passed + one skipped / 452 / 2,603 assertions; full frontend 280 passed, build/typecheck, Pint/PHPStan and whitespace passed. Actual local SPA rendered with isolated API fixtures; five screenshots viewed and teacher-only/name-level PUT payloads verified without application record mutations.
 - [ ] L - Adebare local confirmation pending. See Mahadum360_F33b_Local_Verification.md; documented local demo school-admin/teacher accounts and /classes/4 exist, while mixed-role no-school proof uses isolated fixtures. No manual application-database update by this agent.
 - [x] Commit/push authorization - Adebare replied Continue at 22:34 UTC on 6 October to the parent's explicit question about committing/pushing the completed F33b candidate. Separate focused release on codex/beta-feedback-20260903, base f871e90; exact SHA/origin delivery evidence is in the release handoff. Local human acceptance and production remain pending. Independent tmp/ preserved.
-- [ ] D - Not deployed. User owns deployment; no new F33b migration, API/SPA must be coordinated. F12 deployment remains unconfirmed and whole-branch release would require its receipt migration.
+- [x] D - USER-REPORTED 6e7cedb latest-branch deployment at 22:55 UTC, 6 October. Not independently verified. User owns production; no F33b migration. F12 receipt migration status was not directly observed.
 - [ ] Q - Parent relayed Deborah's 21:14:45 UTC production failures and inspected the PNGs. F33b live retest pending; parent owns email with CC info@mahadum360.com after gates. No live access root cause or Family/Wallet/Reviews/Lucy pass inferred.
 
 F33b source references: workbook Mahadum360 Test Results - Fix by 7 Oct 2026.xlsx; sheet Test Results; F33 extracted index 98 (primary), B33 index 33 and F29 index 94 (remaining dependencies), F24 index 89 (household-preservation guardrail only). Physical Excel rows UNVERIFIED due missing certified mapping and blocked original XLSX materialization. Earlier B18-A row-19 wording was an unverified index-offset inference and is corrected to retain only extracted index 17. All 126 source/reconciliation sections are preserved.
+
+## Ninth local candidate - F34a admin Individual labels
+
+- [x] C - Users type filter and Overview Users by type use Individual in place of Single/single. Existing single wire key, count calculations and account membership/role rules remain intact. P2; original intended date 7 October 2026.
+- [x] T - Two new isolated UI regressions failed before repair; focused 10 passed, full frontend 282 passed; production build/typecheck and whitespace passed. Two actual local SPA screenshots inspected with all API requests intercepted into read-only fixtures; selecting Individual still sends type=single. No application account creation or mutation. Backend application code is unchanged; prior F33b backend/Pint/PHPStan evidence is not represented as a new run for F34a.
+- [ ] L - Adebare local confirmation pending. Visit /admin/users and /admin with the existing local super-admin account; check Individual filter/overview wording and normal filtering/count display. See Mahadum360_F34a_Local_Verification.md.
+- [x] Commit/push authorization - Adebare replied yes commit it at 01:20 UTC on 7 October to the parent's explicit F34a commit/push question. Separate focused release on codex/beta-feedback-20260903, base 6e7cedb; exact SHA/origin delivery verification in release handoff. Local human acceptance and production remain pending. Independent tmp/ preserved.
+- [ ] D - F34a not deployed; no migration. User owns production. Earlier 22:55 latest-branch deployment refers to 6e7cedb and does not include these new local changes.
+- [ ] Q - F34a live QA not requested; parent owns email with CC info@mahadum360.com after the deployment gate.
+
+Source: workbook Mahadum360 Test Results - Fix by 7 Oct 2026.xlsx; Library libfile_d384814a74bc81918140bc576168a324; sheet Test Results; audit ID F34, extracted zero-based index 99. Physical Excel row UNVERIFIED because the extraction has no certified coordinate mapping and original bytes materialization remains blocked by the Windows os.setxattr helper limitation. Full F34 remains open for Teacher/School sign-up separation and Institution classification. Those require a bounded implementation/ownership decision; this candidate does not alter registration or manufacture teacher memberships. Hearts, streak and tier rules remain unchanged.

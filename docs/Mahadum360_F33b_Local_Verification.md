@@ -1,5 +1,7 @@
 # October 6 local verification: F33b class workspace controls and mixed-role school context
 
+Current deployment status, 6 October 22:55 UTC: Adebare reports deploying latest branch 6e7cedb, including F12/F33b. This supersedes earlier pending-deployment statements below, but is USER-REPORTED rather than independent verification. The F12 production receipt migration was not directly observed. Local human acceptance and Deborah live QA remain pending; parent is preparing QA communication, whose send completion is not confirmed here.
+
 Separate local candidate on codex/beta-feedback-20260903, base f871e900292a8dcf4618a71481765d870e5dcbd1. P1; original intended date 7 October 2026. Code/tests and this guide are ready. Adebare authorized committing and pushing this completed candidate at 22:34 UTC on 6 October by replying Continue to the parent's explicit commit/push question. Delivery evidence is recorded in the release handoff. Local human confirmation, production deployment and Deborah's acceptance remain pending; commit/push approval is not evidence of any of those gates. Parent owns all email; Adebare owns the server. Independent tmp/ and the published F12 change are preserved.
 
 ## QA evidence and workbook references

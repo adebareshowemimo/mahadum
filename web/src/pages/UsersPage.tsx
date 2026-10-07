@@ -149,7 +149,7 @@ export function UsersPage() {
               value={type}
               onChange={onFilter(setType)}
               options={[
-                { label: 'Single', value: 'single' },
+                { label: 'Individual', value: 'single' },
                 { label: 'Family', value: 'family' },
                 { label: 'Educator/School', value: 'school' },
               ]}

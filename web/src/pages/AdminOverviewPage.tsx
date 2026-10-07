@@ -7,14 +7,14 @@ function sum(map: Record<string, number>): number {
   return Object.values(map ?? {}).reduce((a, b) => a + b, 0)
 }
 
-function StatusChips({ map }: { map: Record<string, number> }) {
+function StatusChips({ map, labels }: { map: Record<string, number>; labels?: Record<string, string> }) {
   const entries = Object.entries(map ?? {})
   if (entries.length === 0) return <span className="text-sm text-muted">None</span>
   return (
     <div className="flex flex-wrap gap-1.5">
       {entries.map(([status, count]) => (
         <Badge key={status} variant="neutral">
-          {count} {status}
+          {count} {labels?.[status] ?? status}
         </Badge>
       ))}
     </div>
@@ -48,7 +48,7 @@ export function AdminOverviewPage() {
             <CardTitle>Users by type</CardTitle>
           </CardHeader>
           <CardBody>
-            <StatusChips map={m.users_by_type} />
+            <StatusChips map={m.users_by_type} labels={{ single: 'Individual' }} />
           </CardBody>
         </Card>
         <Card>

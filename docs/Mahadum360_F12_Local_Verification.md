@@ -1,5 +1,7 @@
 # October 6 local verification: F12 correct-answer XP on permitted quiz retries
 
+Current deployment status, 6 October 22:55 UTC: Adebare reports deploying latest branch 6e7cedb, including F12/F33b. This supersedes earlier pending-deployment statements below, but is USER-REPORTED rather than independent verification. The F12 production receipt migration was not directly observed. Local human acceptance and Deborah live QA remain pending; parent is preparing QA communication, whose send completion is not confirmed here.
+
 Source F12, A07; P1; intended date 7 October 2026. Separate local candidate on codex/beta-feedback-20260903, based on verified published HEAD/origin 0f66c3fac19b5250bad6156bf3349b814adc0c72. The user explicitly approved replacing the former first-correct-per-question rule: “Yes, use the new rule in the document.” The user separately and explicitly authorized commit/push on 6 October at 21:05 UTC (“commit and push”). This focused release proceeds under that instruction; local human acceptance, production deployment and Deborah live QA are not inferred from push approval and remain pending. The exact commit and verified origin SHA are recorded in the release handoff. Adebare owns deployment and the parent owns all email.
 
 ## Workbook reference for QA

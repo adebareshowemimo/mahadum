@@ -91,6 +91,16 @@ describe('UsersPage and UserDetailPage', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/admin/users/7')
   })
 
+  it('labels the Individual type consistently and keeps the existing filter contract', () => {
+    mockUsers([])
+    renderList()
+    const option = screen.getByRole('option', { name: 'Individual' })
+    expect(option).toHaveValue('single')
+    expect(screen.queryByRole('option', { name: 'Single' })).not.toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'single' } })
+    expect(useAdminUsersMock).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'single', page: 1 }))
+  })
+
   it('creates and securely invites an organization user', async () => {
     mockUsers([])
     createMutate.mockResolvedValue({ id: 8 })
