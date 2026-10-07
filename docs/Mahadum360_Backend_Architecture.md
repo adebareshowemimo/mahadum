@@ -201,6 +201,8 @@ Plus spatie tables: `roles`, `permissions`, `model_has_roles`, `model_has_permis
 **chore_submissions** `id, chore_id, evidence_media_id(nullable), evidence_type(photo|audio|video|checkbox), submitted_at, decision(approve|reject|more_evidence), decided_by, decided_at`
 > Rule 8: coins released only on explicit parent approval.
 
+6 October 2026 local candidate ([Batch 2 evidence](Mahadum360_Batch2_Verification.md)): class assignments now follow this rule too. Learner/parent written submission reaches the owning teacher; passing locks `coins_locked` and sets `parent_review_status=pending`, without crediting the wallet. Family parent review locks the submission, records the decision and releases the reward at most once. Existing graded awards are not requeued. A school learner with no family parent keeps the reward locked. `/tasks` exposes only self/parent-owned learner work; staff read permission does not authorize submissions. Deployment requires the additive parent-review migration; live acceptance is pending.
+
 ### F. Wallet & Coins  🔒
 
 **wallets** `id, owner_type(family|organization|learner), owner_id, coin_balance, currency_balance_minor, currency`

@@ -210,6 +210,8 @@ Ongoing in parallel: **Design**, **Content production**, **Integrations**, **Com
 
 ## Phase 5 — Family economy (wallet · chores) ⬜
 
+6 October 2026 local candidate: [Batch 2 evidence](Mahadum360_Batch2_Verification.md) records `/tasks` checkbox chore submission, submitted-only parent queues and exactly-once approval rewards. Class assignments also require parent reward approval after teacher grading. Additive migration required; deployment/live acceptance pending; speaking remains deferred. Historical shipped labels below are retained.
+
 **Backend `[MVP]`**
 - [x] ✅ Wallets (family) + **append-only coin ledger**; balance reconciliation.
 - [x] ✅ Wallet funding via gateway; coin transfer (optimistic, revert on failure).
@@ -279,6 +281,8 @@ Ongoing in parallel: **Design**, **Content production**, **Integrations**, **Com
 ---
 
 ## Phase 8 — School operations ⬜
+
+6 October 2026 local candidate: [Batch 2 evidence](Mahadum360_Batch2_Verification.md) records learner written class work, teacher answer/feedback review, parent-only coin release and enrolled-student analytics drill-down. Existing staff read/RBAC and teacher ownership rules remain. School-admin assignment management stays in Batch 3; this candidate has not been deployed.
 
 **Backend `[MVP]`**
 - [x] ✅ School registration + Super-Admin activation (CAC/domain verification) — audited.

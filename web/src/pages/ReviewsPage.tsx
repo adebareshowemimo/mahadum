@@ -10,8 +10,8 @@ import {
   Modal,
   Skeleton,
 } from '@/components/ui'
-import { ApiError, type AssignmentDecision, type AssignmentReviewItem, type ChoreDecision } from '@/lib/api'
-import { useCreateChore, useFamily, usePendingReviews, useReviewAssignment, useReviewChore } from '@/lib/family/queries'
+import { ApiError, type AssignmentDecision, type AssignmentReviewItem, type ChoreDecision, type ReviewQueue } from '@/lib/api'
+import { useCreateChore, useFamily, usePendingReviews, useReviewAssignment, useReviewChore, useReviewClassAssignment } from '@/lib/family/queries'
 
 export function ReviewsPage() {
   const { data: queue, isLoading, isError } = usePendingReviews()
@@ -23,7 +23,7 @@ export function ReviewsPage() {
   }
 
   const nothingPending =
-    queue.chores.length === 0 && queue.speaking.length === 0 && queue.assignments.length === 0
+    queue.chores.length === 0 && queue.speaking.length === 0 && queue.assignments.length === 0 && !queue.class_assignments?.length
 
   return (
     <div className="flex flex-col gap-8">
@@ -55,6 +55,7 @@ export function ReviewsPage() {
         <>
           <ChoresSection chores={queue.chores} />
           <AssignmentsSection assignments={queue.assignments} />
+          <ClassAssignmentsSection assignments={queue.class_assignments ?? []} />
           {queue.speaking.length > 0 && <SpeakingSection count={queue.speaking.length} />}
         </>
       )}
@@ -67,7 +68,7 @@ export function ReviewsPage() {
 function ChoresSection({
   chores,
 }: {
-  chores: { chore_id: number; title: string; assignee: string | null; coin_reward: number; status: string }[]
+  chores: ReviewQueue['chores']
 }) {
   const review = useReviewChore()
   const [actingId, setActingId] = useState<number | null>(null)
@@ -104,10 +105,11 @@ function ChoresSection({
                   <span>{c.coin_reward}</span>
                   {c.status === 'pending_review' && (
                     <Badge variant="warning" className="ml-2">
-                      Needs another look
+                      Submitted
                     </Badge>
                   )}
                 </p>
+                {c.evidence_type === 'checkbox' && <p className="mt-1 text-sm text-muted">Your learner marked this chore as completed.</p>}
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant="ghost" loading={busy} onClick={() => decide(c.chore_id, 'more_evidence')}>
@@ -188,6 +190,29 @@ function AssignmentsSection({ assignments }: { assignments: AssignmentReviewItem
       })}
     </section>
   )
+}
+
+function ClassAssignmentsSection({ assignments }: { assignments: NonNullable<ReviewQueue['class_assignments']> }) {
+  const review = useReviewClassAssignment()
+  const [error, setError] = useState<string | null>(null)
+  async function decide(submissionId: number, decision: AssignmentDecision) {
+    setError(null)
+    try { await review.mutateAsync({ submissionId, decision }) }
+    catch (err) { setError(err instanceof ApiError ? err.message : 'Could not save your decision.') }
+  }
+  if (!assignments.length) return null
+  return <section className="flex flex-col gap-3">
+    <h2 className="font-display text-lg font-bold text-foreground">Class assignment rewards</h2>
+    <p className="text-sm text-muted">The teacher has marked this work as passed. Approve to release the coins.</p>
+    {error && <Alert variant="danger">{error}</Alert>}
+    {assignments.map(a => <Card key={a.id}><CardBody className="flex flex-col gap-3">
+      <div><p className="font-semibold text-foreground">{a.title}</p><p className="text-sm text-muted">{a.learner} · {a.coin_reward} coins on approval</p></div>
+      {a.text_body && <p className="whitespace-pre-wrap rounded-xl bg-surface-muted p-3 text-sm text-foreground">{a.text_body}</p>}
+      {a.media_url && (a.media_type === 'audio' ? <audio src={a.media_url} controls className="w-full" /> : <video src={a.media_url} controls playsInline className="aspect-video w-full rounded-xl bg-charcoal-900" />)}
+      {a.feedback && <p className="text-sm text-muted">Teacher feedback: {a.feedback}</p>}
+      <div className="flex flex-wrap justify-end gap-2"><Button size="sm" variant="outline" loading={review.isPending && review.variables?.submissionId === a.id} onClick={() => void decide(a.id, 'reject')}>Decline reward</Button><Button size="sm" variant="parent" loading={review.isPending && review.variables?.submissionId === a.id} onClick={() => void decide(a.id, 'approve')}>Approve · {a.coin_reward} coins</Button></div>
+    </CardBody></Card>)}
+  </section>
 }
 
 function SpeakingSection({ count }: { count: number }) {

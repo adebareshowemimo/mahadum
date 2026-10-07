@@ -7,7 +7,6 @@ use App\Models\LearnerProfile;
 use App\Models\Organization;
 use App\Models\SchoolClass;
 use App\Models\User;
-use App\Models\Wallet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -58,18 +57,19 @@ class ClassAssignmentTest extends TestCase
         $this->actingAsUser($learner->user);
         $submitted = $this->postJson("/api/v1/class-assignments/{$assignmentId}/submissions", [
             'learner_id' => $learner->id,
+            'text_body' => 'E kaaro',
         ])->assertCreated();
         $submissionId = $submitted->json('data.id');
 
-        // Teacher grades it a pass — coins release atomically.
+        // Teacher grades it a pass; coins remain locked until parent approval.
         $this->actingAsUser($teacher);
         $this->postJson("/api/v1/classes/{$class->id}/assignments/{$assignmentId}/submissions/{$submissionId}/grade", [
             'passed' => true,
             'score' => 90,
-        ])->assertOk()->assertJsonPath('data.coins_released', 50);
+        ])->assertOk()->assertJsonPath('data.coins_released', 0);
 
-        $wallet = Wallet::where('owner_type', $learner->getMorphClass())->where('owner_id', $learner->id)->firstOrFail();
-        $this->assertSame(50, $wallet->coin_balance);
+        $this->assertDatabaseMissing('coin_transactions', ['source' => 'class_assignment']);
+        $this->assertDatabaseHas('class_assignment_submissions', ['id' => $submissionId, 'coins_locked' => 50, 'parent_review_status' => 'pending']);
         $this->assertDatabaseHas('audit_logs', ['action' => 'class_assignment.graded', 'subject_id' => $submissionId]);
 
         // Re-grading an already-graded submission is rejected.

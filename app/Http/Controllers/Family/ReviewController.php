@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\ResolvesFamily;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Family\ReviewAssignmentRequest;
 use App\Models\AssignmentSubmission;
+use App\Models\ClassAssignmentSubmission;
 use App\Models\SpeakingSubmission;
 use App\Notifications\AssignmentApproved;
 use App\Services\AuditLogger;
@@ -31,8 +32,9 @@ class ReviewController extends Controller
         $learnerIds = $family->learnerProfiles()->pluck('id');
 
         $chores = $family->chores()
-            ->whereIn('status', ['active', 'pending_review'])
-            ->with('assigneeLearnerProfile')
+            ->where('status', 'pending_review')
+            ->whereHas('submissions', fn ($q) => $q->whereNotNull('submitted_at')->whereNull('decision'))
+            ->with('assigneeLearnerProfile', 'submissions')
             ->get()
             ->map(fn ($c) => [
                 'chore_id' => $c->id,
@@ -40,6 +42,8 @@ class ReviewController extends Controller
                 'assignee' => $c->assigneeLearnerProfile?->display_name,
                 'coin_reward' => $c->coin_reward,
                 'status' => $c->status,
+                'evidence_type' => $c->submissions->first()?->evidence_type,
+                'submitted_at' => $c->submissions->first()?->submitted_at,
             ]);
 
         $speaking = SpeakingSubmission::whereIn('learner_profile_id', $learnerIds)
@@ -67,7 +71,39 @@ class ReviewController extends Controller
             'chores' => $chores->values(),
             'speaking' => $speaking,
             'assignments' => $assignments->values(),
+            'class_assignments' => ClassAssignmentSubmission::whereIn('learner_profile_id', $learnerIds)
+                ->where('parent_review_status', 'pending')->where('status', 'graded')->where('passed', true)
+                ->with('learnerProfile', 'classAssignment', 'mediaAsset')->get()->map(fn ($s) => [
+                    'id' => $s->id, 'learner' => $s->learnerProfile?->display_name,
+                    'title' => $s->classAssignment->title, 'coin_reward' => $s->coins_locked,
+                    'text_body' => $s->text_body, 'feedback' => $s->feedback,
+                    'media_url' => $s->mediaAsset ? Storage::disk('public')->url($s->mediaAsset->url) : null,
+                    'media_type' => $s->mediaAsset?->type,
+                ]),
         ]]);
+    }
+
+    public function reviewClassAssignment(ReviewAssignmentRequest $request, ClassAssignmentSubmission $submission): JsonResponse
+    {
+        $family = $this->family($request->user());
+        $learner = $submission->learnerProfile;
+        abort_unless($learner && $learner->family_id === $family->id && $learner->user_id !== $request->user()->id, 403);
+        $decision = $request->string('decision')->value();
+
+        $released = DB::transaction(function () use ($request, $submission, $learner, $decision) {
+            $submission = ClassAssignmentSubmission::whereKey($submission->id)->lockForUpdate()->firstOrFail();
+            abort_unless($submission->status === 'graded' && $submission->passed && $submission->parent_review_status === 'pending', 422, 'This assignment is not waiting for parent approval.');
+            $released = $decision === 'approve' ? $submission->coins_locked : 0;
+            if ($released > 0) {
+                $this->wallets->credit($this->wallets->walletFor($learner), $released, 'class_assignment', $learner->id, $submission);
+            }
+            $submission->update(['parent_review_status' => $decision === 'approve' ? 'approved' : 'rejected', 'decided_by' => $request->user()->id, 'decided_at' => now()]);
+            $this->audit->record('class_assignment.parent_reviewed', $submission, ['parent_review_status' => 'pending'], ['parent_review_status' => $submission->parent_review_status, 'coins_released' => $released]);
+
+            return $released;
+        });
+
+        return response()->json(['data' => ['submission_id' => $submission->id, 'status' => $submission->fresh()->parent_review_status, 'coins_released' => $released]]);
     }
 
     /**
@@ -86,6 +122,8 @@ class ReviewController extends Controller
         $decision = $request->string('decision')->value();
 
         $coinsReleased = DB::transaction(function () use ($request, $submission, $learner, $decision) {
+            $submission = AssignmentSubmission::whereKey($submission->id)->lockForUpdate()->firstOrFail();
+            abort_unless($submission->parent_review_status === 'pending', 422, 'This assignment has already been reviewed.');
             $released = 0;
             $status = $decision === 'approve' ? 'approved' : 'rejected';
 

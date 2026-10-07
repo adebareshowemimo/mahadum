@@ -13,6 +13,8 @@ all.
 **Legend:** ✅ done · 🟡 in progress / partial · ⬜ not started
 **Tags:** `[MVP]` ships for launch · `[POST]` deferred · `[BE]` needs a backend seam first
 
+**6 October 2026 local candidate:** [Batch 2 verification](Mahadum360_Batch2_Verification.md) adds learner written submissions and separates teacher grading from parent reward approval. Passing class work locks coins; only a distinct family parent may approve release. This enforces the current repository Rule 8 and supersedes the historical teacher-only release behavior described below. The July shipped/verified statements remain historical evidence; Batch 2 deployment and live acceptance are pending. Its additive submission migration is required, with no historical award backfill.
+
 ---
 
 ## Status snapshot (2026-07-04, updated after §0–§3 all shipped — plan complete)

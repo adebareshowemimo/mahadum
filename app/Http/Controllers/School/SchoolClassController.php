@@ -14,6 +14,7 @@ use App\Models\LessonProgress;
 use App\Models\Organization;
 use App\Models\OrganizationUser;
 use App\Models\QuestionResponse;
+use App\Models\QuizAttempt;
 use App\Models\SchoolClass;
 use App\Models\SpeakingSubmission;
 use App\Services\School\ClassCourseEnrollmentService;
@@ -145,6 +146,34 @@ class SchoolClassController extends Controller
         return response()->json(['data' => [
             'class' => ['id' => $class->id, 'name' => $class->name],
             'students' => $students,
+        ]]);
+    }
+
+    /** Existing learning records, restricted to an enrolled student of this class. */
+    public function studentAnalytics(SchoolClass $class, LearnerProfile $learner): JsonResponse
+    {
+        abort_unless($class->enrollments()->where('learner_profile_id', $learner->id)->exists(), 404);
+
+        return response()->json(['data' => [
+            'learner' => ['id' => $learner->id, 'display_name' => $learner->display_name],
+            'lessons' => LessonProgress::where('learner_profile_id', $learner->id)->with('lesson')
+                ->latest('updated_at')->limit(50)->get()->map(fn ($p) => [
+                    'id' => $p->id, 'title' => $p->lesson?->title, 'status' => $p->status,
+                    'score' => $p->score === null ? null : (float) $p->score, 'completed_at' => $p->completed_at,
+                ]),
+            'quizzes' => QuizAttempt::where('learner_profile_id', $learner->id)
+                ->latest('started_at')->limit(50)->get()->map(fn ($q) => [
+                    'id' => $q->id, 'quiz_id' => $q->quiz_id, 'attempt_no' => $q->attempt_no,
+                    'score' => $q->score === null ? null : (float) $q->score, 'completed_at' => $q->completed_at,
+                ]),
+            'speaking' => SpeakingSubmission::where('learner_profile_id', $learner->id)
+                ->latest()->limit(50)->get(['id', 'lesson_component_id', 'status', 'created_at']),
+            'assignments' => ClassAssignmentSubmission::where('learner_profile_id', $learner->id)
+                ->whereHas('classAssignment', fn ($q) => $q->where('school_class_id', $class->id))
+                ->with('classAssignment')->latest()->limit(50)->get()->map(fn ($s) => [
+                    'id' => $s->id, 'title' => $s->classAssignment->title,
+                    'status' => $s->status, 'score' => $s->score, 'feedback' => $s->feedback,
+                ]),
         ]]);
     }
 

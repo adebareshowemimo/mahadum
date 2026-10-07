@@ -17,6 +17,11 @@ use Illuminate\Support\Carbon;
  * @property int $learner_profile_id
  * @property int|null $media_asset_id
  * @property string $status
+ * @property string|null $text_body
+ * @property string|null $parent_review_status
+ * @property int $coins_locked
+ * @property int|null $decided_by
+ * @property Carbon|null $decided_at
  * @property bool|null $passed
  * @property int|null $score
  * @property string|null $feedback
@@ -42,6 +47,7 @@ class ClassAssignmentSubmission extends Model
         'passed' => 'boolean',
         'submitted_at' => 'datetime',
         'graded_at' => 'datetime',
+        'decided_at' => 'datetime',
     ];
 
     /**

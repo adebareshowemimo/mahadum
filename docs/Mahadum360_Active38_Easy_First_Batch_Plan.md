@@ -89,9 +89,11 @@ Shared regressions: Chore submit/reject/request-more/approve, exactly-once coin 
 
 Local/manual QA: /chores, /reviews, class Assignments/Analytics and referral/payout views with isolated funded wallets and simulated transactions. Check a teacher fixture plus learner submission and known referral ledger totals. No real purchase, payout, notification, account relink or funding of customer wallets. Batch 3 may be needed for school-admin UI acceptance; keep that scenario blocked until its policy/visibility defect is resolved.
 
-- [ ] Per-ID reproduction or no-change evidence recorded.
-- [ ] Bounded code changes and applicable regression/static/build checks complete.
-- [ ] Actual UI pixels inspected where relevant; blocked prerequisites explicitly recorded.
+Execution record: [Batch 2 local verification](Mahadum360_Batch2_Verification.md), 6 October 2026 America/New_York. Learner tasks/submissions, parent-only class reward release, review replay guards, per-student drill-down and exact escrow expiry repaired. Full suites and final affected/static/build checks passed. Speaking review and provider sandbox settlement remain NOT RUN; the recorded post-activation 30-day referral rule excludes earlier initial purchases and later school renewals. The additive submission migration passed isolated tests and was applied to the confirmed local development database without historical reward backfill. Production migration remains pending. Adebare subsequently authorized the Batch 2 commit and origin push with "commit and push"; remote verification is recorded in the delivery response. Deployment/email and per-ID acceptance remain pending.
+
+- [x] Per-ID reproduction or no-change evidence recorded.
+- [x] Bounded code changes and applicable regression/static/build checks complete.
+- [x] Actual UI pixels inspected where relevant; blocked prerequisites explicitly recorded.
 - [ ] Adebare local confirmation recorded separately for every included fix.
 - [ ] Concrete batch commit/push authorized and origin SHA verified.
 - [ ] Confirmed changes deployed by Adebare; migration/version evidence recorded if required.

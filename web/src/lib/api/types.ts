@@ -276,9 +276,23 @@ export interface AssignmentReviewItem {
 }
 
 export interface ReviewQueue {
-  chores: { chore_id: number; title: string; assignee: string | null; coin_reward: number; status: ChoreStatus }[]
+  chores: { chore_id: number; title: string; assignee: string | null; coin_reward: number; status: ChoreStatus; evidence_type?: string | null; submitted_at?: string | null }[]
   speaking: { id: number; learner_profile_id: number; lesson_component_id: number; status: string }[]
   assignments: AssignmentReviewItem[]
+  class_assignments?: { id: number; learner: string | null; title: string; coin_reward: number; text_body: string | null; feedback: string | null; media_url?: string | null; media_type?: string | null }[]
+}
+
+export interface LearnerTasks {
+  chores: { id: number; title: string; description: string | null; coin_reward: number; status: ChoreStatus; due_at: string | null; review_decision: ChoreDecision | null }[]
+  assignments: { id: number; title: string; instructions: string | null; class_name: string; coin_reward: number; status: 'submitted' | 'graded' | null; due_at: string | null; feedback: string | null; parent_review_status: string | null }[]
+}
+
+export interface StudentAnalytics {
+  learner: { id: number; display_name: string | null }
+  lessons: { id: number; title: string | null; status: string; score: number | null; completed_at: string | null }[]
+  quizzes: { id: number; quiz_id: number; attempt_no: number; score: number | null; completed_at: string | null }[]
+  speaking: { id: number; lesson_component_id: number; status: string; created_at: string | null }[]
+  assignments: { id: number; title: string; status: string; score: number | null; feedback: string | null }[]
 }
 
 export interface AddChildInput {
@@ -1096,6 +1110,8 @@ export interface ClassCompletionRow {
 }
 
 export interface ClassAssignmentRosterEntry {
+  text_body?: string | null
+  parent_review_status?: string | null
   learner_id: number
   display_name: string | null
   submission_id: number | null

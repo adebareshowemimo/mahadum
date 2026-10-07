@@ -255,8 +255,8 @@ Requested action: On hold: approve the consent, storage and deletion policy for 
 Audit status: Partial. Tested: Flashcards, games, assignments.
 Audit evidence: Flashcards and games are live in the editor. Assignments are blocked because no teacher can be assigned.
 Requested action: Unblock assignments by fixing teacher assignment (see Feedback #33); then confirm learners can see and submit an assignment.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — learner written class work and teacher review added; existing flashcards/games preserved
+- [x] T — local assignment flow and desktop/mobile verification passed; [Batch 2 evidence](Mahadum360_Batch2_Verification.md)
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -375,8 +375,8 @@ Requested action: No action needed.
 Audit status: Partial. Tested: Chore-to-Coin.
 Audit evidence: "New chore" sets the title, child, coin reward and due date. The submit, approve and coin release steps could not be run because the wallet has 0 coins.
 Requested action: Fund a test wallet (sandbox) and run the full chore flow: child submits evidence, parent approves/rejects/requests more, coins release only on approval.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — checkbox submission, real pending queue, audited parent decisions and replay guards added
+- [x] T — isolated funded wallet and submit/more/reject/resubmit/approve flow passed; [Batch 2 evidence](Mahadum360_Batch2_Verification.md)
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -385,8 +385,8 @@ Requested action: Fund a test wallet (sandbox) and run the full chore flow: chil
 Audit status: Partial. Tested: Review queue (speaking, assignment, chores).
 Audit evidence: Reviews loads on the working family account ("Approve chores and check what your children have submitted"). Speaking submissions are paused, and assignments are blocked.
 Requested action: Confirm chore submissions appear in Reviews; add speaking and assignment submissions once those features are live.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — chore and class assignment reward queues repaired; speaking remains deferred
+- [ ] T — PARTIAL: chore/class/lesson assignment regressions and rendered queue passed; speaking NOT RUN; [Batch 2 evidence](Mahadum360_Batch2_Verification.md)
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -425,8 +425,8 @@ Requested action: Add an Email column to the roster CSV template and import; tes
 Audit status: Can't verify. Tested: Speech/quiz analytics grid with drill-down.
 Audit evidence: A class Analytics tab exists, but no teacher account could reach it.
 Requested action: Once a teacher can be assigned, verify the class Analytics tab shows the speech/quiz grid with drill-down per student.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — authorized enrolled-student analytics drill-down added using existing learning records
+- [x] T — tenant/enrollment regressions and desktop/mobile modal passed; existing speaking metadata only; [Batch 2 evidence](Mahadum360_Batch2_Verification.md)
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -636,8 +636,8 @@ Requested action: No action needed.
 Audit status: Can't verify. Tested: User rewards; school commissions on renewals.
 Audit evidence: Needs paid transactions.
 Requested action: Run a sandbox paid subscription through a referral and a school renewal; confirm rewards and commissions post.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — existing 5% user/school attribution verified; school renewal limit documented
+- [ ] T — PARTIAL: fake payment/renewal and replay regressions passed; provider sandbox NOT RUN; renewals after 30 days earn none; [Batch 2 evidence](Mahadum360_Batch2_Verification.md)
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -646,8 +646,8 @@ Requested action: Run a sandbox paid subscription through a referral and a schoo
 Audit status: Partial. Tested: 14-day escrow, chargeback, ₦5k floor / ₦50k cap.
 Audit evidence: The ₦5,000 payout floor is stated and escrow appears in content performance. The others could not be tested.
 Requested action: Test 14-day escrow, chargeback cancellation and the N50k individual cap with sandbox payments.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — exact escrow expiry boundary repaired; existing floor/cap/clawback policies retained
+- [x] T — isolated exact-14-day, refund/replay, floor/cap/month-rollover checks passed; provider settlement not tested; [Batch 2 evidence](Mahadum360_Batch2_Verification.md)
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -677,8 +677,8 @@ October 6 independent regression note: INV-PROMO-1 invoice fee-label normalizati
 Audit status: Can't verify. Tested: Code activates only after the referred person has a paid subscription and has finished 1 lesson + 1 quiz.
 Audit evidence: Needs a paid test subscription.
 Requested action: Run a sandbox paid sign-up via a referral code; confirm the code only activates after payment + 1 lesson + 1 quiz.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — documented no-change finding for paid-plus-lesson-plus-quiz prerequisites
+- [x] T — isolated paid webhook and both payment/learning orders verified; provider sandbox NOT RUN; [Batch 2 evidence](Mahadum360_Batch2_Verification.md)
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -687,8 +687,8 @@ Requested action: Run a sandbox paid sign-up via a referral code; confirm the co
 Audit status: Can't verify. Tested: Referrer earns 5% of the referred person's purchase value for the first month.
 Audit evidence: Needs a paid test subscription.
 Requested action: Confirm the referrer is credited 5% of the first-month purchase after activation.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — existing post-activation 5% rule verified; no retroactive initial purchase credit
+- [ ] T — PARTIAL: rounding/replay/day-30 boundary passed; purchase before activation earns none, provider sandbox NOT RUN; [Batch 2 evidence](Mahadum360_Batch2_Verification.md)
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested
@@ -807,8 +807,8 @@ Requested action: No action needed.
 Audit status: Can't verify. Tested: Referral activation rules: paid plan, 1 lesson + 1 quiz, 5% first month, block existing accounts (4 Sep, #1).
 Audit evidence: Needs a paid subscription to test.
 Requested action: Retest with a sandbox paid subscription (see Expanded BRD #1–3).
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+- [x] C — shared activation/commission and existing-contact guards verified; separate acceptance retained
+- [ ] T — PARTIAL: isolated prerequisites/contact/replay checks passed; same initial-payment limit as X2 and provider sandbox NOT RUN; [Batch 2 evidence](Mahadum360_Batch2_Verification.md)
 - [ ] L — Adebare local confirmation; pending
 - [ ] D — production deployment; not deployed
 - [ ] Q — Deborah live QA; not requested

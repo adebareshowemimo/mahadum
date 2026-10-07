@@ -13,7 +13,7 @@ use Illuminate\Notifications\Notification;
 /**
  * Sent to the learner's own account (when they have a login) after their
  * teacher grades a class assignment submission
- * (ClassAssignmentController@grade). Coins release only when passed.
+ * (ClassAssignmentController@grade). A passed reward awaits parent approval.
  */
 class ClassAssignmentGraded extends Notification implements ShouldQueue
 {
@@ -42,9 +42,9 @@ class ClassAssignmentGraded extends Notification implements ShouldQueue
             ->greeting($passed ? 'Great job!' : 'Assignment graded')
             ->line("Your teacher graded \"{$title}\".")
             ->line($passed
-                ? "{$this->coinsReleased} coins have been added to your wallet."
+                ? ($this->submission->coins_locked > 0 ? "{$this->submission->coins_locked} coins are waiting for your grown-up's approval." : 'Your assignment passed.')
                 : 'Check the feedback from your teacher and try again.')
-            ->action('View assignment', config('brand.url').'/assignments');
+            ->action('View assignment', config('brand.url').'/tasks');
 
         $mail = $this->applyOverride('class_assignment_graded', [
             '{{brand_url}}' => (string) config('brand.url'),

@@ -13,9 +13,9 @@ use App\Models\MediaAsset;
 use App\Models\SchoolClass;
 use App\Notifications\ClassAssignmentGraded;
 use App\Services\AuditLogger;
-use App\Services\Family\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -30,7 +30,6 @@ class ClassAssignmentController extends Controller
     use ResolvesLearner;
 
     public function __construct(
-        private WalletService $wallets,
         private AuditLogger $audit,
     ) {}
 
@@ -122,6 +121,8 @@ class ClassAssignmentController extends Controller
                 'submitted_at' => $s?->submitted_at,
                 'graded_at' => $s?->graded_at,
                 'media_url' => $s?->mediaAsset ? Storage::disk('public')->url($s->mediaAsset->url) : null,
+                'text_body' => $s?->text_body,
+                'parent_review_status' => $s?->parent_review_status,
             ];
         });
 
@@ -137,17 +138,22 @@ class ClassAssignmentController extends Controller
 
     /**
      * A learner (or their parent) submits work for a class assignment. The
-     * learner must be self/parent-owned or same-tenant staff per
-     * LearnerProfilePolicy::view (ResolvesLearner::learner()), and must be
-     * enrolled in the assignment's class.
+     * learner must be self/parent-owned and enrolled in the assignment's class.
+     * Same-tenant staff read access does not grant submission authority.
      */
     public function submit(StoreClassAssignmentSubmissionRequest $request, ClassAssignment $assignment): JsonResponse
     {
         $learner = $this->learner($request->integer('learner_id'));
+        Gate::authorize('redeemReward', $learner);
         $enrolled = $assignment->schoolClass->enrollments()->where('learner_profile_id', $learner->id)->exists();
         abort_unless($enrolled, 403, 'This learner is not enrolled in that class.');
 
         $submission = DB::transaction(function () use ($request, $assignment, $learner) {
+            // Serialize submissions for this assignment; graded work cannot be
+            // reset and rewarded again by resubmitting it.
+            ClassAssignment::whereKey($assignment->id)->lockForUpdate()->firstOrFail();
+            $existing = $assignment->submissions()->where('learner_profile_id', $learner->id)->lockForUpdate()->first();
+            abort_if($existing?->status === 'graded', 422, 'This assignment has already been graded.');
             $assetId = null;
             if ($request->hasFile('media')) {
                 $path = $request->file('media')->store('class-assignments', 'public');
@@ -160,7 +166,7 @@ class ClassAssignmentController extends Controller
 
             return ClassAssignmentSubmission::updateOrCreate(
                 ['class_assignment_id' => $assignment->id, 'learner_profile_id' => $learner->id],
-                ['media_asset_id' => $assetId, 'status' => 'submitted', 'submitted_at' => now()],
+                ['media_asset_id' => $assetId, 'text_body' => $request->input('text_body'), 'status' => 'submitted', 'submitted_at' => now()],
             );
         });
 
@@ -171,10 +177,8 @@ class ClassAssignmentController extends Controller
     }
 
     /**
-     * Grade a submission. Coins release ONLY on pass — atomically with the
-     * decision, and audited. Mirrors the parent-approval separation-of-duties
-     * pattern (ReviewController@review), but the approver here is the class's
-     * own teacher rather than a parent.
+     * Grade the work. A pass locks its reward for parent approval; grading
+     * alone cannot release assignment coins (Rule 8).
      */
     public function grade(
         GradeClassAssignmentSubmissionRequest $request,
@@ -190,19 +194,10 @@ class ClassAssignmentController extends Controller
         $passed = $request->boolean('passed');
         $learner = $submission->learnerProfile;
 
-        $coinsReleased = DB::transaction(function () use ($request, $submission, $assignment, $class, $learner, $passed) {
-            $released = 0;
-
-            if ($passed && $assignment->coin_reward > 0 && $learner) {
-                $this->wallets->credit(
-                    $this->wallets->walletFor($learner),
-                    $assignment->coin_reward,
-                    'class_assignment',
-                    $learner->id,
-                    $submission,
-                );
-                $released = $assignment->coin_reward;
-            }
+        $coinsReleased = DB::transaction(function () use ($request, $submission, $assignment, $class, $passed) {
+            $submission = ClassAssignmentSubmission::whereKey($submission->id)->lockForUpdate()->firstOrFail();
+            abort_unless($submission->status === 'submitted', 422, 'This submission has already been graded.');
+            $locked = $passed ? $assignment->coin_reward : 0;
 
             $submission->update([
                 'status' => 'graded',
@@ -211,21 +206,23 @@ class ClassAssignmentController extends Controller
                 'feedback' => $request->input('feedback'),
                 'graded_by' => $request->user()->id,
                 'graded_at' => now(),
+                'coins_locked' => $locked,
+                'parent_review_status' => $locked > 0 ? 'pending' : 'not_required',
             ]);
 
             $this->audit->record(
                 'class_assignment.graded',
                 $submission,
                 ['status' => 'submitted'],
-                ['status' => 'graded', 'passed' => $passed, 'coins_released' => $released],
+                ['status' => 'graded', 'passed' => $passed, 'coins_released' => 0, 'coins_locked' => $locked],
                 $class->organization_id,
             );
 
-            return $released;
+            return 0;
         });
 
         // Sent after commit so a queued mail job never races a rolled-back transaction.
-        $learner?->user?->notify(new ClassAssignmentGraded($submission, $coinsReleased));
+        $learner?->user?->notify(new ClassAssignmentGraded($submission->refresh(), $coinsReleased));
 
         return response()->json(['data' => [
             'submission_id' => $submission->id,

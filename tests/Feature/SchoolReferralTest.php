@@ -90,6 +90,8 @@ class SchoolReferralTest extends TestCase
 
         // A renewal charge after activation → 5% commission to the organization.
         app(PaymentService::class)->process('paystack', 'org-evt-2', "sub_$subId", 'success', $plan->price_minor, []);
+        $this->assertSame('duplicate', app(PaymentService::class)->process('paystack', 'org-evt-2', "sub_$subId", 'success', $plan->price_minor, []));
+        $this->assertSame(1, Commission::where('beneficiary_type', Organization::class)->where('beneficiary_id', $org->id)->count());
 
         $this->assertDatabaseHas('commissions', [
             'beneficiary_type' => Organization::class, 'beneficiary_id' => $org->id,

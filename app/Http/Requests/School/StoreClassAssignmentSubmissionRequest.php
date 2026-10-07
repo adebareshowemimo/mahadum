@@ -15,6 +15,7 @@ class StoreClassAssignmentSubmissionRequest extends FormRequest
     {
         return [
             'learner_id' => ['required', 'integer', 'exists:learner_profiles,id'],
+            'text_body' => ['nullable', 'string', 'max:10000', 'required_without:media'],
             'media' => ['nullable', 'file', 'mimetypes:video/mp4,video/webm,video/quicktime,audio/mpeg,audio/aac,audio/wav,audio/webm,audio/ogg', 'max:51200'],
         ];
     }

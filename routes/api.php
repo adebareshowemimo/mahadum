@@ -78,6 +78,7 @@ use App\Http\Controllers\Learning\AssignmentSubmissionController;
 use App\Http\Controllers\Learning\CoursePracticeInvitationController;
 use App\Http\Controllers\Learning\EnrollmentController;
 use App\Http\Controllers\Learning\LearnerAvatarController;
+use App\Http\Controllers\Learning\LearnerTasksController;
 use App\Http\Controllers\Learning\LessonCompletionController;
 use App\Http\Controllers\Learning\LessonPlayController;
 use App\Http\Controllers\Learning\PathController;
@@ -283,10 +284,13 @@ Route::prefix('v1')->group(function () {
             ->middleware('can:family.manage');
         Route::get('wallet', [WalletController::class, 'show'])->middleware('can:family.wallet.view');
         Route::get('chores', [ChoreController::class, 'index'])->middleware('can:family.chores.manage');
+        Route::get('learners/{learner}/tasks', [LearnerTasksController::class, 'index']);
+        Route::post('chores/{chore}/submissions', [LearnerTasksController::class, 'submitChore']);
         Route::post('chores', [ChoreController::class, 'store'])->middleware('can:family.chores.manage');
         Route::post('chores/{chore}/review', [ChoreController::class, 'review'])->middleware('can:family.chores.review');
         Route::get('reviews/pending', [ReviewController::class, 'pending'])->middleware('can:family.reviews.handle');
         Route::post('assignment-submissions/{submission}/review', [ReviewController::class, 'review'])->middleware('can:family.reviews.handle');
+        Route::post('class-assignment-submissions/{submission}/review', [ReviewController::class, 'reviewClassAssignment'])->middleware('can:family.reviews.handle');
 
         // money POSTs → idempotent
         Route::middleware('idempotency')->group(function () {
@@ -371,6 +375,8 @@ Route::prefix('v1')->group(function () {
         Route::get('classes/{class}/analytics', [SchoolClassController::class, 'analytics'])
             ->can('view', 'class')
             ->middleware('can:schools.analytics.view');
+        Route::get('classes/{class}/analytics/{learner}', [SchoolClassController::class, 'studentAnalytics'])
+            ->can('view', 'class')->middleware('can:schools.analytics.view');
         Route::post('classes', [SchoolClassController::class, 'store'])->can('create', SchoolClass::class);
         Route::match(['put', 'patch'], 'classes/{class}', [SchoolClassController::class, 'update'])->can('update', 'class');
         Route::get('classes/{class}/available-learners', [SchoolClassController::class, 'availableLearners'])->can('update', 'class');

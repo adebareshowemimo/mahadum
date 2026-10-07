@@ -13,6 +13,42 @@ export const familyKeys = {
   wallet: ['wallet'] as const,
   chores: ['chores'] as const,
   reviews: ['reviews', 'pending'] as const,
+  tasks: (learnerId: number) => ['tasks', learnerId] as const,
+}
+
+export function useLearnerTasks(learnerId: number | null) {
+  return useQuery({ queryKey: familyKeys.tasks(learnerId ?? 0), queryFn: () => familyApi.tasks(learnerId as number), enabled: !!learnerId })
+}
+
+export function useSubmitTask(learnerId: number | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { kind: 'chore' | 'assignment'; id: number; text?: string }) => input.kind === 'chore'
+      ? familyApi.submitChore(input.id, learnerId as number)
+      : familyApi.submitClassAssignment(input.id, learnerId as number, input.text ?? ''),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: familyKeys.tasks(learnerId ?? 0) })
+      void qc.invalidateQueries({ queryKey: familyKeys.reviews })
+      void qc.invalidateQueries({ queryKey: ['school-classes'] })
+      void qc.invalidateQueries({ queryKey: ['class-assignments'] })
+      void qc.invalidateQueries({ queryKey: ['class-completion'] })
+    },
+  })
+}
+
+export function useReviewClassAssignment() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ submissionId, decision }: { submissionId: number; decision: AssignmentDecision }) => familyApi.reviewClassAssignment(submissionId, decision),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: familyKeys.reviews })
+      void qc.invalidateQueries({ queryKey: familyKeys.wallet })
+      void qc.invalidateQueries({ queryKey: familyKeys.family })
+      void qc.invalidateQueries({ queryKey: ['family', 'child'] })
+      void qc.invalidateQueries({ queryKey: ['tasks'] })
+      void qc.invalidateQueries({ queryKey: ['me'] })
+    },
+  })
 }
 
 export function useFamily(enabled = true) {
@@ -120,6 +156,10 @@ export function useReviewChore() {
       void qc.invalidateQueries({ queryKey: familyKeys.reviews })
       void qc.invalidateQueries({ queryKey: familyKeys.chores })
       void qc.invalidateQueries({ queryKey: familyKeys.wallet })
+      void qc.invalidateQueries({ queryKey: familyKeys.family })
+      void qc.invalidateQueries({ queryKey: ['family', 'child'] })
+      void qc.invalidateQueries({ queryKey: ['tasks'] })
+      void qc.invalidateQueries({ queryKey: ['me'] })
     },
   })
 }
@@ -132,6 +172,9 @@ export function useReviewAssignment() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: familyKeys.reviews })
       void qc.invalidateQueries({ queryKey: familyKeys.wallet })
+      void qc.invalidateQueries({ queryKey: familyKeys.family })
+      void qc.invalidateQueries({ queryKey: ['family', 'child'] })
+      void qc.invalidateQueries({ queryKey: ['me'] })
     },
   })
 }

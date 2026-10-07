@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { Alert, Avatar, Badge, Button, Input, LinkButton, Skeleton } from '@/components/ui'
+import { Alert, Avatar, Badge, Button, Input, LinkButton, Modal, Skeleton } from '@/components/ui'
 import { ApiError, schoolApi, type ClassAnalyticsStudent } from '@/lib/api'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { ClassManagementActions } from '@/components/school/ClassManagementActions'
@@ -308,7 +308,7 @@ function AnalyticsPanel({ classId }: { classId: number }) {
             <tr><th className="px-4 py-3 font-semibold">Learner</th><th className="px-3 py-3 text-right font-semibold">Lessons</th><th className="px-3 py-3 text-right font-semibold">Average</th><th className="px-3 py-3 text-right font-semibold">Quiz</th><th className="px-3 py-3 text-right font-semibold">Speaking</th><th className="px-4 py-3 text-right font-semibold">Assignments</th></tr>
           </thead>
           <tbody className="divide-y divide-border bg-surface">
-            {analytics.data.students.map((student) => <AnalyticsRow key={student.learner_id} student={student} />)}
+            {analytics.data.students.map((student) => <AnalyticsRow key={student.learner_id} classId={classId} student={student} />)}
           </tbody>
         </table>
       </div>
@@ -316,10 +316,21 @@ function AnalyticsPanel({ classId }: { classId: number }) {
   )
 }
 
-function AnalyticsRow({ student }: { student: ClassAnalyticsStudent }) {
+function AnalyticsRow({ student, classId }: { student: ClassAnalyticsStudent; classId: number }) {
+  const [open, setOpen] = useState(false)
+  const detail = useQuery({ queryKey: ['school-classes', 'student-analytics', classId, student.learner_id], queryFn: () => schoolApi.studentAnalytics(classId, student.learner_id), enabled: open })
   return (
     <tr>
-      <td className="px-4 py-3 font-medium text-foreground">{student.display_name ?? 'Learner'}</td>
+      <td className="px-4 py-3 font-medium text-foreground"><button className="min-h-11 text-left font-semibold text-primary hover:underline" onClick={() => setOpen(true)}>{student.display_name ?? 'Learner'}</button>
+        <Modal open={open} onClose={() => setOpen(false)} title={`${student.display_name ?? 'Learner'} — learning activity`} description="Up to 50 recent records in each section.">
+          {detail.isLoading ? <Skeleton className="h-48" /> : detail.isError || !detail.data ? <Alert variant="danger">Couldn’t load this learner’s activity. Please try again.</Alert> : <div className="flex flex-col gap-5 text-sm">
+            <section><h3 className="font-semibold text-foreground">Lessons</h3>{!detail.data.lessons.length && <p className="text-muted">No lesson activity.</p>}{detail.data.lessons.map(p => <p key={p.id} className="mt-2 text-muted">{p.title ?? 'Lesson'} · {p.status} · {p.score == null ? 'No score' : `${p.score}%`}</p>)}</section>
+            <section><h3 className="font-semibold text-foreground">Quizzes</h3>{!detail.data.quizzes.length && <p className="text-muted">No quiz attempts.</p>}{detail.data.quizzes.map(q => <p key={q.id} className="mt-2 text-muted">Quiz {q.quiz_id} · Attempt {q.attempt_no} · {q.completed_at ? 'Completed' : 'In progress'} · {q.score == null ? 'No score' : `${Math.round(q.score * 100)}%`}</p>)}</section>
+            <section><h3 className="font-semibold text-foreground">Speaking</h3>{!detail.data.speaking.length && <p className="text-muted">No speaking submissions.</p>}{detail.data.speaking.map(s => <p key={s.id} className="mt-2 text-muted">Submission {s.id} · {s.status}</p>)}</section>
+            <section><h3 className="font-semibold text-foreground">Assignments</h3>{!detail.data.assignments.length && <p className="text-muted">No assignment submissions.</p>}{detail.data.assignments.map(a => <p key={a.id} className="mt-2 text-muted">{a.title} · {a.status}{a.score != null ? ` · ${a.score}%` : ''}{a.feedback ? ` · ${a.feedback}` : ''}</p>)}</section>
+          </div>}
+        </Modal>
+      </td>
       <td className="px-3 py-3 text-right tabular-nums text-foreground">{student.lessons_completed}</td>
       <td className="px-3 py-3 text-right tabular-nums text-muted">{student.avg_score == null ? '—' : `${student.avg_score}%`}</td>
       <td className="px-3 py-3 text-right tabular-nums text-muted">{student.quiz_accuracy == null ? '—' : `${student.quiz_accuracy}%`}</td>

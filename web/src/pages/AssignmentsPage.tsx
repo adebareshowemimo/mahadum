@@ -305,6 +305,9 @@ function RosterRow({
         )}
       </div>
 
+      {entry.text_body && <p className="mt-3 whitespace-pre-wrap rounded-xl bg-surface-muted p-3 text-sm text-foreground">{entry.text_body}</p>}
+      {entry.parent_review_status === 'pending' && <p className="mt-2 text-sm text-muted">Reward awaiting parent approval.</p>}
+
       {entry.status === 'graded' && entry.feedback && (
         <p className="mt-2 text-sm text-muted">“{entry.feedback}”</p>
       )}
@@ -319,7 +322,7 @@ function RosterRow({
           <div className="grid gap-2 sm:grid-cols-2">
             <Input label="Score (optional)" type="number" min={0} max={100} value={score} onChange={(e) => setScore(e.target.value)} />
             <div className="flex flex-col justify-end text-xs text-muted">
-              {coinReward > 0 ? `${coinReward} coins release on pass` : 'No coin reward set'}
+              {coinReward > 0 ? `${coinReward} coins await parent approval after a pass` : 'No coin reward set'}
             </div>
           </div>
           <Textarea label="Feedback (optional)" value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={2} />

@@ -22,6 +22,7 @@ const ChildSafetyPage = lazy(() => import('@/pages/PublicTrustPages').then((m) =
 const AccessibilityPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.AccessibilityPage })))
 const AssignmentsPage = lazy(() => import('@/pages/AssignmentsPage').then((m) => ({ default: m.AssignmentsPage })))
 const AssignmentDetailPage = lazy(() => import('@/pages/AssignmentDetailPage').then((m) => ({ default: m.AssignmentDetailPage })))
+const TasksPage = lazy(() => import('@/pages/TasksPage').then((m) => ({ default: m.TasksPage })))
 const BillingPage = lazy(() => import('@/pages/BillingPage').then((m) => ({ default: m.BillingPage })))
 const MobileDataPage = lazy(() => import('@/pages/MobileDataPage').then((m) => ({ default: m.MobileDataPage })))
 const ClassesPage = lazy(() => import('@/pages/ClassesPage').then((m) => ({ default: m.ClassesPage })))
@@ -119,6 +120,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/learn': 'My Learning',
   '/learn/courses': 'Courses',
   '/family': 'Family',
+  '/tasks': 'My tasks',
   '/classes': 'Classes',
   '/assignments': 'Assignments',
   '/school': 'Educator/School Dashboard',
@@ -223,6 +225,7 @@ const REAL_PAGES = new Set([
   '/family',
   '/wallet',
   '/reviews',
+  '/tasks',
   '/learn',
   '/learn/courses',
   '/achievements',
@@ -347,6 +350,7 @@ export function App() {
           <Route path="/family/children/:learnerId" element={<ChildPage />} />
           <Route path="/wallet" element={<WalletPage />} />
           <Route path="/reviews" element={<ReviewsPage />} />
+          <Route path="/tasks" element={<TasksPage />} />
           <Route path="/billing" element={<BillingPage />} />
           <Route path="/billing/data" element={<MobileDataPage />} />
           <Route element={<RoleRoute roles={['teacher', 'school_admin']} />}>

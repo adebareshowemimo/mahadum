@@ -10,6 +10,8 @@ import type {
   AssignmentDecision,
   AwardBadgeResult,
   Chore,
+  LearnerTasks,
+  StudentAnalytics,
   ChoreDecision,
   BadgesInfo,
   CompleteResult,
@@ -371,6 +373,26 @@ export const familyApi = {
 
   async pendingReviews(): Promise<ReviewQueue> {
     const { data } = await api.get('/reviews/pending')
+    return data.data
+  },
+
+  async tasks(learnerId: number): Promise<LearnerTasks> {
+    const { data } = await api.get(`/learners/${learnerId}/tasks`)
+    return data.data
+  },
+
+  async submitChore(choreId: number, learnerId: number) {
+    const { data } = await api.post(`/chores/${choreId}/submissions`, { learner_id: learnerId, completed: true })
+    return data.data
+  },
+
+  async submitClassAssignment(assignmentId: number, learnerId: number, text: string) {
+    const { data } = await api.post(`/class-assignments/${assignmentId}/submissions`, { learner_id: learnerId, text_body: text })
+    return data.data
+  },
+
+  async reviewClassAssignment(submissionId: number, decision: AssignmentDecision) {
+    const { data } = await api.post(`/class-assignment-submissions/${submissionId}/review`, { decision })
     return data.data
   },
 
@@ -1357,6 +1379,11 @@ export const schoolApi = {
 
   async classAnalytics(classId: number): Promise<ClassAnalytics> {
     const { data } = await api.get(`/classes/${classId}/analytics`)
+    return data.data
+  },
+
+  async studentAnalytics(classId: number, learnerId: number): Promise<StudentAnalytics> {
+    const { data } = await api.get(`/classes/${classId}/analytics/${learnerId}`)
     return data.data
   },
 

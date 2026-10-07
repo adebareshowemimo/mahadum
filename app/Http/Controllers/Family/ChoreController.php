@@ -10,6 +10,7 @@ use App\Models\Chore;
 use App\Models\ChoreSubmission;
 use App\Models\LearnerProfile;
 use App\Notifications\ChoreApproved;
+use App\Services\AuditLogger;
 use App\Services\Family\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ class ChoreController extends Controller
 {
     use ResolvesFamily;
 
-    public function __construct(private WalletService $wallets) {}
+    public function __construct(private WalletService $wallets, private AuditLogger $audit) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -71,10 +72,11 @@ class ChoreController extends Controller
         $approvedLearner = null;
 
         $result = DB::transaction(function () use ($request, $chore, $decision, &$approvedLearner) {
-            ChoreSubmission::updateOrCreate(
-                ['chore_id' => $chore->id],
-                ['decision' => $decision, 'decided_by' => $request->user()->id, 'decided_at' => now()],
-            );
+            $chore = Chore::whereKey($chore->id)->lockForUpdate()->firstOrFail();
+            abort_unless($chore->status === 'pending_review', 422, 'This chore is not waiting for review.');
+            $submission = ChoreSubmission::where('chore_id', $chore->id)->firstOrFail();
+            abort_unless($submission->submitted_at !== null && $submission->decision === null, 422, 'Wait for a new submission before reviewing.');
+            $submission->update(['decision' => $decision, 'decided_by' => $request->user()->id, 'decided_at' => now()]);
 
             $coinsReleased = 0;
             if ($decision === 'approve') {
@@ -96,6 +98,8 @@ class ChoreController extends Controller
             } else { // more_evidence
                 $chore->update(['status' => 'pending_review']);
             }
+
+            $this->audit->record('chore.reviewed', $chore, ['status' => 'pending_review'], ['status' => $chore->status, 'decision' => $decision, 'coins_released' => $coinsReleased]);
 
             return $coinsReleased;
         });

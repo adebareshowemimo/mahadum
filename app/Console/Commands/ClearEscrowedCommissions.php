@@ -21,7 +21,7 @@ class ClearEscrowedCommissions extends Command
         $cleared = 0;
 
         Commission::where('status', 'pending_escrow')
-            ->where('escrow_until', '<', now())
+            ->where('escrow_until', '<=', now())
             ->whereHas('referral', fn ($q) => $q->where('status', '!=', 'rejected'))
             ->chunkById(200, function ($commissions) use (&$cleared) {
                 foreach ($commissions as $commission) {

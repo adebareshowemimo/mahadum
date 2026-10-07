@@ -69,6 +69,8 @@ class WalletTest extends TestCase
             'title' => 'Tidy', 'assignee_learner_profile_id' => $learner->id, 'coin_reward' => 15,
         ])->assertCreated()->json('data.id');
 
+        $this->postJson("/api/v1/chores/$chore/submissions", ['learner_id' => $learner->id, 'completed' => true])->assertCreated();
+
         $this->postJson("/api/v1/chores/$chore/review", ['decision' => 'approve'])
             ->assertOk()->assertJsonPath('data.coins_released', 15);
 

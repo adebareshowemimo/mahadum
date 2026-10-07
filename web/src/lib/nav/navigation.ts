@@ -30,6 +30,7 @@ export const NAV_SECTIONS: NavSection[] = [
     title: 'Learn',
     items: [
       { label: 'My learning', to: '/learn', icon: 'book', roles: ['student', 'parent', 'supervisor'] },
+      { label: 'My tasks', to: '/tasks', icon: 'clipboard', roles: ['student', 'parent'] },
       { label: 'Courses', to: '/learn/courses', icon: 'layers', roles: ['student', 'parent', 'supervisor'] },
       { label: 'Achievements', to: '/achievements', icon: 'sparkles', roles: ['student', 'parent', 'supervisor'] },
       { label: 'Leaderboard', to: '/leaderboard', icon: 'trophy', roles: ['student', 'parent', 'supervisor'] },
