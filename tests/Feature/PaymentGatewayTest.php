@@ -21,6 +21,7 @@ class PaymentGatewayTest extends TestCase
             'services.paystack.secret' => 'sk_test',
             'services.paystack.base_url' => 'https://api.paystack.co',
             'services.flutterwave.secret' => 'flw_test',
+            'services.flutterwave.secret_hash' => 'webhook_test_hash',
             'services.flutterwave.base_url' => 'https://api.flutterwave.com/v3',
             'services.monnify.api_key' => 'mk_test',
             'services.monnify.secret' => 'mnfy_secret',
@@ -149,7 +150,7 @@ class PaymentGatewayTest extends TestCase
             && $request['amount'] === round($plan->price_minor / 100, 2));
     }
 
-    public function test_no_live_gateway_means_null_checkout_and_no_http(): void
+    public function test_no_live_gateway_blocks_wallet_checkout_without_http_or_pending_transaction(): void
     {
         Http::fake(); // live defaults to false → NullGateway
 
@@ -158,8 +159,9 @@ class PaymentGatewayTest extends TestCase
         $this->parentWithChild($parent);
 
         $this->postJson('/api/v1/wallet/fund', ['amount' => 50000, 'gateway' => 'paystack'], ['Idempotency-Key' => 'gw-null'])
-            ->assertCreated()
-            ->assertJsonPath('data.checkout_url', null);
+            ->assertUnprocessable();
+
+        $this->assertDatabaseCount('wallet_funding_transactions', 0);
 
         Http::assertNothingSent();
     }

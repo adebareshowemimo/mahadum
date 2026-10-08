@@ -13,6 +13,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $learner_profile_id
  * @property int $course_id
+ * @property int|null $assigned_course_level_id
  * @property string $status
  * @property Carbon|null $started_at
  * @property Carbon|null $created_at

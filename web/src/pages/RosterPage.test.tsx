@@ -11,6 +11,7 @@ vi.mock('@/components/school/SchoolGate', () => ({
 }))
 vi.mock('@/lib/school/queries', () => ({
   useImportRoster: () => ({ mutateAsync: mocks.mutateAsync, isPending: false }),
+  useClasses: () => ({ data: [{ id: 7, name: 'Igbo class' }], isLoading: false, isError: false }),
 }))
 
 describe('Roster import', () => {
@@ -41,10 +42,20 @@ describe('Roster import', () => {
       reader.readAsText(blob)
     })
     const rows = csv.split('\n').map(row => row.split(','))
-    expect(rows[0]).toEqual(['Firstname', 'Lastname', 'Email', 'Level'])
-    expect(rows.slice(1).every(row => row.length === 4 && row[2] === '')).toBe(true)
+    expect(rows[0]).toEqual(['Firstname', 'Lastname', 'Email', 'Level', 'StudentId'])
+    expect(rows.slice(1).every(row => row.length === 5 && row[2] === '' && (!row[3] || /^L[0-5]$/.test(row[3])) && row[4])).toBe(true)
     expect(screen.getByText(/existing login already linked to this school/)).toBeInTheDocument()
     expect(mocks.revokeObjectURL).toHaveBeenCalledWith('blob:roster-template')
+  })
+
+  it('sends the selected class with the uploaded roster', async () => {
+    mocks.mutateAsync.mockResolvedValue({ created: 1, matched: 0, errors: [] })
+    const { container } = render(<RosterPage />)
+    await userEvent.selectOptions(screen.getByLabelText('Assign imported students to class'), '7')
+    const file = new File(['Firstname,Lastname\nAmara,Okafor'], 'roster.csv', { type: 'text/csv' })
+    await userEvent.upload(container.querySelector('input[type="file"]') as HTMLInputElement, file)
+    await userEvent.click(screen.getByRole('button', { name: 'Import students' }))
+    expect(mocks.mutateAsync).toHaveBeenCalledWith({ file, class_id: 7 })
   })
 
   it('uploads the file and distinguishes new profiles, matched rows and rejected CSV rows', async () => {

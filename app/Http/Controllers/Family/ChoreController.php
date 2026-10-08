@@ -83,11 +83,10 @@ class ChoreController extends Controller
                 $chore->update(['status' => 'approved']);
                 if ($chore->coin_reward > 0 && $chore->assignee_learner_profile_id) {
                     $learner = LearnerProfile::find($chore->assignee_learner_profile_id);
-                    $this->wallets->credit(
-                        $this->wallets->walletFor($learner),
+                    $this->wallets->rewardFromParent(
+                        $learner,
                         $chore->coin_reward,
                         'chore',
-                        $learner->id,
                         $chore,
                     );
                     $coinsReleased = $chore->coin_reward;

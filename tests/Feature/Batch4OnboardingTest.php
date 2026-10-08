@@ -160,4 +160,23 @@ class Batch4OnboardingTest extends TestCase
         $this->assertSame([$unlinked->id], UserAccountType::filter(User::query(), 'teacher')->pluck('id')->all());
         $this->assertSame(0, UserAccountType::filter(User::query(), 'single')->count());
     }
+
+    public function test_family_teacher_keeps_family_identity_across_home_admin_and_filters(): void
+    {
+        [$org, $admin] = $this->school();
+        $parent = $this->userWithRole('parent');
+        $parent->assignRole('teacher');
+        Family::create(['owner_user_id' => $parent->id, 'name' => 'Family']);
+        $org->members()->attach($parent->id, ['role' => 'teacher', 'status' => 'active']);
+        $this->assertSame('family', UserAccountType::forUser($parent));
+        $this->assertTrue(UserAccountType::filter(User::query(), 'family')->whereKey($parent->id)->exists());
+        foreach (['teacher', 'school', 'institution', 'single'] as $type) {
+            $this->assertFalse(UserAccountType::filter(User::query(), $type)->whereKey($parent->id)->exists());
+        }
+        $this->actingAsUser($parent);
+        $this->getJson('/api/v1/me')->assertOk()->assertJsonPath('data.user.account_type', 'family');
+        $this->actingAsUser($this->userWithRole('super_admin'));
+        $this->getJson("/api/v1/admin/users/{$parent->id}")->assertOk()->assertJsonPath('data.account_type', 'family');
+        $this->assertSame('school', UserAccountType::forUser($admin));
+    }
 }

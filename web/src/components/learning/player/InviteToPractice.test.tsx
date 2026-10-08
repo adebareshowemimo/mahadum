@@ -12,7 +12,7 @@ const video: VideoSlide = {
 
 function mount(slide = video, preview = false) {
   const invite = vi.fn().mockResolvedValue(undefined)
-  const service = { isPreview: preview, inviteTonePractice: invite, trackVideo: vi.fn().mockResolvedValue(undefined) } as unknown as PlayerService
+  const service = { isPreview: preview, practiceContacts: vi.fn().mockResolvedValue([{ id: 1, name: 'Parent', email: 'parent@example.com', relation: 'family', role: 'guardian' }]), inviteTonePractice: invite, trackVideo: vi.fn().mockResolvedValue(undefined) } as unknown as PlayerService
   const view = render(<SlideView slide={slide} service={service} isLast={false} onAdvance={vi.fn()}
     onGraded={vi.fn()} onHearts={vi.fn()} onPracticeMode={vi.fn()} />)
   return { ...view, invite }
@@ -33,7 +33,8 @@ describe('Invite to Practice after video', () => {
     await user.click(screen.getByRole('button', { name: 'Invite to Practice' }))
     expect(screen.getByText(/Invitation message:/)).toHaveTextContent('Greetings')
     expect(screen.getByText(/private link to the language video/)).toBeInTheDocument()
-    await user.type(screen.getByLabelText('Recipient email'), 'parent@example.com')
+    await screen.findByRole('option', { name: 'Parent · parent@example.com' })
+    await user.selectOptions(screen.getByLabelText('Practice partner'), 'parent@example.com')
     await user.click(screen.getByRole('button', { name: 'Send invitation' }))
     expect(await screen.findByRole('status')).toHaveTextContent('Invitation sent')
     expect(invite).toHaveBeenCalledWith(video, 'parent@example.com')

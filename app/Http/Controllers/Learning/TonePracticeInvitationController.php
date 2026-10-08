@@ -5,14 +5,13 @@ namespace App\Http\Controllers\Learning;
 use App\Http\Controllers\Concerns\ResolvesLearner;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Learning\StoreTonePracticeInvitationRequest;
-use App\Models\LearnerProfile;
 use App\Models\LessonComponent;
-use App\Models\OrganizationUser;
 use App\Models\TonePracticeInvitation;
 use App\Models\User;
 use App\Notifications\TonePracticeInvitationNotification;
 use App\Services\AuditLogger;
 use App\Services\Learning\LessonAccess;
+use App\Services\Learning\PracticeRecipientEligibility;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -35,10 +34,8 @@ class TonePracticeInvitationController extends Controller
 
         app(LessonAccess::class)->authorize($learner, $component->lesson);
 
-        $recipient = User::whereRaw('LOWER(email) = ?', [Str::lower($request->string('recipient_email')->value())])->firstOrFail();
-        abort_unless($recipient->status === 'active', 422, 'The recipient account is not active.');
-        abort_unless($recipient->hasAnyRole(['parent', 'teacher', 'supervisor', 'school_admin']), 422, 'Invite a registered parent, guardian, or teacher.');
-        $this->authorizeTeacherRecipient($learner, $recipient);
+        $recipient = User::whereRaw('LOWER(email) = ?', [Str::lower(trim($request->string('recipient_email')->value()))])->first();
+        abort_unless($recipient && app(PracticeRecipientEligibility::class)->isEligible($learner, $request->user(), $recipient), 422, 'Choose an active adult from this learner’s family or school practice contacts.');
 
         $plainToken = Str::random(64);
         $invitation = TonePracticeInvitation::create([
@@ -114,19 +111,5 @@ class TonePracticeInvitationController extends Controller
             'expires_at' => $invitation->expires_at->toISOString(),
             'accepted' => $invitation->accepted_at !== null,
         ];
-    }
-
-    private function authorizeTeacherRecipient(LearnerProfile $learner, User $recipient): void
-    {
-        if ($recipient->hasRole('parent')) {
-            return;
-        }
-
-        abort_if($learner->organization_id === null, 422, 'A teacher invitation requires a school learner.');
-        $sharesOrganization = OrganizationUser::where('user_id', $recipient->id)
-            ->where('organization_id', $learner->organization_id)
-            ->where('status', 'active')
-            ->exists();
-        abort_unless($sharesOrganization, 422, 'The teacher must belong to the learner’s school.');
     }
 }

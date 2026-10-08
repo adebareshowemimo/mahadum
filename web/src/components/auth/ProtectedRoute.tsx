@@ -48,7 +48,7 @@ export function RoleRoute({ roles }: { roles: Role[] }) {
   if (!user?.user.email_verified) {
     return <Navigate to="/verify-email" replace state={{ from: location }} />
   }
-  if (!hasRole(...roles)) return <Navigate to="/home" replace />
+  if (!hasRole(...roles)) return <Navigate to="/home" replace state={{ notice: 'This page is available to accounts with the appropriate access. Choose one of your available tools below.' }} />
   return <Outlet />
 }
 

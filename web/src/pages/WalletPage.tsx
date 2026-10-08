@@ -52,7 +52,7 @@ export function WalletPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <TransferCard learners={learners} maxCoins={wallet.coin_balance} />
-        <FundCard currency={wallet.currency} />
+        <FundCard currency={wallet.currency} gateways={wallet.funding_gateways ?? []} />
       </div>
     </div>
   )
@@ -132,10 +132,12 @@ function TransferCard({
   )
 }
 
-function FundCard({ currency }: { currency: string }) {
+type FundingGateway = 'flutterwave' | 'monnify' | 'paystack'
+function FundCard({ currency, gateways }: { currency: string; gateways: FundingGateway[] }) {
   const fund = useFundWallet()
   const [amount, setAmount] = useState('')
-  const [gateway, setGateway] = useState<'flutterwave' | 'monnify' | 'paystack'>('monnify')
+  const [selectedGateway, setGateway] = useState<FundingGateway | ''>('')
+  const gateway = gateways.includes(selectedGateway as FundingGateway) ? selectedGateway as FundingGateway : gateways[0]
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState<{ ref: string; url: string | null } | null>(null)
 
@@ -143,6 +145,7 @@ function FundCard({ currency }: { currency: string }) {
     e.preventDefault()
     setError(null)
     setPending(null)
+    if (!gateway) return
     try {
       const result = await fund.mutateAsync({ amount: Math.round(Number(amount) * 100), gateway })
       setPending({ ref: result.gateway_ref, url: result.checkout_url })
@@ -158,7 +161,7 @@ function FundCard({ currency }: { currency: string }) {
         <CardTitle>Add money</CardTitle>
       </CardHeader>
       <CardBody>
-        <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+        {!gateways.length ? <Alert variant="info">Wallet funding is currently unavailable. Please try again later.</Alert> : <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
           {error && <Alert variant="danger">{error}</Alert>}
           {pending && (
             <Alert variant="info" title="Checkout started">
@@ -187,15 +190,13 @@ function FundCard({ currency }: { currency: string }) {
               onChange={(e) => setGateway(e.target.value as 'flutterwave' | 'monnify' | 'paystack')}
               className="h-11 rounded-xl border border-border-strong bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             >
-              <option value="monnify">Monnify</option>
-              <option value="paystack">Paystack</option>
-              <option value="flutterwave">Flutterwave</option>
+              {gateways.map(key => <option key={key} value={key}>{({ monnify: 'Monnify', paystack: 'Paystack', flutterwave: 'Flutterwave' })[key]}</option>)}
             </select>
           </label>
-          <Button type="submit" variant="billing" loading={fund.isPending} disabled={!amount}>
+          <Button type="submit" variant="billing" loading={fund.isPending} disabled={!amount || !gateway}>
             Continue to payment
           </Button>
-        </form>
+        </form>}
       </CardBody>
     </Card>
   )

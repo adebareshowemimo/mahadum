@@ -46,9 +46,12 @@ class ClassCourseEnrollmentService
 
     private function enroll(LearnerProfile $learner, Course $course): bool
     {
+        // School placement is metadata, never a completion/access bypass.
+        $assignedLevelId = $learner->roster_level_position !== null
+            ? $course->levels()->where('position', $learner->roster_level_position)->value('id') : null;
         $enrollment = Enrollment::firstOrCreate(
             ['learner_profile_id' => $learner->id, 'course_id' => $course->id],
-            ['status' => 'active', 'started_at' => now()],
+            ['status' => 'active', 'started_at' => now(), 'assigned_course_level_id' => $assignedLevelId],
         );
 
         $this->paths->build($enrollment);

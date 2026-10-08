@@ -47,7 +47,7 @@ function Dashboard({ orgId }: { orgId: number }) {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi icon="cap" label="Classes" value={data.classes} />
-        <Kpi icon="users" label="Students" value={data.students} />
+        <Kpi icon="users" label="Students" value={data.students} sub={data.student_counts ? `${data.student_counts.in_classes} in classes · ${data.student_counts.unassigned} unassigned` : 'All school learner profiles'} />
         <Kpi icon="layers" label="Seats filled" value={`${data.seats.filled}/${data.seats.purchased}`} sub={`${seatsPct}% used`} />
         <Kpi
           icon="card"

@@ -2,11 +2,19 @@
 
 namespace App\Http\Requests\Referral;
 
+use App\Support\Phone;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
 class SendReferralInvitationRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if ($this->input('channel') === 'phone' && is_string($this->input('contact')) && is_string($this->input('dial_code'))) {
+            $this->merge(['contact' => Phone::normalize($this->input('contact'), $this->input('dial_code')) ?? $this->input('contact')]);
+        }
+    }
+
     public function authorize(): bool
     {
         return $this->user() !== null;
@@ -17,6 +25,7 @@ class SendReferralInvitationRequest extends FormRequest
         return [
             'channel' => ['required', 'in:email,phone'],
             'contact' => ['required', 'string', 'max:255'],
+            'dial_code' => ['nullable', 'string', 'regex:/^\+?[1-9][0-9]{0,3}$/'],
         ];
     }
 

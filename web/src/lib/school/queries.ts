@@ -198,7 +198,7 @@ export function usePurchaseSeats(orgId: number) {
   return useMutation({
     mutationFn: (input: PurchaseSeatsInput) => schoolApi.purchaseSeats(orgId, input),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: schoolKeys.seats(orgId) })
+        void qc.invalidateQueries({ queryKey: schoolKeys.seats(orgId) })
       void qc.invalidateQueries({ queryKey: schoolKeys.invoices(orgId) })
       void qc.invalidateQueries({ queryKey: schoolKeys.dashboard(orgId) })
     },
@@ -289,6 +289,8 @@ export function useImportRoster(orgId: number) {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: schoolKeys.dashboard(orgId) })
       void qc.invalidateQueries({ queryKey: schoolKeys.seats(orgId) })
+      void qc.invalidateQueries({ queryKey: ['school-students'] })
+      void qc.invalidateQueries({ queryKey: ['school-classes'] })
     },
   })
 }

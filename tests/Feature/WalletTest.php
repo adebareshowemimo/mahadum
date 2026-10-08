@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\CoinTransaction;
+use App\Services\Billing\PaymentGatewayManager;
 use App\Services\Family\WalletService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\MakesContent;
@@ -64,6 +66,8 @@ class WalletTest extends TestCase
         $this->seedRbac();
         $parent = $this->actingAsUser($this->userWithRole('parent'));
         $learner = $this->parentWithChild($parent);
+        $wallets = app(WalletService::class);
+        $wallets->credit($wallets->walletFor($learner->family), 15, 'test_seed');
 
         $chore = $this->postJson('/api/v1/chores', [
             'title' => 'Tidy', 'assignee_learner_profile_id' => $learner->id, 'coin_reward' => 15,
@@ -77,10 +81,34 @@ class WalletTest extends TestCase
         $this->assertDatabaseHas('coin_transactions', [
             'learner_profile_id' => $learner->id, 'source' => 'chore', 'amount' => 15,
         ]);
+        $this->assertSame(0, $wallets->walletFor($learner->family)->coin_balance);
+        $this->assertSame(15, $wallets->walletFor($learner)->coin_balance);
+    }
+
+    public function test_unfunded_chore_stays_pending_and_can_be_approved_once_after_funding(): void
+    {
+        $this->seedRbac();
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $learner = $this->parentWithChild($parent);
+        $id = $this->postJson('/api/v1/chores', ['title' => 'Tidy', 'assignee_learner_profile_id' => $learner->id, 'coin_reward' => 15])->json('data.id');
+        $this->postJson("/api/v1/chores/$id/submissions", ['learner_id' => $learner->id, 'completed' => true])->assertCreated();
+        $this->postJson("/api/v1/chores/$id/review", ['decision' => 'approve'])->assertUnprocessable();
+        $this->assertDatabaseHas('chores', ['id' => $id, 'status' => 'pending_review']);
+        $this->assertDatabaseHas('chore_submissions', ['chore_id' => $id, 'decision' => null]);
+        $this->assertDatabaseMissing('coin_transactions', ['source' => 'chore']);
+        $wallets = app(WalletService::class);
+        $wallets->credit($wallets->walletFor($learner->family), 15, 'test_seed');
+        $this->postJson("/api/v1/chores/$id/review", ['decision' => 'approve'])->assertOk();
+        $this->postJson("/api/v1/chores/$id/review", ['decision' => 'approve'])->assertUnprocessable();
+        $this->assertSame(0, $wallets->walletFor($learner->family)->coin_balance);
+        $this->assertSame(15, $wallets->walletFor($learner)->coin_balance);
+        $this->assertSame(2, CoinTransaction::where('source', 'chore')->count());
     }
 
     public function test_fund_creates_pending_transaction_without_crediting(): void
     {
+        $this->partialMock(PaymentGatewayManager::class)
+            ->shouldReceive('available')->andReturn(['paystack']);
         $this->seedRbac();
         $parent = $this->actingAsUser($this->userWithRole('parent'));
         $this->parentWithChild($parent);

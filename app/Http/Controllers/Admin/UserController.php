@@ -295,9 +295,7 @@ class UserController extends Controller
     private function row(User $u, ?array $memberships = null): array
     {
         $memberships ??= $this->membershipsFor([$u->id])[$u->id] ?? [];
-        $type = collect($memberships)->contains(fn ($m) => $m->organization?->type === 'institution') ? 'institution'
-            : ($memberships !== [] ? 'school' : ($u->signup_account_type === 'teacher' ? 'teacher'
-                : (($u->owned_families_count ?? $u->ownedFamilies()->count()) > 0 ? 'family' : 'single')));
+        $type = UserAccountType::forUser($u);
 
         return [
             'id' => $u->id,

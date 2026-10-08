@@ -6,6 +6,13 @@ function titles(roles: Parameters<typeof visibleSections>[0]) {
 }
 
 describe('visibleSections', () => {
+  it('shows adult consumer capabilities without family or teacher-only destinations', () => {
+    const paths = visibleSections(['student'], ['referrals.view', 'payouts.view', 'billing.subscriptions.manage', 'billing.databundles.manage']).flatMap((section) => section.items.map((item) => item.to))
+    expect(paths).toEqual(expect.arrayContaining(['/billing', '/billing/data', '/referrals']))
+    expect(paths).not.toContain('/family')
+    expect(paths).not.toContain('/wallet')
+    expect(paths).not.toContain('/earnings')
+  })
   it('shows the Family section to parents but not School/Admin', () => {
     const t = titles(['parent'])
     expect(t).toContain('Family')

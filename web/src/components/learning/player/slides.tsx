@@ -672,7 +672,7 @@ function VideoSlideView({ slide, service, onAdvance }: SlideProps & { slide: Vid
 
   return (
     <>
-      <SlideBody chip={{ icon: '▶', label: 'Watch' }}>
+      <SlideBody chip={{ icon: '', label: 'Watch' }}>
         {slide.title && <p className="font-display text-2xl font-bold text-foreground">{slide.title}</p>}
         {hasVideo && isYoutube ? (
           <iframe

@@ -15,6 +15,22 @@ use App\Services\Billing\Gateways\PaystackGateway;
  */
 class PaymentGatewayManager
 {
+    /** Public readiness metadata, never credentials. */
+    public function available(): array
+    {
+        if (! config('services.payments.live')) {
+            return [];
+        }
+
+        $configured = [
+            'monnify' => filled(config('services.monnify.api_key')) && filled(config('services.monnify.secret')) && filled(config('services.monnify.contract_code')),
+            'paystack' => filled(config('services.paystack.secret')),
+            'flutterwave' => filled(config('services.flutterwave.secret')) && filled(config('services.flutterwave.secret_hash')),
+        ];
+
+        return array_keys(array_filter($configured));
+    }
+
     public function driver(?string $name = null): PaymentGateway
     {
         if (! config('services.payments.live')) {

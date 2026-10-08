@@ -1,4 +1,5 @@
-import { Badge, Card, CardBody, CardHeader, CardTitle, LinkButton } from '@/components/ui'
+import { Alert, Badge, Card, CardBody, CardHeader, CardTitle, LinkButton } from '@/components/ui'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { CoursePerformanceDashboard } from '@/components/content/CoursePerformanceDashboard'
 import { ReferralActivity } from '@/components/referral/ReferralActivity'
@@ -6,6 +7,8 @@ import { ReferralActivity } from '@/components/referral/ReferralActivity'
 /** Authenticated landing. Rendered inside the app shell (AppLayout). */
 export function DashboardPage() {
   const { user, hasRole } = useAuth()
+  const location = useLocation()
+  const notice = (location.state as { notice?: string } | null)?.notice
 
   if (hasRole('content_owner')) {
     return (
@@ -30,6 +33,7 @@ export function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-8">
+      {notice && <Alert>{notice}</Alert>}
       <div>
         <h1 className="font-display text-2xl font-bold text-foreground">
           Welcome back{user ? `, ${user.user.first_name}` : ''} 👋
@@ -45,6 +49,7 @@ export function DashboardPage() {
           </CardHeader>
           <CardBody className="flex flex-col gap-2 text-sm">
             <Row label="Email" value={user?.user.email} />
+            <Row label="Account type" value={user?.user.account_type === 'single' ? 'Individual' : user?.user.account_type?.replace(/^./, (letter) => letter.toUpperCase())} />
             <Row label="Verified" value={user?.user.email_verified ? 'Yes' : 'No'} />
             <Row
               label="Institution"

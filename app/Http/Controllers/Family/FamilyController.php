@@ -6,15 +6,19 @@ use App\Http\Controllers\Concerns\ResolvesFamily;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Family\AddChildRequest;
 use App\Http\Requests\Family\SetChildPinRequest;
+use App\Models\Course;
+use App\Models\Enrollment;
 use App\Models\FamilyMember;
 use App\Models\LearnerProfile;
 use App\Models\ParentalConsent;
 use App\Services\AuditLogger;
 use App\Services\Family\WalletService;
+use App\Services\Learning\PathBuilder;
 use App\Services\Settings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 
@@ -57,7 +61,13 @@ class FamilyController extends Controller
 
     public function addChild(AddChildRequest $request): JsonResponse
     {
+        return DB::transaction(fn () => $this->createChild($request));
+    }
+
+    private function createChild(AddChildRequest $request): JsonResponse
+    {
         $family = $this->family($request->user());
+        $family->newQuery()->whereKey($family->id)->lockForUpdate()->firstOrFail();
 
         if ($family->learnerProfiles()->count() >= $family->child_limit) {
             return response()->json([
@@ -91,6 +101,16 @@ class FamilyController extends Controller
             'ip' => $request->ip(),
             'user_agent' => substr((string) $request->userAgent(), 0, 512),
         ]);
+
+        if ($learner->target_language_id !== null) {
+            $courses = Course::where('language_id', $learner->target_language_id)->where('is_published', true)
+                ->whereHas('levels.lessons', fn ($lessons) => $lessons->whereNotNull('published_at'))->orderBy('id')->get();
+            foreach ($courses as $course) {
+                $enrollment = Enrollment::firstOrCreate(['learner_profile_id' => $learner->id, 'course_id' => $course->id],
+                    ['status' => 'active', 'started_at' => now()]);
+                app(PathBuilder::class)->build($enrollment);
+            }
+        }
 
         return response()->json(['data' => ['id' => $learner->id, 'display_name' => $learner->display_name]], 201);
     }

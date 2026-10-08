@@ -3,6 +3,7 @@
 namespace App\Services\Family;
 
 use App\Models\CoinTransaction;
+use App\Models\LearnerProfile;
 use App\Models\Wallet;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +17,31 @@ use RuntimeException;
  */
 class WalletService
 {
+    /** Parent-funded rewards conserve coins; insufficient funding leaves review pending. */
+    public function rewardFromParent(LearnerProfile $learner, int $amount, string $source, Model $reference): void
+    {
+        abort_unless($learner->family !== null, 422, 'A parent wallet is required before this reward can be paid.');
+        abort_unless($amount > 0, 422, 'Reward coins must be positive.');
+        DB::transaction(function () use ($learner, $amount, $source, $reference) {
+            $parent = $this->walletFor($learner->family);
+            $child = $this->walletFor($learner);
+            $locked = Wallet::whereIn('id', [$parent->id, $child->id])->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+            $entries = CoinTransaction::where('source', $source)->where('reference_type', $reference->getMorphClass())
+                ->where('reference_id', $reference->getKey())->whereIn('wallet_id', [$parent->id, $child->id])->get();
+            if ($entries->isNotEmpty()) {
+                $valid = $entries->count() === 2
+                    && $entries->contains(fn ($entry) => $entry->wallet_id === $parent->id && $entry->type === 'debit' && $entry->amount === $amount)
+                    && $entries->contains(fn ($entry) => $entry->wallet_id === $child->id && $entry->type === 'credit' && $entry->amount === $amount);
+                abort_unless($valid, 422, 'This reward has existing ledger entries that need review. No coins were moved.');
+
+                return;
+            }
+            abort_unless($locked[$parent->id]->coin_balance >= $amount, 422, 'Not enough family coins. This reward is still waiting. Top up the family wallet, then approve it again.');
+            $this->debit($parent, $amount, $source, $learner->id, $reference);
+            $this->credit($child, $amount, $source, $learner->id, $reference);
+        });
+    }
+
     public function walletFor(Model $owner): Wallet
     {
         return Wallet::firstOrCreate(

@@ -127,15 +127,17 @@ export const NAV_SECTIONS: NavSection[] = [
   },
 ]
 
-function itemVisible(item: NavItem, roles: Role[]): boolean {
+function itemVisible(item: NavItem, roles: Role[], capabilities: string[]): boolean {
+  const ability = ({ '/referrals': 'referrals.view', '/billing': 'billing.subscriptions.manage', '/billing/data': 'billing.databundles.manage' } as Record<string, string>)[item.to]
+  if (ability && capabilities.includes(ability)) return true
   return !item.roles || item.roles.some((r) => roles.includes(r))
 }
 
 /** Sections (with their items pre-filtered) the given roles are allowed to see. */
-export function visibleSections(roles: Role[]): NavSection[] {
+export function visibleSections(roles: Role[], capabilities: string[] = []): NavSection[] {
   return NAV_SECTIONS.map((section) => ({
     ...section,
-    items: section.items.filter((item) => itemVisible(item, roles)),
+    items: section.items.filter((item) => itemVisible(item, roles, capabilities)),
   })).filter((section) => section.items.length > 0)
 }
 

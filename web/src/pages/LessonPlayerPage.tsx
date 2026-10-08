@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { Alert, Button3D, Skeleton } from '@/components/ui'
@@ -80,11 +80,13 @@ function LessonComplete({ lessonId, learnerId, onExit }: { lessonId: number; lea
   const [result, setResult] = useState<CompleteResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [adOpen, setAdOpen] = useState(false)
+  const completion = useRef<{ key: string; promise: Promise<CompleteResult> } | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    learningApi
-      .complete(lessonId, learnerId)
+    const key = `${learnerId}:${lessonId}`
+    if (completion.current?.key !== key) completion.current = { key, promise: learningApi.complete(lessonId, learnerId) }
+    completion.current.promise
       .then((r) => {
         if (cancelled) return
         setResult(r)
@@ -124,6 +126,7 @@ function LessonComplete({ lessonId, learnerId, onExit }: { lessonId: number; lea
       {badgeCount > 0 && (
         <p className="text-sm font-semibold text-primary">🏅 {badgeCount} new badge{badgeCount === 1 ? '' : 's'}!</p>
       )}
+      {result.badges_unlocked?.map((badge) => { const name = typeof badge === 'string' ? badge : badge.name; return <p key={name} className="font-semibold text-primary">{name}</p> })}
       {result.practice_mode && (
         <Alert variant="info">You completed the lesson in practice mode. Learning stayed open, while XP and leaderboard progress remain paused until your hearts refill.</Alert>
       )}

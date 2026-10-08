@@ -51,7 +51,9 @@ class Batch2FamilyFlowsTest extends TestCase
         $this->assertDatabaseCount('chore_submissions', 1);
         $this->assertDatabaseHas('audit_logs', ['action' => 'chore.reviewed', 'actor_user_id' => $parent->id]);
         $this->assertDatabaseHas('coin_transactions', ['source' => 'chore', 'amount' => 15, 'balance_after' => 15]);
-        $this->assertSame(1, CoinTransaction::where('learner_profile_id', $learner->id)->where('source', 'chore')->count());
+        $this->assertSame(2, CoinTransaction::where('learner_profile_id', $learner->id)->where('source', 'chore')->count());
+        $this->assertSame(85, $wallets->walletFor($learner->family)->coin_balance);
+        $this->getJson("/api/v1/learners/$learner->id/tasks")->assertOk()->assertJsonPath('data.chores.0.status', 'approved')->assertJsonPath('data.chores.0.coin_reward', 15);
         $other = $this->userWithRole('parent');
         $otherChild = $this->parentWithChild($other);
         $this->actingAsUser($other);
@@ -70,6 +72,8 @@ class Batch2FamilyFlowsTest extends TestCase
         $class = SchoolClass::create(['organization_id' => $org->id, 'name' => 'Yoruba Class', 'teacher_user_id' => $teacher->id]);
         $parent = $this->userWithRole('parent');
         $learner = $this->parentWithChild($parent);
+        $wallets = app(WalletService::class);
+        $wallets->credit($wallets->walletFor($learner->family), 100, 'test_seed');
         $learner->update(['organization_id' => $org->id]);
         ClassEnrollment::create(['school_class_id' => $class->id, 'learner_profile_id' => $learner->id]);
         $this->actingAsUser($teacher);

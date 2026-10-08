@@ -9,9 +9,11 @@ import {
   CardTitle,
   Icon,
   Input,
+  PhoneInput,
   Skeleton,
 } from '@/components/ui'
 import { formatMoney } from '@/lib/format'
+import { DISPLAY_NAME } from '@/lib/brand'
 import { ApiError, type ReferralInvitationChannel } from '@/lib/api'
 import { PAYOUT_FLOOR_NAIRA, RequestPayoutModal } from '@/components/referral/RequestPayoutModal'
 import { ReferralStatusAlert } from '@/components/referral/ReferralStatusAlert'
@@ -50,7 +52,7 @@ export function ReferralsPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-foreground">Refer & earn</h1>
-          <p className="mt-1 text-muted">Share Mahadum.360 and earn commission when friends subscribe.</p>
+          <p className="mt-1 text-muted">Share {DISPLAY_NAME} and earn commission when friends subscribe.</p>
         </div>
         <div className="flex flex-col items-end gap-2">
           <div className="text-right">
@@ -124,6 +126,7 @@ function ReferralCodeCard() {
 function InviteCard() {
   const [channel, setChannel] = useState<ReferralInvitationChannel>('email')
   const [contact, setContact] = useState('')
+  const [dialCode, setDialCode] = useState('+234')
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState<string | null>(null)
   const send = useSendInvitation()
@@ -134,7 +137,7 @@ function InviteCard() {
     setError(null)
     setSent(null)
     try {
-      await send.mutateAsync({ channel, contact: contact.trim() })
+      await send.mutateAsync({ channel, contact: contact.trim(), ...(channel === 'phone' ? { dial_code: dialCode } : {}) })
       setSent(contact.trim())
       setContact('')
     } catch (err) {
@@ -172,7 +175,7 @@ function InviteCard() {
           </div>
           <div className="flex flex-wrap items-start gap-2">
             <div className="min-w-[16rem] flex-1">
-              <Input
+              {channel === 'phone' ? <PhoneInput label="Friend's phone" value={contact} onChange={(value) => { setContact(value); setError(null) }} dialCodeValue={dialCode} onDialCodeChange={setDialCode} /> : <Input
                 type={channel === 'email' ? 'email' : 'tel'}
                 value={contact}
                 onChange={(e) => {
@@ -181,7 +184,7 @@ function InviteCard() {
                 }}
                 placeholder={channel === 'email' ? 'friend@example.com' : '0803 000 1111'}
                 aria-label={`Friend's ${channel}`}
-              />
+              />}
             </div>
             <Button type="submit" variant="parent" loading={send.isPending} disabled={!contact.trim()}>
               Send invite

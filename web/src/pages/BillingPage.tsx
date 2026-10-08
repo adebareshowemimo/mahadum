@@ -59,7 +59,7 @@ export function BillingPage() {
   const changeSub = useChangeSubscription()
   const retrySub = useRetrySubscription()
 
-  const telco = useTelcoStatus()
+  const telco = useTelcoStatus(hasRole('parent', 'super_admin'))
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busyPlan, setBusyPlan] = useState<number | null>(null)

@@ -357,7 +357,9 @@ export function App() {
           <Route path="/learn/courses" element={<CourseCatalogPage />} />
           <Route path="/achievements" element={<AchievementsPage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
-          <Route path="/family" element={<FamilyPage />} />
+          <Route element={<RoleRoute roles={['parent', 'supervisor', 'super_admin']} />}>
+            <Route path="/family" element={<FamilyPage />} />
+          </Route>
           <Route element={<RoleRoute roles={['parent']} />}><Route path="/family/goals" element={<FamilyGoalsPage />} /></Route>
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route element={<RoleRoute roles={['school_admin', 'super_admin']} />}>

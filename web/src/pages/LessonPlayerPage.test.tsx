@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { StrictMode } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -28,18 +29,20 @@ describe('Lesson completion achievements', () => {
     vi.spyOn(learningApi, 'play').mockResolvedValue({ lesson: { id: 10, title: 'Level 0' } } as never)
     vi.spyOn(learningApi, 'complete').mockResolvedValue({
       lesson_score: 1, xp_total: 14, streak: { count: 1, state: 'active' },
-      badges_unlocked: [{ name: 'Star Starter', id: 1 }], next_node: null,
+      badges_unlocked: [{ name: 'First Steps', id: 1 }], next_node: null,
     })
-    render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/lessons/10/play']}>
+    render(<StrictMode><QueryClientProvider client={client}><MemoryRouter initialEntries={['/lessons/10/play']}>
       <Routes><Route path="/lessons/:lessonId/play" element={<LessonPlayerPage />} /></Routes>
-    </MemoryRouter></QueryClientProvider>)
+    </MemoryRouter></QueryClientProvider></StrictMode>)
 
     expect(await screen.findByRole('heading', { name: 'Lesson complete!' })).toBeInTheDocument()
     expect(screen.getByText('🏅 1 new badge!')).toBeInTheDocument()
+    expect(screen.getByText('First Steps')).toBeInTheDocument()
     await waitFor(() => {
       for (const key of keys) expect(client.getQueryState(key)?.isInvalidated).toBe(true)
     })
     expect(client.getQueryState(gamificationKeys.badges(2))?.isInvalidated).toBe(false)
     expect(learningApi.complete).toHaveBeenCalledWith(10, 1)
+    expect(learningApi.complete).toHaveBeenCalledTimes(1)
   })
 })

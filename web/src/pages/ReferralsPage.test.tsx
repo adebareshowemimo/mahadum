@@ -38,6 +38,16 @@ beforeEach(() => {
 })
 
 describe('ReferralsPage', () => {
+  it('sends the chosen country calling code with a phone invitation', async () => {
+    const mutateAsync = vi.fn().mockResolvedValue({})
+    m.useSendInvitation.mockReturnValue({ mutateAsync, isPending: false } as never)
+    render(<ReferralsPage />)
+    await userEvent.click(screen.getByRole('button', { name: 'phone' }))
+    await userEvent.selectOptions(screen.getByLabelText('Country calling code'), 'GB')
+    await userEvent.type(screen.getByLabelText("Friend's phone"), '02079460958')
+    await userEvent.click(screen.getByRole('button', { name: /send invite/i }))
+    expect(mutateAsync).toHaveBeenCalledWith({ channel: 'phone', contact: '02079460958', dial_code: '+44' })
+  })
   it('lists activations with their contact channel and status', () => {
     m.useSendInvitation.mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never)
     render(<ReferralsPage />)

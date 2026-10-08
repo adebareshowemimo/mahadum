@@ -30,13 +30,13 @@ class PracticeRecipientEligibility
 
     public function isEligible(LearnerProfile $learner, User $excluding, User $recipient): bool
     {
-        if ($recipient->id === $excluding->id || $recipient->status !== 'active') {
+        if ($recipient->id === $learner->user_id || $recipient->status !== 'active') {
             return false;
         }
 
-        $inFamily = $learner->family_id !== null && FamilyMember::where('family_id', $learner->family_id)
-            ->where('user_id', $recipient->id)
-            ->exists();
+        $inFamily = $learner->family_id !== null && ($learner->family?->owner_user_id === $recipient->id
+            || (FamilyMember::where('family_id', $learner->family_id)->where('user_id', $recipient->id)->exists()
+                && $recipient->hasAnyRole(['parent', 'supervisor'])));
 
         if ($inFamily) {
             return true;
@@ -49,6 +49,7 @@ class PracticeRecipientEligibility
         return OrganizationUser::where('organization_id', $learner->organization_id)
             ->where('user_id', $recipient->id)
             ->where('status', 'active')
+            ->whereIn('role', self::SCHOOL_STAFF_ROLES)
             ->exists();
     }
 
@@ -60,8 +61,9 @@ class PracticeRecipientEligibility
         }
 
         return User::query()
-            ->whereIn('id', FamilyMember::where('family_id', $learner->family_id)->whereNotNull('user_id')->pluck('user_id'))
-            ->where('id', '!=', $excluding->id)
+            ->where(fn ($query) => $query->where('id', $learner->family?->owner_user_id)
+                ->orWhere(fn ($members) => $members->whereIn('id', FamilyMember::where('family_id', $learner->family_id)->whereNotNull('user_id')->pluck('user_id'))->role(['parent', 'supervisor'])))
+            ->when($learner->user_id !== null, fn ($query) => $query->where('id', '!=', $learner->user_id))
             ->where('status', 'active')
             ->when($search !== '', fn ($q) => $q->where(fn ($q2) => $q2->where('first_name', 'like', "%{$search}%")
                 ->orWhere('last_name', 'like', "%{$search}%")
@@ -80,11 +82,12 @@ class PracticeRecipientEligibility
 
         $staffIds = OrganizationUser::where('organization_id', $learner->organization_id)
             ->where('status', 'active')
+            ->whereIn('role', self::SCHOOL_STAFF_ROLES)
             ->pluck('user_id');
 
         return User::query()
             ->whereIn('id', $staffIds)
-            ->where('id', '!=', $excluding->id)
+            ->when($learner->user_id !== null, fn ($query) => $query->where('id', '!=', $learner->user_id))
             ->where('status', 'active')
             ->role(self::SCHOOL_STAFF_ROLES)
             ->when($search !== '', fn ($q) => $q->where(fn ($q2) => $q2->where('first_name', 'like', "%{$search}%")

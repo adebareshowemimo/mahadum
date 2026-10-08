@@ -7,6 +7,7 @@ import { GoogleButton, OrDivider } from '@/components/auth/GoogleButton'
 import { ApiError, classInvitationApi } from '@/lib/api'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useConfig } from '@/lib/config/useConfig'
+import { DISPLAY_NAME } from '@/lib/brand'
 
 export function LoginPage() {
   const { login } = useAuth()
@@ -69,7 +70,7 @@ export function LoginPage() {
       phrases={['Ẹ káàrọ̀', 'Ụtụtụ ọma', 'Ina kwana']}
       footer={
         <>
-          New to Mahadum.360?{' '}
+          New to {DISPLAY_NAME}?{' '}
           <Link to={invitationToken ? `/register?class_invitation=${invitationToken}` : '/register'} className="inline-flex min-h-11 items-center font-bold text-chore-700 hover:underline">
             Create an account
           </Link>

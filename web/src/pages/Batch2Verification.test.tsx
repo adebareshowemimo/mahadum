@@ -10,9 +10,10 @@ import { TasksPage } from './TasksPage'
 import { ReviewsPage } from './ReviewsPage'
 import { ClassPage } from './ClassPage'
 
-vi.mock('@/lib/profile/ActiveProfile', () => ({ useActiveProfile: () => ({ activeLearnerId: 21 }) }))
+const profile = vi.hoisted(() => ({ adult: false }))
+vi.mock('@/lib/profile/ActiveProfile', () => ({ useActiveProfile: () => ({ activeLearnerId: 21, activeLearner: { is_child: !profile.adult, age_band: profile.adult ? 'adult' : 'child' } }) }))
 vi.mock('@/lib/auth/AuthProvider', () => ({ useAuth: () => ({ activeOrgId: 3, user: { user: { id: 7, roles: ['teacher'] }, organizations: [{ id: 3 }] }, hasRole: (...roles: string[]) => roles.includes('teacher') }) }))
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => { vi.restoreAllMocks(); profile.adult = false })
 
 function show(page: ReactNode, entry = '/') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity }, mutations: { retry: false } } })
@@ -28,6 +29,15 @@ const tasks: LearnerTasks = {
 }
 
 describe('Batch 2 family, learner and class flows', () => {
+  it('keeps approved rewards visible and uses adult task copy for an adult profile', async () => {
+    profile.adult = true
+    vi.spyOn(familyApi, 'tasks').mockResolvedValue({ ...tasks, chores: [{ ...tasks.chores[0], status: 'approved' }] })
+    show(<TasksPage />)
+    expect(await screen.findByText('Approved +15 coins')).toBeInTheDocument()
+    expect(screen.getByText('Track your tasks, submissions and reward decisions.')).toBeInTheDocument()
+    expect(screen.queryByText(/grown-up/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'I finished this chore' })).not.toBeInTheDocument()
+  })
   it('submits checkbox chore evidence and prevents another submission while waiting', async () => {
     const user = userEvent.setup()
     vi.spyOn(familyApi, 'tasks').mockResolvedValueOnce(tasks).mockResolvedValue({ ...tasks, chores: [{ ...tasks.chores[0], status: 'pending_review' }] })

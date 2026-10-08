@@ -10,20 +10,22 @@ use App\Models\LearnerProfile;
 use App\Models\Organization;
 use App\Models\SchoolClass;
 use App\Services\School\ClassCourseEnrollmentService;
+use App\Services\School\RosterIdentityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 /**
  * CSV / JSON roster import. Blank-email rows create school-managed profiles;
  * an email reuses an existing profile already linked to the same school.
- * Invalid rows are reported before any profile or enrollment is written.
+ * Import identities prevent replayed blank-email rows from consuming more seats.
  */
 class RosterController extends Controller
 {
     use ResolvesOrganization;
 
-    public function __construct(private ClassCourseEnrollmentService $courseEnrollments) {}
+    public function __construct(private ClassCourseEnrollmentService $courseEnrollments, private RosterIdentityService $identities) {}
 
     public function import(ImportRosterRequest $request, Organization $organization): JsonResponse
     {
@@ -38,20 +40,31 @@ class RosterController extends Controller
         $created = 0;
         $matched = 0;
         $errors = [];
+        $batchKey = $this->identities->batchKey($rows);
 
-        DB::transaction(function () use ($rows, $fromCsv, $organization, $defaultClassId, &$created, &$matched, &$errors) {
+        DB::transaction(function () use ($rows, $fromCsv, $organization, $defaultClassId, $batchKey, &$created, &$matched, &$errors) {
+            // All imports for a school take the same lock before identity/seat writes.
+            Organization::whereKey($organization->id)->lockForUpdate()->firstOrFail();
+            $occurrences = [];
+            $prepared = [];
             foreach ($rows as $i => $row) {
                 $rowNumber = $fromCsv ? $i : $i + 1;
                 $name = trim($row['display_name'] ?? '');
                 $email = strtolower(trim($row['email'] ?? ''));
                 $row['display_name'] = $name;
                 $row['email'] = $email ?: null;
+                if (array_key_exists('firstname', $row) && (trim((string) $row['firstname']) === '' || trim((string) $row['lastname']) === '')) {
+                    $errors[] = ['row' => $rowNumber, 'error' => 'First name and last name are required.'];
+
+                    continue;
+                }
                 $validator = Validator::make($row, [
                     'display_name' => ['required', 'string', 'max:255'],
                     'email' => ['nullable', 'email', 'max:255'],
-                    'level' => ['nullable', 'string', 'max:100'],
+                    'level' => ['nullable', 'string', 'regex:/^L[0-5]$/'],
                     'class_id' => ['nullable', 'integer'],
-                ]);
+                    'student_id' => ['nullable', 'string', 'max:100'],
+                ], ['level.regex' => 'Level must be L0, L1, L2, L3, L4 or L5.']);
                 if ($validator->fails()) {
                     $errors[] = ['row' => $rowNumber, 'error' => $validator->errors()->first()];
 
@@ -64,6 +77,16 @@ class RosterController extends Controller
                     $errors[] = ['row' => $rowNumber, 'error' => "Class {$classId} not in this organization"];
 
                     continue;
+                }
+                if ($class && ($row['level'] ?? '') !== '') {
+                    $position = (int) substr($row['level'], 1);
+                    $missing = $class->courseAssignments()->whereHas('course', fn ($query) => $query->where('is_published', true)
+                        ->whereDoesntHave('levels', fn ($levels) => $levels->where('position', $position)))->exists();
+                    if ($missing) {
+                        $errors[] = ['row' => $rowNumber, 'error' => 'Level '.$row['level'].' is not available in every course assigned to this class.'];
+
+                        continue;
+                    }
                 }
 
                 $learner = null;
@@ -84,12 +107,38 @@ class RosterController extends Controller
                     $learner = $matches->first();
                 }
 
-                $isNew = $learner === null;
-                $learner ??= LearnerProfile::create([
-                    'organization_id' => $organization->id,
-                    'display_name' => $name,
-                    'age_band' => $row['level'] ?? null,
-                ]);
+                $occurrence = 0;
+                if ($learner === null) {
+                    $rowKey = $this->identities->rowKey($row);
+                    $occurrence = $occurrences[$rowKey] ?? 0;
+                    $occurrences[$rowKey] = $occurrence + 1;
+                    $identity = $this->identities->resolve($organization, $row, $batchKey, $occurrence, false);
+                    if ($identity['error'] !== null) {
+                        $errors[] = ['row' => $rowNumber, 'error' => $identity['error']];
+
+                        continue;
+                    }
+                    $learner = $identity['learner'];
+                }
+                $prepared[] = compact('row', 'rowNumber', 'learner', 'occurrence', 'class');
+            }
+
+            // Preflight the entire file before profiles, identities, seats or enrolments change.
+            if ($errors !== []) {
+                return;
+            }
+            foreach ($prepared as $item) {
+                $learner = $item['learner'];
+                $class = $item['class'];
+                $isNew = false;
+                if ($learner === null) {
+                    $identity = $this->identities->resolve($organization, $item['row'], $batchKey, $item['occurrence']);
+                    if ($identity['error'] !== null || $identity['learner'] === null) {
+                        throw ValidationException::withMessages(['file' => 'Row '.$item['rowNumber'].': '.($identity['error'] ?? 'Roster identity could not be resolved.')]);
+                    }
+                    $learner = $identity['learner'];
+                    $isNew = $identity['created'];
+                }
                 if ($class) {
                     ClassEnrollment::firstOrCreate(['school_class_id' => $class->id, 'learner_profile_id' => $learner->id]);
                     $this->courseEnrollments->syncLearner($class, $learner);
@@ -116,7 +165,7 @@ class RosterController extends Controller
      * Array keys identify CSV records including the header, so errors line up
      * with the usual spreadsheet rows. Headerless records start at one.
      *
-     * @return array<int, array{display_name:string, level:?string, email:?string}>
+     * @return array<int, array<string, string|null>>
      */
     private function parseCsv(string $path): array
     {
@@ -147,7 +196,7 @@ class RosterController extends Controller
     /**
      * @param  array<int, string>  $header
      * @param  array<int, string|null>  $cols
-     * @return array{display_name:string, level:?string, email:?string}
+     * @return array<string, string|null>
      */
     private function rowFromCols(array $header, array $cols): array
     {
@@ -157,6 +206,12 @@ class RosterController extends Controller
             ? trim((string) $byKey['display_name'])
             : trim(($byKey['firstname'] ?? '').' '.($byKey['lastname'] ?? ''));
 
-        return ['display_name' => $displayName, 'level' => $byKey['level'] ?? null, 'email' => $byKey['email'] ?? null];
+        $row = ['display_name' => $displayName, 'level' => $byKey['level'] ?? null, 'email' => $byKey['email'] ?? null, 'student_id' => $byKey['studentid'] ?? null];
+        if (array_key_exists('firstname', $byKey) || array_key_exists('lastname', $byKey)) {
+            $row['firstname'] = $byKey['firstname'] ?? null;
+            $row['lastname'] = $byKey['lastname'] ?? null;
+        }
+
+        return $row;
     }
 }

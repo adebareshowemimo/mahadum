@@ -51,7 +51,7 @@ class SchoolAndAdminTest extends TestCase
 
         $file = UploadedFile::fake()->createWithContent(
             'roster.csv',
-            "Firstname,Lastname,Level\nAmara,Okafor,A1\nBello,Musa,A2\n",
+            "Firstname,Lastname,Level\nAmara,Okafor,L0\nBello,Musa,L1\n",
         );
 
         $this->post('/api/v1/schools/'.$org->id.'/students/import', ['file' => $file], ['Accept' => 'application/json'])

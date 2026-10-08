@@ -111,6 +111,8 @@ export interface Me {
     email: string
     email_verified: boolean
     signup_account_type?: string | null
+    account_type?: 'single' | 'family' | 'teacher' | 'school' | 'institution'
+    capabilities?: string[]
     roles: Role[]
   }
   families: Family[]
@@ -208,6 +210,7 @@ export interface WalletBalance {
   /** Cash balance in minor units (e.g. kobo). */
   currency_minor: number
   currency: string
+  funding_gateways?: ('monnify' | 'paystack' | 'flutterwave')[]
 }
 
 export interface FamilyOverview {
@@ -875,6 +878,7 @@ export interface ReferralInvitation {
 export interface SendReferralInvitationInput {
   channel: ReferralInvitationChannel
   contact: string
+  dial_code?: string
 }
 
 export type PayoutMethod = 'bank' | 'coins'
@@ -928,6 +932,7 @@ export interface SchoolDashboard {
   organization: { id: number; name: string; status: string }
   classes: number
   students: number
+  student_counts?: { total: number; in_classes: number; unassigned: number }
   seats: { purchased: number; filled: number }
   invoices: { unpaid: number; unpaid_minor: number }
   subscription: { status: string | null; last_payment_at: string | null }

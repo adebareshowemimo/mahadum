@@ -17,7 +17,7 @@ export function AppLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   const roles = user?.user.roles ?? []
-  const sections = visibleSections(roles)
+  const sections = visibleSections(roles, user?.user.capabilities)
 
   // Close the mobile drawer on navigation.
   useEffect(() => {

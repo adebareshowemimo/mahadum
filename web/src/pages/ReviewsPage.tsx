@@ -152,7 +152,7 @@ function AssignmentsSection({ assignments }: { assignments: AssignmentReviewItem
   return (
     <section className="flex flex-col gap-3">
       <h2 className="font-display text-lg font-bold text-foreground">Assignments</h2>
-      <p className="-mt-1 text-sm text-muted">Watch the clip, then release the coins if it looks good.</p>
+      <p className="-mt-1 text-sm text-muted">Watch the clip, then approve the reward from your family coins. If your balance is short, it stays waiting until you top up and approve again.</p>
       {error && <Alert variant="danger">{error}</Alert>}
       {assignments.map((a) => {
         const busy = actingId === a.id
@@ -203,7 +203,7 @@ function ClassAssignmentsSection({ assignments }: { assignments: NonNullable<Rev
   if (!assignments.length) return null
   return <section className="flex flex-col gap-3">
     <h2 className="font-display text-lg font-bold text-foreground">Class assignment rewards</h2>
-    <p className="text-sm text-muted">The teacher has marked this work as passed. Approve to release the coins.</p>
+    <p className="text-sm text-muted">The teacher has marked this work as passed. Approve to pay the reward from your family coins. If your balance is short, it stays waiting.</p>
     {error && <Alert variant="danger">{error}</Alert>}
     {assignments.map(a => <Card key={a.id}><CardBody className="flex flex-col gap-3">
       <div><p className="font-semibold text-foreground">{a.title}</p><p className="text-sm text-muted">{a.learner} · {a.coin_reward} coins on approval</p></div>

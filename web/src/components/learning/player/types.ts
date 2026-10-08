@@ -331,6 +331,7 @@ export interface PlayerService {
   completeStep(slide: Slide): Promise<void>
   submitSpeaking(slide: SpeakingSlide, audio: Blob | null): Promise<void>
   inviteTonePractice(slide: SpeakingSlide | VideoSlide, recipientEmail: string): Promise<void>
+  practiceContacts(): Promise<import('@/lib/api').PracticeContact[]>
   /** Submit a recorded assignment clip (coins escrow until a parent approves). */
   submitAssignment(slide: AssignmentSlide, media: Blob | null, filename?: string): Promise<void>
   /** Persist a video-watching beat (no-op in preview). */
@@ -389,6 +390,7 @@ export function createLiveService(lessonId: number, learnerId: number): PlayerSe
     async inviteTonePractice(slide, recipientEmail) {
       await learningApi.inviteTonePractice({ learnerId, componentId: slide.componentId, recipientEmail })
     },
+    practiceContacts: () => learningApi.searchPracticeContacts(learnerId, ''),
     async submitAssignment(slide, media, filename) {
       await learningApi.submitAssignment({ learnerId, componentId: slide.componentId, media: media ?? undefined, filename })
     },
@@ -467,6 +469,7 @@ export function createPreviewService(key: Map<number, QuizKey>, hearts: { value:
     async completeStep() {},
     async submitSpeaking() {},
     async inviteTonePractice() {},
+    async practiceContacts() { return [] },
     async submitAssignment() {},
     async trackVideo() {},
   }

@@ -39,6 +39,7 @@ class SchoolDirectoryController extends Controller
         ])
             ->orderBy('display_name')->get()->map(fn ($learner) => [
                 'id' => $learner->id, 'name' => $learner->display_name, 'email' => $learner->user?->email,
+                'level' => $learner->roster_level_position !== null ? 'L'.$learner->roster_level_position : null,
                 'classes' => $learner->classEnrollments->map(fn ($entry) => ['id' => $entry->schoolClass->id, 'name' => $entry->schoolClass->name])->values(),
             ]);
 

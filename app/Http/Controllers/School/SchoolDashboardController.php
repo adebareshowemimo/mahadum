@@ -21,6 +21,8 @@ class SchoolDashboardController extends Controller
 
         $allocations = $organization->seatAllocations()->get();
         $studentIds = LearnerProfile::where('organization_id', $organization->id)->pluck('id');
+        $inClasses = LearnerProfile::whereIn('id', $studentIds)
+            ->whereHas('classEnrollments.schoolClass', fn ($query) => $query->where('organization_id', $organization->id))->count();
 
         $subscription = Subscription::where('subscriber_type', Organization::class)
             ->where('subscriber_id', $organization->id)
@@ -45,6 +47,7 @@ class SchoolDashboardController extends Controller
             'organization' => ['id' => $organization->id, 'name' => $organization->name, 'status' => $organization->status],
             'classes' => $organization->schoolClasses()->count(),
             'students' => $studentIds->count(),
+            'student_counts' => ['total' => $studentIds->count(), 'in_classes' => $inClasses, 'unassigned' => $studentIds->count() - $inClasses],
             'learning' => [...$analytics->summarize($byLearner), 'top_students' => $topStudents, 'top_classes' => $topClasses],
             'seats' => [
                 'purchased' => (int) $allocations->sum('total_purchased'),

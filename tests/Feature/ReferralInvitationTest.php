@@ -35,6 +35,23 @@ class ReferralInvitationTest extends TestCase
     {
         Notification::fake();
         $this->seedRbac();
+        $this->actingAsUser($this->userWithRole('parent'));
+        foreach (['0803 000 1111', '+2348030001111'] as $contact) {
+            $this->postJson('/api/v1/referrals/invitations', ['channel' => 'phone', 'contact' => $contact, 'dial_code' => '+234'])
+                ->assertCreated()->assertJsonPath('data.contact', '2348030001111');
+        }
+        $this->assertDatabaseCount('referral_invitations', 1);
+        $this->postJson('/api/v1/referrals/invitations', ['channel' => 'phone', 'contact' => '020 7946 0958', 'dial_code' => '+44'])
+            ->assertCreated()->assertJsonPath('data.contact', '442079460958');
+        User::factory()->create(['phone' => '+12025550123']);
+        $this->postJson('/api/v1/referrals/invitations', ['channel' => 'phone', 'contact' => '2025550123', 'dial_code' => '+1'])
+            ->assertUnprocessable()->assertJsonPath('error.code', 'account_exists');
+    }
+
+    public function test_cannot_invite_an_existing_active_account_using_legacy_contact_format(): void
+    {
+        Notification::fake();
+        $this->seedRbac();
         $referrer = $this->userWithRole('parent');
         $existing = $this->userWithRole('parent', ['email' => 'already@here.com', 'phone' => '+2348099998888']);
         $existing->update(['status' => 'active']);

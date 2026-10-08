@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\WalletFundingTransaction;
+use App\Services\Billing\PaymentGatewayManager;
 use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
@@ -20,6 +21,9 @@ class BillingWebhookTest extends TestCase
         parent::setUp();
         config()->set('services.paystack.secret', 'testsecret');
         config()->set('services.monnify.secret', 'mnfysecret');
+        // Receipt fixtures exercise settlement independently of provider readiness.
+        $this->partialMock(PaymentGatewayManager::class)
+            ->shouldReceive('available')->andReturn(['monnify', 'paystack', 'flutterwave']);
     }
 
     private function paystack(array $payload): TestResponse

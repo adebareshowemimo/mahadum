@@ -23,6 +23,8 @@ Product rules that override convenience (from the BRD): Free = Lesson 0 per lang
 
 ## Commands
 
+Reward funding was explicitly confirmed on 2026-10-07: chore, study and assignment rewards transfer existing parent coins; insufficient funds leave rewards pending. See `docs/Mahadum360_Reward_Funding_Decision.md`. Do not mint coins in these reward release paths.
+
 **Backend** (repo root):
 ```bash
 composer dev            # all-in-one: serve + queue + pail logs + vite (concurrently)

@@ -70,9 +70,10 @@ export function useRetrySubscription() {
   })
 }
 
-export function useTelcoStatus() {
+export function useTelcoStatus(enabled = true) {
   return useQuery({
     queryKey: billingKeys.telcoStatus,
+    enabled,
     queryFn: billingApi.telcoStatus,
     retry: false, // 404 when the user has no airtime subscription
   })

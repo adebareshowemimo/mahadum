@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Lesson;
+use App\Services\Family\WalletService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\MakesContent;
 use Tests\TestCase;
@@ -47,6 +48,8 @@ class AssignmentFlowTest extends TestCase
         $this->seedRbac();
         $parent = $this->actingAsUser($this->userWithRole('parent'));
         $learner = $this->parentWithChild($parent);
+        $wallets = app(WalletService::class);
+        $wallets->credit($wallets->walletFor($learner->family), 50, 'test_seed');
         $lesson = $this->publishedLesson();
         $component = $this->assignmentComponent($lesson);
 
@@ -64,9 +67,27 @@ class AssignmentFlowTest extends TestCase
         ]);
         $this->assertDatabaseHas('assignment_submissions', ['id' => $id, 'parent_review_status' => 'approved', 'decided_by' => $parent->id]);
         $this->assertDatabaseHas('audit_logs', ['action' => 'assignment.reviewed']);
+        $this->assertSame(0, $wallets->walletFor($learner->family)->coin_balance);
 
         // Idempotent: a second review is rejected.
         $this->postJson("/api/v1/assignment-submissions/{$id}/review", ['decision' => 'approve'])->assertStatus(422);
+    }
+
+    public function test_unfunded_assignment_approval_stays_pending_and_can_be_retried_after_funding(): void
+    {
+        $this->seedRbac();
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $learner = $this->parentWithChild($parent);
+        $component = $this->assignmentComponent($this->publishedLesson());
+        $id = $this->postJson('/api/v1/assignment-submissions', ['learner_id' => $learner->id, 'component_id' => $component->id])->json('data.id');
+        $this->postJson("/api/v1/assignment-submissions/{$id}/review", ['decision' => 'approve'])->assertUnprocessable();
+        $this->assertDatabaseHas('assignment_submissions', ['id' => $id, 'parent_review_status' => 'pending', 'coins_locked' => 50]);
+        $this->assertDatabaseMissing('coin_transactions', ['source' => 'assignment']);
+        $wallets = app(WalletService::class);
+        $wallets->credit($wallets->walletFor($learner->family), 50, 'test_seed');
+        $this->postJson("/api/v1/assignment-submissions/{$id}/review", ['decision' => 'approve'])->assertOk();
+        $this->assertSame(0, $wallets->walletFor($learner->family)->coin_balance);
+        $this->assertSame(50, $wallets->walletFor($learner)->coin_balance);
     }
 
     public function test_rejection_releases_no_coins(): void

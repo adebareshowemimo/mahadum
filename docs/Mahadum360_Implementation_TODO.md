@@ -11,6 +11,8 @@ backend architecture, content model, DB layer, and UI designs already produced.
 **Legend:** ✅ done · 🟡 in progress / partial · ⬜ not started
 **Tags:** `[MVP]` ships for launch · `[POST]` deferred · `[BLOCK]` decision needed first
 
+**7 October 2026 retest — active repair checklist:** [Active fix TODO](Mahadum360_Retest_7Oct_Active_Fix_TODO.md) groups 58 retained audit IDs into 28 work items, excluding 23 deferred/held IDs and separating the unsupported W15 copy finding. Mixed rows retain only their current repair scope. Batches 4–5 were committed and pushed in `876ebf8`; the earlier candidate's pending-delivery wording below is historical. Deployment and per-ID acceptance remain open. Creating this checklist makes no application or production changes.
+
 **7 October 2026 Batch 4 local candidate (milestones 5–8):** [Verification and release handover](Mahadum360_Batch4_Verification.md) covers teacher directories/invitation onboarding, distinct Teacher/School/Institution account handling, weekly 30-learner cohorts/private cheers, shared lesson goals, parent-managed conserved-coin pools and configurable parent alerts/browser notifications. Threshold and pool decisions were confirmed by Adebare. New migrations were applied locally; commit/push, deployment, live delivery and reviewer acceptance remain pending. No historical identities, balances, rewards or approved learning-access rules were changed.
 
 ### Pending review follow-up (2026-09-09)

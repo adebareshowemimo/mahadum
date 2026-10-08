@@ -10,6 +10,8 @@ use App\Models\Subscription;
 use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\Billing\EntitlementResolver;
+use App\Services\ConsumerAccess;
+use App\Services\UserAccountType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -42,7 +44,9 @@ class MeController extends Controller
                 'email' => $user->email,
                 'email_verified' => $user->hasVerifiedEmail(),
                 'signup_account_type' => $user->signup_account_type,
+                'account_type' => UserAccountType::forUser($user),
                 'roles' => $user->getRoleNames(),
+                'capabilities' => array_values(array_filter(ConsumerAccess::ABILITIES, fn ($ability) => $user->can($ability))),
             ],
             'families' => FamilyResource::collection($user->ownedFamilies),
             'learner_profiles' => $user->learnerProfile

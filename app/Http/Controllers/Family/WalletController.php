@@ -29,6 +29,7 @@ class WalletController extends Controller
             'coin_balance' => $wallet->coin_balance,
             'currency_minor' => $wallet->currency_balance_minor,
             'currency' => $wallet->currency,
+            'funding_gateways' => $this->gateways->available(),
         ]]);
     }
 
@@ -39,6 +40,7 @@ class WalletController extends Controller
      */
     public function fund(FundWalletRequest $request): JsonResponse
     {
+        abort_unless(in_array($request->string('gateway')->value(), $this->gateways->available(), true), 422, 'This payment method is currently unavailable. Choose an available method or try again later.');
         $wallet = $this->wallets->walletFor($this->family($request->user()));
 
         $funding = WalletFundingTransaction::create([

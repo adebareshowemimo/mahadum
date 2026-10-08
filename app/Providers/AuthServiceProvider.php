@@ -10,6 +10,7 @@ use App\Policies\CoursePolicy;
 use App\Policies\LearnerProfilePolicy;
 use App\Policies\PayoutPolicy;
 use App\Policies\SchoolClassPolicy;
+use App\Services\ConsumerAccess;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 
@@ -35,5 +36,6 @@ class AuthServiceProvider extends ServiceProvider
         // added later are covered without re-seeding the role. Returning null
         // (not false) lets normal checks run for everyone else.
         Gate::before(fn ($user) => $user->hasRole('super_admin') ? true : null);
+        Gate::before(fn ($user, $ability) => ConsumerAccess::allows($user, $ability) ? true : null);
     }
 }

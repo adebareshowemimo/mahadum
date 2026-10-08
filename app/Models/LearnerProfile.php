@@ -21,6 +21,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $profile_photo_asset_id
  * @property Carbon|null $date_of_birth
  * @property string|null $age_band
+ * @property int|null $roster_level_position
  * @property int|null $target_language_id
  * @property int $current_level
  * @property string|null $parental_pin
@@ -83,6 +84,7 @@ class LearnerProfile extends Model
 
     protected $casts = [
         'date_of_birth' => 'date',
+        'roster_level_position' => 'integer',
     ];
 
     /**

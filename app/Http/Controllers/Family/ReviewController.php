@@ -95,7 +95,7 @@ class ReviewController extends Controller
             abort_unless($submission->status === 'graded' && $submission->passed && $submission->parent_review_status === 'pending', 422, 'This assignment is not waiting for parent approval.');
             $released = $decision === 'approve' ? $submission->coins_locked : 0;
             if ($released > 0) {
-                $this->wallets->credit($this->wallets->walletFor($learner), $released, 'class_assignment', $learner->id, $submission);
+                $this->wallets->rewardFromParent($learner, $released, 'class_assignment', $submission);
             }
             $submission->update(['parent_review_status' => $decision === 'approve' ? 'approved' : 'rejected', 'decided_by' => $request->user()->id, 'decided_at' => now()]);
             $this->audit->record('class_assignment.parent_reviewed', $submission, ['parent_review_status' => 'pending'], ['parent_review_status' => $submission->parent_review_status, 'coins_released' => $released]);
@@ -128,11 +128,10 @@ class ReviewController extends Controller
             $status = $decision === 'approve' ? 'approved' : 'rejected';
 
             if ($decision === 'approve' && $submission->coins_locked > 0) {
-                $this->wallets->credit(
-                    $this->wallets->walletFor($learner),
+                $this->wallets->rewardFromParent(
+                    $learner,
                     $submission->coins_locked,
                     'assignment',
-                    $learner->id,
                     $submission,
                 );
                 $released = $submission->coins_locked;
