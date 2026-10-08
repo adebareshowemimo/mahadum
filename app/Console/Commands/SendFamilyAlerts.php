@@ -15,12 +15,22 @@ class SendFamilyAlerts extends Command
 
     public function handle(FamilyAlertService $alerts): int
     {
-        Family::whereIn('id', FamilyAlertPreference::select('family_id'))->chunkById(100, function ($families) use ($alerts) {
+        $evaluated = 0;
+        $failed = 0;
+        Family::whereIn('id', FamilyAlertPreference::select('family_id'))->chunkById(100, function ($families) use ($alerts, &$evaluated, &$failed) {
             foreach ($families as $family) {
-                $alerts->evaluate($family);
+                $evaluated++;
+                try {
+                    $alerts->evaluate($family);
+                } catch (\Throwable $error) {
+                    $failed++;
+                    report($error);
+                    $this->error("Alert evaluation failed for family {$family->id}. See the application log.");
+                }
             }
         });
+        $this->info("Evaluated {$evaluated} families; {$failed} failed.");
 
-        return self::SUCCESS;
+        return $failed > 0 ? self::FAILURE : self::SUCCESS;
     }
 }

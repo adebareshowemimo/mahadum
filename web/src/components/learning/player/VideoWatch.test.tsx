@@ -82,6 +82,31 @@ describe('required video coverage', () => {
     expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
   })
 
+  it('recovers from a failed file by switching to an available quality without unlocking skipped footage', () => {
+    const { video, container } = mount({ renditions: [{ quality: '240p', src: '/240.mp4' }] })
+    video.currentTime = 4
+    fireEvent.error(video)
+    expect(container.querySelector('video')).toBeNull()
+    fireEvent.change(screen.getByLabelText('Video quality'), { target: { value: '240p' } })
+    const recovered = container.querySelector('video')!
+    expect(recovered).toHaveAttribute('src', '/240.mp4')
+    Object.defineProperty(recovered, 'duration', { configurable: true, value: 10 })
+    fireEvent.loadedMetadata(recovered)
+    expect(recovered.currentTime).toBe(4)
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
+  })
+
+  it.each([0.5, 9.5])('retains the playhead at %s seconds while changing quality on completed videos', (position) => {
+    const { video } = mount({ alreadyCompleted: true, renditions: [{ quality: '240p', src: '/240.mp4' }] })
+    video.currentTime = position
+    fireEvent.change(screen.getByLabelText('Video quality'), { target: { value: '240p' } })
+    // A replacement resource resets currentTime before metadata is available.
+    video.currentTime = 0
+    fireEvent.loadedMetadata(video)
+    expect(video.currentTime).toBe(position)
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
+  })
+
   it('retries saving completed coverage after a connection failure', async () => {
     const { video, trackVideo, advance } = mount()
     trackVideo.mockImplementation((_slide, beat) => beat.completed ? Promise.reject(new Error('offline')) : Promise.resolve())

@@ -46,7 +46,7 @@ class BadgeService
                     if (str_starts_with($badge->code, 'tier_')) {
                         $this->notifyLevelUp($learner, (int) substr($badge->code, 5), $badge->name);
                     } else {
-                        ($learner->family_id ? $learner->family->owner : $learner->user)?->notify(new FamilyActivityAlert('achievement', 'A learning achievement is ready', 'A new badge has been earned. Open achievements to celebrate the progress.', '/achievements'));
+                        rescue(fn () => ($learner->family_id ? $learner->family->owner : $learner->user)?->notify(new FamilyActivityAlert('achievement', 'A learning achievement is ready', 'A new badge has been earned. Open achievements to celebrate the progress.', '/achievements')), report: true);
                     }
                 }
             }
@@ -88,6 +88,6 @@ class BadgeService
     {
         $notifiable = $learner->user ?? $learner->family?->owner;
 
-        $notifiable?->notify(new LearningLevelUp($learner->display_name, $level, $badgeName));
+        rescue(fn () => $notifiable?->notify(new LearningLevelUp($learner->display_name, $level, $badgeName)), report: true);
     }
 }

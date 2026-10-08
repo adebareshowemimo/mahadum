@@ -105,7 +105,7 @@ class ChoreController extends Controller
 
         // Sent after commit so a queued mail job never races a rolled-back transaction.
         if ($approvedLearner) {
-            $approvedLearner->user?->notify(new ChoreApproved($chore, $result));
+            rescue(fn () => $approvedLearner->user?->notify(new ChoreApproved($chore, $result)), report: true);
         }
 
         return response()->json(['data' => [

@@ -63,7 +63,7 @@ class AssignmentSubmissionController extends Controller
         });
 
         $xapi->record($learner->id, XapiRecorder::VERB_RESPONDED, 'components', $component->id, $component->title ?? 'Assignment', XapiRecorder::ACTIVITY_INTERACTION);
-        app(FamilyAlertService::class)->forLearner($learner);
+        rescue(fn () => app(FamilyAlertService::class)->forLearner($learner), report: true);
 
         return response()->json(['data' => [
             'id' => $submission->id,

@@ -559,11 +559,12 @@ function VideoSlideView({ slide, service, onAdvance }: SlideProps & { slide: Vid
       const switching = switchingRef.current
       const resumeAt = switching?.position ?? slide.resumeAt
       const dur = durationRef.current
-      if (!slide.alreadyCompleted && resumeAt > 1 && (dur === null || resumeAt < dur - 1)) {
+      if (switching || (!slide.alreadyCompleted && resumeAt > 1 && (dur === null || resumeAt < dur - 1))) {
         resumingRef.current = true
-        v.currentTime = resumeAt
-        lastTimeRef.current = resumeAt
-        setResumedFrom(resumeAt)
+        const position = Math.max(0, dur === null ? resumeAt : Math.min(resumeAt, dur))
+        v.currentTime = position
+        lastTimeRef.current = position
+        setResumedFrom(position)
       }
       if (switching) {
         switchingRef.current = null
@@ -620,7 +621,11 @@ function VideoSlideView({ slide, service, onAdvance }: SlideProps & { slide: Vid
         .catch(() => setSaveError('Your progress could not be saved. Press Continue to retry.'))
         .finally(() => setBusy(false))
     }
-    const onError = () => setFailed(true)
+    const onError = () => {
+      switchingRef.current = { position: v.currentTime, playing: false }
+      playingRef.current = false
+      setFailed(true)
+    }
 
     v.addEventListener('loadedmetadata', onLoaded)
     v.addEventListener('play', onPlay)
@@ -705,6 +710,7 @@ function VideoSlideView({ slide, service, onAdvance }: SlideProps & { slide: Vid
           <select aria-label="Video quality" value={quality} onChange={e => {
             const v = videoRef.current
             if (v) { switchingRef.current = { position: v.currentTime, playing: !v.paused }; flush('paused') }
+            setFailed(false)
             setQuality(e.target.value)
           }} className="ml-2 rounded border border-gold-500/20 bg-charcoal-900 p-2">
             {slide.src && <option value="original">Original</option>}

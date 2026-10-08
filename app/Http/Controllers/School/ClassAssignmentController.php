@@ -229,9 +229,9 @@ class ClassAssignmentController extends Controller
         });
 
         // Sent after commit so a queued mail job never races a rolled-back transaction.
-        $learner?->user?->notify(new ClassAssignmentGraded($submission->refresh(), $coinsReleased));
+        rescue(fn () => $learner?->user?->notify(new ClassAssignmentGraded($submission->refresh(), $coinsReleased)), report: true);
         if ($learner) {
-            app(FamilyAlertService::class)->forLearner($learner);
+            rescue(fn () => app(FamilyAlertService::class)->forLearner($learner), report: true);
         }
 
         return response()->json(['data' => [

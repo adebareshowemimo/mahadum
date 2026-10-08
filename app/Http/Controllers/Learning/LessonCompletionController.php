@@ -6,7 +6,9 @@ use App\Http\Controllers\Concerns\ResolvesLearner;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Learning\CompleteLessonRequest;
 use App\Models\LearnerPathNode;
+use App\Models\LearnerProfile;
 use App\Models\Lesson;
+use App\Models\LessonProgress;
 use App\Models\XpLedger;
 use App\Services\Billing\EntitlementResolver;
 use App\Services\Gamification\BadgeService;
@@ -53,14 +55,18 @@ class LessonCompletionController extends Controller
             ], 422);
         }
 
-        $alreadyDone = $progress->status === 'completed';
         $score = $scorer->score($lesson, $byComponent);
         $unlimitedHearts = (bool) $entitlements->forLearner($learner)['unlimited_hearts'];
         $heartState = $unlimitedHearts
             ? ['practice_mode' => false, 'competitive_paused_until' => null]
             : $practice->state($learner);
 
-        $result = DB::transaction(function () use ($lesson, $learner, $progress, $byComponent, $score, $alreadyDone, $heartState) {
+        $result = DB::transaction(function () use ($lesson, $learner, $progress, $byComponent, $score, $heartState, $xapi) {
+            // Answer requests lock the learner first too. Re-read completion
+            // under the lock; a request's earlier snapshot may be stale.
+            LearnerProfile::whereKey($learner->id)->lockForUpdate()->firstOrFail();
+            $progress = LessonProgress::whereKey($progress->id)->lockForUpdate()->firstOrFail();
+            $alreadyDone = $progress->status === 'completed';
             $progress->update([
                 'status' => 'completed',
                 'score' => $score,
@@ -80,6 +86,13 @@ class LessonCompletionController extends Controller
                 ]);
             }
 
+            if (! $alreadyDone) {
+                $xapi->record($learner->id, XapiRecorder::VERB_COMPLETED, 'lessons', $lesson->id, $lesson->title, XapiRecorder::ACTIVITY_LESSON, [
+                    'completion' => true,
+                    'score' => ['scaled' => round($score, 4)],
+                ]);
+            }
+
             return [
                 'xp_total' => $alreadyDone || $heartState['practice_mode'] ? 0 : $xpTotal,
                 'next_node' => $this->unlockNext($learner->id, $lesson->id),
@@ -88,13 +101,6 @@ class LessonCompletionController extends Controller
 
         if ($result['xp_total'] > 0) {
             $levels->forLearner($learner);
-        }
-
-        if (! $alreadyDone) {
-            $xapi->record($learner->id, XapiRecorder::VERB_COMPLETED, 'lessons', $lesson->id, $lesson->title, XapiRecorder::ACTIVITY_LESSON, [
-                'completion' => true,
-                'score' => ['scaled' => round($score, 4)],
-            ]);
         }
 
         // Gamification: completing a lesson is qualifying streak activity and may

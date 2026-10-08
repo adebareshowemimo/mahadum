@@ -58,7 +58,7 @@ class LearnerTasksController extends Controller
             $chore->update(['status' => 'pending_review']);
         });
 
-        app(FamilyAlertService::class)->forLearner($learner);
+        rescue(fn () => app(FamilyAlertService::class)->forLearner($learner), report: true);
 
         return response()->json(['data' => ['chore_id' => $chore->id, 'status' => 'pending_review']], 201);
     }

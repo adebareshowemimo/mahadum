@@ -155,7 +155,7 @@ class ReviewController extends Controller
 
         // Sent after commit so a queued mail job never races a rolled-back transaction.
         if ($decision === 'approve') {
-            $learner->user?->notify(new AssignmentApproved($submission, $coinsReleased));
+            rescue(fn () => $learner->user?->notify(new AssignmentApproved($submission, $coinsReleased)), report: true);
         }
 
         return response()->json(['data' => [
