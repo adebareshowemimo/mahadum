@@ -9,7 +9,8 @@ interface AdGateway
 
     /**
      * Server-side verification that the ad referenced by `$adRef` played to
-     * completion (an SSV callback for a real network; deterministic for Null).
+     * completion (for example, a stored SSV callback for a real network).
+     * Verification must remain repeatable through completion and redemption.
      */
     public function verifyReward(string $adRef): bool;
 }

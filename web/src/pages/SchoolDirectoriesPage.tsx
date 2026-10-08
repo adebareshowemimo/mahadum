@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { Alert, Button, Card, CardBody, Input, Skeleton } from '@/components/ui'
 import { SchoolGate } from '@/components/school/SchoolGate'
+import { TeacherCsvImport } from '@/components/school/TeacherCsvImport'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { batch4Api } from '@/lib/batch4/api'
 
@@ -163,6 +164,7 @@ function Teachers({ org }: { org: number }) {
           </p>
         </CardBody>
       </Card>
+      <TeacherCsvImport org={org} />
       {query.isLoading ? (
         <Skeleton className="h-48" />
       ) : query.isError ? (

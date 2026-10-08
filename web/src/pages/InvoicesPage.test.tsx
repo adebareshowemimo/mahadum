@@ -68,6 +68,7 @@ describe('InvoicesPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Apply promo code' }))
     await waitFor(() => expect(mocks.applyInvoicePromo).toHaveBeenCalledWith(9, 27, 'SCHOOL20'))
     await waitFor(() => expect(mocks.refetch).toHaveBeenCalled())
+    expect(mocks.usePayInvoice().mutateAsync).not.toHaveBeenCalled()
   })
 
   it('shows waived registration fees as a zero-value line', () => {

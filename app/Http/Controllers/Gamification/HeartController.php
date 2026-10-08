@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AdImpression;
 use App\Models\Heart;
 use App\Models\LearnerProfile;
+use App\Services\Ads\AdNetworkManager;
 use App\Services\Billing\EntitlementResolver;
 use App\Services\Gamification\PracticeModeService;
 use Illuminate\Http\JsonResponse;
@@ -69,6 +70,7 @@ class HeartController extends Controller
                 abort_unless($impression->placement === 'rewarded_heart', 422, 'This ad was not for a hearts refill.');
                 abort_unless($impression->shown_at !== null, 422, 'This ad has not been verified as shown yet.');
                 abort_if($impression->consumed_at !== null, 422, 'This ad has already been redeemed.');
+                abort_unless($impression->ad_ref !== null && app(AdNetworkManager::class)->driver()->verifyReward($impression->ad_ref), 422, 'This advert reward cannot be verified. No hearts were changed.');
                 $impression->update(['consumed_at' => now()]);
             }
 

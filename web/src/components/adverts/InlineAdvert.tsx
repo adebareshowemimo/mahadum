@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useAdsAllowed, useActiveAdvert, useRecordClick, useRecordImpression } from '@/lib/adverts/queries'
 import type { AdvertPosition } from '@/lib/api'
 import { useAuth } from '@/lib/auth/AuthProvider'
+import { useActiveProfile } from '@/lib/profile/ActiveProfile'
 
 /**
  * Reveal-on-scroll banner slot, droppable into any page's content flow.
@@ -9,10 +10,12 @@ import { useAuth } from '@/lib/auth/AuthProvider'
  * out), unlike the leaderboard which fades both ways.
  * Never shown to staff roles (admin portal, content authoring, teaching, school ops).
  */
-export function InlineAdvert({ position = 'inline' }: { position?: AdvertPosition }) {
+export function InlineAdvert({ position = 'inline', childProfile = false }: { position?: AdvertPosition; childProfile?: boolean }) {
   const adsAllowed = useAdsAllowed()
-  const { hasRole } = useAuth()
-  const childOnly = hasRole('student') && !hasRole('parent')
+  const { user, hasRole } = useAuth()
+  const { activeLearner } = useActiveProfile()
+  const canBuyData = user?.user.capabilities?.includes('billing.databundles.manage') ?? hasRole('parent', 'super_admin')
+  const childOnly = childProfile || activeLearner?.is_child === true || !canBuyData
   const { data: advert } = useActiveAdvert(position)
   const [visible, setVisible] = useState(false)
   const ref = useRef<HTMLDivElement>(null)

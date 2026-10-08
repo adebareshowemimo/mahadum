@@ -3,11 +3,9 @@
 namespace App\Services\Ads;
 
 /**
- * Resolves the outbound ad-network gateway. Returns a NullAdGateway (always
- * available, always verified) unless `services.ads.live` is on — mirrors
- * PaymentGatewayManager/TelcoGatewayManager. No real vendor (AdMob, Unity,
- * etc.) is wired yet; `services.ads.live` has nothing to turn on to until one
- * is chosen and a concrete AdGateway added here.
+ * Resolves the outbound ad-network gateway. No real vendor is wired yet, so
+ * even services.ads.live cannot enable inventory or rewards. The fallback
+ * always returns unavailable/unverified until a concrete provider is added.
  */
 class AdNetworkManager
 {

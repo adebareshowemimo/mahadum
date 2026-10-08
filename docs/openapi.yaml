@@ -2405,6 +2405,12 @@ paths:
     post:
       tags: [School]
       summary: Purchase seats (schools.seats.purchase)
+      description: Allocation, invoice and audit are created atomically. Retry the same purchase with the same key and details to replay its original result; a new deliberate purchase needs a new key.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 8, maxLength: 128 }
       requestBody:
         required: true
         content:
@@ -2416,6 +2422,7 @@ paths:
                 quantity: { type: integer, minimum: 1, maximum: 100000 }
                 term_label: { type: string, maxLength: 100, nullable: true }
                 auto_renew: { type: boolean }
+                include_registration: { type: boolean, default: true }
       responses:
         "201":
           description: Created
@@ -2429,11 +2436,68 @@ paths:
                     properties:
                       allocation_id: { type: integer }
                       quantity: { type: integer }
-                      discount_percent: { type: integer }
-                      enterprise: { type: boolean }
+                      band: { type: string }
+                      per_student_minor: { type: integer }
+                      seats_subtotal_minor: { type: integer }
+                      registration_minor: { type: integer }
+                      vat_minor: { type: integer }
                       amount_minor: { type: integer }
                       invoice_id: { type: integer }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The purchase key was already used with different details. }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /schools/{organization}/teachers/import:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationId"
+    post:
+      tags: [School]
+      summary: Preview or invite teachers from CSV (schools.classes.manage)
+      description: Active school administrator only. Firstname, Lastname, Email and Phone are required; maximum 500 teachers and 2 MiB. Any row error prevents all writes. Existing teachers and live pending invitations are skipped. Acceptance still requires the invited verified email. Preview sends nothing.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, preview]
+              properties:
+                file: { type: string, format: binary }
+                preview: { type: boolean }
+      responses:
+        "200":
+          description: Preview or import result, including physical row errors and delivery readiness.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      preview: { type: boolean }
+                      created: { type: integer }
+                      skipped: { type: integer }
+                      delivery_status: { type: string, enum: [queued, not_configured] }
+                      rows:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            row: { type: integer }
+                            name: { type: string }
+                            email: { type: string }
+                            phone: { type: string }
+                            action: { type: string, enum: [invite, skip] }
+                      errors:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            row: { type: integer }
+                            message: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: School is inactive. }
         "422": { $ref: "#/components/responses/ValidationError" }
 
   /schools/{organization}/invoices:

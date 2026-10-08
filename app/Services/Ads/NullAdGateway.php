@@ -4,19 +4,19 @@ namespace App\Services\Ads;
 
 /**
  * No-op ad network used when no live vendor is configured (local/CI, and
- * production until a vendor is chosen — see AdNetworkManager). An ad is
- * always "available" and always "verified", so the reward flow can be
- * exercised end-to-end without a real network.
+ * production until a vendor is chosen — see AdNetworkManager). No inventory
+ * or verified reward exists without a provider. Tests inject a verified gateway
+ * explicitly rather than granting rewards through this fallback.
  */
 class NullAdGateway implements AdGateway
 {
     public function available(string $placement): bool
     {
-        return true;
+        return false;
     }
 
     public function verifyReward(string $adRef): bool
     {
-        return true;
+        return false;
     }
 }

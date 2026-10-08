@@ -28,9 +28,18 @@ Checkboxes marked complete mean the code requirement was implemented and locally
 | T13 | Prevented duplicate completion requests on StrictMode effect replay, retained the first award response and displayed badge names. Existing backend completion/streak/badge tests and frontend StrictMode test pass. Production BadgeSeeder state and reported learner completion remain unverified. |
 | T14 | Approved +N coins, To do, Needs more and Rejected remain visible; adult profile copy is neutral. Full chore decision cycle and approved-history tests pass. |
 | T16–T18 | Signup country selector reused for referrals with shared server normalization; duplicate/existing-account checks pass. Reported Login/Refer prose uses DISPLAY_NAME. Passive Watch label has no play symbol; coverage/seek gate tests still pass. |
-| T15, T19–T28 | Still pending further review/acceptance. T22 vendor/design and one-heart/full-refill choices have been requested. Deferred items remain excluded. |
+| T15 | Implemented preview-first Firstname/Lastname/Email/Phone CSV invitations through the shared single-invite service. Whole-file validation, physical row errors, normalized phones, pending/accepted replay skips and tenant/membership guards pass. Verified acceptance preserves existing Family/phone/roles and populates the directory/picker. Actual mail delivery and school deployment remain part of T25. |
+| T19 | Added an explicit frontend assertion that Apply promo never invokes payment. Existing fee/discount/no-stacking backend tests pass. Production invoice #12 and deployed versions remain unverified. |
+| T20 | Reproduced seat purchase retry issuing a second allocation/invoice. Added a required Idempotency-Key, stored organization/user-scoped response and atomic allocation/invoice/audit transaction. Replay preserves original invoice/expiry; changed details conflict; intentional new purchases remain possible; failure rolls back everything. Existing production invoices #11/#12 and actual simultaneous MySQL retries remain unverified. |
+| T22 | Disabled false availability/verification in the unconfigured ad fallback and reverify before redemption, including previously shown placeholders. Tests prove unavailable ads cannot grant hearts or consume an impression. Real video/provider integration and the one-heart/full-refill decision remain pending; no banner/countdown is treated as provider proof. |
+| T23 | Data-ad messaging now follows the active/viewed child profile and server financial capability. Parent-operated child views have no checkout link; eligible adult Individuals can browse Buy data. Billing, Buy data and Tasks remain excluded; premium/staff suppression retained. Deployed campaign/placement acceptance remains. |
+| T21, T24–T28 | Still pending provider, reviewed production-data or deployment acceptance. Deferred items remain excluded. |
 
 Validation: full backend run passed 516 tests with one skipped (3,198 assertions); full frontend run passed 321 tests. Subsequent affected backend run passed 50 tests/398 assertions, including final practice and reward fixtures; affected frontend run passed 41 tests. PHPStan level 5 and frontend production build passed. Pint applied style fixes. Two new roster migrations must be applied with deployment. Live gateway, data vend, mail/push and production account acceptance are not inferred from local tests.
+
+Continuation deployment requirements: apply the teacher-invitation phone and seat-purchase receipt migrations as well as the preceding roster migrations. Deploy the updated SPA/API together: seat purchases now require an `Idempotency-Key` header, reused for retries of the same operation. The SPA retains the key across failed retries while the purchase form remains mounted; a reload/new session starts a new operation, so check the invoice list after an uncertain payment/purchase response. No existing invoice or term was rewritten. Unconfigured rewarded ads now return unavailable instead of granting placeholder rewards.
+
+Continuation validation: full backend suite passed 530 tests with one skipped (3,318 assertions); all 330 frontend tests passed. PHPStan level 5, Pint style check, frontend production build and OpenAPI YAML parsing passed. Ten of 28 task checkboxes now record locally completed code requirements; deployment and source-status acceptance remain separate. This continuation is prepared for version control and has not been deployed.
 
 Start T01–T04 roster integrity, T06 wallet availability, T08–T14 account/practice/task defects, and T19–T21 billing/provider diagnosis. Inventory/reproduce T07 in parallel, but settle reward funding before changing ledgers. P1 means current integrity/access or core-flow priority; P2 means follow-up/acceptance, not deferred scope.
 
@@ -113,7 +122,7 @@ Quick UI tasks T16–T18 can proceed independently. T05/T24 depend on roster dia
 
 ## P2 — remaining implementation and acceptance
 
-- [ ] **T15 · Complete teacher CSV onboarding** — Code; import contract first; source IDs: B33, F33.
+- [x] **T15 · Complete teacher CSV onboarding** — Code; import contract first; source IDs: B33, F33.
 
   Define and implement Firstname, Lastname, Email and Phone import using the same verified invitation/acceptance flow as single email invites. Validate and preview errors, avoid duplicate invites/memberships and preserve existing family/roles. Done when a school-admin import leads to accepted teachers in the directory/picker, with tenant isolation and readable row errors. Supervisor import and multicampus administration are excluded.
 

@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { ConsumerPageAdvert, isConsumerAdvertRoute } from './ConsumerPageAdvert'
 
-vi.mock('./InlineAdvert', () => ({ InlineAdvert: ({ position }: { position: string }) => <div data-testid="inline-advert" data-position={position} /> }))
+vi.mock('./InlineAdvert', () => ({ InlineAdvert: ({ position, childProfile }: { position: string; childProfile: boolean }) => <div data-testid="inline-advert" data-position={position} data-child-profile={String(childProfile)} /> }))
 
 describe('ConsumerPageAdvert', () => {
   it.each([
@@ -21,7 +21,7 @@ describe('ConsumerPageAdvert', () => {
     expect(isConsumerAdvertRoute(pathname)).toBe(true)
   })
 
-  it.each(['/learn/lessons/3', '/wallet', '/reviews', '/billing', '/support', '/admin', '/courses']) (
+  it.each(['/learn/lessons/3', '/wallet', '/reviews', '/billing', '/billing/data', '/tasks', '/support', '/admin', '/courses']) (
     'keeps adverts out of focused or operational route %s',
     (pathname) => {
       expect(isConsumerAdvertRoute(pathname)).toBe(false)
@@ -37,6 +37,7 @@ describe('ConsumerPageAdvert', () => {
 
     expect(screen.getByTestId('inline-advert')).toBeInTheDocument()
     expect(screen.getByTestId('inline-advert')).toHaveAttribute('data-position', 'profile_data_topup')
+    expect(screen.getByTestId('inline-advert')).toHaveAttribute('data-child-profile', 'true')
   })
 
   it('does not reserve advert space on billing', () => {

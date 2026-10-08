@@ -8,15 +8,12 @@ use App\Models\LearnerProfile;
 use App\Models\Organization;
 use App\Models\OrganizationUser;
 use App\Models\TeacherInvitation;
-use App\Models\User;
-use App\Notifications\TeacherInvited;
 use App\Services\AuditLogger;
+use App\Services\School\TeacherCsvImporter;
 use App\Services\School\TeacherInvitationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Str;
 
 class SchoolDirectoryController extends Controller
 {
@@ -64,24 +61,19 @@ class SchoolDirectoryController extends Controller
         $this->authorizeDirectory($request, $organization);
         abort_unless($organization->status === 'active', 409, 'Activate the school before inviting teachers.');
         $data = $request->validate(['name' => ['required', 'string', 'max:255'], 'email' => ['required', 'email', 'max:255']]);
-        $email = strtolower($data['email']);
-        $existing = User::whereRaw('LOWER(email) = ?', [$email])->first();
-        abort_if($existing && OrganizationUser::where('organization_id', $organization->id)->where('user_id', $existing->id)
-            ->where('role', 'teacher')->where('status', 'active')->exists(), 422, 'This teacher is already in your school.');
-        $token = Str::random(64);
-        $invitation = DB::transaction(function () use ($organization, $request, $data, $email, $token) {
-            Organization::whereKey($organization->id)->lockForUpdate()->firstOrFail();
-            // Preserve invitation history while invalidating previous pending links.
-            TeacherInvitation::where('organization_id', $organization->id)->where('email', $email)->whereNull('accepted_at')->whereNull('revoked_at')->update(['revoked_at' => now()]);
+        $invitation = app(TeacherInvitationService::class)->issue($organization, $request->user(), $data['name'], $data['email']);
 
-            return TeacherInvitation::create(['organization_id' => $organization->id, 'invited_by_user_id' => $request->user()->id,
-                'name' => $data['name'], 'email' => $email, 'token_hash' => hash('sha256', $token), 'expires_at' => now()->addDays(7)]);
-        });
-        app(AuditLogger::class)->record('school.teacher_invited', $invitation, [], ['email' => $email], $organization->id);
-        Notification::route('mail', $email)->notify(new TeacherInvited($invitation, $token));
-
-        return response()->json(['data' => ['id' => $invitation->id, 'email' => $email,
+        return response()->json(['data' => ['id' => $invitation->id, 'email' => $invitation->email,
             'delivery_status' => in_array(config('mail.default'), ['log', 'array'], true) ? 'not_configured' : 'queued']], 201);
+    }
+
+    public function importTeachers(Request $request, Organization $organization, TeacherCsvImporter $importer): JsonResponse
+    {
+        $this->authorizeDirectory($request, $organization);
+        abort_unless($organization->status === 'active', 409, 'Activate the school before inviting teachers.');
+        $request->validate(['file' => ['required', 'file', 'mimes:csv,txt', 'max:2048'], 'preview' => ['required', 'boolean']]);
+
+        return response()->json(['data' => $importer->run($organization, $request->user(), $request->file('file'), $request->boolean('preview'))]);
     }
 
     public function revoke(Request $request, Organization $organization, TeacherInvitation $invitation): JsonResponse

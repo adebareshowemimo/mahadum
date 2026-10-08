@@ -29,6 +29,14 @@ export interface TeacherInvite {
   expires_at: string
   status: string
 }
+export interface TeacherImportResult {
+  preview: boolean
+  rows: { row: number; name: string; email: string; phone: string | null; action: 'skip' | 'invite' }[]
+  errors: { row: number; message: string }[]
+  created: number
+  skipped: number
+  delivery_status: string
+}
 export interface AlertPreferences {
   low_balance_coins: number | null
   inactive_days: number | null
@@ -62,6 +70,12 @@ export interface FamilyGoals {
   alerts: AlertPreferences
 }
 export const batch4Api = {
+  importTeachers: async (org: number, file: File, preview: boolean): Promise<TeacherImportResult> => {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('preview', preview ? '1' : '0')
+    return (await api.post(`/schools/${org}/teachers/import`, form)).data.data
+  },
   students: async (org: number): Promise<StudentRow[]> =>
     (await api.get(`/schools/${org}/students`)).data.data,
   teachers: async (org: number): Promise<TeacherDirectory> =>

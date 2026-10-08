@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRef } from 'react'
 import {
   schoolApi,
   type AddClassLearnerInput,
@@ -195,10 +196,16 @@ export function useUnassignClassCourse(classId: number) {
 
 export function usePurchaseSeats(orgId: number) {
   const qc = useQueryClient()
+  const attempts = useRef(new Map<string, string>())
   return useMutation({
-    mutationFn: (input: PurchaseSeatsInput) => schoolApi.purchaseSeats(orgId, input),
-    onSuccess: () => {
-        void qc.invalidateQueries({ queryKey: schoolKeys.seats(orgId) })
+    mutationFn: (input: PurchaseSeatsInput) => {
+      const fingerprint = JSON.stringify([orgId, input.quantity, input.term_label ?? null, input.auto_renew ?? false, input.include_registration ?? true])
+      if (!attempts.current.has(fingerprint)) attempts.current.set(fingerprint, crypto.randomUUID())
+      return schoolApi.purchaseSeats(orgId, input, attempts.current.get(fingerprint)!)
+    },
+    onSuccess: (_data, input) => {
+      attempts.current.delete(JSON.stringify([orgId, input.quantity, input.term_label ?? null, input.auto_renew ?? false, input.include_registration ?? true]))
+      void qc.invalidateQueries({ queryKey: schoolKeys.seats(orgId) })
       void qc.invalidateQueries({ queryKey: schoolKeys.invoices(orgId) })
       void qc.invalidateQueries({ queryKey: schoolKeys.dashboard(orgId) })
     },

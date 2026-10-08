@@ -2,14 +2,47 @@
 
 namespace App\Services\School;
 
+use App\Models\Organization;
 use App\Models\OrganizationUser;
 use App\Models\TeacherInvitation;
 use App\Models\User;
+use App\Notifications\TeacherInvited;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 
 class TeacherInvitationService
 {
+    /** Shared issuance: bulk retries keep live links; explicit single resends replace them. */
+    public function issue(Organization $organization, User $issuer, string $name, string $email, ?string $phone = null, bool $reusePending = false): ?TeacherInvitation
+    {
+        return DB::transaction(function () use ($organization, $issuer, $name, $email, $phone, $reusePending) {
+            Organization::whereKey($organization->id)->lockForUpdate()->firstOrFail();
+            $email = strtolower(trim($email));
+            $existing = User::whereRaw('LOWER(email) = ?', [$email])->first();
+            $membership = $existing ? OrganizationUser::where('organization_id', $organization->id)->where('user_id', $existing->id)->first() : null;
+            abort_if($membership && ($membership->role !== 'teacher' || $membership->status !== 'active'), 422, 'Review this account’s existing school membership before inviting it.');
+            if ($membership) {
+                abort_unless($reusePending, 422, 'This teacher is already in your school.');
+
+                return null;
+            }
+            $pending = TeacherInvitation::where('organization_id', $organization->id)->where('email', $email)->whereNull('accepted_at')->whereNull('revoked_at');
+            if ($reusePending && (clone $pending)->where('expires_at', '>', now())->exists()) {
+                return null;
+            }
+            $pending->update(['revoked_at' => now()]);
+            $token = Str::random(64);
+            $invitation = TeacherInvitation::create(['organization_id' => $organization->id, 'invited_by_user_id' => $issuer->id,
+                'name' => $name, 'email' => $email, 'invited_phone' => $phone, 'token_hash' => hash('sha256', $token), 'expires_at' => now()->addDays(7)]);
+            app(AuditLogger::class)->record('school.teacher_invited', $invitation, [], ['email' => $email], $organization->id);
+            DB::afterCommit(fn () => Notification::route('mail', $email)->notify(new TeacherInvited($invitation, $token)));
+
+            return $invitation;
+        });
+    }
+
     public function find(string $token): TeacherInvitation
     {
         abort_unless(strlen($token) === 64, 404);

@@ -29,7 +29,7 @@ export function ConsumerPageAdvert() {
 
   return (
     <aside className="mt-8" aria-label="Sponsored content">
-      <InlineAdvert key={pathname} position={position} />
+      <InlineAdvert key={pathname} position={position} childProfile={/^\/family\/children\/\d+$/.test(pathname)} />
     </aside>
   )
 }

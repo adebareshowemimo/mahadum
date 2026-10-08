@@ -374,6 +374,7 @@ Route::prefix('v1')->group(function () {
             Route::get('students', [SchoolDirectoryController::class, 'students'])->middleware('can:schools.roster.view');
             Route::get('teacher-directory', [SchoolDirectoryController::class, 'teachers'])->middleware('can:schools.classes.manage');
             Route::post('teacher-invitations', [SchoolDirectoryController::class, 'invite'])->middleware('can:schools.classes.manage');
+            Route::post('teachers/import', [SchoolDirectoryController::class, 'importTeachers'])->middleware('can:schools.classes.manage');
             Route::post('teacher-invitations/{invitation}/revoke', [SchoolDirectoryController::class, 'revoke'])->middleware('can:schools.classes.manage');
             Route::post('students/import', [RosterController::class, 'import'])->middleware('can:schools.roster.import');
             Route::get('seats', [SeatController::class, 'index'])->middleware('can:schools.seats.view');

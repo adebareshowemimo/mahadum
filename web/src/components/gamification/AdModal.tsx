@@ -12,10 +12,9 @@ type Phase = 'requesting' | 'ineligible' | 'playing' | 'rewarding' | 'done'
  * Placeholder rewarded/interstitial ad screen (Rule 10: never interrupts an
  * active lesson — only opened between lesson nodes or from the hearts card).
  * Requests + verifies the impression server-side via /ads/*, so the reward
- * this unlocks (currently a hearts refill) can't be claimed without an ad
- * actually "playing". No ad-network vendor is wired yet (NullAdGateway
- * always fills), so this is the on-device shell the real SDK will render
- * into once one is chosen.
+ * this unlocks requires provider verification. No ad-network vendor is wired
+ * yet; the server returns unavailable until a provider is implemented. The
+ * playback shell still needs the chosen vendor's SDK before it can be used.
  */
 export function AdModal({
   open,
@@ -103,7 +102,7 @@ export function AdModal({
           <Alert variant="warning">
             {reason === 'coppa'
               ? 'Ads aren’t available on this profile.'
-              : 'No ad is available right now — please try again shortly.'}
+              : 'No ad is available right now. You can wait for your hearts to refill or view plans.'}
           </Alert>
           <Button fullWidth onClick={onClose}>
             Close

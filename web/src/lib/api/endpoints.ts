@@ -1494,8 +1494,8 @@ export const schoolApi = {
     return data.data
   },
 
-  async purchaseSeats(orgId: number, input: PurchaseSeatsInput): Promise<PurchaseSeatsResult> {
-    const { data } = await api.post(`/schools/${orgId}/seats/purchase`, input)
+  async purchaseSeats(orgId: number, input: PurchaseSeatsInput, idempotencyKey: string = crypto.randomUUID()): Promise<PurchaseSeatsResult> {
+    const { data } = await api.post(`/schools/${orgId}/seats/purchase`, input, { headers: { 'Idempotency-Key': idempotencyKey } })
     return data.data
   },
 

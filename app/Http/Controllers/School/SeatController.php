@@ -6,10 +6,12 @@ use App\Http\Controllers\Concerns\ResolvesOrganization;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\School\PurchaseSeatsRequest;
 use App\Models\Organization;
+use App\Services\AuditLogger;
 use App\Services\Billing\InvoiceLineBuilder;
 use App\Support\SeatPricing;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class SeatController extends Controller
 {
@@ -49,6 +51,29 @@ class SeatController extends Controller
     {
         $this->authorizeOrg($request->user(), $organization);
 
+        return DB::transaction(function () use ($request, $organization) {
+            Organization::whereKey($organization->id)->lockForUpdate()->firstOrFail();
+            $key = hash('sha256', $request->string('purchase_request_key')->value());
+            $fingerprint = hash('sha256', json_encode([$request->integer('quantity'), $request->input('term_label'),
+                $request->boolean('auto_renew'), $request->boolean('include_registration', true)], JSON_THROW_ON_ERROR));
+            $query = DB::table('school_seat_purchase_requests')->where('organization_id', $organization->id)
+                ->where('user_id', $request->user()->id)->where('request_key', $key);
+            if ($previous = $query->first()) {
+                abort_unless(hash_equals($previous->fingerprint, $fingerprint), 409, 'This purchase reference was already used for different seat details. Start a new purchase.');
+
+                return response()->json(['data' => json_decode($previous->response, true, flags: JSON_THROW_ON_ERROR)], 201)->header('Idempotency-Replayed', 'true');
+            }
+            $result = $this->createPurchase($request, $organization);
+            DB::table('school_seat_purchase_requests')->insert(['organization_id' => $organization->id, 'user_id' => $request->user()->id,
+                'request_key' => $key, 'fingerprint' => $fingerprint, 'response' => json_encode($result, JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
+
+            return response()->json(['data' => $result], 201);
+        });
+    }
+
+    private function createPurchase(PurchaseSeatsRequest $request, Organization $organization): array
+    {
+
         $qty = $request->integer('quantity');
         $band = SeatPricing::bandFor($qty);
         $includeRegistration = $request->boolean('include_registration', true);
@@ -74,7 +99,7 @@ class SeatController extends Controller
             'issued_at' => now(),
         ]);
 
-        return response()->json(['data' => [
+        $result = [
             'allocation_id' => $allocation->id,
             'quantity' => $qty,
             'band' => $band['label'],
@@ -84,6 +109,9 @@ class SeatController extends Controller
             'vat_minor' => $vat,
             'amount_minor' => $billed['total_minor'],
             'invoice_id' => $invoice->id,
-        ]], 201);
+        ];
+        app(AuditLogger::class)->record('school.seats_purchased', $allocation, [], $result, $organization->id);
+
+        return $result;
     }
 }

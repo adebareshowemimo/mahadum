@@ -4,15 +4,52 @@ namespace Tests\Feature;
 
 use App\Models\AdImpression;
 use App\Models\Family;
+use App\Models\Heart;
 use App\Models\LearnerProfile;
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\Ads\AdGateway;
+use App\Services\Ads\AdNetworkManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class AdNetworkTest extends TestCase
 {
     use RefreshDatabase;
+
+    private function verifiedGateway(): void
+    {
+        $gateway = \Mockery::mock(AdGateway::class);
+        $gateway->shouldReceive('available')->andReturn(true);
+        $gateway->shouldReceive('verifyReward')->andReturn(true);
+        $this->mock(AdNetworkManager::class)->shouldReceive('driver')->andReturn($gateway);
+    }
+
+    public function test_unconfigured_provider_cannot_offer_or_redeem_placeholder_rewards(): void
+    {
+        $this->seedRbac();
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $learner = $this->child($parent, now()->subYears(20)->toDateString());
+        Heart::create(['learner_profile_id' => $learner->id, 'current' => 0, 'refills_at' => now()->addHours(12)]);
+
+        $this->postJson('/api/v1/ads/request', ['learner_id' => $learner->id, 'placement' => 'rewarded_heart'])
+            ->assertOk()->assertJsonPath('data.eligible', false)->assertJsonPath('data.reason', 'unavailable');
+
+        // Previously shown placeholders must not bypass the unavailable provider.
+        $legacy = AdImpression::create([
+            'learner_profile_id' => $learner->id, 'placement' => 'rewarded_heart',
+            'coppa_passed' => true, 'ad_ref' => 'placeholder', 'shown_at' => now(),
+        ]);
+        $this->postJson('/api/v1/hearts/refill', [
+            'learner_id' => $learner->id, 'method' => 'ad', 'ad_impression_id' => $legacy->id,
+        ])->assertStatus(422);
+        $this->assertNull($legacy->fresh()->consumed_at);
+        $this->assertDatabaseHas('hearts', ['learner_profile_id' => $learner->id, 'current' => 0]);
+
+        $legacy->update(['shown_at' => null]);
+        $this->postJson("/api/v1/ads/{$legacy->id}/complete")->assertOk()->assertJsonPath('data.shown', false);
+        $this->assertNull($legacy->fresh()->shown_at);
+    }
 
     private function child(User $parent, ?string $dob = null): LearnerProfile
     {
@@ -41,6 +78,7 @@ class AdNetworkTest extends TestCase
 
     public function test_adult_learner_gets_an_ad_and_can_redeem_a_hearts_refill(): void
     {
+        $this->verifiedGateway();
         $this->seedRbac();
         $parent = $this->actingAsUser($this->userWithRole('parent'));
         $learner = $this->child($parent, now()->subYears(20)->toDateString());
@@ -74,6 +112,7 @@ class AdNetworkTest extends TestCase
 
     public function test_a_consumed_ad_impression_cannot_be_redeemed_twice(): void
     {
+        $this->verifiedGateway();
         $this->seedRbac();
         $parent = $this->actingAsUser($this->userWithRole('parent'));
         $learner = $this->child($parent, now()->subYears(20)->toDateString());
@@ -93,6 +132,7 @@ class AdNetworkTest extends TestCase
 
     public function test_a_post_lesson_impression_cannot_be_redeemed_for_a_hearts_refill(): void
     {
+        $this->verifiedGateway();
         $this->seedRbac();
         $parent = $this->actingAsUser($this->userWithRole('parent'));
         $learner = $this->child($parent, now()->subYears(20)->toDateString());

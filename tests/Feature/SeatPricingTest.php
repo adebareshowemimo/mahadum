@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Organization;
 use App\Services\Billing\InvoiceLineBuilder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -50,7 +51,7 @@ class SeatPricingTest extends TestCase
     {
         [$org] = $this->schoolAdmin();
 
-        $this->postJson("/api/v1/schools/{$org->id}/seats/purchase", ['quantity' => $qty])
+        $this->withHeader('Idempotency-Key', (string) Str::uuid())->postJson("/api/v1/schools/{$org->id}/seats/purchase", ['quantity' => $qty])
             ->assertCreated()
             ->assertJsonPath('data.band', $label)
             ->assertJsonPath('data.registration_minor', $registration)
@@ -63,13 +64,13 @@ class SeatPricingTest extends TestCase
         [$org] = $this->schoolAdmin();
 
         // 99 → 1–99 band, 100 → next band, 500 → 250–500, 501 → above 500.
-        $this->postJson("/api/v1/schools/{$org->id}/seats/purchase", ['quantity' => 99])
+        $this->withHeader('Idempotency-Key', (string) Str::uuid())->postJson("/api/v1/schools/{$org->id}/seats/purchase", ['quantity' => 99])
             ->assertJsonPath('data.band', '1–99 students');
-        $this->postJson("/api/v1/schools/{$org->id}/seats/purchase", ['quantity' => 100])
+        $this->withHeader('Idempotency-Key', (string) Str::uuid())->postJson("/api/v1/schools/{$org->id}/seats/purchase", ['quantity' => 100])
             ->assertJsonPath('data.band', '100–249 students');
-        $this->postJson("/api/v1/schools/{$org->id}/seats/purchase", ['quantity' => 500])
+        $this->withHeader('Idempotency-Key', (string) Str::uuid())->postJson("/api/v1/schools/{$org->id}/seats/purchase", ['quantity' => 500])
             ->assertJsonPath('data.band', '250–500 students');
-        $this->postJson("/api/v1/schools/{$org->id}/seats/purchase", ['quantity' => 501])
+        $this->withHeader('Idempotency-Key', (string) Str::uuid())->postJson("/api/v1/schools/{$org->id}/seats/purchase", ['quantity' => 501])
             ->assertJsonPath('data.band', 'Above 500 students');
     }
 
@@ -78,7 +79,7 @@ class SeatPricingTest extends TestCase
         [$org] = $this->schoolAdmin();
 
         // A same-year top-up: seats only, no registration fee.
-        $this->postJson("/api/v1/schools/{$org->id}/seats/purchase", ['quantity' => 50, 'include_registration' => false])
+        $this->withHeader('Idempotency-Key', (string) Str::uuid())->postJson("/api/v1/schools/{$org->id}/seats/purchase", ['quantity' => 50, 'include_registration' => false])
             ->assertCreated()
             ->assertJsonPath('data.registration_minor', 0)
             ->assertJsonPath('data.amount_minor', self::withVat(50 * 700_000));
@@ -95,7 +96,7 @@ class SeatPricingTest extends TestCase
     {
         [$org] = $this->schoolAdmin();
 
-        $this->postJson("/api/v1/schools/{$org->id}/seats/purchase", ['quantity' => 50])
+        $this->withHeader('Idempotency-Key', (string) Str::uuid())->postJson("/api/v1/schools/{$org->id}/seats/purchase", ['quantity' => 50])
             ->assertCreated();
 
         $this->getJson("/api/v1/schools/{$org->id}/invoices")
