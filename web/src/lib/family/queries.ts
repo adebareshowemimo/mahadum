@@ -1,11 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRef } from 'react'
 import {
+  ApiError,
   familyApi,
   type AddChildInput,
   type AssignmentDecision,
   type ChoreDecision,
   type CreateChoreInput,
 } from '@/lib/api'
+import { useAuth } from '@/lib/auth/AuthProvider'
 
 export const familyKeys = {
   family: ['family'] as const,
@@ -130,9 +133,31 @@ export function useTransfer() {
 }
 
 export function useFundWallet() {
+  const { user } = useAuth()
+  const attempts = useRef(new Map<string, string>())
+  const fingerprint = (input: { amount: number; gateway: string }) => JSON.stringify([user?.user.id ?? null, input.amount, input.gateway])
+  function clear(input: { amount: number; gateway: string }) {
+    const attempt = fingerprint(input)
+    attempts.current.delete(attempt)
+    try { if (user) sessionStorage.removeItem(`mahadum.wallet-funding.${attempt}`) } catch { /* Storage may be disabled. */ }
+  }
   return useMutation({
-    mutationFn: (input: { amount: number; gateway: 'flutterwave' | 'monnify' | 'paystack' }) =>
-      familyApi.fundWallet(input),
+    mutationFn: (input: { amount: number; gateway: 'flutterwave' | 'monnify' | 'paystack' }) => {
+      const attempt = fingerprint(input)
+      if (!attempts.current.has(attempt)) {
+        let previous: string | null = null
+        try { if (user) previous = sessionStorage.getItem(`mahadum.wallet-funding.${attempt}`) } catch { /* Retain in-memory retry safety. */ }
+        attempts.current.set(attempt, previous || crypto.randomUUID())
+      }
+      try { if (user) sessionStorage.setItem(`mahadum.wallet-funding.${attempt}`, attempts.current.get(attempt)!) } catch { /* Continue with the in-memory key. */ }
+      return familyApi.fundWallet({ amount: input.amount, gateway: input.gateway }, attempts.current.get(attempt)!)
+    },
+    onSuccess: (_data, input) => clear(input),
+    onError: (error, input) => {
+      // A definite rejection can be corrected. Uncertain failures retain the
+      // key so the API can replay a previously recorded successful checkout.
+      if (error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 409) clear(input)
+    },
   })
 }
 

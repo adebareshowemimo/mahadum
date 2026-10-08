@@ -129,4 +129,24 @@ class AssignmentFlowTest extends TestCase
         $this->actingAsUser($intruder);
         $this->postJson("/api/v1/assignment-submissions/{$id}/review", ['decision' => 'approve'])->assertStatus(403);
     }
+
+    public function test_parent_cannot_review_their_own_learner_assignment(): void
+    {
+        $this->seedRbac();
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $learner = $this->parentWithChild($parent);
+        $component = $this->assignmentComponent($this->publishedLesson());
+        $id = $this->postJson('/api/v1/assignment-submissions', ['learner_id' => $learner->id, 'component_id' => $component->id])
+            ->assertCreated()->json('data.id');
+        $learner->update(['user_id' => $parent->id]);
+        $wallets = app(WalletService::class);
+        $familyWallet = $wallets->walletFor($learner->family);
+        $wallets->credit($familyWallet, 100, 'test_seed');
+
+        $this->postJson("/api/v1/assignment-submissions/{$id}/review", ['decision' => 'approve'])->assertForbidden();
+        $this->assertDatabaseHas('assignment_submissions', ['id' => $id, 'parent_review_status' => 'pending', 'decided_by' => null]);
+        $this->assertDatabaseMissing('coin_transactions', ['source' => 'assignment']);
+        $this->assertSame(100, $familyWallet->fresh()->coin_balance);
+        $this->assertSame(0, $wallets->walletFor($learner)->coin_balance);
+    }
 }

@@ -145,6 +145,8 @@ export function useAddClassLearner(classId: number) {
   return useMutation({
     mutationFn: (input: AddClassLearnerInput) => schoolApi.addClassLearner(classId, input),
     onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['school-students'] })
+      void qc.invalidateQueries({ queryKey: ['school-dashboard'] })
       void qc.invalidateQueries({ queryKey: ['school-classes'] })
       void qc.invalidateQueries({ queryKey: schoolKeys.classCourses(classId) })
       void qc.invalidateQueries({ queryKey: schoolKeys.availableLearners(classId) })

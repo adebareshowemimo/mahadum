@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Family\ReviewAssignmentRequest;
 use App\Models\AssignmentSubmission;
 use App\Models\ClassAssignmentSubmission;
+use App\Models\LearnerProfile;
 use App\Models\SpeakingSubmission;
 use App\Notifications\AssignmentApproved;
 use App\Services\AuditLogger;
@@ -90,8 +91,10 @@ class ReviewController extends Controller
         abort_unless($learner && $learner->family_id === $family->id && $learner->user_id !== $request->user()->id, 403);
         $decision = $request->string('decision')->value();
 
-        $released = DB::transaction(function () use ($request, $submission, $learner, $decision) {
+        $released = DB::transaction(function () use ($request, $submission, $family, $decision) {
             $submission = ClassAssignmentSubmission::whereKey($submission->id)->lockForUpdate()->firstOrFail();
+            $learner = LearnerProfile::whereKey($submission->learner_profile_id)->lockForUpdate()->first();
+            abort_unless($learner && $learner->family_id === $family->id && $learner->user_id !== $request->user()->id, 403, 'You may only review another learner in your own family.');
             abort_unless($submission->status === 'graded' && $submission->passed && $submission->parent_review_status === 'pending', 422, 'This assignment is not waiting for parent approval.');
             $released = $decision === 'approve' ? $submission->coins_locked : 0;
             if ($released > 0) {
@@ -117,12 +120,15 @@ class ReviewController extends Controller
         $family = $this->family($request->user());
         $learner = $submission->learnerProfile;
         abort_unless($learner && $learner->family_id === $family->id, 403, 'Not your family assignment.');
+        abort_if($learner->user_id === $request->user()->id, 403, 'You cannot review your own learner assignment.');
         abort_unless($submission->parent_review_status === 'pending', 422, 'This assignment has already been reviewed.');
 
         $decision = $request->string('decision')->value();
 
-        $coinsReleased = DB::transaction(function () use ($request, $submission, $learner, $decision) {
+        $coinsReleased = DB::transaction(function () use ($request, $submission, $family, $decision) {
             $submission = AssignmentSubmission::whereKey($submission->id)->lockForUpdate()->firstOrFail();
+            $learner = LearnerProfile::whereKey($submission->learner_profile_id)->lockForUpdate()->first();
+            abort_unless($learner && $learner->family_id === $family->id && $learner->user_id !== $request->user()->id, 403, 'You may only review another learner in your own family.');
             abort_unless($submission->parent_review_status === 'pending', 422, 'This assignment has already been reviewed.');
             $released = 0;
             $status = $decision === 'approve' ? 'approved' : 'rejected';

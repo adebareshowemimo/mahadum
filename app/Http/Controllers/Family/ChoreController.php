@@ -80,9 +80,11 @@ class ChoreController extends Controller
 
             $coinsReleased = 0;
             if ($decision === 'approve') {
+                $learner = LearnerProfile::whereKey($chore->assignee_learner_profile_id)->lockForUpdate()->first();
+                abort_unless($learner && $learner->family_id === $chore->family_id, 422, 'This learner is no longer in the chore’s family. Review the assignment before approving.');
+                abort_if($learner->user_id === $request->user()->id, 403, 'You cannot approve your own learner reward.');
                 $chore->update(['status' => 'approved']);
-                if ($chore->coin_reward > 0 && $chore->assignee_learner_profile_id) {
-                    $learner = LearnerProfile::find($chore->assignee_learner_profile_id);
+                if ($chore->coin_reward > 0) {
                     $this->wallets->rewardFromParent(
                         $learner,
                         $chore->coin_reward,

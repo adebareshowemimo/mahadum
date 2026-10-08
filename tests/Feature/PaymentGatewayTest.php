@@ -165,4 +165,36 @@ class PaymentGatewayTest extends TestCase
 
         Http::assertNothingSent();
     }
+
+    public function test_wallet_checkout_retry_reuses_funding_and_signed_payment_credits_once(): void
+    {
+        $this->goLive('paystack');
+        Http::fake(['api.paystack.co/*' => Http::response([
+            'data' => ['authorization_url' => 'https://checkout.paystack.com/retry'],
+        ])]);
+        $this->seedRbac();
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $this->parentWithChild($parent);
+        $input = ['amount' => 50000, 'gateway' => 'paystack'];
+        $headers = ['Idempotency-Key' => 'wallet-uncertain-response'];
+        $original = $this->postJson('/api/v1/wallet/fund', $input, $headers)->assertCreated()->json('data');
+        $this->postJson('/api/v1/wallet/fund', $input, $headers)->assertCreated()
+            ->assertHeader('Idempotency-Replayed', 'true')->assertJsonPath('data', $original);
+        $this->postJson('/api/v1/wallet/fund', ['amount' => 60000, 'gateway' => 'paystack'], $headers)->assertConflict();
+        Http::assertSentCount(1);
+        $this->assertDatabaseCount('wallet_funding_transactions', 1);
+        $this->getJson('/api/v1/wallet')->assertOk()->assertJsonPath('data.currency_minor', 0);
+
+        $body = json_encode(['event' => 'charge.success', 'data' => [
+            'id' => 123, 'reference' => $original['gateway_ref'], 'status' => 'success', 'amount' => 50000,
+        ]]);
+        foreach (['funded', 'duplicate'] as $status) {
+            $this->call('POST', '/api/v1/webhooks/paystack', [], [], [], [
+                'HTTP_X_PAYSTACK_SIGNATURE' => hash_hmac('sha512', $body, 'sk_test'),
+                'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json',
+            ], $body)->assertOk()->assertJsonPath('status', $status);
+            $this->getJson('/api/v1/wallet')->assertOk()->assertJsonPath('data.currency_minor', 50000);
+        }
+        $this->assertDatabaseHas('wallet_funding_transactions', ['gateway_ref' => $original['gateway_ref'], 'status' => 'success']);
+    }
 }

@@ -129,4 +129,50 @@ class WalletTest extends TestCase
         $this->postJson('/api/v1/wallet/fund', ['amount' => 50000, 'gateway' => 'paystack'])
             ->assertStatus(422)->assertJsonPath('error.code', 'idempotency_key_required');
     }
+
+    public function test_parent_cannot_approve_a_chore_for_their_own_learner_profile(): void
+    {
+        $this->seedRbac();
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $learner = $this->parentWithChild($parent);
+        $wallets = app(WalletService::class);
+        $familyWallet = $wallets->walletFor($learner->family);
+        $wallets->credit($familyWallet, 100, 'test_seed');
+        $id = $this->postJson('/api/v1/chores', ['title' => 'Read', 'assignee_learner_profile_id' => $learner->id, 'coin_reward' => 15])
+            ->assertCreated()->json('data.id');
+        $this->postJson("/api/v1/chores/{$id}/submissions", ['learner_id' => $learner->id, 'completed' => true])->assertCreated();
+        $learner->update(['user_id' => $parent->id]);
+
+        $this->postJson("/api/v1/chores/{$id}/review", ['decision' => 'approve'])->assertForbidden();
+        $this->assertDatabaseHas('chores', ['id' => $id, 'status' => 'pending_review']);
+        $this->assertDatabaseHas('chore_submissions', ['chore_id' => $id, 'decision' => null]);
+        $this->assertDatabaseMissing('coin_transactions', ['source' => 'chore']);
+        $this->assertSame(100, $familyWallet->fresh()->coin_balance);
+        $this->assertSame(0, $wallets->walletFor($learner)->coin_balance);
+    }
+
+    public function test_old_chore_cannot_debit_the_wallet_of_a_learners_new_family(): void
+    {
+        $this->seedRbac();
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $learner = $this->parentWithChild($parent);
+        $other = $this->parentWithChild($this->userWithRole('parent'));
+        $wallets = app(WalletService::class);
+        $original = $wallets->walletFor($learner->family);
+        $destination = $wallets->walletFor($other->family);
+        $wallets->credit($original, 100, 'test_seed');
+        $wallets->credit($destination, 100, 'test_seed');
+        $id = $this->postJson('/api/v1/chores', ['title' => 'Read', 'assignee_learner_profile_id' => $learner->id, 'coin_reward' => 15])
+            ->assertCreated()->json('data.id');
+        $this->postJson("/api/v1/chores/{$id}/submissions", ['learner_id' => $learner->id, 'completed' => true])->assertCreated();
+        $learner->update(['family_id' => $other->family_id]);
+
+        $this->postJson("/api/v1/chores/{$id}/review", ['decision' => 'approve'])->assertUnprocessable();
+        $this->assertDatabaseHas('chores', ['id' => $id, 'status' => 'pending_review']);
+        $this->assertDatabaseHas('chore_submissions', ['chore_id' => $id, 'decision' => null]);
+        $this->assertDatabaseMissing('coin_transactions', ['source' => 'chore']);
+        $this->assertSame(100, $original->fresh()->coin_balance);
+        $this->assertSame(100, $destination->fresh()->coin_balance);
+        $this->assertSame(0, $wallets->walletFor($learner)->coin_balance);
+    }
 }

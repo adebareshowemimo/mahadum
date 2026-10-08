@@ -222,11 +222,11 @@ class SchoolClassController extends Controller
             })
             ->orderBy('display_name')
             ->limit(20)
-            ->get(['id', 'user_id', 'display_name', 'age_band'])
+            ->get(['id', 'user_id', 'display_name', 'roster_level_position'])
             ->map(fn (LearnerProfile $learner) => [
                 'id' => $learner->id,
                 'display_name' => $learner->display_name,
-                'level' => $learner->age_band,
+                'level' => $learner->roster_level_position !== null ? 'L'.$learner->roster_level_position : null,
                 'email' => $learner->user?->email,
             ]);
 

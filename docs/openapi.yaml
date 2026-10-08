@@ -2322,6 +2322,12 @@ paths:
     post:
       tags: [School]
       summary: Bulk import students (schools.roster.import)
+      description: >-
+        Preflights the whole import before writing. Any row error leaves profiles,
+        class enrollments and seat counts unchanged. Optional StudentId values must
+        be unique within the file. CSV headings must be unique and each record must
+        have the same number of columns as the header. CSV errors identify the
+        physical starting line, including after quoted multiline fields.
       requestBody:
         required: true
         content:
@@ -2337,18 +2343,20 @@ paths:
                     required: [display_name]
                     properties:
                       display_name: { type: string, maxLength: 255 }
-                      level: { type: string, maxLength: 100, nullable: true }
+                      level: { type: string, enum: [L0, L1, L2, L3, L4, L5], nullable: true }
+                      email: { type: string, format: email, maxLength: 255, nullable: true }
+                      student_id: { type: string, maxLength: 100, nullable: true }
                       class_id: { type: integer, nullable: true }
                 class_id: { type: integer, nullable: true }
           multipart/form-data:
             schema:
               type: object
               properties:
-                file: { type: string, format: binary, description: "csv/txt, max 2 MB; required without `students`" }
+                file: { type: string, format: binary, description: "csv/txt, max 2 MB; Firstname,Lastname,Email,Level with optional StudentId; legacy three-column/display_name files supported; required without `students`" }
                 class_id: { type: integer, nullable: true }
       responses:
         "201":
-          description: Created (per-row soft errors reported)
+          description: Import result (any row error prevents all import writes)
           content:
             application/json:
               schema:
@@ -2358,6 +2366,7 @@ paths:
                     type: object
                     properties:
                       created: { type: integer }
+                      matched: { type: integer }
                       errors:
                         type: array
                         items:

@@ -46,9 +46,15 @@ class RosterController extends Controller
             // All imports for a school take the same lock before identity/seat writes.
             Organization::whereKey($organization->id)->lockForUpdate()->firstOrFail();
             $occurrences = [];
+            $studentIds = [];
             $prepared = [];
             foreach ($rows as $i => $row) {
                 $rowNumber = $fromCsv ? $i : $i + 1;
+                if (isset($row['_error'])) {
+                    $errors[] = ['row' => $rowNumber, 'error' => $row['_error']];
+
+                    continue;
+                }
                 $name = trim($row['display_name'] ?? '');
                 $email = strtolower(trim($row['email'] ?? ''));
                 $row['display_name'] = $name;
@@ -69,6 +75,16 @@ class RosterController extends Controller
                     $errors[] = ['row' => $rowNumber, 'error' => $validator->errors()->first()];
 
                     continue;
+                }
+
+                $studentId = trim((string) ($row['student_id'] ?? ''));
+                if ($studentId !== '') {
+                    if (isset($studentIds[$studentId])) {
+                        $errors[] = ['row' => $rowNumber, 'error' => 'StudentId is repeated in this file (first seen at row '.$studentIds[$studentId].').'];
+
+                        continue;
+                    }
+                    $studentIds[$studentId] = $rowNumber;
                 }
 
                 $classId = $row['class_id'] ?? $defaultClassId;
@@ -162,8 +178,8 @@ class RosterController extends Controller
 
     /**
      * Header-driven; accepts Email plus legacy three-column/display_name files.
-     * Array keys identify CSV records including the header, so errors line up
-     * with the usual spreadsheet rows. Headerless records start at one.
+     * Array keys identify physical starting lines, including quoted multiline
+     * records. Headerless records start at one.
      *
      * @return array<int, array<string, string|null>>
      */
@@ -172,15 +188,29 @@ class RosterController extends Controller
         $rows = [];
         if (($handle = fopen($path, 'r')) !== false) {
             $header = null;
-            $rowNumber = 0;
-            while (($cols = fgetcsv($handle)) !== false) {
-                $rowNumber++;
+            $line = 1;
+            while (! feof($handle)) {
+                $start = ftell($handle);
+                $cols = fgetcsv($handle, escape: '');
+                if ($cols === false) {
+                    break;
+                }
+                $end = ftell($handle);
+                fseek($handle, $start);
+                $raw = fread($handle, $end - $start);
+                fseek($handle, $end);
+                $rowNumber = $line;
+                $line += max(1, substr_count(str_replace("\r\n", "\n", $raw), "\n"));
                 if ($header === null) {
                     $cols[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) ($cols[0] ?? ''));
                     $header = array_map(fn ($h) => strtolower(trim((string) $h)), $cols);
                     if (! in_array('firstname', $header, true) && ! in_array('display_name', $header, true)) {
                         $header = count($cols) >= 4 ? ['firstname', 'lastname', 'email', 'level'] : ['firstname', 'lastname', 'level'];
                         $rows[$rowNumber] = $this->rowFromCols($header, $cols);
+                    } elseif (count(array_unique($header)) !== count($header)) {
+                        $rows[$rowNumber] = ['_error' => 'CSV column names must be unique.'];
+
+                        break;
                     }
 
                     continue;
@@ -200,7 +230,10 @@ class RosterController extends Controller
      */
     private function rowFromCols(array $header, array $cols): array
     {
-        $byKey = array_combine($header, array_slice(array_pad($cols, count($header), null), 0, count($header)));
+        if (count($cols) !== count($header)) {
+            return ['_error' => 'Expected '.count($header).' CSV columns; found '.count($cols).'.'];
+        }
+        $byKey = array_combine($header, $cols);
 
         $displayName = array_key_exists('display_name', $byKey) && trim((string) $byKey['display_name']) !== ''
             ? trim((string) $byKey['display_name'])

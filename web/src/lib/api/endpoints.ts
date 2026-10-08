@@ -330,7 +330,7 @@ export const familyApi = {
   },
 
   /** Start a gateway top-up; the wallet is credited later by the webhook. */
-  async fundWallet(input: { amount: number; gateway: 'flutterwave' | 'monnify' | 'paystack' }): Promise<{
+  async fundWallet(input: { amount: number; gateway: 'flutterwave' | 'monnify' | 'paystack' }, key = idempotencyKey()): Promise<{
     funding_id: number
     status: string
     gateway: string
@@ -338,7 +338,7 @@ export const familyApi = {
     checkout_url: string | null
   }> {
     const { data } = await api.post('/wallet/fund', input, {
-      headers: { 'Idempotency-Key': idempotencyKey() },
+      headers: { 'Idempotency-Key': key },
     })
     return data.data
   },

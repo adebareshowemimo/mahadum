@@ -336,4 +336,112 @@ class RosterImportTest extends TestCase
         $this->importCsv($school, $csv)->assertForbidden();
         $this->assertDatabaseCount('learner_profiles', 0);
     }
+
+    public function test_repeated_student_ids_reject_csv_and_inline_imports_before_any_writes(): void
+    {
+        $this->seedRbac();
+        $school = $this->school();
+        $this->admin($school);
+        $allocation = SeatAllocation::create(['organization_id' => $school->id, 'total_purchased' => 10, 'active_filled' => 0]);
+        $class = SchoolClass::create(['organization_id' => $school->id, 'name' => 'Class']);
+        $csv = "StudentId,Firstname,Lastname,Email,Level\nS-001,First,Learner,,L0\n S-001 ,Other,Learner,,L0\n";
+        $this->importCsv($school, $csv, ['class_id' => $class->id])->assertCreated()
+            ->assertJsonPath('data.created', 0)->assertJsonPath('data.matched', 0)
+            ->assertJsonPath('data.errors.0.row', 3);
+        $this->postJson("/api/v1/schools/{$school->id}/students/import", [
+            'class_id' => $class->id,
+            'students' => [
+                ['student_id' => 'S-001', 'display_name' => 'First Learner'],
+                ['student_id' => ' S-001 ', 'display_name' => 'Other Learner'],
+            ],
+        ])->assertCreated()->assertJsonPath('data.created', 0)->assertJsonPath('data.errors.0.row', 2);
+        $this->assertDatabaseCount('learner_profiles', 0);
+        $this->assertDatabaseCount('school_roster_identities', 0);
+        $this->assertDatabaseCount('class_enrollments', 0);
+        $this->assertSame(0, $allocation->fresh()->active_filled);
+
+        $corrected = str_replace(' S-001 ', 'S-002', $csv);
+        $this->importCsv($school, $corrected, ['class_id' => $class->id])->assertCreated()
+            ->assertJsonPath('data.created', 2)->assertJsonPath('data.errors', []);
+        $this->importCsv($school, $corrected, ['class_id' => $class->id])->assertCreated()
+            ->assertJsonPath('data.created', 0)->assertJsonPath('data.matched', 2);
+        $this->assertDatabaseCount('learner_profiles', 2);
+        $this->assertDatabaseCount('class_enrollments', 2);
+        $this->assertSame(2, $allocation->fresh()->active_filled);
+    }
+
+    public function test_duplicate_headers_and_wrong_column_counts_reject_the_whole_roster(): void
+    {
+        $this->seedRbac();
+        $school = $this->school();
+        $this->admin($school);
+        $allocation = SeatAllocation::create(['organization_id' => $school->id, 'total_purchased' => 10, 'active_filled' => 0]);
+        $files = [
+            ["Firstname,Lastname,Email,Level, EMAIL \nFirst,Learner,,L0,\n", 1, 'column names must be unique'],
+            ["Firstname,Lastname,Email,Level\nValid,Learner,,L0\nExtra,Learner,,L0,unintended\n", 3, 'Expected 4 CSV columns; found 5'],
+            ["Firstname,Lastname,Email,Level\nValid,Learner,,L0\nMissing,Learner,L0\n", 3, 'Expected 4 CSV columns; found 3'],
+        ];
+        foreach ($files as [$csv, $row, $error]) {
+            $response = $this->importCsv($school, $csv)->assertCreated()
+                ->assertJsonPath('data.created', 0)->assertJsonPath('data.errors.0.row', $row);
+            $this->assertStringContainsString($error, $response->json('data.errors.0.error'));
+        }
+        $this->assertDatabaseCount('learner_profiles', 0);
+        $this->assertDatabaseCount('school_roster_identities', 0);
+        $this->assertSame(0, $allocation->fresh()->active_filled);
+    }
+
+    public function test_csv_errors_use_physical_starting_lines_after_quoted_multiline_fields(): void
+    {
+        $this->seedRbac();
+        $school = $this->school();
+        $this->admin($school);
+        foreach (["\n", "\r\n"] as $newline) {
+            $csv = implode($newline, ['Firstname,Lastname,Email,Level', '"Multi', 'Line",Learner,,L0', 'Invalid,Learner,,A1', '']);
+            $this->importCsv($school, $csv)->assertCreated()
+                ->assertJsonPath('data.created', 0)->assertJsonPath('data.errors.0.row', 4);
+        }
+        $this->assertDatabaseCount('learner_profiles', 0);
+        $this->assertDatabaseCount('school_roster_identities', 0);
+    }
+
+    public function test_imported_learner_can_join_classes_once_with_consistent_placement_directory_and_totals(): void
+    {
+        $this->seedRbac();
+        $school = $this->school();
+        $admin = $this->admin($school);
+        $this->actingAsUser($admin->fresh());
+        $allocation = SeatAllocation::create(['organization_id' => $school->id, 'total_purchased' => 10, 'active_filled' => 0]);
+        $class = SchoolClass::create(['organization_id' => $school->id, 'name' => 'First class']);
+        $course = $this->publishedLesson()->courseLevel->course;
+        $level = $course->levels()->create(['title' => 'L2', 'position' => 2, 'is_free' => false]);
+        $class->courseAssignments()->create(['course_id' => $course->id]);
+        $this->importCsv($school, "StudentId,Firstname,Lastname,Email,Level\nS-101,Amara,Okafor,,L2\n")
+            ->assertCreated()->assertJsonPath('data.created', 1);
+        $learner = LearnerProfile::firstOrFail();
+        $learner->update(['age_band' => '8-10']);
+
+        $this->getJson("/api/v1/schools/{$school->id}/dashboard")->assertOk()
+            ->assertJsonPath('data.student_counts', ['total' => 1, 'in_classes' => 0, 'unassigned' => 1]);
+        $this->getJson("/api/v1/classes/{$class->id}/available-learners?q=Amara")->assertOk()
+            ->assertJsonPath('data.0.id', $learner->id)->assertJsonPath('data.0.level', 'L2');
+        foreach ([1, 0] as $enrolled) {
+            $this->postJson("/api/v1/classes/{$class->id}/learners", ['learner_id' => $learner->id])
+                ->assertCreated()->assertJsonPath('data.courses_enrolled', $enrolled);
+        }
+        $this->getJson("/api/v1/classes/{$class->id}/available-learners?q=Amara")->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson("/api/v1/schools/{$school->id}/students")->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $learner->id)->assertJsonPath('data.0.level', 'L2')
+            ->assertJsonPath('data.0.classes.0.id', $class->id);
+        $second = SchoolClass::create(['organization_id' => $school->id, 'name' => 'Second class']);
+        $this->postJson("/api/v1/classes/{$second->id}/learners", ['learner_id' => $learner->id])->assertCreated();
+        $this->getJson("/api/v1/schools/{$school->id}/dashboard")->assertOk()
+            ->assertJsonPath('data.student_counts', ['total' => 1, 'in_classes' => 1, 'unassigned' => 0]);
+        $this->assertDatabaseCount('learner_profiles', 1);
+        $this->assertDatabaseCount('class_enrollments', 2);
+        $this->assertDatabaseCount('enrollments', 1);
+        $this->assertDatabaseHas('enrollments', ['learner_profile_id' => $learner->id, 'assigned_course_level_id' => $level->id]);
+        $this->assertSame('8-10', $learner->fresh()->age_band);
+        $this->assertSame(1, $allocation->fresh()->active_filled);
+    }
 }
