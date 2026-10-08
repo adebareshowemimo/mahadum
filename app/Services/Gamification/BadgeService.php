@@ -10,6 +10,7 @@ use App\Models\Lesson;
 use App\Models\QuizAttempt;
 use App\Notifications\FamilyActivityAlert;
 use App\Notifications\LearningLevelUp;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Evaluates badge conditions for a learner and awards any newly-earned badges.
@@ -43,11 +44,13 @@ class BadgeService
                     ]);
                     $newlyEarned[] = ['code' => $badge->code, 'name' => $badge->name];
 
-                    if (str_starts_with($badge->code, 'tier_')) {
-                        $this->notifyLevelUp($learner, (int) substr($badge->code, 5), $badge->name);
-                    } else {
-                        rescue(fn () => ($learner->family_id ? $learner->family->owner : $learner->user)?->notify(new FamilyActivityAlert('achievement', 'A learning achievement is ready', 'A new badge has been earned. Open achievements to celebrate the progress.', '/achievements')), report: true);
-                    }
+                    DB::afterCommit(function () use ($learner, $badge) {
+                        if (str_starts_with($badge->code, 'tier_')) {
+                            $this->notifyLevelUp($learner, (int) substr($badge->code, 5), $badge->name);
+                        } else {
+                            rescue(fn () => ($learner->family_id ? $learner->family->owner : $learner->user)?->notify(new FamilyActivityAlert('achievement', 'A learning achievement is ready', 'A new badge has been earned. Open achievements to celebrate the progress.', '/achievements')), report: true);
+                        }
+                    });
                 }
             }
         }

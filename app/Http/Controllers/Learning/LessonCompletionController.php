@@ -61,7 +61,7 @@ class LessonCompletionController extends Controller
             ? ['practice_mode' => false, 'competitive_paused_until' => null]
             : $practice->state($learner);
 
-        $result = DB::transaction(function () use ($lesson, $learner, $progress, $byComponent, $score, $heartState, $xapi) {
+        $result = DB::transaction(function () use ($lesson, $learner, $progress, $byComponent, $score, $heartState, $xapi, $levels, $streaks, $badges) {
             // Answer requests lock the learner first too. Re-read completion
             // under the lock; a request's earlier snapshot may be stale.
             LearnerProfile::whereKey($learner->id)->lockForUpdate()->firstOrFail();
@@ -93,20 +93,23 @@ class LessonCompletionController extends Controller
                 ]);
             }
 
+            $xpAwarded = $alreadyDone || $heartState['practice_mode'] ? 0 : $xpTotal;
+            $next = $this->unlockNext($learner->id, $lesson->id);
+            if ($xpAwarded > 0) {
+                $levels->forLearner($learner);
+            }
+
+            // Completion and its earned outcomes commit together. A failed badge
+            // write must leave a retry able to return the original first awards.
+            $streak = $streaks->recordActivity($learner);
+
             return [
-                'xp_total' => $alreadyDone || $heartState['practice_mode'] ? 0 : $xpTotal,
-                'next_node' => $this->unlockNext($learner->id, $lesson->id),
+                'xp_total' => $xpAwarded,
+                'next_node' => $next,
+                'streak' => ['count' => $streak->current_count, 'state' => $streak->state],
+                'badges_unlocked' => $badges->evaluate($learner),
             ];
         });
-
-        if ($result['xp_total'] > 0) {
-            $levels->forLearner($learner);
-        }
-
-        // Gamification: completing a lesson is qualifying streak activity and may
-        // unlock badges. Recorded after the lesson is finalized.
-        $streak = $streaks->recordActivity($learner);
-        $badgesUnlocked = $badges->evaluate($learner);
 
         // A finished lesson may complete a referral's activation gate (FR-7).
         $referrals->maybeActivateForLearner($learner);
@@ -114,8 +117,8 @@ class LessonCompletionController extends Controller
         return response()->json(['data' => [
             'lesson_score' => $score,
             'xp_total' => $result['xp_total'],
-            'streak' => ['count' => $streak->current_count, 'state' => $streak->state],
-            'badges_unlocked' => $badgesUnlocked,
+            'streak' => $result['streak'],
+            'badges_unlocked' => $result['badges_unlocked'],
             'next_node' => $result['next_node'],
             'practice_mode' => $heartState['practice_mode'],
             'competitive_paused_until' => $heartState['competitive_paused_until'],

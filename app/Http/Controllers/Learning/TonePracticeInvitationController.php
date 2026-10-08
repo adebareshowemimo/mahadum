@@ -86,6 +86,7 @@ class TonePracticeInvitationController extends Controller
             ->firstOrFail();
         abort_unless((int) $invitation->recipient_user_id === (int) $request->user()->id, 403, 'This invitation belongs to another account.');
         abort_if($invitation->expires_at->isPast(), 410, 'This invitation has expired.');
+        abort_unless($invitation->component()->whereHas('lesson', fn ($query) => $query->whereNotNull('published_at'))->exists(), 410, 'This practice lesson is no longer available. Ask for a new invitation.');
 
         return $invitation;
     }

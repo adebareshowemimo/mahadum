@@ -105,4 +105,40 @@ class LessonCompletionRetryTest extends TestCase
         $this->assertDatabaseCount('xp_ledger', 1);
         $this->assertSame(2, LearnerBadge::where('learner_profile_id', $learner->id)->count());
     }
+
+    public function test_badge_persistence_failure_rolls_back_completion_and_retry_returns_all_first_awards(): void
+    {
+        [$learner, $lesson, $progress] = $this->ready();
+        $fail = true;
+        LearnerBadge::creating(function (LearnerBadge $award) use (&$fail) {
+            if ($fail && $award->badge->code === 'tier_0') {
+                throw new \RuntimeException('Simulated badge persistence failure');
+            }
+        });
+        $url = "/api/v1/lessons/{$lesson->id}/complete";
+
+        $this->postJson($url, ['learner_id' => $learner->id])->assertStatus(500);
+        $this->assertSame('in_progress', $progress->fresh()->status);
+        $this->assertNull($progress->fresh()->completed_at);
+        $this->assertDatabaseCount('xp_ledger', 0);
+        $this->assertDatabaseCount('learner_badges', 0);
+        $this->assertDatabaseCount('streaks', 0);
+        $this->assertDatabaseCount('xapi_statements', 1); // Enrollment only.
+        $this->assertDatabaseMissing('learner_path_nodes', ['lesson_id' => $lesson->id, 'state' => 'completed']);
+        Notification::assertNothingSent();
+
+        $fail = false;
+        $this->postJson($url, ['learner_id' => $learner->id])->assertOk()
+            ->assertJsonPath('data.xp_total', 13)->assertJsonPath('data.streak.count', 1)
+            ->assertJsonFragment(['code' => 'first_lesson', 'name' => 'First Steps'])
+            ->assertJsonFragment(['code' => 'tier_0', 'name' => 'Star Starter']);
+        $earnedAt = LearnerBadge::where('learner_profile_id', $learner->id)->firstOrFail()->earned_at->toISOString();
+        $this->postJson($url, ['learner_id' => $learner->id])->assertOk()
+            ->assertJsonPath('data.xp_total', 0)->assertJsonCount(0, 'data.badges_unlocked');
+        $this->assertDatabaseCount('xp_ledger', 1);
+        $this->assertDatabaseCount('learner_badges', 2);
+        $this->assertDatabaseCount('streaks', 1);
+        $this->assertDatabaseCount('xapi_statements', 2);
+        $this->assertSame($earnedAt, LearnerBadge::where('learner_profile_id', $learner->id)->firstOrFail()->earned_at->toISOString());
+    }
 }

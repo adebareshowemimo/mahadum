@@ -90,6 +90,7 @@ class CoursePracticeInvitationController extends Controller
     {
         $tier = $access->tier($learner);
         $nodes = LearnerPathNode::whereHas('enrollment', fn ($q) => $q->where('learner_profile_id', $learner->id))
+            ->whereHas('lesson', fn ($query) => $query->whereNotNull('published_at'))
             ->whereHas('lesson.courseLevel')
             ->with(['lesson.courseLevel'])
             ->orderBy('position')
@@ -116,6 +117,7 @@ class CoursePracticeInvitationController extends Controller
             ->firstOrFail();
         abort_unless((int) $invitation->recipient_user_id === (int) $request->user()->id, 403, 'This invitation belongs to another account.');
         abort_if($invitation->expires_at->isPast(), 410, 'This invitation has expired.');
+        abort_unless($invitation->lesson()->whereNotNull('published_at')->exists(), 410, 'This practice lesson is no longer available. Ask for a new invitation.');
 
         return $invitation;
     }

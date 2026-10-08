@@ -119,8 +119,11 @@ class InvoiceController extends Controller
                 return response()->json(['data' => ['invoice_id' => $invoiceModel->id, 'payment_reference' => 'invoice_'.$invoiceModel->id, 'checkout_url' => null, 'settled' => true]]);
             }
 
+            $gateway = $request->string('gateway')->value() ?: (string) config('services.payments.default', 'monnify');
+            abort_unless(in_array($gateway, $this->gateways->available(), true), 422, 'This payment provider is currently unavailable. Please try again later.');
+
             $reference = 'invoice_'.$invoiceModel->id;
-            $checkout = $this->gateways->driver($request->string('gateway')->value() ?: null)->initialize(
+            $checkout = $this->gateways->driver($gateway)->initialize(
                 $reference,
                 $invoiceModel->amount_minor,
                 (string) $organization->contact_email,
