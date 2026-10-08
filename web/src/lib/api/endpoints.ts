@@ -1637,6 +1637,10 @@ export const gamificationApi = {
     return data.data
   },
 
+  async recordAdProgress(impressionId: number, positionSeconds: number): Promise<void> {
+    await api.post(`/ads/${impressionId}/progress`, { position_seconds: positionSeconds })
+  },
+
   async badges(learnerId: number): Promise<BadgesInfo> {
     const { data } = await api.get(`/learners/${learnerId}/badges`)
     return data.data

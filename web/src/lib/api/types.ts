@@ -746,6 +746,7 @@ export interface AdEligibility {
   reason?: 'coppa' | 'unavailable'
   impression_id?: number
   ad_ref?: string
+  video?: { url: string; duration_seconds: number } | null
 }
 
 export interface AdCompleteResult {

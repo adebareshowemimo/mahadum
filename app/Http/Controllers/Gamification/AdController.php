@@ -7,10 +7,13 @@ use App\Http\Controllers\Controller;
 use App\Models\AdImpression;
 use App\Models\LearnerProfile;
 use App\Services\Ads\AdNetworkManager;
+use App\Services\Ads\ManagedVideoGateway;
+use App\Services\Billing\EntitlementResolver;
 use App\Services\Settings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -47,18 +50,30 @@ class AdController extends Controller
         }
 
         $gateway = $this->ads->driver();
-        if (! $gateway->available($placement)) {
+        if (! app(EntitlementResolver::class)->forLearner($learner)['ads']
+            || $request->user()->hasAnyRole(['super_admin', 'content_owner', 'teacher', 'school_admin'])
+            || ! $gateway->available($placement)) {
             return response()->json(['data' => ['eligible' => false, 'reason' => 'unavailable']]);
         }
 
         $adRef = (string) Str::uuid();
         $impression->update(['ad_ref' => $adRef]);
+        $video = $gateway instanceof ManagedVideoGateway ? $gateway->initialize($impression) : null;
 
         return response()->json(['data' => [
             'eligible' => true,
             'impression_id' => $impression->id,
             'ad_ref' => $adRef,
+            'video' => $video,
         ]]);
+    }
+
+    public function progress(Request $request, AdImpression $impression, ManagedVideoGateway $video): JsonResponse
+    {
+        $this->learnerForReward($impression->learner_profile_id);
+        $input = $request->validate(['position_seconds' => ['required', 'numeric', 'between:0,300']]);
+
+        return response()->json(['data' => $video->progress($impression, (float) $input['position_seconds'])]);
     }
 
     /** Client reports the ad finished playing; verified server-side before it can be redeemed. */
@@ -66,16 +81,16 @@ class AdController extends Controller
     {
         $this->learnerForReward($impression->learner_profile_id); // self/parent only — not same-tenant staff
 
-        abort_unless($impression->ad_ref !== null, 422, 'No ad was requested for this impression.');
-        abort_if($impression->shown_at !== null, 422, 'This ad has already been marked as shown.');
+        return DB::transaction(function () use ($impression) {
+            $impression = AdImpression::lockForUpdate()->findOrFail($impression->id);
+            abort_unless($impression->ad_ref !== null, 422, 'No ad was requested for this impression.');
+            $verified = $this->ads->driver()->verifyReward($impression->ad_ref);
+            if ($verified && $impression->shown_at === null) {
+                $impression->update(['shown_at' => now()]);
+            }
 
-        $verified = $this->ads->driver()->verifyReward($impression->ad_ref);
-
-        if ($verified) {
-            $impression->update(['shown_at' => now()]);
-        }
-
-        return response()->json(['data' => ['shown' => $verified]]);
+            return response()->json(['data' => ['shown' => $verified]]);
+        });
     }
 
     /**

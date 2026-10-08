@@ -10,6 +10,26 @@
  */
 return [
     'groups' => [
+        'rewarded_video' => [
+            'label' => 'Rewarded video',
+            'settings' => [
+                'ads.managed_video_enabled' => [
+                    'label' => 'Enable rewarded video',
+                    'help' => 'Eligible free learners can watch the configured video to refill all five hearts. Consent-age and staff restrictions still apply.',
+                    'type' => 'bool', 'default' => false,
+                ],
+                'ads.managed_video_asset_id' => [
+                    'label' => 'Rewarded video media ID',
+                    'help' => 'Use an uploaded video from Media. Zero disables inventory. Missing files cannot earn rewards.',
+                    'type' => 'int', 'min' => 0, 'default' => 0,
+                ],
+                'ads.managed_video_duration_seconds' => [
+                    'label' => 'Rewarded video length (seconds)',
+                    'help' => 'Set the actual video length when the uploaded media has no duration metadata. The player checks this against the file. Zero leaves such videos unavailable.',
+                    'type' => 'int', 'min' => 0, 'max' => 300, 'default' => 0,
+                ],
+            ],
+        ],
         'login' => [
             'label' => 'Login page',
             'settings' => [

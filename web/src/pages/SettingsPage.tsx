@@ -3,6 +3,7 @@ import { AdminPageHeader } from '@/components/admin'
 import { Alert, Button, Card, CardBody, Input, Skeleton, Switch } from '@/components/ui'
 import { ApiError, type SettingItem, type SettingValue } from '@/lib/api'
 import { useSettings, useUpdateSettings } from '@/lib/admin/queries'
+import { useMediaLibraryInfinite } from '@/lib/content/queries'
 
 export function SettingsPage() {
   const { data, isLoading, isError } = useSettings()
@@ -91,6 +92,9 @@ function SettingField({
   error?: string
   onChange: (value: SettingValue) => void
 }) {
+  if (setting.key === 'ads.managed_video_asset_id') {
+    return <RewardedVideoPicker value={Number(value)} onChange={onChange} error={error} />
+  }
   if (setting.type === 'bool') {
     return (
       <div className="flex items-start justify-between gap-4">
@@ -117,4 +121,24 @@ function SettingField({
       {setting.help && !error && <p className="mt-1 text-xs text-muted">{setting.help}</p>}
     </div>
   )
+}
+
+function RewardedVideoPicker({ value, onChange, error }: { value: number; onChange: (value: number) => void; error?: string }) {
+  const [search, setSearch] = useState('')
+  const media = useMediaLibraryInfinite({ type: 'video', q: search, per_page: 25 })
+  const videos = media.data?.pages.flatMap(page => page.data) ?? []
+  return <div className="space-y-2">
+    <Input label="Find a rewarded video" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search uploaded videos" />
+    <label className="block text-sm font-semibold" htmlFor="rewarded-video">Rewarded video</label>
+    <select id="rewarded-video" className="w-full rounded-lg border border-border bg-surface px-3 py-2" value={value} onChange={event => onChange(Number(event.target.value))}>
+      <option value={0}>No video selected</option>
+      {value > 0 && !videos.some(video => video.id === value) && <option value={value}>Current saved video</option>}
+      {videos.map(video => <option key={video.id} value={video.id}>{video.title || video.original_name || 'Untitled video'}</option>)}
+    </select>
+    {media.isLoading && <p className="text-xs text-muted">Loading videos…</p>}
+    {media.isError && <p className="text-xs text-danger">Could not load videos. <button type="button" className="underline" onClick={() => { void media.refetch() }}>Retry</button></p>}
+    {media.hasNextPage && <Button size="sm" variant="outline" loading={media.isFetchingNextPage} onClick={() => { void media.fetchNextPage() }}>Load more videos</Button>}
+    {error && <p className="text-xs text-danger">{error}</p>}
+    <p className="text-xs text-muted">Choose a reviewed upload from Media. Set its actual length below, then enable rewarded video.</p>
+  </div>
 }

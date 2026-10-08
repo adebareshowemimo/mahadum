@@ -195,7 +195,7 @@ function Achievements({ learner }: { learner: LearnerProfile }) {
         learnerId={learner.id}
         placement="rewarded_heart"
         onClose={() => setAdOpen(false)}
-        onRewarded={(impressionId) => refill.mutate({ method: 'ad', adImpressionId: impressionId })}
+        onRewarded={(impressionId) => refill.mutateAsync({ method: 'ad', adImpressionId: impressionId })}
       />
     </div>
   )

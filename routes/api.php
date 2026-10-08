@@ -279,6 +279,7 @@ Route::prefix('v1')->group(function () {
         Route::post('hearts/refill', [HeartController::class, 'refill']);
         Route::post('ads/request', [AdController::class, 'request']);
         Route::post('ads/{impression}/complete', [AdController::class, 'complete']);
+        Route::post('ads/{impression}/progress', [AdController::class, 'progress']);
         Route::get('leagues/current', [LeaderboardController::class, 'current']);
         Route::get('leaderboard', [LeaderboardController::class, 'index']);
         Route::get('learners/{learner}/badges', [BadgeController::class, 'index'])->can('view', 'learner');

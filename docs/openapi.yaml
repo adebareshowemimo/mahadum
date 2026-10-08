@@ -1283,7 +1283,8 @@ paths:
   /hearts/refill:
     post:
       tags: [Gamification]
-      summary: Refill hearts (ad or coins)
+      summary: Refill all five hearts through a verified one-time rewarded impression
+      description: Coin refills return 422 until a coin price and debit are configured. Ad refills require ad_impression_id; ownership, placement, completion, expiry/content availability and one-time redemption are checked server-side.
       requestBody:
         required: true
         content:
@@ -1294,6 +1295,7 @@ paths:
               properties:
                 learner_id: { type: integer }
                 method: { type: string, enum: [ad, coins] }
+                ad_impression_id: { type: integer, description: Required for method ad }
       responses:
         "200":
           description: OK
@@ -1308,6 +1310,66 @@ paths:
                       current: { type: integer }
                       refills_at: { type: string, format: date-time, nullable: true }
                       method: { type: string }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /ads/request:
+    post:
+      tags: [Gamification]
+      summary: Request an eligible managed rewarded video
+      description: Self/parent only. Unknown/under-consent age, premium/staff suppression, disabled inventory or missing media returns eligible false. Managed inventory supports rewarded_heart only. Session expires after 30 minutes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [learner_id, placement]
+              properties:
+                learner_id: { type: integer }
+                placement: { type: string, enum: [rewarded_heart, post_lesson] }
+      responses:
+        "200":
+          description: Eligibility, impression_id, ad_ref and video (url, duration_seconds), or eligible false with reason coppa/unavailable
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /ads/{impression}/progress:
+    post:
+      tags: [Gamification]
+      summary: Record a contiguous managed-video playback position
+      description: Self/parent only. Server locks the impression and verifies expiry, unchanged available media, consent age and non-decreasing small advances within elapsed time. Waiting alone grants no coverage. Rejected samples return 422 without advancing progress.
+      parameters:
+        - name: impression
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [position_seconds]
+              properties:
+                position_seconds: { type: number, minimum: 0, maximum: 300 }
+      responses:
+        "200": { description: Accepted position_seconds in data envelope }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /ads/{impression}/complete:
+    post:
+      tags: [Gamification]
+      summary: Verify playback completion before heart redemption
+      description: Self/parent only. Returns shown true only with server-accepted coverage and sufficient elapsed time. Does not itself change hearts. Verified completion retries preserve the original shown date.
+      parameters:
+        - name: impression
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Boolean shown in data envelope }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
   /leagues/current:
