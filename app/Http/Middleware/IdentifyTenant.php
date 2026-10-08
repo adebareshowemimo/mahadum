@@ -30,6 +30,9 @@ class IdentifyTenant
 {
     public function handle(Request $request, Closure $next): Response
     {
+        // Resolve every request afresh, including direct consumers and removed
+        // memberships, when the application instance handles multiple requests.
+        app()->forgetInstance('currentTenantId');
         $user = $request->user();
 
         // 1) Super admin runs unscoped/global.

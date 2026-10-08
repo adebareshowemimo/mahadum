@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\OrganizationUser;
 use App\Models\SchoolClass;
 use App\Models\User;
 
@@ -19,7 +20,7 @@ class SchoolClassPolicy
 
     public function view(User $user, SchoolClass $class): bool
     {
-        if ($class->teacher_user_id === $user->id) {
+        if ($class->teacher_user_id === $user->id && $this->sameTenant($class) && $this->activeTeacher($user, $class)) {
             return true; // own classroom
         }
 
@@ -54,7 +55,20 @@ class SchoolClassPolicy
     public function createAssignment(User $user, SchoolClass $class): bool
     {
         return $user->can('schools.assignments.create') && $this->sameTenant($class)
-            && ($user->hasRole('school_admin') || (int) $class->teacher_user_id === (int) $user->id);
+            && ($user->hasRole('school_admin') || ((int) $class->teacher_user_id === (int) $user->id && $this->activeTeacher($user, $class)));
+    }
+
+    public function gradeAssignment(User $user, SchoolClass $class): bool
+    {
+        return $user->can('schools.assignments.review') && $this->sameTenant($class)
+            && (int) $class->teacher_user_id === (int) $user->id && $this->activeTeacher($user, $class);
+    }
+
+    private function activeTeacher(User $user, SchoolClass $class): bool
+    {
+        return OrganizationUser::where('organization_id', $class->organization_id)
+            ->where('user_id', $user->id)->where('role', 'teacher')->where('status', 'active')
+            ->whereHas('user', fn ($query) => $query->where('status', 'active'))->exists();
     }
 
     private function sameTenant(SchoolClass $class): bool

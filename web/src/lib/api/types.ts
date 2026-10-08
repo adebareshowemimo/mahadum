@@ -1132,6 +1132,7 @@ export interface ClassCompletionRow {
 }
 
 export interface ClassAssignmentRosterEntry {
+  media_type?: string | null
   text_body?: string | null
   parent_review_status?: string | null
   learner_id: number

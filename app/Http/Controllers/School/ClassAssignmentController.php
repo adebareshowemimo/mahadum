@@ -125,6 +125,7 @@ class ClassAssignmentController extends Controller
                 'submitted_at' => $s?->submitted_at,
                 'graded_at' => $s?->graded_at,
                 'media_url' => $s?->mediaAsset ? Storage::disk('public')->url($s->mediaAsset->url) : null,
+                'media_type' => $s?->mediaAsset?->type,
                 'text_body' => $s?->text_body,
                 'parent_review_status' => $s?->parent_review_status,
             ];
@@ -136,7 +137,7 @@ class ClassAssignmentController extends Controller
             'instructions' => $assignment->instructions,
             'due_at' => $assignment->due_at,
             'coin_reward' => $assignment->coin_reward,
-            'can_grade' => $class->teacher_user_id === $request->user()->id && $request->user()->can('schools.assignments.review'),
+            'can_grade' => $class->teacher_user_id === $request->user()->id && Gate::allows('gradeAssignment', $class),
             'roster' => $roster->values(),
         ]]);
     }
@@ -191,6 +192,7 @@ class ClassAssignmentController extends Controller
         ClassAssignment $assignment,
         ClassAssignmentSubmission $submission,
     ): JsonResponse {
+        Gate::authorize('gradeAssignment', $class);
         abort_unless($class->teacher_user_id === $request->user()->id, 403, 'Only this class\'s teacher can grade submissions.');
         abort_unless($assignment->school_class_id === $class->id, 404);
         abort_unless($submission->class_assignment_id === $assignment->id, 404);

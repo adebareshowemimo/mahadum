@@ -327,6 +327,11 @@ function RosterRow({
       </div>
 
       {entry.text_body && <p className="mt-3 whitespace-pre-wrap rounded-xl bg-surface-muted p-3 text-sm text-foreground">{entry.text_body}</p>}
+      {entry.media_url && <div className="mt-3">
+        {entry.media_type === 'audio' ? <audio aria-label={`Submitted audio by ${entry.display_name ?? 'Student'}`} src={entry.media_url} controls preload="metadata" className="w-full" />
+          : entry.media_type === 'video' ? <video aria-label={`Submitted video by ${entry.display_name ?? 'Student'}`} src={entry.media_url} controls playsInline preload="metadata" className="aspect-video w-full rounded-xl bg-charcoal-900" />
+          : <a href={entry.media_url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-primary underline">Open submitted work</a>}
+      </div>}
       {entry.parent_review_status === 'pending' && <p className="mt-2 text-sm text-muted">Reward awaiting parent approval.</p>}
 
       {entry.status === 'graded' && entry.feedback && (

@@ -196,15 +196,24 @@ export function useUnassignClassCourse(classId: number) {
 
 export function usePurchaseSeats(orgId: number) {
   const qc = useQueryClient()
+  const { user } = useAuth()
   const attempts = useRef(new Map<string, string>())
+  const attemptKey = (input: PurchaseSeatsInput) => JSON.stringify([user?.user.id ?? null, orgId, input.quantity, input.term_label ?? null, input.auto_renew ?? false, input.include_registration ?? true])
   return useMutation({
     mutationFn: (input: PurchaseSeatsInput) => {
-      const fingerprint = JSON.stringify([orgId, input.quantity, input.term_label ?? null, input.auto_renew ?? false, input.include_registration ?? true])
-      if (!attempts.current.has(fingerprint)) attempts.current.set(fingerprint, crypto.randomUUID())
+      const fingerprint = attemptKey(input)
+      if (!attempts.current.has(fingerprint)) {
+        let previous: string | null = null
+        try { if (user) previous = sessionStorage.getItem(`mahadum.seat-purchase.${fingerprint}`) } catch { /* Storage may be disabled; keep in-memory retry safety. */ }
+        attempts.current.set(fingerprint, previous || crypto.randomUUID())
+      }
+      try { if (user) sessionStorage.setItem(`mahadum.seat-purchase.${fingerprint}`, attempts.current.get(fingerprint)!) } catch { /* Continue with the retained in-memory key. */ }
       return schoolApi.purchaseSeats(orgId, input, attempts.current.get(fingerprint)!)
     },
     onSuccess: (_data, input) => {
-      attempts.current.delete(JSON.stringify([orgId, input.quantity, input.term_label ?? null, input.auto_renew ?? false, input.include_registration ?? true]))
+      const fingerprint = attemptKey(input)
+      attempts.current.delete(fingerprint)
+      try { if (user) sessionStorage.removeItem(`mahadum.seat-purchase.${fingerprint}`) } catch { /* No browser storage was required to complete this purchase. */ }
       void qc.invalidateQueries({ queryKey: schoolKeys.seats(orgId) })
       void qc.invalidateQueries({ queryKey: schoolKeys.invoices(orgId) })
       void qc.invalidateQueries({ queryKey: schoolKeys.dashboard(orgId) })
