@@ -9,6 +9,7 @@ use App\Models\LessonProgress;
 use App\Models\XpLedger;
 use App\Services\Learning\LessonScorer;
 use App\Services\Learning\XapiRecorder;
+use App\Services\Referral\ReferralService;
 use Database\Seeders\BadgeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -34,6 +35,21 @@ class LessonCompletionRetryTest extends TestCase
         }
 
         return [$learner, $lesson, $progress];
+    }
+
+    public function test_referral_failure_after_completion_does_not_hide_first_steps_or_trigger_another_reward(): void
+    {
+        [$learner, $lesson, $progress] = $this->ready();
+        $this->mock(ReferralService::class)->shouldReceive('maybeActivateForLearner')->twice()
+            ->andThrow(new \RuntimeException('Simulated referral persistence failure'));
+        $url = "/api/v1/lessons/{$lesson->id}/complete";
+        $this->postJson($url, ['learner_id' => $learner->id])->assertOk()
+            ->assertJsonPath('data.streak.count', 1)->assertJsonPath('data.xp_total', 13)
+            ->assertJsonFragment(['code' => 'first_lesson', 'name' => 'First Steps']);
+        $this->postJson($url, ['learner_id' => $learner->id])->assertOk()
+            ->assertJsonPath('data.xp_total', 0)->assertJsonCount(0, 'data.badges_unlocked');
+        $this->assertDatabaseCount('xp_ledger', 1);
+        $this->assertSame('completed', $progress->fresh()->status);
     }
 
     public function test_completion_retries_award_xp_and_first_steps_once(): void

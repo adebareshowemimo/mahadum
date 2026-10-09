@@ -6,6 +6,7 @@ use App\Models\ClassAssignmentSubmission;
 use App\Models\ClassEnrollment;
 use App\Models\CoinTransaction;
 use App\Models\Family;
+use App\Models\LearnerProfile;
 use App\Models\MediaAsset;
 use App\Models\Organization;
 use App\Models\SchoolClass;
@@ -22,6 +23,52 @@ use Tests\TestCase;
 class TeacherOnboardingAssignmentTest extends TestCase
 {
     use MakesContent, RefreshDatabase;
+
+    public function test_assignment_rosters_count_only_distinct_current_school_learners(): void
+    {
+        $this->seedRbac();
+        $school = Organization::create(['name' => 'Roster school', 'slug' => 'assignment-roster', 'type' => 'school', 'status' => 'active']);
+        $teacher = $this->userWithRole('teacher');
+        $school->members()->attach($teacher, ['role' => 'teacher', 'status' => 'active']);
+        $class = SchoolClass::create(['organization_id' => $school->id, 'name' => 'Current class', 'teacher_user_id' => $teacher->id]);
+        $current = LearnerProfile::create(['organization_id' => $school->id, 'display_name' => 'Current learner']);
+        $moved = LearnerProfile::create(['display_name' => 'Moved learner']);
+        $deleted = LearnerProfile::create(['organization_id' => $school->id, 'display_name' => 'Deleted learner']);
+        foreach ([$current, $current, $moved, $deleted] as $learner) {
+            ClassEnrollment::create(['school_class_id' => $class->id, 'learner_profile_id' => $learner->id]);
+        }
+        $deleted->delete();
+        $this->actingAsUser($teacher);
+        $assignment = $this->postJson("/api/v1/classes/{$class->id}/assignments", ['title' => 'Roster work'])->assertCreated()->json('data.id');
+        $this->getJson("/api/v1/classes/{$class->id}/assignments")->assertOk()->assertJsonPath('data.0.total_students', 1);
+        $this->getJson("/api/v1/classes/{$class->id}/assignments/{$assignment}")->assertOk()
+            ->assertJsonCount(1, 'data.roster')->assertJsonPath('data.roster.0.learner_id', $current->id);
+        $this->getJson("/api/v1/classes/{$class->id}/assignments/completion")->assertOk()->assertJsonCount(1, 'data');
+        $this->assertDatabaseCount('class_enrollments', 4);
+    }
+
+    public function test_old_class_membership_does_not_allow_submission_or_grading_after_school_move(): void
+    {
+        $this->seedRbac();
+        $school = Organization::create(['name' => 'Old school', 'slug' => 'assignment-old-school', 'type' => 'school', 'status' => 'active']);
+        $teacher = $this->userWithRole('teacher');
+        $school->members()->attach($teacher, ['role' => 'teacher', 'status' => 'active']);
+        $class = SchoolClass::create(['organization_id' => $school->id, 'name' => 'Old class', 'teacher_user_id' => $teacher->id]);
+        $parent = $this->userWithRole('parent');
+        $learner = $this->parentWithChild($parent);
+        $learner->update(['organization_id' => $school->id]);
+        ClassEnrollment::create(['school_class_id' => $class->id, 'learner_profile_id' => $learner->id]);
+        $this->actingAsUser($teacher);
+        $assignment = $this->postJson("/api/v1/classes/{$class->id}/assignments", ['title' => 'Existing work', 'coin_reward' => 10])->assertCreated()->json('data.id');
+        $submission = ClassAssignmentSubmission::create(['class_assignment_id' => $assignment, 'learner_profile_id' => $learner->id, 'status' => 'submitted']);
+        $learner->update(['organization_id' => null]);
+        $this->actingAsUser($parent);
+        $this->postJson("/api/v1/class-assignments/{$assignment}/submissions", ['learner_id' => $learner->id, 'text_body' => 'Moved work'])->assertForbidden();
+        $this->actingAsUser($teacher);
+        $this->postJson("/api/v1/classes/{$class->id}/assignments/{$assignment}/submissions/{$submission->id}/grade", ['passed' => true])->assertUnprocessable();
+        $this->assertSame('submitted', $submission->fresh()->status);
+        $this->assertDatabaseCount('coin_transactions', 0);
+    }
 
     public function test_csv_invitation_through_parent_funded_assignment_reward(): void
     {

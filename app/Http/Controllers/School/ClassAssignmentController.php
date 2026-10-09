@@ -9,7 +9,9 @@ use App\Http\Requests\School\StoreClassAssignmentRequest;
 use App\Http\Requests\School\StoreClassAssignmentSubmissionRequest;
 use App\Models\ClassAssignment;
 use App\Models\ClassAssignmentSubmission;
+use App\Models\LearnerProfile;
 use App\Models\MediaAsset;
+use App\Models\Organization;
 use App\Models\SchoolClass;
 use App\Notifications\ClassAssignmentGraded;
 use App\Services\AuditLogger;
@@ -38,12 +40,13 @@ class ClassAssignmentController extends Controller
     /** List a class's assignments with submission progress. */
     public function index(SchoolClass $class): JsonResponse
     {
-        $total = $class->enrollments()->count();
+        $currentIds = $class->currentEnrollments()->pluck('learner_profile_id')->unique();
+        $total = $currentIds->count();
 
         $assignments = $class->assignments()
             ->withCount([
-                'submissions',
-                'submissions as graded_count' => fn ($q) => $q->where('status', 'graded'),
+                'submissions' => fn ($q) => $q->whereIn('learner_profile_id', $currentIds),
+                'submissions as graded_count' => fn ($q) => $q->whereIn('learner_profile_id', $currentIds)->where('status', 'graded'),
             ])
             ->latest()
             ->get()
@@ -74,7 +77,7 @@ class ClassAssignmentController extends Controller
             ->groupBy('learner_profile_id')
             ->pluck('c', 'learner_profile_id');
 
-        $roster = $class->enrollments()->with('learnerProfile')->get()->map(function ($enrollment) use ($submittedCounts, $totalAssignments) {
+        $roster = $class->currentEnrollments()->with('learnerProfile')->get()->unique('learner_profile_id')->map(function ($enrollment) use ($submittedCounts, $totalAssignments) {
             $submitted = (int) ($submittedCounts[$enrollment->learner_profile_id] ?? 0);
 
             return [
@@ -111,7 +114,7 @@ class ClassAssignmentController extends Controller
 
         $submissions = $assignment->submissions()->with('learnerProfile', 'mediaAsset')->get()->keyBy('learner_profile_id');
 
-        $roster = $class->enrollments()->with('learnerProfile')->get()->map(function ($enrollment) use ($submissions) {
+        $roster = $class->currentEnrollments()->with('learnerProfile')->get()->unique('learner_profile_id')->map(function ($enrollment) use ($submissions) {
             $s = $submissions->get($enrollment->learner_profile_id);
 
             return [
@@ -151,15 +154,19 @@ class ClassAssignmentController extends Controller
     {
         $learner = $this->learner($request->integer('learner_id'));
         Gate::authorize('redeemReward', $learner);
-        $enrolled = $assignment->schoolClass->enrollments()->where('learner_profile_id', $learner->id)->exists();
+        $enrolled = $assignment->schoolClass->currentEnrollments()->where('learner_profile_id', $learner->id)->exists();
         abort_unless($enrolled, 403, 'This learner is not enrolled in that class.');
 
         $submission = DB::transaction(function () use ($request, $assignment, $learner) {
+            Organization::whereKey($assignment->schoolClass->organization_id)->lockForUpdate()->firstOrFail();
             // Serialize submissions for this assignment; graded work cannot be
             // reset and rewarded again by resubmitting it.
             ClassAssignment::whereKey($assignment->id)->lockForUpdate()->firstOrFail();
             $existing = $assignment->submissions()->where('learner_profile_id', $learner->id)->lockForUpdate()->first();
             abort_if($existing?->status === 'graded', 422, 'This assignment has already been graded.');
+            $learner = LearnerProfile::whereKey($learner->id)->lockForUpdate()->firstOrFail();
+            Gate::authorize('redeemReward', $learner);
+            abort_unless($assignment->schoolClass->currentEnrollments()->where('learner_profile_id', $learner->id)->exists(), 403, 'This learner is not enrolled in that class.');
             $assetId = null;
             if ($request->hasFile('media')) {
                 $path = $request->file('media')->store('class-assignments', 'public');
@@ -202,8 +209,13 @@ class ClassAssignmentController extends Controller
         $learner = $submission->learnerProfile;
 
         $coinsReleased = DB::transaction(function () use ($request, $submission, $assignment, $class, $passed) {
+            Organization::whereKey($class->organization_id)->lockForUpdate()->firstOrFail();
+            $class = SchoolClass::whereKey($class->id)->firstOrFail();
+            Gate::authorize('gradeAssignment', $class);
             $submission = ClassAssignmentSubmission::whereKey($submission->id)->lockForUpdate()->firstOrFail();
             abort_unless($submission->status === 'submitted', 422, 'This submission has already been graded.');
+            $learner = LearnerProfile::whereKey($submission->learner_profile_id)->lockForUpdate()->first();
+            abort_unless($learner && $class->currentEnrollments()->where('learner_profile_id', $learner->id)->exists(), 422, 'This learner is no longer enrolled in this class.');
             $locked = $passed ? $assignment->coin_reward : 0;
 
             $submission->update([

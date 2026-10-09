@@ -16,6 +16,7 @@ use App\Services\Learning\LessonAccess;
 use App\Services\Learning\PracticeRecipientEligibility;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
@@ -75,12 +76,16 @@ class CoursePracticeInvitationController extends Controller
 
     public function accept(Request $request, string $token, AuditLogger $audit): JsonResponse
     {
-        $invitation = $this->resolveForRecipient($request, $token);
-        if ($invitation->accepted_at === null) {
-            $acceptedAt = now();
-            $invitation->update(['accepted_at' => $acceptedAt, 'opened_at' => $invitation->opened_at ?? $acceptedAt]);
-            $audit->record('course_practice.accepted', $invitation, [], ['accepted_at' => $acceptedAt->toISOString()]);
-        }
+        $invitation = DB::transaction(function () use ($request, $token, $audit) {
+            $invitation = $this->resolveForRecipient($request, $token, true);
+            if ($invitation->accepted_at === null) {
+                $acceptedAt = now();
+                $invitation->update(['accepted_at' => $acceptedAt, 'opened_at' => $invitation->opened_at ?? $acceptedAt]);
+                $audit->record('course_practice.accepted', $invitation, [], ['accepted_at' => $acceptedAt->toISOString()]);
+            }
+
+            return $invitation;
+        });
 
         return response()->json(['data' => $this->safePayload($invitation->fresh())]);
     }
@@ -110,10 +115,11 @@ class CoursePracticeInvitationController extends Controller
         return null;
     }
 
-    private function resolveForRecipient(Request $request, string $token): CoursePracticeInvitation
+    private function resolveForRecipient(Request $request, string $token, bool $lock = false): CoursePracticeInvitation
     {
         $invitation = CoursePracticeInvitation::with(['lesson.courseLevel.course', 'inviter'])
             ->where('token_hash', hash('sha256', $token))
+            ->when($lock, fn ($query) => $query->lockForUpdate())
             ->firstOrFail();
         abort_unless((int) $invitation->recipient_user_id === (int) $request->user()->id, 403, 'This invitation belongs to another account.');
         abort_if($invitation->expires_at->isPast(), 410, 'This invitation has expired.');

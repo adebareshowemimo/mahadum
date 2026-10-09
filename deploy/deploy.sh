@@ -123,6 +123,10 @@ echo "==> Syncing RBAC roles & permissions"
 # (e.g. the emails.* group), without a manual step.
 php artisan db:seed --class="Database\Seeders\RolesAndPermissionsSeeder" --force
 
+echo "==> Syncing achievement badge definitions"
+# Completion can award First Steps only when its canonical definition exists.
+php artisan db:seed --class="Database\Seeders\BadgeSeeder" --force
+
 echo "==> Caching config/routes/views"
 php artisan config:cache
 # route:cache clears the cache internally, but that is too late when this

@@ -1,19 +1,26 @@
 <?php
 
 /**
- * Opt-in local MariaDB/MySQL acceptance: php tests/Support/verify-roster-concurrency.php
+ * Opt-in local MariaDB/MySQL roster, seat purchase and completion concurrency acceptance:
+ * php tests/Support/verify-roster-concurrency.php
  * Creates/drops only its random database on 127.0.0.1, ignoring application DB_* values.
  * Optional ROSTER_VERIFY_MYSQL_USER/PASSWORD/PORT override local root defaults.
  */
 
 use App\Models\ClassLearnerInvitation;
+use App\Models\ComponentProgress;
 use App\Models\Course;
+use App\Models\Family;
+use App\Models\Heart;
 use App\Models\Language;
+use App\Models\LearnerBadge;
 use App\Models\LearnerProfile;
+use App\Models\LessonProgress;
 use App\Models\Organization;
 use App\Models\SchoolClass;
 use App\Models\SeatAllocation;
 use App\Models\User;
+use Database\Seeders\BadgeSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Contracts\Http\Kernel as HttpKernel;
@@ -81,7 +88,9 @@ try {
             usleep(20_000);
         }
         $rows = [['display_name' => 'Same Name', 'student_id' => 'S-001'], ['display_name' => 'Same Name', 'student_id' => 'S-002']];
-        $actor = User::findOrFail($scenario === 'invitation' ? $data['invitee'] : $data['admin']);
+        $actor = User::findOrFail(match ($scenario) {
+            'invitation' => $data['invitee'], 'completion' => $data['parent'], default => $data['admin'],
+        });
         $result = match ($scenario) {
             'import' => $send($actor, 'POST', "schools/{$data['school']}/students/import", ['students' => $rows, 'class_id' => $data['first_class']]),
             'add' => $send($actor, 'POST', "classes/{$data['second_class']}/learners", ['learner_id' => $data['learner']]),
@@ -90,6 +99,7 @@ try {
                 : $send($actor, 'POST', "classes/{$data['second_class']}/learners", ['learner_id' => $data['other_learner']]),
             'invitation' => $send($actor, 'POST', "class-invitations/{$data['invite_token']}/accept"),
             'seats' => $send($actor, 'POST', "schools/{$data['school']}/seats/purchase", ['quantity' => 100, 'term_label' => '2026/27'], ['HTTP_IDEMPOTENCY_KEY' => 'isolated-concurrent-seat-purchase']),
+            'completion' => $send($actor, 'POST', "lessons/{$data['lesson']}/complete", ['learner_id' => $data['learner']]),
             'course' => $index === 0
                 ? $send($actor, 'POST', "schools/{$data['school']}/students/import", ['students' => [
                     ['display_name' => 'New Learner', 'student_id' => 'S-003'], ['display_name' => 'New Learner', 'student_id' => 'S-004'],
@@ -124,9 +134,23 @@ try {
     $control->exec('CREATE TABLE roster_verification (id INT PRIMARY KEY, ready INT NOT NULL DEFAULT 0, go INT NOT NULL DEFAULT 0, fixture JSON NOT NULL) ENGINE=InnoDB');
     DB::table('roster_verification')->insert(['id' => 1, 'fixture' => json_encode($fixture)]);
     $results = [];
-    foreach (['import', 'add', 'mixed', 'invitation', 'course', 'seats'] as $scenario) {
+    foreach (['import', 'add', 'mixed', 'invitation', 'course', 'seats', 'completion'] as $scenario) {
         if ($scenario !== 'import') {
             [$fixture['learner'], $fixture['other_learner']] = LearnerProfile::orderBy('id')->limit(2)->pluck('id')->all();
+        }
+        if ($scenario === 'completion') {
+            Artisan::call('db:seed', ['--class' => BadgeSeeder::class, '--force' => true]);
+            $parent = User::factory()->create();
+            $parent->assignRole('parent');
+            $family = Family::create(['owner_user_id' => $parent->id, 'name' => 'Completion family']);
+            LearnerProfile::whereKey($fixture['learner'])->update(['family_id' => $family->id]);
+            Heart::create(['learner_profile_id' => $fixture['learner'], 'current' => 5]);
+            $lesson = $course->levels()->firstOrFail()->lessons()->create(['title' => 'Concurrent completion', 'position' => 1, 'published_at' => now()]);
+            $component = $lesson->components()->create(['type' => 'video', 'position' => 1, 'xp_value' => 13, 'is_required' => true]);
+            $progress = LessonProgress::create(['learner_profile_id' => $fixture['learner'], 'lesson_id' => $lesson->id, 'status' => 'in_progress']);
+            ComponentProgress::create(['lesson_progress_id' => $progress->id, 'lesson_component_id' => $component->id, 'status' => 'complete', 'score' => 1]);
+            $fixture['parent'] = $parent->id;
+            $fixture['lesson'] = $lesson->id;
         }
         DB::table('roster_verification')->where('id', 1)->update(['ready' => 0, 'go' => 0, 'fixture' => json_encode($fixture)]);
         foreach ([0, 1] as $index) {
@@ -147,18 +171,22 @@ try {
             usleep(20_000);
         }
         DB::beginTransaction();
-        Organization::whereKey($school->id)->lockForUpdate()->firstOrFail();
+        if ($scenario === 'completion') {
+            LearnerProfile::whereKey($fixture['learner'])->lockForUpdate()->firstOrFail();
+        } else {
+            Organization::whereKey($school->id)->lockForUpdate()->firstOrFail();
+        }
         $control->exec('UPDATE roster_verification SET go = 1 WHERE id = 1');
         $waiting = 0;
         $deadline = microtime(true) + 10;
         while ($waiting < 2 && microtime(true) < $deadline) {
             $waiting = count(array_filter($control->query('SHOW FULL PROCESSLIST')->fetchAll(PDO::FETCH_ASSOC),
-                fn ($row) => $row['db'] === $database && str_contains(strtolower($row['Info'] ?? ''), 'for update') && str_contains($row['Info'], 'organizations')));
+                fn ($row) => $row['db'] === $database && str_contains(strtolower($row['Info'] ?? ''), 'for update') && str_contains($row['Info'], $scenario === 'completion' ? 'learner_profiles' : 'organizations')));
             usleep(20_000);
         }
         DB::commit();
         if ($waiting !== 2) {
-            throw new RuntimeException("{$scenario}: both requests did not contend on the school lock.");
+            throw new RuntimeException("{$scenario}: both requests did not contend on the expected row lock.");
         }
         $responses = [];
         foreach ($processes as [$process, $pipes]) {
@@ -173,8 +201,8 @@ try {
             $responses[] = json_decode($output, true, flags: JSON_THROW_ON_ERROR);
         }
         $processes = [];
-        $expectedLearners = ['import' => 2, 'add' => 2, 'mixed' => 2, 'invitation' => 3, 'course' => 5, 'seats' => 5][$scenario];
-        $expectedMemberships = ['import' => 2, 'add' => 3, 'mixed' => 4, 'invitation' => 5, 'course' => 7, 'seats' => 7][$scenario];
+        $expectedLearners = ['import' => 2, 'add' => 2, 'mixed' => 2, 'invitation' => 3, 'course' => 5, 'seats' => 5, 'completion' => 5][$scenario];
+        $expectedMemberships = ['import' => 2, 'add' => 3, 'mixed' => 4, 'invitation' => 5, 'course' => 7, 'seats' => 7, 'completion' => 7][$scenario];
         if (LearnerProfile::count() !== $expectedLearners || (int) $allocation->fresh()->active_filled !== $expectedLearners
             || DB::table('class_enrollments')->count() !== $expectedMemberships) {
             throw new RuntimeException("{$scenario}: profiles, memberships or seats did not reconcile.");
@@ -189,8 +217,26 @@ try {
             || DB::table('audit_logs')->where('action', 'school.seats_purchased')->count() !== 1)) {
             throw new RuntimeException('Concurrent seat retries created duplicate purchases or returned different receipts.');
         }
+        if ($scenario === 'completion') {
+            $xp = array_column(array_column($responses, 'body'), 'data');
+            $xp = array_column($xp, 'xp_total');
+            sort($xp);
+            if (array_column($responses, 'status') !== [200, 200] || $xp !== [0, 13]
+                || DB::table('xp_ledger')->where('source', 'lesson')->count() !== 1
+                || DB::table('streaks')->where('learner_profile_id', $fixture['learner'])->value('current_count') !== 1
+                || LearnerBadge::where('learner_profile_id', $fixture['learner'])->whereHas('badge', fn ($query) => $query->where('code', 'first_lesson'))->count() !== 1
+                || DB::table('xapi_statements')->where('verb', 'http://adlnet.gov/expapi/verbs/completed')->count() !== 1) {
+                throw new RuntimeException('Concurrent completion duplicated XP, First Steps, streak or completion event.');
+            }
+        }
         $results[$scenario] = ['overlapping_requests' => 2, 'statuses' => array_column($responses, 'status'),
             'profiles' => $expectedLearners, 'filled_seats' => $expectedLearners, 'memberships' => $expectedMemberships];
+        if ($scenario === 'completion') {
+            $results[$scenario]['xp_responses'] = $xp;
+            $results[$scenario]['first_steps_awards'] = 1;
+            $results[$scenario]['streak_count'] = 1;
+            $results[$scenario]['completion_events'] = 1;
+        }
     }
     $directory = $send($admin, 'GET', "schools/{$school->id}/students");
     $dashboard = $send($admin, 'GET', "schools/{$school->id}/dashboard");
@@ -206,6 +252,8 @@ try {
     }
     echo json_encode(['result' => 'passed', 'engine' => $control->query('SELECT VERSION()')->fetchColumn(), 'scenarios' => $results,
         'directory_profiles' => 5, 'course_enrollments' => 5, 'class_counts' => $classCounts, 'student_counts' => $dashboard['body']['data']['student_counts']], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR).PHP_EOL;
+} catch (Throwable $error) {
+    $failure = $error;
 } finally {
     if (! $worker) {
         if (isset($app) && DB::transactionLevel() > 0) {
@@ -219,4 +267,9 @@ try {
         }
         $control->exec("DROP DATABASE `{$database}`");
     }
+}
+
+if (isset($failure)) {
+    fwrite(STDERR, $failure->getMessage().PHP_EOL);
+    exit(1);
 }

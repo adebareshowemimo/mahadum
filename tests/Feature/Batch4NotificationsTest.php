@@ -26,6 +26,34 @@ class Batch4NotificationsTest extends TestCase
 {
     use MakesContent, RefreshDatabase;
 
+    public function test_cached_family_membership_does_not_send_inactivity_alert_for_a_moved_learner(): void
+    {
+        $this->seedRbac();
+        Notification::fake();
+        $parent = $this->userWithRole('parent');
+        $learner = $this->parentWithChild($parent);
+        $learner->update(['created_at' => now()->subDays(8)]);
+        $family = $learner->family->load('learnerProfiles', 'owner');
+        FamilyAlertPreference::create(['family_id' => $family->id, 'inactive_days' => 7, 'review_alerts' => false]);
+        $other = $this->parentWithChild($this->userWithRole('parent'));
+        $learner->update(['family_id' => $other->family_id]);
+        app(FamilyAlertService::class)->evaluate($family);
+        Notification::assertNothingSent();
+    }
+
+    public function test_cached_active_owner_cannot_receive_alerts_after_suspension(): void
+    {
+        $this->seedRbac();
+        Notification::fake();
+        $parent = $this->userWithRole('parent');
+        $learner = $this->parentWithChild($parent);
+        $family = $learner->family->load('owner');
+        FamilyAlertPreference::create(['family_id' => $family->id, 'low_balance_coins' => 0]);
+        $parent->update(['status' => 'suspended']);
+        app(FamilyAlertService::class)->evaluate($family);
+        Notification::assertNothingSent();
+    }
+
     // Public test-only key pair. Never use these keys for a deployed service.
     private const PUBLIC_KEY = 'BAE5Jwen-j4MhOC5Clgczi7twm-Jm6EhbzLZlFZwxW8BTin45VqSS2A08gyIRM6ZW1rjkSAF0i_7qaWadKa-vjI';
 

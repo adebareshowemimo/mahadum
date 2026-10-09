@@ -69,6 +69,12 @@ class SchoolClass extends Model
         return $this->hasMany(ClassEnrollment::class);
     }
 
+    /** @return HasMany<ClassEnrollment, $this> */
+    public function currentEnrollments(): HasMany
+    {
+        return $this->enrollments()->currentLearners();
+    }
+
     /**
      * @return HasMany<ClassAssignment, $this>
      */

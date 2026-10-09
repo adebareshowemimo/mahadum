@@ -112,7 +112,7 @@ class LessonCompletionController extends Controller
         });
 
         // A finished lesson may complete a referral's activation gate (FR-7).
-        $referrals->maybeActivateForLearner($learner);
+        rescue(fn () => $referrals->maybeActivateForLearner($learner), report: true);
 
         return response()->json(['data' => [
             'lesson_score' => $score,

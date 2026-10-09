@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditLog;
 use App\Models\CoursePracticeInvitation;
 use App\Models\TonePracticeInvitation;
+use App\Services\AuditLogger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -17,6 +19,37 @@ class PracticeInvitationContentTest extends TestCase
     public static function withdrawnContent(): array
     {
         return [['course', false], ['course', true], ['tone', false], ['tone', true]];
+    }
+
+    public static function invitationKinds(): array
+    {
+        return [['course'], ['tone']];
+    }
+
+    #[DataProvider('invitationKinds')]
+    public function test_failed_acceptance_audit_does_not_consume_the_invitation(string $kind): void
+    {
+        $this->seedRbac();
+        $parent = $this->userWithRole('parent');
+        $learner = $this->parentWithChild($parent);
+        $lesson = $this->publishedLesson();
+        $model = $kind === 'course' ? CoursePracticeInvitation::class : TonePracticeInvitation::class;
+        $target = $kind === 'course' ? ['lesson_id' => $lesson->id]
+            : ['lesson_component_id' => $lesson->components->firstWhere('type', 'speaking')->id];
+        $token = 'atomic-acceptance-token';
+        $invitation = $model::create([...$target, 'learner_profile_id' => $learner->id,
+            'inviter_user_id' => $parent->id, 'recipient_user_id' => $parent->id,
+            'token_hash' => hash('sha256', $token), 'channel' => 'email', 'expires_at' => now()->addHours(48)]);
+        $this->actingAsUser($parent);
+        $this->mock(AuditLogger::class)->shouldReceive('record')->once()->andThrow(new \RuntimeException('Simulated audit failure'));
+        $url = "/api/v1/{$kind}-practice/invitations/{$token}/accept";
+        $this->postJson($url)->assertStatus(500);
+        $this->assertNull($invitation->fresh()->accepted_at);
+        $this->assertNull($invitation->fresh()->opened_at);
+        $this->app->instance(AuditLogger::class, new AuditLogger);
+        $this->postJson($url)->assertOk()->assertJsonPath('data.accepted', true);
+        $this->postJson($url)->assertOk();
+        $this->assertSame(1, AuditLog::where('action', "{$kind}_practice.accepted")->count());
     }
 
     #[DataProvider('withdrawnContent')]

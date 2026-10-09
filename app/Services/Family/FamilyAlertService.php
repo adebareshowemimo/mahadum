@@ -20,6 +20,10 @@ class FamilyAlertService
 {
     public function evaluate(Family $family): void
     {
+        $family = Family::with(['owner', 'learnerProfiles'])->find($family->id);
+        if ($family === null) {
+            return;
+        }
         $prefs = FamilyAlertPreference::where('family_id', $family->id)->first();
         $owner = $family->owner;
         if (! $prefs || $owner->status !== 'active' || ! $owner->hasRole('parent') || ! $owner->hasVerifiedEmail()) {
