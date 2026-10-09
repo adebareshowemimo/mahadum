@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\Family;
 use App\Models\FamilyMember;
 use App\Models\LearnerProfile;
+use App\Models\Organization;
 use App\Models\User;
+use App\Services\AuditLogger;
 use App\Services\Family\WalletService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -38,6 +40,9 @@ class ParentRoleFamilyTest extends TestCase
     {
         $this->seedRbac();
         $user = $this->userWithRole('parent');
+        $user->assignRole('student');
+        $school = Organization::create(['name' => 'Existing school', 'slug' => 'existing-school', 'type' => 'school', 'status' => 'active']);
+        $learner = LearnerProfile::create(['user_id' => $user->id, 'organization_id' => $school->id, 'display_name' => 'Existing student']);
         $this->actingAsUser($user);
         $this->getJson('/api/v1/family')->assertNotFound();
         $this->getJson('/api/v1/wallet')->assertNotFound();
@@ -50,6 +55,9 @@ class ParentRoleFamilyTest extends TestCase
         $this->getJson('/api/v1/family')->assertOk();
         $this->getJson('/api/v1/wallet')->assertOk();
         $this->getJson('/api/v1/reviews/pending')->assertOk();
+        $this->assertNull($learner->fresh()->family_id);
+        $this->assertSame($school->id, $learner->fresh()->organization_id);
+        $this->assertTrue($user->fresh()->hasRole('student'));
     }
 
     public function test_parent_school_parent_changes_preserve_family_learners_and_wallet(): void
@@ -105,5 +113,43 @@ class ParentRoleFamilyTest extends TestCase
         $this->postJson("/api/v1/admin/users/{$user->id}/roles", ['role' => 'parent', 'action' => 'assign'])->assertUnprocessable();
         $this->assertFalse($user->fresh()->hasRole('parent'));
         $this->assertSame(1, Family::withTrashed()->where('owner_user_id', $user->id)->count());
+    }
+
+    public function test_audit_failure_rolls_back_parent_grant_and_family_and_retry_repairs_once(): void
+    {
+        $this->seedRbac();
+        $user = $this->userWithRole('student');
+        $this->actingAsUser($this->userWithRole('super_admin'));
+        $calls = 0;
+        $this->mock(AuditLogger::class)->shouldReceive('record')->twice()
+            ->andReturnUsing(function (...$arguments) use (&$calls) {
+                if (++$calls === 1) {
+                    throw new \RuntimeException('Simulated audit failure');
+                }
+
+                return (new AuditLogger)->record(...$arguments);
+            });
+        $url = "/api/v1/admin/users/{$user->id}/roles";
+        $this->postJson($url, ['role' => 'parent', 'action' => 'assign'])->assertStatus(500);
+        $this->assertFalse($user->fresh()->hasRole('parent'));
+        $this->assertSame(0, $user->ownedFamilies()->count());
+        $this->assertDatabaseCount('family_members', 0);
+        $this->postJson($url, ['role' => 'parent', 'action' => 'assign'])->assertOk();
+        $this->assertSame(1, $user->ownedFamilies()->count());
+        $this->assertSame(1, FamilyMember::where('user_id', $user->id)->count());
+        $this->assertDatabaseHas('audit_logs', ['action' => 'user.role_assign', 'subject_id' => $user->id]);
+    }
+
+    public function test_ambiguous_owned_households_are_not_silently_selected_on_parent_grant(): void
+    {
+        $this->seedRbac();
+        $user = $this->userWithRole('student');
+        foreach (['First', 'Second'] as $name) {
+            Family::create(['owner_user_id' => $user->id, 'name' => $name]);
+        }
+        $this->actingAsUser($this->userWithRole('super_admin'));
+        $this->postJson("/api/v1/admin/users/{$user->id}/roles", ['role' => 'parent', 'action' => 'assign'])->assertUnprocessable();
+        $this->assertFalse($user->fresh()->hasRole('parent'));
+        $this->assertSame(2, $user->ownedFamilies()->count());
     }
 }

@@ -226,8 +226,9 @@ class UserController extends Controller
             ], 422);
         }
 
-        $before = $user->getRoleNames()->all();
         DB::transaction(function () use ($user, $role, $action): void {
+            $user = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+            $before = $user->getRoleNames()->all();
             if ($action === 'assign') {
                 $user->assignRole($role);
                 if ($role === 'parent') {
@@ -236,14 +237,13 @@ class UserController extends Controller
             } else {
                 $user->removeRole($role);
             }
+            $this->audit->record(
+                'user.role_'.$action,
+                $user,
+                ['roles' => $before],
+                ['roles' => $user->getRoleNames()->all()],
+            );
         });
-
-        $this->audit->record(
-            'user.role_'.$action,
-            $user,
-            ['roles' => $before],
-            ['roles' => $user->getRoleNames()->all()],
-        );
 
         return response()->json(['data' => $this->row($user->fresh('roles'))]);
     }

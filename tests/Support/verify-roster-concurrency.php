@@ -55,10 +55,11 @@ try {
     DB::purge('mysql');
     $control->exec("USE `{$database}`");
 
-    $send = function (User $user, string $method, string $path, array $payload = []) use ($app): array {
+    $send = function (User $user, string $method, string $path, array $payload = [], array $headers = []) use ($app): array {
         $token = $user->createToken('isolated-roster-verification')->plainTextToken;
         $request = Request::create('/api/v1/'.$path, $method, server: [
             'HTTP_ACCEPT' => 'application/json', 'CONTENT_TYPE' => 'application/json', 'HTTP_AUTHORIZATION' => 'Bearer '.$token,
+            ...$headers,
         ], content: json_encode($payload, JSON_THROW_ON_ERROR));
         $kernel = $app->make(HttpKernel::class);
         $response = $kernel->handle($request);
@@ -88,6 +89,7 @@ try {
                 ? $send($actor, 'POST', "schools/{$data['school']}/students/import", ['students' => $rows, 'class_id' => $data['second_class']])
                 : $send($actor, 'POST', "classes/{$data['second_class']}/learners", ['learner_id' => $data['other_learner']]),
             'invitation' => $send($actor, 'POST', "class-invitations/{$data['invite_token']}/accept"),
+            'seats' => $send($actor, 'POST', "schools/{$data['school']}/seats/purchase", ['quantity' => 100, 'term_label' => '2026/27'], ['HTTP_IDEMPOTENCY_KEY' => 'isolated-concurrent-seat-purchase']),
             'course' => $index === 0
                 ? $send($actor, 'POST', "schools/{$data['school']}/students/import", ['students' => [
                     ['display_name' => 'New Learner', 'student_id' => 'S-003'], ['display_name' => 'New Learner', 'student_id' => 'S-004'],
@@ -122,7 +124,7 @@ try {
     $control->exec('CREATE TABLE roster_verification (id INT PRIMARY KEY, ready INT NOT NULL DEFAULT 0, go INT NOT NULL DEFAULT 0, fixture JSON NOT NULL) ENGINE=InnoDB');
     DB::table('roster_verification')->insert(['id' => 1, 'fixture' => json_encode($fixture)]);
     $results = [];
-    foreach (['import', 'add', 'mixed', 'invitation', 'course'] as $scenario) {
+    foreach (['import', 'add', 'mixed', 'invitation', 'course', 'seats'] as $scenario) {
         if ($scenario !== 'import') {
             [$fixture['learner'], $fixture['other_learner']] = LearnerProfile::orderBy('id')->limit(2)->pluck('id')->all();
         }
@@ -171,14 +173,21 @@ try {
             $responses[] = json_decode($output, true, flags: JSON_THROW_ON_ERROR);
         }
         $processes = [];
-        $expectedLearners = ['import' => 2, 'add' => 2, 'mixed' => 2, 'invitation' => 3, 'course' => 5][$scenario];
-        $expectedMemberships = ['import' => 2, 'add' => 3, 'mixed' => 4, 'invitation' => 5, 'course' => 7][$scenario];
+        $expectedLearners = ['import' => 2, 'add' => 2, 'mixed' => 2, 'invitation' => 3, 'course' => 5, 'seats' => 5][$scenario];
+        $expectedMemberships = ['import' => 2, 'add' => 3, 'mixed' => 4, 'invitation' => 5, 'course' => 7, 'seats' => 7][$scenario];
         if (LearnerProfile::count() !== $expectedLearners || (int) $allocation->fresh()->active_filled !== $expectedLearners
             || DB::table('class_enrollments')->count() !== $expectedMemberships) {
             throw new RuntimeException("{$scenario}: profiles, memberships or seats did not reconcile.");
         }
         if ($scenario === 'course' && (DB::table('enrollments')->count() !== 5 || DB::table('class_course_assignments')->count() !== 1)) {
             throw new RuntimeException('Concurrent course assignment missed or duplicated a current/new learner.');
+        }
+        if ($scenario === 'seats' && (array_column($responses, 'status') !== [201, 201]
+            || $responses[0]['body']['data'] !== $responses[1]['body']['data']
+            || DB::table('school_seat_purchase_requests')->count() !== 1
+            || DB::table('invoices')->count() !== 1 || SeatAllocation::count() !== 2
+            || DB::table('audit_logs')->where('action', 'school.seats_purchased')->count() !== 1)) {
+            throw new RuntimeException('Concurrent seat retries created duplicate purchases or returned different receipts.');
         }
         $results[$scenario] = ['overlapping_requests' => 2, 'statuses' => array_column($responses, 'status'),
             'profiles' => $expectedLearners, 'filled_seats' => $expectedLearners, 'memberships' => $expectedMemberships];

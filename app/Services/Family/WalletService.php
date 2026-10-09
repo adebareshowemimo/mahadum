@@ -20,9 +20,12 @@ class WalletService
     /** Parent-funded rewards conserve coins; insufficient funding leaves review pending. */
     public function rewardFromParent(LearnerProfile $learner, int $amount, string $source, Model $reference): void
     {
-        abort_unless($learner->family !== null, 422, 'A parent wallet is required before this reward can be paid.');
         abort_unless($amount > 0, 422, 'Reward coins must be positive.');
         DB::transaction(function () use ($learner, $amount, $source, $reference) {
+            $current = LearnerProfile::whereKey($learner->id)->lockForUpdate()->first();
+            abort_unless($current !== null && $current->family_id === $learner->family_id, 422, 'This learner’s family changed or is unavailable. Review the learner before paying this reward.');
+            $learner = $current;
+            abort_unless($learner->family !== null, 422, 'A parent wallet is required before this reward can be paid.');
             $parent = $this->walletFor($learner->family);
             $child = $this->walletFor($learner);
             $locked = Wallet::whereIn('id', [$parent->id, $child->id])->orderBy('id')->lockForUpdate()->get()->keyBy('id');

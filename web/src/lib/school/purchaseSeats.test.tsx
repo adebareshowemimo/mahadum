@@ -52,3 +52,28 @@ it('keeps in-memory retry safety when browser storage is disabled', async () => 
   await act(async () => { await result.current.mutateAsync({ quantity: 100 }) })
   expect(request.mock.calls[1][2]).toBe(request.mock.calls[0][2])
 })
+
+it('does not let a late successful response clear a newer uncertain purchase', async () => {
+  let finishFirst!: (value: never) => void
+  let finishRetry!: (value: never) => void
+  const request = vi.spyOn(schoolApi, 'purchaseSeats')
+    .mockReturnValueOnce(new Promise(resolve => { finishFirst = resolve }))
+    .mockReturnValueOnce(new Promise(resolve => { finishRetry = resolve }))
+    .mockRejectedValue(new Error('Response lost'))
+  const cache = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+  const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={cache}>{children}</QueryClientProvider>
+  const hook = renderHook(() => usePurchaseSeats(7), { wrapper })
+  const input = { quantity: 100 }
+  let first!: Promise<unknown>
+  let retry!: Promise<unknown>
+  act(() => { first = hook.result.current.mutateAsync(input); retry = hook.result.current.mutateAsync(input) })
+  await act(async () => { finishFirst({ invoice_id: 10 } as never); await first })
+  await act(async () => { await expect(hook.result.current.mutateAsync(input)).rejects.toThrow('Response lost') })
+  const newer = request.mock.calls[2][2]
+  expect(newer).not.toBe(request.mock.calls[0][2])
+  await act(async () => { finishRetry({ invoice_id: 10 } as never); await retry })
+  hook.unmount()
+  const remount = renderHook(() => usePurchaseSeats(7), { wrapper })
+  await act(async () => { await expect(remount.result.current.mutateAsync(input)).rejects.toThrow('Response lost') })
+  expect(request.mock.calls[3][2]).toBe(newer)
+})

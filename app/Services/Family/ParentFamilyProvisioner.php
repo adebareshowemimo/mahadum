@@ -16,7 +16,13 @@ class ParentFamilyProvisioner
         return DB::transaction(function () use ($user): Family {
             User::whereKey($user->id)->lockForUpdate()->firstOrFail();
 
-            $family = $user->ownedFamilies()->first();
+            $families = $user->ownedFamilies()->lockForUpdate()->get();
+            if ($families->count() > 1) {
+                throw ValidationException::withMessages([
+                    'role' => 'This account owns multiple families. Review the households before granting Parent access.',
+                ]);
+            }
+            $family = $families->first();
             if ($family !== null) {
                 return $family;
             }

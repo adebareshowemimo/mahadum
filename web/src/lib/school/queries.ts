@@ -202,7 +202,7 @@ export function usePurchaseSeats(orgId: number) {
   const attempts = useRef(new Map<string, string>())
   const attemptKey = (input: PurchaseSeatsInput) => JSON.stringify([user?.user.id ?? null, orgId, input.quantity, input.term_label ?? null, input.auto_renew ?? false, input.include_registration ?? true])
   return useMutation({
-    mutationFn: (input: PurchaseSeatsInput) => {
+    mutationFn: async (input: PurchaseSeatsInput) => {
       const fingerprint = attemptKey(input)
       if (!attempts.current.has(fingerprint)) {
         let previous: string | null = null
@@ -210,12 +210,15 @@ export function usePurchaseSeats(orgId: number) {
         attempts.current.set(fingerprint, previous || crypto.randomUUID())
       }
       try { if (user) sessionStorage.setItem(`mahadum.seat-purchase.${fingerprint}`, attempts.current.get(fingerprint)!) } catch { /* Continue with the retained in-memory key. */ }
-      return schoolApi.purchaseSeats(orgId, input, attempts.current.get(fingerprint)!)
+      const key = attempts.current.get(fingerprint)!
+      const result = await schoolApi.purchaseSeats(orgId, input, key)
+      if (attempts.current.get(fingerprint) === key) attempts.current.delete(fingerprint)
+      try {
+        if (user && sessionStorage.getItem(`mahadum.seat-purchase.${fingerprint}`) === key) sessionStorage.removeItem(`mahadum.seat-purchase.${fingerprint}`)
+      } catch { /* No browser storage was required to complete this purchase. */ }
+      return result
     },
-    onSuccess: (_data, input) => {
-      const fingerprint = attemptKey(input)
-      attempts.current.delete(fingerprint)
-      try { if (user) sessionStorage.removeItem(`mahadum.seat-purchase.${fingerprint}`) } catch { /* No browser storage was required to complete this purchase. */ }
+    onSuccess: () => {
       void qc.invalidateQueries({ queryKey: schoolKeys.seats(orgId) })
       void qc.invalidateQueries({ queryKey: schoolKeys.invoices(orgId) })
       void qc.invalidateQueries({ queryKey: schoolKeys.dashboard(orgId) })
