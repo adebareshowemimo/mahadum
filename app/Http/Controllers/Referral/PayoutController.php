@@ -12,6 +12,7 @@ use App\Services\AuditLogger;
 use App\Services\Settings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PayoutController extends Controller
 {
@@ -124,49 +125,65 @@ class PayoutController extends Controller
     /** Approve a payout (super_admin). Separation of duties enforced here. */
     public function approve(Request $request, Payout $payout): JsonResponse
     {
-        $approver = $request->user();
-
-        // Separation of duties — enforced HERE, not only in PayoutPolicy::approve.
-        // payouts.approve is a super_admin-only permission, and the super_admin
-        // Gate::before bypass short-circuits the policy, so the policy's
-        // approver≠beneficiary guard never actually runs for the role that can
-        // reach this endpoint. This check does, regardless of the gate.
-        if ($payout->isBeneficiary($approver)) {
-            return response()->json([
-                'error' => ['code' => 'payout_self_approval', 'message' => 'You cannot approve a payout you would receive.', 'status' => 403],
-            ], 403);
-        }
-
-        if ($payout->status !== 'requested') {
-            return response()->json([
-                'error' => ['code' => 'payout_not_pending', 'message' => 'Only a requested payout can be approved.', 'status' => 409],
-            ], 409);
-        }
-
-        $payout->update(['status' => 'approved', 'approved_by' => $approver->id]);
-
-        $this->audit->record('payout.approved', $payout, ['status' => 'requested'], ['status' => 'approved', 'amount_minor' => $payout->amount_minor]);
-
-        if ($payout->beneficiary instanceof User) {
-            $payout->beneficiary->notify(new PayoutApproved($payout));
-        }
-
-        return response()->json(['data' => ['id' => $payout->id, 'status' => $payout->status, 'approved_by' => $payout->approved_by]]);
+        return $this->review($request, $payout, 'approved');
     }
 
     /** Reject a requested payout (super_admin). Only a pending request can be rejected. */
     public function reject(Request $request, Payout $payout): JsonResponse
     {
-        if ($payout->status !== 'requested') {
-            return response()->json([
-                'error' => ['code' => 'payout_not_pending', 'message' => 'Only a requested payout can be rejected.', 'status' => 409],
-            ], 409);
+        return $this->review($request, $payout, 'rejected');
+    }
+
+    private function review(Request $request, Payout $payout, string $decision): JsonResponse
+    {
+        $approvedPayout = null;
+        $response = DB::transaction(function () use ($request, $payout, $decision, &$approvedPayout) {
+            // Route binding can precede another review; always use current locked state.
+            $payout = Payout::whereKey($payout->id)->lockForUpdate()->firstOrFail();
+            $approver = $request->user();
+
+            // Separation of duties — enforced HERE, not only in PayoutPolicy::approve.
+            // payouts.approve is a super_admin-only permission, and the super_admin
+            // Gate::before bypass short-circuits the policy, so the policy's
+            // approver≠beneficiary guard never actually runs for the role that can
+            // reach this endpoint. This check does, regardless of the gate.
+            if ($decision === 'approved' && $payout->isBeneficiary($approver)) {
+                return response()->json([
+                    'error' => ['code' => 'payout_self_approval', 'message' => 'You cannot approve a payout you would receive.', 'status' => 403],
+                ], 403);
+            }
+
+            if ($payout->status !== 'requested') {
+                return response()->json([
+                    'error' => ['code' => 'payout_not_pending', 'message' => 'Only a requested payout can be reviewed.', 'status' => 409],
+                ], 409);
+            }
+
+            $updates = ['status' => $decision];
+            if ($decision === 'approved') {
+                $updates['approved_by'] = $approver->id;
+            }
+            $payout->update($updates);
+
+            $this->audit->record('payout.'.$decision, $payout, ['status' => 'requested'], ['status' => $decision, 'amount_minor' => $payout->amount_minor]);
+
+            $data = ['id' => $payout->id, 'status' => $payout->status];
+            if ($decision === 'approved') {
+                $data['approved_by'] = $payout->approved_by;
+                $approvedPayout = $payout;
+            }
+
+            return response()->json(['data' => $data]);
+        });
+
+        if ($approvedPayout !== null) {
+            rescue(function () use ($approvedPayout) {
+                if ($approvedPayout->beneficiary instanceof User) {
+                    $approvedPayout->beneficiary->notify(new PayoutApproved($approvedPayout));
+                }
+            }, report: true);
         }
 
-        $payout->update(['status' => 'rejected']);
-
-        $this->audit->record('payout.rejected', $payout, ['status' => 'requested'], ['status' => 'rejected', 'amount_minor' => $payout->amount_minor]);
-
-        return response()->json(['data' => ['id' => $payout->id, 'status' => $payout->status]]);
+        return $response;
     }
 }

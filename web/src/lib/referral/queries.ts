@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRef } from 'react'
 import {
+  ApiError,
   referralApi,
   schoolApi,
   type RequestPayoutInput,
@@ -56,8 +58,34 @@ export function useSendInvitation() {
 
 export function useRequestPayout() {
   const qc = useQueryClient()
+  const { user } = useAuth()
+  const attempts = useRef(new Map<string, string>())
   return useMutation({
-    mutationFn: (input: RequestPayoutInput) => referralApi.requestPayout(input),
+    mutationFn: async (input: RequestPayoutInput) => {
+      // Capture this account/operation once, including across an in-flight account change.
+      const attempt = JSON.stringify([user?.user.id ?? null, input.amount_minor, input.method])
+      const storageKey = `mahadum.payout-request.${attempt}`
+      if (!attempts.current.has(attempt)) {
+        let previous: string | null = null
+        try { if (user) previous = sessionStorage.getItem(storageKey) } catch { /* Keep in-memory retry safety. */ }
+        attempts.current.set(attempt, previous || crypto.randomUUID())
+      }
+      const key = attempts.current.get(attempt)!
+      try { if (user) sessionStorage.setItem(storageKey, key) } catch { /* Browser storage may be disabled. */ }
+      const clear = () => {
+        if (attempts.current.get(attempt) === key) attempts.current.delete(attempt)
+        try { if (user && sessionStorage.getItem(storageKey) === key) sessionStorage.removeItem(storageKey) } catch { /* In-memory cleanup still succeeds. */ }
+      }
+      try {
+        const result = await referralApi.requestPayout(input, key)
+        clear()
+        return result
+      } catch (error) {
+        // Preserve uncertain attempts so the server can replay its recorded response.
+        if (error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 409) clear()
+        throw error
+      }
+    },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: referralKeys.payouts })
       void qc.invalidateQueries({ queryKey: referralKeys.summary })

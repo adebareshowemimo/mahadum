@@ -35,7 +35,7 @@ class ClassCourseEnrollmentService
     {
         $count = 0;
 
-        foreach ($class->enrollments()->with('learnerProfile')->get() as $classEnrollment) {
+        foreach ($class->enrollments()->currentLearners()->with('learnerProfile')->get()->unique('learner_profile_id') as $classEnrollment) {
             if ($classEnrollment->learnerProfile && $this->enroll($classEnrollment->learnerProfile, $course)) {
                 $count++;
             }

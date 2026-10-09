@@ -52,7 +52,9 @@ class SchoolClassController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = SchoolClass::with('teacherUser')->withCount('enrollments');
+        $query = SchoolClass::with('teacherUser')->withCount([
+            'enrollments' => fn ($query) => $query->currentLearners()->select(DB::raw('COUNT(DISTINCT learner_profile_id)')),
+        ]);
 
         // ?mine=1 — only classes this user teaches (used by the Teacher Profile page).
         if ($request->boolean('mine')) {
@@ -73,7 +75,7 @@ class SchoolClassController extends Controller
 
     public function show(Request $request, SchoolClass $class): JsonResponse
     {
-        $class->load('teacherUser', 'enrollments.learnerProfile');
+        $class->load(['teacherUser', 'enrollments' => fn ($query) => $query->currentLearners()->with('learnerProfile')]);
         $canUpdate = $request->user()->can('update', $class);
         $teacherOnly = $request->user()->hasRole('teacher') && ! $request->user()->hasRole('school_admin');
 
@@ -86,7 +88,7 @@ class SchoolClassController extends Controller
             'teacher_user_id' => $class->teacher_user_id,
             // Expose existing policy decisions for the class workspace controls.
             'capabilities' => ['update' => $canUpdate, 'assign_teacher' => $canUpdate && ! $teacherOnly, 'create_assignment' => $request->user()->can('createAssignment', $class)],
-            'students' => $class->enrollments->map(fn ($e) => [
+            'students' => $class->enrollments->unique('learner_profile_id')->map(fn ($e) => [
                 'learner_id' => $e->learner_profile_id,
                 'display_name' => $e->learnerProfile?->display_name,
             ])->values(),
@@ -100,7 +102,7 @@ class SchoolClassController extends Controller
      */
     public function analytics(SchoolClass $class): JsonResponse
     {
-        $class->load('enrollments.learnerProfile');
+        $class->load(['enrollments' => fn ($query) => $query->currentLearners()->with('learnerProfile')]);
         $ids = $class->enrollments->pluck('learner_profile_id');
 
         $progress = LessonProgress::whereIn('learner_profile_id', $ids)
@@ -120,7 +122,7 @@ class SchoolClassController extends Controller
             ->selectRaw('learner_profile_id, COUNT(*) as total, SUM(CASE WHEN passed = 1 THEN 1 ELSE 0 END) as passed')
             ->groupBy('learner_profile_id')->get()->keyBy('learner_profile_id');
 
-        $students = $class->enrollments->map(function ($e) use ($progress, $quiz, $speaking, $assignments) {
+        $students = $class->enrollments->unique('learner_profile_id')->map(function ($e) use ($progress, $quiz, $speaking, $assignments) {
             $id = $e->learner_profile_id;
             $p = $progress->get($id);
             $qz = $quiz->get($id);
@@ -152,7 +154,7 @@ class SchoolClassController extends Controller
     /** Existing learning records, restricted to an enrolled student of this class. */
     public function studentAnalytics(SchoolClass $class, LearnerProfile $learner): JsonResponse
     {
-        abort_unless($class->enrollments()->where('learner_profile_id', $learner->id)->exists(), 404);
+        abort_unless($class->enrollments()->currentLearners()->where('learner_profile_id', $learner->id)->exists(), 404);
 
         return response()->json(['data' => [
             'learner' => ['id' => $learner->id, 'display_name' => $learner->display_name],
@@ -237,7 +239,9 @@ class SchoolClassController extends Controller
     public function addLearner(StoreClassLearnerRequest $request, SchoolClass $class): JsonResponse
     {
         [$learner, $coursesEnrolled] = DB::transaction(function () use ($request, $class) {
+            Organization::whereKey($class->organization_id)->lockForUpdate()->firstOrFail();
             $learner = LearnerProfile::where('organization_id', $class->organization_id)
+                ->lockForUpdate()
                 ->findOrFail($request->integer('learner_id'));
 
             ClassEnrollment::firstOrCreate([

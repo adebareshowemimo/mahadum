@@ -133,6 +133,71 @@ class ReferralFraudTest extends TestCase
         $this->assertSame('flagged', $code->fresh()->status);
     }
 
+    public function test_activation_rechecks_code_status_after_a_pending_referral_was_loaded(): void
+    {
+        $this->seedRbac();
+        $this->seed(PlanSeeder::class);
+        $service = app(ReferralService::class);
+        $code = $service->codeFor($this->userWithRole('parent'));
+        $buyer = $this->userWithRole('parent');
+        $pending = $service->attribute($buyer, $code->code, 'freeze-before-activation');
+        $this->completedLearningWithSubscription($buyer, 'premium_individual');
+        $pending->load('referralCode');
+
+        foreach (['flagged', 'frozen'] as $status) {
+            $code->update(['status' => $status]);
+            $service->maybeActivate($pending);
+            $this->assertSame('pending', $pending->fresh()->status);
+            $this->assertNull($pending->fresh()->activated_at);
+        }
+
+        $code->update(['status' => 'active']);
+        $service->maybeActivate($pending);
+        $this->assertSame('qualified', $pending->fresh()->status);
+    }
+
+    public function test_stale_pending_activation_does_not_restart_the_commission_window(): void
+    {
+        $this->freezeTime();
+        $this->seedRbac();
+        $this->seed(PlanSeeder::class);
+        $service = app(ReferralService::class);
+        $code = $service->codeFor($this->userWithRole('parent'));
+        $buyer = $this->userWithRole('parent');
+        $stale = $service->attribute($buyer, $code->code, 'stale-activation');
+        $subscription = $this->completedLearningWithSubscription($buyer, 'premium_individual');
+        $service->maybeActivate($stale->fresh());
+        $activatedAt = $stale->fresh()->activated_at;
+        $this->travel(31)->days();
+
+        $service->maybeActivate($stale);
+
+        $this->assertTrue($stale->fresh()->activated_at->equalTo($activatedAt));
+        $this->assertNull($service->recordReferredPurchase($buyer, $subscription, 200_000, 'outside-original-window'));
+        $this->assertDatabaseCount('commissions', 0);
+    }
+
+    public function test_stale_pending_activation_cannot_restore_a_reversed_referral(): void
+    {
+        $this->seedRbac();
+        $this->seed(PlanSeeder::class);
+        $service = app(ReferralService::class);
+        $code = $service->codeFor($this->userWithRole('parent'));
+        $buyer = $this->userWithRole('parent');
+        $stale = $service->attribute($buyer, $code->code, 'reversed-before-activation');
+        $subscription = $this->completedLearningWithSubscription($buyer, 'premium_individual');
+        $service->maybeActivate($stale->fresh());
+        $service->reverseForSubscription($subscription);
+        $this->assertSame('reversed', $stale->fresh()->status);
+
+        $service->maybeActivate($stale);
+
+        $this->assertSame('reversed', $stale->fresh()->status);
+        $this->assertNull($stale->fresh()->activated_at);
+        $this->assertNull($service->recordReferredPurchase($buyer, $subscription, 200_000, 'after-reversal'));
+        $this->assertDatabaseCount('commissions', 0);
+    }
+
     private function completedLearningWithSubscription(User $user, string $planCode): Subscription
     {
         $lesson = $this->publishedLesson();

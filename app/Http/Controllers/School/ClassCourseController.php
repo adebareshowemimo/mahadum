@@ -5,6 +5,7 @@ namespace App\Http\Controllers\School;
 use App\Http\Controllers\Controller;
 use App\Models\ClassCourseAssignment;
 use App\Models\Course;
+use App\Models\Organization;
 use App\Models\SchoolClass;
 use App\Services\AuditLogger;
 use App\Services\School\ClassCourseEnrollmentService;
@@ -53,6 +54,7 @@ class ClassCourseController extends Controller
         abort_unless($course->is_published, 422, 'Only published courses can be assigned.');
 
         [$assignment, $enrolled] = DB::transaction(function () use ($request, $class, $course) {
+            Organization::whereKey($class->organization_id)->lockForUpdate()->firstOrFail();
             $assignment = ClassCourseAssignment::firstOrCreate(
                 ['school_class_id' => $class->id, 'course_id' => $course->id],
                 ['assigned_by_user_id' => $request->user()->id],
@@ -83,8 +85,11 @@ class ClassCourseController extends Controller
     /** Stop assigning to future class members; existing learning records remain intact. */
     public function destroy(SchoolClass $class, Course $course): JsonResponse
     {
-        $assignment = $class->courseAssignments()->where('course_id', $course->id)->firstOrFail();
-        $assignment->delete();
+        DB::transaction(function () use ($class, $course) {
+            Organization::whereKey($class->organization_id)->lockForUpdate()->firstOrFail();
+            $assignment = $class->courseAssignments()->where('course_id', $course->id)->firstOrFail();
+            $assignment->delete();
+        });
 
         return response()->json(['data' => ['course_id' => $course->id, 'assigned' => false]]);
     }

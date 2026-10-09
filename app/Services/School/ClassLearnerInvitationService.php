@@ -5,6 +5,7 @@ namespace App\Services\School;
 use App\Models\ClassEnrollment;
 use App\Models\ClassLearnerInvitation;
 use App\Models\LearnerProfile;
+use App\Models\Organization;
 use App\Models\OrganizationUser;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -40,6 +41,15 @@ class ClassLearnerInvitationService
         }
 
         return DB::transaction(function () use ($invitation, $user) {
+            Organization::whereKey($invitation->organization_id)->lockForUpdate()->firstOrFail();
+            User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+            $invitation = ClassLearnerInvitation::whereKey($invitation->id)->lockForUpdate()->firstOrFail();
+            if ($invitation->accepted_at !== null) {
+                abort_unless((int) $invitation->accepted_by_user_id === (int) $user->id, 409, 'This invitation has already been used.');
+
+                return $invitation->fresh(['schoolClass', 'organization']);
+            }
+            abort_if($invitation->expires_at->isPast(), 410, 'This invitation has expired.');
             $profile = LearnerProfile::where('user_id', $user->id)->first();
             if ($profile && $profile->organization_id !== null && (int) $profile->organization_id !== (int) $invitation->organization_id) {
                 abort(409, 'This learner profile already belongs to another school.');

@@ -96,7 +96,7 @@ class OrganizationController extends Controller
             ]);
 
         $classes = $organization->schoolClasses()
-            ->withCount('enrollments')
+            ->withCount(['enrollments' => fn ($query) => $query->currentLearners()->select(DB::raw('COUNT(DISTINCT learner_profile_id)'))])
             ->orderBy('name')
             ->get()
             ->map(fn ($c) => [

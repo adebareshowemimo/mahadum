@@ -1594,9 +1594,9 @@ export const referralApi = {
     return data.data
   },
 
-  async requestPayout(input: RequestPayoutInput): Promise<{ id: number; status: string }> {
+  async requestPayout(input: RequestPayoutInput, key = idempotencyKey()): Promise<{ id: number; status: string }> {
     const { data } = await api.post('/payouts/request', input, {
-      headers: { 'Idempotency-Key': idempotencyKey() },
+      headers: { 'Idempotency-Key': key },
     })
     return data.data
   },

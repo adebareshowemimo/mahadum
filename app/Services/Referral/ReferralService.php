@@ -16,6 +16,7 @@ use App\Models\XpLedger;
 use App\Services\Settings;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -171,6 +172,27 @@ class ReferralService
      * subscription predates activation).
      */
     public function maybeActivate(Referral $referral): void
+    {
+        DB::transaction(function () use ($referral) {
+            // Completion hooks and the scheduler may both hold an old pending model.
+            $current = Referral::whereKey($referral->id)->lockForUpdate()->first();
+            if (! $current || $current->activated_at !== null || $current->status !== 'pending') {
+                return;
+            }
+
+            // Serialize with fraud review/velocity updates before qualifying the referral.
+            $code = ReferralCode::whereKey($current->referral_code_id)->lockForUpdate()->first();
+            if (! $code || $code->status !== 'active') {
+                return;
+            }
+
+            $this->activateEligibleReferral($current);
+            $referral->setRawAttributes($current->getAttributes(), true);
+            $referral->unsetRelations();
+        });
+    }
+
+    private function activateEligibleReferral(Referral $referral): void
     {
         if ($referral->activated_at !== null || $referral->status !== 'pending') {
             return;

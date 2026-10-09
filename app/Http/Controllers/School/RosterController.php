@@ -124,11 +124,11 @@ class RosterController extends Controller
                 }
 
                 $occurrence = 0;
-                if ($learner === null) {
+                if ($learner === null || $studentId !== '') {
                     $rowKey = $this->identities->rowKey($row);
                     $occurrence = $occurrences[$rowKey] ?? 0;
                     $occurrences[$rowKey] = $occurrence + 1;
-                    $identity = $this->identities->resolve($organization, $row, $batchKey, $occurrence, false);
+                    $identity = $this->identities->resolve($organization, $row, $batchKey, $occurrence, false, $learner);
                     if ($identity['error'] !== null) {
                         $errors[] = ['row' => $rowNumber, 'error' => $identity['error']];
 
@@ -147,8 +147,8 @@ class RosterController extends Controller
                 $learner = $item['learner'];
                 $class = $item['class'];
                 $isNew = false;
-                if ($learner === null) {
-                    $identity = $this->identities->resolve($organization, $item['row'], $batchKey, $item['occurrence']);
+                if ($learner === null || (trim((string) ($item['row']['student_id'] ?? '')) !== '' && ! empty($item['row']['email']))) {
+                    $identity = $this->identities->resolve($organization, $item['row'], $batchKey, $item['occurrence'], true, $learner);
                     if ($identity['error'] !== null || $identity['learner'] === null) {
                         throw ValidationException::withMessages(['file' => 'Row '.$item['rowNumber'].': '.($identity['error'] ?? 'Roster identity could not be resolved.')]);
                     }

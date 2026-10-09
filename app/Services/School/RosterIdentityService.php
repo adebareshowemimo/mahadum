@@ -33,7 +33,7 @@ class RosterIdentityService
      *
      * @return array{learner:?LearnerProfile,created:bool,error:?string}
      */
-    public function resolve(Organization $school, array $row, string $batchKey, int $occurrence, bool $create = true): array
+    public function resolve(Organization $school, array $row, string $batchKey, int $occurrence, bool $create = true, ?LearnerProfile $matchedLearner = null): array
     {
         $studentId = trim((string) ($row['student_id'] ?? ''));
         $identityKey = hash('sha256', $studentId !== ''
@@ -43,11 +43,14 @@ class RosterIdentityService
             ->where('organization_id', $school->id)->where('identity_key', $identityKey)->first();
         if ($identity) {
             $learner = LearnerProfile::where('organization_id', $school->id)->find($identity->learner_profile_id);
+            if ($learner && $matchedLearner && $learner->id !== $matchedLearner->id) {
+                return ['learner' => null, 'created' => false, 'error' => 'StudentId and email identify different school learners. Correct the row before importing.'];
+            }
 
             return ['learner' => $learner, 'created' => false, 'error' => $learner ? null : 'This roster identity belongs to an unavailable profile. Review it before importing.'];
         }
 
-        if ($studentId === '') {
+        if ($matchedLearner === null && $studentId === '') {
             $sameBatchIds = DB::table('school_roster_identities')->where('organization_id', $school->id)
                 ->where('batch_key', $batchKey)->pluck('learner_profile_id');
             $collision = LearnerProfile::withTrashed()->where('organization_id', $school->id)
@@ -59,10 +62,10 @@ class RosterIdentityService
         }
 
         if (! $create) {
-            return ['learner' => null, 'created' => false, 'error' => null];
+            return ['learner' => $matchedLearner, 'created' => false, 'error' => null];
         }
 
-        $learner = LearnerProfile::create([
+        $learner = $matchedLearner ?? LearnerProfile::create([
             'organization_id' => $school->id,
             'display_name' => $row['display_name'],
             'roster_level_position' => ($row['level'] ?? '') !== '' ? (int) substr($row['level'], 1) : null,
@@ -72,6 +75,6 @@ class RosterIdentityService
             'learner_profile_id' => $learner->id, 'created_at' => now(), 'updated_at' => now(),
         ]);
 
-        return ['learner' => $learner, 'created' => true, 'error' => null];
+        return ['learner' => $learner, 'created' => $matchedLearner === null, 'error' => null];
     }
 }

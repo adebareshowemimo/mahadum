@@ -8,6 +8,7 @@ use App\Models\Organization;
 use App\Models\SchoolClass;
 use App\Models\SeatAllocation;
 use App\Models\User;
+use App\Services\School\ClassCourseEnrollmentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Tests\Concerns\MakesContent;
@@ -403,6 +404,80 @@ class RosterImportTest extends TestCase
         }
         $this->assertDatabaseCount('learner_profiles', 0);
         $this->assertDatabaseCount('school_roster_identities', 0);
+    }
+
+    public function test_student_id_on_an_email_match_remains_stable_when_email_is_omitted_later(): void
+    {
+        $this->seedRbac();
+        $school = $this->school();
+        $this->admin($school);
+        $user = User::factory()->create(['email' => 'linked@example.test']);
+        $learner = LearnerProfile::create(['organization_id' => $school->id, 'user_id' => $user->id, 'display_name' => 'Existing Learner']);
+        $allocation = SeatAllocation::create(['organization_id' => $school->id, 'total_purchased' => 10, 'active_filled' => 1]);
+        $class = SchoolClass::create(['organization_id' => $school->id, 'name' => 'Matched class']);
+        $this->importCsv($school, "StudentId,Firstname,Lastname,Email,Level\nS-001,Existing,Learner,linked@example.test,L0\n")
+            ->assertCreated()->assertJsonPath('data.created', 0)->assertJsonPath('data.matched', 1);
+        $this->importCsv($school, "StudentId,Firstname,Lastname,Email,Level\nS-001,Changed,Name,,L0\n", ['class_id' => $class->id])
+            ->assertCreated()->assertJsonPath('data.created', 0)->assertJsonPath('data.matched', 1);
+        $this->assertDatabaseCount('learner_profiles', 1);
+        $this->assertDatabaseHas('class_enrollments', ['school_class_id' => $class->id, 'learner_profile_id' => $learner->id]);
+        $this->assertSame(1, $allocation->fresh()->active_filled);
+    }
+
+    public function test_conflicting_student_id_and_email_reject_the_whole_batch_without_class_or_seat_changes(): void
+    {
+        $this->seedRbac();
+        $school = $this->school();
+        $this->admin($school);
+        $allocation = SeatAllocation::create(['organization_id' => $school->id, 'total_purchased' => 10, 'active_filled' => 0]);
+        $this->importCsv($school, "StudentId,Firstname,Lastname,Email,Level\nS-001,Original,Learner,,L0\n")->assertCreated();
+        $user = User::factory()->create(['email' => 'different@example.test']);
+        LearnerProfile::create(['organization_id' => $school->id, 'user_id' => $user->id, 'display_name' => 'Different Learner']);
+        $class = SchoolClass::create(['organization_id' => $school->id, 'name' => 'No writes']);
+        $this->importCsv($school, "StudentId,Firstname,Lastname,Email,Level\nS-002,New,Learner,,L0\nS-001,Different,Learner,different@example.test,L0\n", ['class_id' => $class->id])
+            ->assertCreated()->assertJsonPath('data.created', 0)->assertJsonPath('data.matched', 0)
+            ->assertJsonPath('data.errors.0.row', 3)->assertJsonCount(1, 'data.errors');
+        $this->assertDatabaseCount('learner_profiles', 2);
+        $this->assertDatabaseCount('school_roster_identities', 1);
+        $this->assertDatabaseCount('class_enrollments', 0);
+        $this->assertSame(1, $allocation->fresh()->active_filled);
+    }
+
+    public function test_class_and_school_views_ignore_duplicate_deleted_and_moved_memberships_without_deleting_history(): void
+    {
+        $this->seedRbac();
+        $school = $this->school();
+        $other = $this->school('moved-school');
+        $admin = $this->admin($school);
+        $admin->givePermissionTo('schools.analytics.view');
+        $this->actingAsUser($admin->fresh());
+        $class = SchoolClass::create(['organization_id' => $school->id, 'name' => 'Reconciled class']);
+        $current = LearnerProfile::create(['organization_id' => $school->id, 'display_name' => 'Current Learner']);
+        $deleted = LearnerProfile::create(['organization_id' => $school->id, 'display_name' => 'Deleted Learner']);
+        $moved = LearnerProfile::create(['organization_id' => $school->id, 'display_name' => 'Moved Learner']);
+        foreach ([$current, $current, $deleted, $moved] as $learner) {
+            $class->enrollments()->create(['learner_profile_id' => $learner->id]);
+        }
+        $deleted->delete();
+        $moved->update(['organization_id' => $other->id]);
+
+        $this->getJson('/api/v1/classes')->assertOk()->assertJsonPath('data.0.students', 1);
+        $this->getJson("/api/v1/classes/{$class->id}")->assertOk()->assertJsonCount(1, 'data.students')
+            ->assertJsonPath('data.students.0.learner_id', $current->id);
+        $this->getJson("/api/v1/classes/{$class->id}/analytics")->assertOk()->assertJsonCount(1, 'data.students');
+        $this->getJson("/api/v1/classes/{$class->id}/analytics/{$moved->id}")->assertNotFound();
+        $this->getJson("/api/v1/schools/{$school->id}/students")->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonCount(1, 'data.0.classes');
+        $this->getJson("/api/v1/schools/{$school->id}/dashboard")->assertOk()
+            ->assertJsonPath('data.student_counts', ['total' => 1, 'in_classes' => 1, 'unassigned' => 0]);
+        $this->actingAsUser($this->userWithRole('super_admin'));
+        $this->getJson("/api/v1/admin/organizations/{$school->id}")->assertOk()->assertJsonPath('data.classes.0.students', 1);
+        $this->assertDatabaseCount('class_enrollments', 4);
+        $this->assertSame(3, LearnerProfile::withTrashed()->count());
+        $course = $this->publishedLesson()->courseLevel->course;
+        $this->assertSame(1, app(ClassCourseEnrollmentService::class)->syncCourse($class, $course));
+        $this->assertDatabaseCount('enrollments', 1);
+        $this->assertDatabaseHas('enrollments', ['learner_profile_id' => $current->id, 'course_id' => $course->id]);
     }
 
     public function test_imported_learner_can_join_classes_once_with_consistent_placement_directory_and_totals(): void
