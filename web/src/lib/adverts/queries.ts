@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/auth/AuthProvider'
 import { useEntitlements } from '@/lib/billing/entitlements'
 
 /** Staff/operational roles run the admin portal and internal tooling — never advertising targets. */
-const STAFF_ROLES = ['super_admin', 'content_owner', 'teacher', 'school_admin'] as const
+const STAFF_ROLES = ['super_admin', 'content_owner', 'teacher', 'school_admin', 'supervisor'] as const
 
 /** Whether banner adverts may show at all: free-tier entitlements, and never for staff roles. */
 export function useAdsAllowed(): boolean {

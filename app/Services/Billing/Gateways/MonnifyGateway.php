@@ -38,7 +38,9 @@ class MonnifyGateway implements PaymentGateway
                 'paymentDescription' => 'MAHADUM.360 payment',
                 'currencyCode' => 'NGN',
                 'contractCode' => $this->contractCode,
-                'redirectUrl' => (string) config('app.url'),
+                'redirectUrl' => ($metadata['purpose'] ?? null) === 'data_bundle'
+                    ? rtrim((string) config('app.url'), '/').'/billing/data'
+                    : (string) config('app.url'),
                 'metaData' => $metadata,
             ])
             ->throw()

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AdImpression;
 use App\Models\Heart;
 use App\Models\LearnerProfile;
+use App\Services\Ads\AdAudience;
 use App\Services\Ads\AdNetworkManager;
 use App\Services\Billing\EntitlementResolver;
 use App\Services\Gamification\PracticeModeService;
@@ -59,11 +60,12 @@ class HeartController extends Controller
         abort_if($method === 'coins', 422, 'Coin refills are not configured. Watch an eligible ad, wait for your refill, or upgrade.');
 
         return DB::transaction(function () use ($request, $learner, $method) {
-            LearnerProfile::whereKey($learner->id)->lockForUpdate()->firstOrFail();
+            $learner = LearnerProfile::whereKey($learner->id)->lockForUpdate()->firstOrFail();
             if ($method === 'ad') {
                 // Redeeming a reward is self/parent only — narrower than the
                 // same-tenant-staff view access used to resolve $learner above.
                 Gate::authorize('redeemReward', $learner);
+                abort_unless(app(AdAudience::class)->allowed($request->user(), $learner), 422, 'Rewarded videos are no longer available for this account.');
 
                 $impression = AdImpression::lockForUpdate()->findOrFail($request->integer('ad_impression_id'));
                 abort_unless((int) $impression->learner_profile_id === $learner->id, 403, 'This ad was not requested for this learner.');

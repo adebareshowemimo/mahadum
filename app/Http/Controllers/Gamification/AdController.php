@@ -6,14 +6,15 @@ use App\Http\Controllers\Concerns\ResolvesLearner;
 use App\Http\Controllers\Controller;
 use App\Models\AdImpression;
 use App\Models\LearnerProfile;
+use App\Services\Ads\AdAudience;
 use App\Services\Ads\AdNetworkManager;
 use App\Services\Ads\ManagedVideoGateway;
-use App\Services\Billing\EntitlementResolver;
 use App\Services\Settings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
 /**
@@ -50,8 +51,7 @@ class AdController extends Controller
         }
 
         $gateway = $this->ads->driver();
-        if (! app(EntitlementResolver::class)->forLearner($learner)['ads']
-            || $request->user()->hasAnyRole(['super_admin', 'content_owner', 'teacher', 'school_admin'])
+        if (! app(AdAudience::class)->allowed($request->user(), $learner)
             || ! $gateway->available($placement)) {
             return response()->json(['data' => ['eligible' => false, 'reason' => 'unavailable']]);
         }
@@ -70,18 +70,24 @@ class AdController extends Controller
 
     public function progress(Request $request, AdImpression $impression, ManagedVideoGateway $video): JsonResponse
     {
-        $this->learnerForReward($impression->learner_profile_id);
         $input = $request->validate(['position_seconds' => ['required', 'numeric', 'between:0,300']]);
 
-        return response()->json(['data' => $video->progress($impression, (float) $input['position_seconds'])]);
+        return DB::transaction(function () use ($request, $impression, $video, $input) {
+            $learner = LearnerProfile::whereKey($impression->learner_profile_id)->lockForUpdate()->firstOrFail();
+            Gate::authorize('redeemReward', $learner);
+            abort_unless(app(AdAudience::class)->allowed($request->user(), $learner), 422, 'Rewarded videos are no longer available for this account.');
+
+            return response()->json(['data' => $video->progress($impression, (float) $input['position_seconds'])]);
+        });
     }
 
     /** Client reports the ad finished playing; verified server-side before it can be redeemed. */
-    public function complete(AdImpression $impression): JsonResponse
+    public function complete(Request $request, AdImpression $impression): JsonResponse
     {
-        $this->learnerForReward($impression->learner_profile_id); // self/parent only — not same-tenant staff
-
-        return DB::transaction(function () use ($impression) {
+        return DB::transaction(function () use ($request, $impression) {
+            $learner = LearnerProfile::whereKey($impression->learner_profile_id)->lockForUpdate()->firstOrFail();
+            Gate::authorize('redeemReward', $learner);
+            abort_unless(app(AdAudience::class)->allowed($request->user(), $learner), 422, 'Rewarded videos are no longer available for this account.');
             $impression = AdImpression::lockForUpdate()->findOrFail($impression->id);
             abort_unless($impression->ad_ref !== null, 422, 'No ad was requested for this impression.');
             $verified = $this->ads->driver()->verifyReward($impression->ad_ref);

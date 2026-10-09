@@ -10,6 +10,7 @@ use App\Models\MediaAsset;
 use App\Services\Billing\EntitlementResolver;
 use App\Services\Settings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -55,6 +56,58 @@ class ManagedRewardedVideoTest extends TestCase
     private function refill(int $id)
     {
         return $this->postJson('/api/v1/hearts/refill', ['learner_id' => $this->learner->id, 'method' => 'ad', 'ad_impression_id' => $id]);
+    }
+
+    public function test_premium_upgrade_revokes_an_existing_reward_session_without_changing_hearts(): void
+    {
+        $id = $this->requestVideo();
+        $this->watch($id);
+        $this->postJson("/api/v1/ads/{$id}/complete")->assertOk()->assertJsonPath('data.shown', true);
+        $this->mock(EntitlementResolver::class)->shouldReceive('forLearner')->andReturn(['ads' => false]);
+        $this->postJson("/api/v1/ads/{$id}/progress", ['position_seconds' => 10])->assertUnprocessable();
+        $this->postJson("/api/v1/ads/{$id}/complete")->assertUnprocessable();
+        $this->refill($id)->assertUnprocessable();
+        $this->assertNull(AdImpression::findOrFail($id)->consumed_at);
+        $this->assertDatabaseHas('hearts', ['learner_profile_id' => $this->learner->id, 'current' => 0]);
+    }
+
+    public static function staffPromotions(): array
+    {
+        return [['teacher'], ['supervisor']];
+    }
+
+    #[DataProvider('staffPromotions')]
+    public function test_staff_promotion_blocks_existing_reward_sessions_and_new_requests(string $role): void
+    {
+        $id = $this->requestVideo();
+        $this->watch($id);
+        $this->postJson("/api/v1/ads/{$id}/complete")->assertOk();
+        $owner = $this->learner->family->owner;
+        $owner->assignRole($role);
+        $this->actingAsUser($owner->fresh());
+        $this->postJson('/api/v1/ads/request', ['learner_id' => $this->learner->id, 'placement' => 'rewarded_heart'])
+            ->assertOk()->assertJsonPath('data.eligible', false);
+        $this->refill($id)->assertUnprocessable();
+        $this->assertNull(AdImpression::findOrFail($id)->consumed_at);
+        $this->assertDatabaseHas('hearts', ['learner_profile_id' => $this->learner->id, 'current' => 0]);
+    }
+
+    public function test_refill_rechecks_household_after_the_request_loaded_its_learner(): void
+    {
+        $id = $this->requestVideo();
+        $this->watch($id);
+        $this->postJson("/api/v1/ads/{$id}/complete")->assertOk();
+        $other = Family::create(['owner_user_id' => $this->userWithRole('parent')->id, 'name' => 'New household']);
+        $moved = false;
+        LearnerProfile::retrieved(function (LearnerProfile $learner) use (&$moved, $other) {
+            if (! $moved && $learner->id === $this->learner->id) {
+                $moved = true;
+                DB::table('learner_profiles')->where('id', $learner->id)->update(['family_id' => $other->id]);
+            }
+        });
+        $this->refill($id)->assertForbidden();
+        $this->assertNull(AdImpression::findOrFail($id)->consumed_at);
+        $this->assertDatabaseHas('hearts', ['learner_profile_id' => $this->learner->id, 'current' => 0]);
     }
 
     public function test_real_progress_completes_then_refills_all_hearts_exactly_once(): void

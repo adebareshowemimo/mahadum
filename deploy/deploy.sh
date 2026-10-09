@@ -5,6 +5,9 @@
 #
 # Usage: ./deploy/deploy.sh
 set -euo pipefail
+# Public build artifacts must remain readable by Apache even when the deploy
+# user's shell has a restrictive umask (for example after a database backup).
+umask 022
 
 APP_DIR="${APP_DIR:-/var/www/mahadum}"
 BRANCH="${BRANCH:-main}"
@@ -79,6 +82,14 @@ fi
 echo "==> Installing PHP dependencies"
 composer install --no-dev --optimize-autoloader --no-interaction
 
+# Existing Git/Composer files can retain owner-only modes from an earlier
+# deployment. PHP-FPM needs to traverse and read the application code too.
+# Leave .env, runtime caches and uploaded files under their existing policy.
+for code_dir in app bootstrap config database routes resources vendor; do
+    find "$code_dir" -path bootstrap/cache -prune -o -type d -exec chmod 0755 {} +
+    find "$code_dir" -path bootstrap/cache -prune -o -type f -exec chmod a+r {} +
+done
+
 echo "==> Building the SPA"
 (cd web && npm ci && npm run build)
 
@@ -109,6 +120,16 @@ find web/dist -mindepth 1 -maxdepth 1 -type d -print0 |
     done
 cp web/dist/index.html resources/spa/index.html
 find web/dist -maxdepth 1 -type f ! -name 'index.html' -exec cp {} public/ \;
+# cp preserves restrictive source modes. Normalize only the published SPA
+# artifacts, never private application files or uploaded media.
+for target in "${PUBLISHED_PATHS[@]}"; do
+    if [ -d "$target" ]; then
+        find "$target" -type d -exec chmod 0755 {} +
+        find "$target" -type f -exec chmod 0644 {} +
+    else
+        chmod 0644 "$target"
+    fi
+done
 
 echo "==> Entering maintenance mode"
 php artisan down --retry=15 || true
@@ -160,6 +181,15 @@ if ! curl --fail --silent --show-error --max-time 10 "$HEALTH_URL" > /dev/null; 
     echo "==> Health check against $HEALTH_URL failed" >&2
     false # triggers the ERR trap → rollback
 fi
+# A healthy API does not prove that Apache can serve the SPA. Check every
+# bundled script/stylesheet against the same origin before accepting release.
+SPA_ORIGIN="${SPA_ORIGIN:-${HEALTH_URL%/up}}"
+while IFS= read -r asset_path; do
+    if ! curl --fail --silent --show-error --max-time 10 "$SPA_ORIGIN$asset_path" > /dev/null; then
+        echo "==> SPA asset check failed: $asset_path" >&2
+        false # triggers rollback
+    fi
+done < <(php -r 'preg_match_all("~(?:src|href)=\"(/assets/[^\"]+\\.(?:js|css))\"~", file_get_contents("resources/spa/index.html"), $matches); echo implode(PHP_EOL, array_unique($matches[1])).PHP_EOL;')
 
 trap - ERR
 if [ -n "$PREVIOUS_COMMIT" ]; then

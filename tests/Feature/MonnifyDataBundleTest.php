@@ -102,6 +102,22 @@ class MonnifyDataBundleTest extends TestCase
         return $this->postJson('/api/v1/data-bundles/purchase', array_replace($this->payload, $overrides), ['Idempotency-Key' => $key]);
     }
 
+    public function test_data_checkout_returns_to_the_data_page(): void
+    {
+        config(['app.url' => 'https://mahadum360.com/']);
+        $this->buy('data-return')->assertCreated();
+
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/init-transaction')
+            && $request['redirectUrl'] === 'https://mahadum360.com/billing/data');
+    }
+
+    public function test_existing_data_checkout_root_return_redirects_to_data_page(): void
+    {
+        $query = ['paymentReference' => 'data_'.str_repeat('a', 64), 'paymentStatus' => 'CANCELLED'];
+        $this->get('/?'.http_build_query($query))
+            ->assertRedirect('/billing/data?'.http_build_query($query));
+    }
+
     public function test_catalogue_uses_provider_names_codes_prices_and_validity(): void
     {
         $this->getJson('/api/v1/data-bundles/billers')->assertOk()->assertJsonPath('data.0.code', 'MTN_DATA');
