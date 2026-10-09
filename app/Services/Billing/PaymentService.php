@@ -21,6 +21,7 @@ use App\Services\Family\WalletService;
 use App\Services\Referral\ReferralService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 
 /**
@@ -64,9 +65,9 @@ class PaymentService
         $sourceEvent = $source.':'.$eventKey;
 
         $outcome = match ($kind) {
-            'refund' => $this->reverse($reference, $amountMinor, $sourceEvent),
+            'refund' => $this->reverse($reference, $amountMinor, $sourceEvent, $source),
             'failed' => $this->fail($reference),
-            default => $this->settle($reference, $amountMinor, $sourceEvent),
+            default => $this->settle($reference, $amountMinor, $sourceEvent, $source, $raw),
         };
 
         $event->update(['status' => $outcome === 'unmatched' ? 'unmatched' : 'processed', 'processed_at' => now()]);
@@ -75,7 +76,7 @@ class PaymentService
     }
 
     /** Credit path: confirm a wallet funding or activate a subscription. */
-    private function settle(?string $reference, ?int $amountMinor, string $sourceEvent = ''): string
+    private function settle(?string $reference, ?int $amountMinor, string $sourceEvent, string $source, array $raw): string
     {
         if (! $reference) {
             return 'unmatched';
@@ -92,9 +93,9 @@ class PaymentService
         }
 
         if ($funding = $this->findFunding($reference)) {
-            $this->settleFunding($funding, $amountMinor, $sourceEvent);
+            $currency = $source === 'monnify' ? ($raw['eventData']['currencyCode'] ?? null) : ($raw['data']['currency'] ?? null);
 
-            return 'funded';
+            return $this->settleFunding($funding, $amountMinor, $sourceEvent, $source, $currency) ? 'funded' : 'ignored';
         }
 
         if ($subscription = $this->findSubscription($reference)) {
@@ -113,7 +114,7 @@ class PaymentService
     }
 
     /** Reversal path (refund/chargeback): claw back a funding or cancel a subscription. */
-    private function reverse(?string $reference, ?int $amountMinor, string $sourceEvent): string
+    private function reverse(?string $reference, ?int $amountMinor, string $sourceEvent, string $source): string
     {
         if (! $reference) {
             return 'unmatched';
@@ -129,6 +130,9 @@ class PaymentService
         }
 
         if ($funding = $this->findFunding($reference)) {
+            if ($funding->gateway !== $source) {
+                return 'ignored';
+            }
             $this->reverseFunding($funding, $amountMinor);
 
             return 'reversed';
@@ -210,41 +214,57 @@ class PaymentService
         return Invoice::where('gateway_txn_ref', $reference)->first();
     }
 
-    private function settleFunding(WalletFundingTransaction $funding, ?int $amountMinor, string $sourceEvent = ''): void
+    private function settleFunding(WalletFundingTransaction $funding, ?int $amountMinor, string $sourceEvent, string $source, mixed $currency): bool
     {
-        if ($funding->status === 'success') {
-            return; // already settled
+        $payer = null;
+        $settled = DB::transaction(function () use ($funding, $amountMinor, $sourceEvent, $source, $currency, &$payer) {
+            $funding = WalletFundingTransaction::whereKey($funding->id)->lockForUpdate()->firstOrFail();
+            if ($funding->gateway !== $source || $amountMinor === null || $amountMinor <= 0
+                || $amountMinor !== $funding->amount_minor
+                || ($currency !== null && $currency !== $funding->currency)
+                || $funding->currency !== $funding->wallet->currency) {
+                return false;
+            }
+            if ($funding->status === 'success') {
+                return true; // Different notifications for one payment still credit once.
+            }
+            if ($funding->status !== 'pending') {
+                return false; // A delayed success must never restore refunded money.
+            }
+            $this->wallets->creditCurrency($funding->wallet, $amountMinor);
+            $funding->update(['status' => 'success']);
+            $owner = $funding->wallet->owner;
+            $payer = $owner instanceof User ? $owner : ($owner instanceof Family ? $owner->owner : null);
+            if ($payer instanceof User) {
+                $this->referrals->recordReferredPurchase($payer, $funding, $amountMinor, $sourceEvent);
+            }
+
+            return true;
+        });
+        if ($payer instanceof User) {
+            rescue(fn () => $payer->notify(new WalletFunded($amountMinor)), report: true);
         }
 
-        $credited = $amountMinor ?? $funding->amount_minor;
-        $funding->update(['status' => 'success']);
-        $this->wallets->creditCurrency($funding->wallet, $credited);
-
-        // Receipt to the wallet owner (a direct-consumer user or a family's owner).
-        $owner = $funding->wallet->owner;
-        $payer = $owner instanceof User ? $owner : ($owner instanceof Family ? $owner->owner : null);
-        $payer?->notify(new WalletFunded($credited));
-
-        // A funded wallet is a purchase by the referred person (FR-7): pay the referrer.
-        if ($payer instanceof User && $sourceEvent !== '') {
-            $this->referrals->recordReferredPurchase($payer, $funding, $credited, $sourceEvent);
-        }
+        return $settled;
     }
 
     private function reverseFunding(WalletFundingTransaction $funding, ?int $amountMinor): void
     {
-        if ($funding->status !== 'success') {
-            return; // nothing settled to claw back (pending/failed/already refunded)
-        }
+        DB::transaction(function () use ($funding, $amountMinor) {
+            $funding = WalletFundingTransaction::whereKey($funding->id)->lockForUpdate()->firstOrFail();
+            if ($funding->status !== 'success') {
+                return; // nothing settled to claw back (pending/failed/already refunded)
+            }
 
-        $reversed = $amountMinor ?? $funding->amount_minor;
-        $funding->update(['status' => 'refunded']);
-        $this->wallets->debitCurrency($funding->wallet, $reversed);
+            $reversed = $amountMinor ?? $funding->amount_minor;
+            $funding->update(['status' => 'refunded']);
+            $this->wallets->debitCurrency($funding->wallet, $reversed);
 
-        $this->audit->record('funding.refunded', $funding, ['status' => 'success'], ['status' => 'refunded', 'amount_minor' => $reversed]);
+            $this->audit->record('funding.refunded', $funding, ['status' => 'success'], ['status' => 'refunded', 'amount_minor' => $reversed]);
 
-        // Claw back any referral commission this funding earned (FR-7.3).
-        $this->referrals->reverseForSource(WalletFundingTransaction::class, $funding->id);
+            // Claw back any referral commission this funding earned (FR-7.3).
+            $this->referrals->reverseForSource(WalletFundingTransaction::class, $funding->id);
+        });
     }
 
     private function cancelSubscription(Subscription $subscription): void

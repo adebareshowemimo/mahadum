@@ -113,12 +113,12 @@ class DataBundleService
                 $validation = $this->bills->validate($purchase->product_code, $purchase->phone_number);
                 app(DataPurchaseActivity::class)->record('recipient_validated', $purchase);
                 $instruction = $validation['vendInstruction'] ?? null;
-                if (! is_array($instruction) || ! array_key_exists('requireValidationRef', $instruction)) {
+                if (! is_array($instruction) || ! is_bool($instruction['requireValidationRef'] ?? null)) {
                     throw new HttpException(502, 'Monnify did not return vending instructions.');
                 }
                 $payload = [
                     'productCode' => $purchase->product_code, 'customerId' => $purchase->phone_number,
-                    'amount' => round($purchase->amount_minor / 100, 2), 'reference' => $purchase->vend_reference,
+                    'vendAmount' => round($purchase->amount_minor / 100, 2), 'vendReference' => $purchase->vend_reference,
                     'emailAddress' => $purchase->user->email, 'phoneNumber' => $purchase->phone_number,
                 ];
                 if ($instruction['requireValidationRef']) {

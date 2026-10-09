@@ -52,7 +52,7 @@ class MonnifyBills
 
     public function requery(string $reference): array
     {
-        return $this->request('get', 'requery', ['reference' => $reference]);
+        return $this->request('get', 'requery', ['vendReference' => $reference]);
     }
 
     private function pages(string $endpoint, array $query): array
@@ -102,8 +102,8 @@ class MonnifyBills
             $response = Http::withToken($this->token)->acceptJson()->connectTimeout(5)->timeout(15)
                 ->{$method}($base.'/api/v1/vas/bills-payment/'.$endpoint, $payload);
             if (! $response->successful() || $response->json('requestSuccessful') !== true) {
-                throw new HttpException(502, in_array($response->status(), [401, 403], true)
-                    ? 'Monnify rejected Bills Payment access. Check credentials and account activation.'
+                throw new HttpException(502, in_array($response->status(), [401, 403, 406], true)
+                    ? 'Mobile data plans are unavailable because Monnify Bills Payment access is not enabled or was rejected. Please contact support.'
                     : 'Monnify’s Bills Payment service is unavailable. Please try again later.');
             }
             $body = $response->json('responseBody');

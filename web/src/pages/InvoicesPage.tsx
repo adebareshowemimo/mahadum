@@ -21,6 +21,8 @@ function Invoices({ orgId }: { orgId: number }) {
   const pay = usePayInvoice(orgId)
   const [codes, setCodes] = useState<Record<number, string>>({})
   const [applying, setApplying] = useState<number | null>(null)
+  const [paying, setPaying] = useState<number | null>(null)
+  const actionPending = useRef(false)
   const sharedApplied = useRef(false)
   const sharedCode = new URLSearchParams(window.location.search).get('promo') ?? ''
   useEffect(() => {
@@ -33,14 +35,17 @@ function Invoices({ orgId }: { orgId: number }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, sharedCode])
   async function applyCode(id: number) {
+    if (actionPending.current || pay.isPending) return
+    actionPending.current = true
     setApplying(id)
     setError(null)
+    setCheckoutUrl(null)
     try {
       await schoolApi.applyInvoicePromo(orgId, id, codes[id] ?? sharedCode)
-      await refetch()
+      await refetch({ throwOnError: true })
     } catch (err) {
       setError(err instanceof ApiError ? (err.fieldErrors.code ?? err.message) : 'Could not apply that promo code.')
-    } finally { setApplying(null) }
+    } finally { setApplying(null); actionPending.current = false }
   }
   const [downloading, setDownloading] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -61,6 +66,9 @@ function Invoices({ orgId }: { orgId: number }) {
   }
 
   async function payInvoiceNow(id: number) {
+    if (actionPending.current || pay.isPending) return
+    actionPending.current = true
+    setPaying(id)
     setError(null)
     setCheckoutUrl(null)
     try {
@@ -70,6 +78,9 @@ function Invoices({ orgId }: { orgId: number }) {
       else setError('Payment started — the invoice will be marked paid once confirmed.')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not start payment.')
+    } finally {
+      setPaying(null)
+      actionPending.current = false
     }
   }
 
@@ -122,7 +133,7 @@ function Invoices({ orgId }: { orgId: number }) {
                   {inv.status === 'unpaid' && !inv.lines?.some(line => line.description.startsWith('Promo code:')) && (
                     <div className="w-full">
                       <Input label="Have a promo code?" value={codes[inv.id] ?? sharedCode} onChange={e => setCodes(current => ({ ...current, [inv.id]: e.target.value }))} />
-                      <Button size="sm" variant="outline" loading={applying === inv.id} disabled={!(codes[inv.id] ?? sharedCode).trim()} onClick={() => applyCode(inv.id)}>Apply promo code</Button>
+                      <Button size="sm" variant="outline" loading={applying === inv.id} disabled={applying !== null || paying !== null || pay.isPending || !(codes[inv.id] ?? sharedCode).trim()} onClick={() => applyCode(inv.id)}>Apply promo code</Button>
                     </div>
                   )}
                   {inv.status === 'unpaid' && (
@@ -130,6 +141,7 @@ function Invoices({ orgId }: { orgId: number }) {
                       size="sm"
                       variant="parent"
                       loading={pay.isPending && pay.variables?.invoiceId === inv.id}
+                      disabled={applying !== null || paying !== null || pay.isPending}
                       onClick={() => payInvoiceNow(inv.id)}
                     >
                       Pay now

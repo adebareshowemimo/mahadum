@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { InvoicesPage } from './InvoicesPage'
+import { ApiError } from '@/lib/api'
 
 const mocks = vi.hoisted(() => ({
   applyInvoicePromo: vi.fn(),
@@ -26,6 +27,7 @@ vi.mock('@/lib/school/queries', () => ({
 
 describe('InvoicesPage', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     mocks.applyInvoicePromo.mockResolvedValue({ amount_minor: 34_400_000 })
     mocks.refetch.mockResolvedValue({})
     mocks.usePayInvoice.mockReturnValue({ isPending: false, mutateAsync: vi.fn() })
@@ -96,5 +98,42 @@ describe('InvoicesPage', () => {
 
     expect(screen.getByText('Registration Fees')).toBeInTheDocument()
     expect(screen.getByText('₦0.00')).toBeInTheDocument()
+  })
+
+  it('blocks payment until promo application and refreshed totals finish', async () => {
+    let finishApply!: (value: { amount_minor: number }) => void
+    let finishRefresh!: (value: object) => void
+    mocks.applyInvoicePromo.mockReturnValue(new Promise(resolve => { finishApply = resolve }))
+    mocks.refetch.mockReturnValue(new Promise(resolve => { finishRefresh = resolve }))
+    render(<InvoicesPage />)
+    fireEvent.change(screen.getByLabelText('Have a promo code?'), { target: { value: 'SCHOOL20' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Apply promo code' }))
+    expect(screen.getByRole('button', { name: 'Pay now' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Pay now' }))
+    expect(mocks.usePayInvoice().mutateAsync).not.toHaveBeenCalled()
+    finishApply({ amount_minor: 34_400_000 })
+    await waitFor(() => expect(mocks.refetch).toHaveBeenCalled())
+    expect(screen.getByRole('button', { name: 'Pay now' })).toBeDisabled()
+    finishRefresh({})
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Pay now' })).toBeEnabled())
+  })
+
+  it('blocks promo submission while payment is starting', () => {
+    mocks.usePayInvoice.mockReturnValue({ isPending: true, variables: { invoiceId: 27 }, mutateAsync: vi.fn() })
+    render(<InvoicesPage />)
+    fireEvent.change(screen.getByLabelText('Have a promo code?'), { target: { value: 'SCHOOL20' } })
+    expect(screen.getByRole('button', { name: 'Apply promo code' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Apply promo code' }))
+    expect(mocks.applyInvoicePromo).not.toHaveBeenCalled()
+  })
+
+  it('shows promo rejection clearly without starting payment', async () => {
+    mocks.applyInvoicePromo.mockRejectedValue(new ApiError('Invalid code', 'validation_error', 422, { code: 'A promo code has already been applied.' }))
+    render(<InvoicesPage />)
+    fireEvent.change(screen.getByLabelText('Have a promo code?'), { target: { value: 'SECOND10' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Apply promo code' }))
+    expect(await screen.findByText('A promo code has already been applied.')).toBeInTheDocument()
+    expect(mocks.usePayInvoice().mutateAsync).not.toHaveBeenCalled()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Pay now' })).toBeEnabled())
   })
 })

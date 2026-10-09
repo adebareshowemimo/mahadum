@@ -87,7 +87,7 @@ class MonnifyDataBundleTest extends TestCase
                 '/api/v1/merchant/transactions/init-transaction' => ['checkoutUrl' => 'https://sandbox.monnify.com/checkout/test'],
                 '/api/v2/merchant/transactions/query' => ['paymentStatus' => $paymentStatus, 'amountPaid' => $paid, 'currencyCode' => 'NGN', 'paymentReference' => $request['paymentReference']],
                 '/api/v1/vas/bills-payment/vend', '/api/v1/vas/bills-payment/requery' => [
-                    'vendStatus' => $vendStatus, 'vendReference' => $request['reference'], 'productCode' => 'MTN_1GB_7D',
+                    'vendStatus' => $vendStatus, 'vendReference' => $request['vendReference'], 'productCode' => 'MTN_1GB_7D',
                     'customerId' => '08012345678', 'vendAmount' => 750,
                 ],
                 default => throw new \RuntimeException('Unexpected endpoint '.$path),
@@ -135,6 +135,17 @@ class MonnifyDataBundleTest extends TestCase
         Http::preventStrayRequests();
         Http::fake(['*/api/v1/auth/login' => Http::response(['responseBody' => ['accessToken' => 'token']]), '*/billers*' => Http::response([], 502)]);
         $this->getJson('/api/v1/data-bundles/billers')->assertStatus(502)->assertJsonMissingPath('data');
+    }
+
+    public function test_access_rejection_explains_activation_without_exposing_provider_details(): void
+    {
+        $this->provider(overrides: ['/api/v1/vas/bills-payment/billers' => Http::response([
+            'requestSuccessful' => false, 'responseCode' => '99', 'responseMessage' => 'private merchant details',
+        ], 406)]);
+        $response = $this->getJson('/api/v1/data-bundles/billers')->assertStatus(502)
+            ->assertJsonPath('message', 'Mobile data plans are unavailable because Monnify Bills Payment access is not enabled or was rejected. Please contact support.');
+        $this->assertStringNotContainsString('private merchant details', $response->getContent());
+        Http::assertNotSent(fn ($r) => str_ends_with($r->url(), '/vend'));
     }
 
     public function test_checkout_requires_enabled_payments_current_price_and_valid_product(): void
@@ -189,7 +200,8 @@ class MonnifyDataBundleTest extends TestCase
         $id = $this->buy()->json('data.purchase_id');
         $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()->assertJsonPath('data.status', 'success');
         $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()->assertJsonPath('data.status', 'success');
-        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/vend') && $r['amount'] == 750 && ! isset($r['validationReference']));
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/vend') && $r['vendAmount'] == 750
+            && str_starts_with($r['vendReference'], 'vend_data_') && ! isset($r['amount']) && ! isset($r['reference']) && ! isset($r['validationReference']));
         $this->assertCount(1, Http::recorded(fn ($r) => str_ends_with($r->url(), '/vend')));
     }
 
@@ -201,7 +213,7 @@ class MonnifyDataBundleTest extends TestCase
         Http::assertSent(fn ($r) => str_ends_with($r->url(), '/vend') && $r['validationReference'] === 'validation-1');
         $this->provider();
         $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()->assertJsonPath('data.status', 'success');
-        Http::assertSent(fn ($r) => str_contains($r->url(), '/requery') && str_starts_with($r['reference'], 'vend_data_'));
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/requery') && str_starts_with($r['vendReference'], 'vend_data_') && ! isset($r['reference']));
     }
 
     public function test_timeout_after_vend_is_requeried_without_another_charge(): void
@@ -213,6 +225,31 @@ class MonnifyDataBundleTest extends TestCase
         $this->provider();
         $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()->assertJsonPath('data.status', 'success');
         Http::assertNotSent(fn ($r) => str_ends_with($r->url(), '/vend'));
+    }
+
+    public function test_malformed_validation_instructions_never_start_delivery(): void
+    {
+        $id = $this->buy()->json('data.purchase_id');
+        $this->provider(overrides: ['/api/v1/vas/bills-payment/validate-customer' => Http::response([
+            'requestSuccessful' => true, 'responseBody' => ['vendInstruction' => ['requireValidationRef' => 'false']],
+        ])]);
+        $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertStatus(502);
+        $this->assertNull(DataBundlePurchase::findOrFail($id)->vend_started_at);
+        Http::assertNotSent(fn ($r) => str_ends_with($r->url(), '/vend'));
+    }
+
+    public function test_mismatched_delivery_confirmation_is_reviewed_without_another_vend(): void
+    {
+        $id = $this->buy()->json('data.purchase_id');
+        $purchase = DataBundlePurchase::findOrFail($id);
+        $this->provider(overrides: ['/api/v1/vas/bills-payment/vend' => Http::response([
+            'requestSuccessful' => true, 'responseBody' => ['vendStatus' => 'SUCCESS',
+                'vendReference' => $purchase->vend_reference, 'productCode' => $purchase->product_code,
+                'customerId' => '08012345679', 'vendAmount' => 750],
+        ])]);
+        $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()->assertJsonPath('data.status', 'needs_review');
+        $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()->assertJsonPath('data.status', 'needs_review');
+        $this->assertCount(1, Http::recorded(fn ($r) => str_ends_with($r->url(), '/vend')));
     }
 
     public function test_other_users_cannot_inspect_or_fulfill_a_purchase(): void
