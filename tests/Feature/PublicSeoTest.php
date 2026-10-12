@@ -26,6 +26,12 @@ class PublicSeoTest extends TestCase
         File::put($this->build.'/shell.html', $shell);
         File::put($this->build.'/families.html', str_replace('<div id="root"></div>', '<main><h1>Families learn together</h1><p>Readable without JavaScript.</p></main>', $shell));
         File::put($this->build.'/spa-routes.json', json_encode(['/register', '/home', '/school/students', '/learn/lessons/:lessonId']));
+        File::put($this->build.'/chrome.json', json_encode([
+            'header' => '<header>Shared website navigation</header>',
+            'footer' => '<footer>Shared website footer</footer>',
+            'styles' => ['/assets/website.css'],
+            'script' => '/assets/public-chrome.js',
+        ]));
         config(['seo.shell' => $this->build.'/shell.html', 'seo.prerender' => $this->build]);
     }
 
@@ -48,6 +54,24 @@ class PublicSeoTest extends TestCase
         $types = array_map(fn ($json) => json_decode($json, true, flags: JSON_THROW_ON_ERROR)['@type'], $matches[1]);
         $this->assertContains('Organization', $types);
         $this->assertContains('WebSite', $types);
+    }
+
+    public function test_all_content_pages_use_built_website_header_footer_and_styles(): void
+    {
+        PublicDocument::create($this->guide());
+        foreach (['/languages', '/learn-igbo', '/learn-yoruba', '/learn-hausa', '/guides', '/guides/greetings', '/vote'] as $path) {
+            $this->get($path)->assertOk()
+                ->assertSee('<header>Shared website navigation</header>', false)
+                ->assertSee('<footer>Shared website footer</footer>', false)
+                ->assertSee('href="/assets/website.css"', false)
+                ->assertSee('src="/assets/public-chrome.js"', false);
+        }
+    }
+
+    public function test_missing_chrome_build_returns_service_unavailable(): void
+    {
+        File::delete($this->build.'/chrome.json');
+        $this->get('/guides')->assertStatus(503);
     }
 
     public function test_missing_pages_are_404_and_known_account_routes_are_noindex(): void

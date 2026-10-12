@@ -28,7 +28,9 @@ export default defineConfig(({ isSsrBuild }) => ({
     },
   },
   build: {
+    manifest: isSsrBuild ? false : 'prerender/manifest.json',
     rollupOptions: {
+      input: isSsrBuild ? undefined : { app: fileURLToPath(new URL('./index.html', import.meta.url)), 'public-chrome': fileURLToPath(new URL('./src/public-chrome.tsx', import.meta.url)) },
       output: {
         // Split the rarely-changing framework/data-layer deps into their own
         // chunk so app-code deploys don't bust the vendor cache entry.

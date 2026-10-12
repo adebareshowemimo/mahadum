@@ -98,7 +98,10 @@ class PublicContentController extends Controller
     private function page(string $path, string $view, array $data, array $schema = [], ?array $meta = null): Response
     {
         $meta ??= $this->seo->pages()[$path];
+        $chromeFile = config('seo.prerender').'/chrome.json';
+        abort_unless(is_file($chromeFile), 503, 'Website assets are being prepared.');
+        $chrome = json_decode(file_get_contents($chromeFile), true, flags: JSON_THROW_ON_ERROR);
 
-        return response()->view($view, $data + ['head' => $this->seo->head($path, $meta, $schema)], 200, ['Cache-Control' => 'no-cache', 'Content-Type' => 'text/html; charset=UTF-8']);
+        return response()->view($view, $data + ['head' => $this->seo->head($path, $meta, $schema), 'chrome' => $chrome], 200, ['Cache-Control' => 'no-cache', 'Content-Type' => 'text/html; charset=UTF-8']);
     }
 }
