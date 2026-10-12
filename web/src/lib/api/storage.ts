@@ -14,6 +14,7 @@ let memToken: string | null | undefined
 
 export const tokenStore = {
   get(): string | null {
+    if (typeof localStorage === 'undefined') return null
     if (memToken === undefined) memToken = localStorage.getItem(TOKEN_KEY)
     return memToken
   },

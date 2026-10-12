@@ -25,6 +25,7 @@ const ActiveProfileContext = createContext<ActiveProfileValue | null>(null)
 export function ActiveProfileProvider({ children }: { children: ReactNode }) {
   const { user, status } = useAuth()
   const [activeLearnerId, setId] = useState<number | null>(() => {
+    if (typeof localStorage === 'undefined') return null
     const raw = localStorage.getItem(STORAGE_KEY)
     return raw ? Number(raw) : null
   })

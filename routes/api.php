@@ -110,6 +110,7 @@ use App\Http\Controllers\Support\TicketController;
 use App\Http\Controllers\Webhooks\PaymentWebhookController;
 use App\Http\Controllers\Webhooks\SendgridWebhookController;
 use App\Http\Controllers\Webhooks\TelcoWebhookController;
+use App\Http\Controllers\WebsiteEditorController;
 use App\Http\Middleware\RequireVerifiedEmail;
 use App\Models\Course;
 use App\Models\Payout;
@@ -181,6 +182,11 @@ Route::prefix('v1')->group(function () {
         Route::delete('me/push', [WebPushController::class, 'destroy']);
 
         /* ---- Content / CMS (content_owner) ---- */
+        Route::get('website/documents', [WebsiteEditorController::class, 'index']);
+        Route::post('website/documents', [WebsiteEditorController::class, 'store']);
+        Route::put('website/documents/{document}', [WebsiteEditorController::class, 'update']);
+        Route::get('website/reports', [WebsiteEditorController::class, 'reports']);
+        Route::get('website/votes.csv', [WebsiteEditorController::class, 'votesCsv']);
         Route::get('courses', [CourseController::class, 'index']);
         Route::get('courses/{course}', [CourseController::class, 'show'])->can('view', 'course');
         Route::post('courses', [CourseController::class, 'store'])->can('create', Course::class);

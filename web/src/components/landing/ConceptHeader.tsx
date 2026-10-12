@@ -34,7 +34,7 @@ export function ConceptHeader({ tone = 'light', overlay = false }: { tone?: Conc
           !overlay && tone === 'navy' && 'border-white/15 bg-[#061a3c] text-white',
         )}
       >
-        <div className="mx-auto flex min-h-[4.75rem] max-w-[90rem] flex-wrap items-center justify-between gap-x-3 px-4 py-2 sm:h-[4.75rem] sm:flex-nowrap sm:px-6 sm:py-0 lg:px-10">
+        <div className="mx-auto flex min-h-[4.75rem] max-w-[90rem] flex-wrap items-center justify-between gap-x-3 px-4 py-2 xl:h-[4.75rem] xl:flex-nowrap sm:px-6 xl:py-0 lg:px-10">
         <Link
           to="/"
           aria-label={`${WORDMARK} home`}
@@ -43,14 +43,14 @@ export function ConceptHeader({ tone = 'light', overlay = false }: { tone?: Conc
             dark && !overlay && 'bg-white/95 px-2',
           )}
         >
-          <Logo className="h-8 sm:h-9" />
+          <Logo className="h-12 sm:h-14" />
         </Link>
 
         <nav
           id="public-navigation"
           aria-label="Primary"
           className={cn(
-            'order-4 w-full border-t pt-2 sm:order-none sm:flex sm:w-auto sm:items-center sm:justify-center sm:gap-x-6 sm:border-0 sm:pt-0',
+            'order-4 w-full border-t pt-2 xl:order-none xl:flex xl:w-auto xl:items-center xl:justify-center xl:gap-x-3 xl:border-0 xl:pt-0',
             dark ? 'border-white/15' : 'border-chore-100',
             menuOpen ? 'grid grid-cols-2' : 'hidden',
           )}
@@ -76,6 +76,8 @@ export function ConceptHeader({ tone = 'light', overlay = false }: { tone?: Conc
               {item.label}
             </NavLink>
           ))}
+          <a href="/languages" className={cn('inline-flex min-h-11 items-center px-2 font-display text-sm font-bold', dark ? 'text-white' : 'text-navy-700')}>Languages</a>
+          <a href="/guides" className={cn('inline-flex min-h-11 items-center px-2 font-display text-sm font-bold', dark ? 'text-white' : 'text-navy-700')}>Guides</a>
         </nav>
 
         <div className="flex items-center gap-2">
@@ -87,7 +89,7 @@ export function ConceptHeader({ tone = 'light', overlay = false }: { tone?: Conc
             aria-controls="public-navigation"
             onClick={() => setMenuOpen((open) => !open)}
             className={cn(
-              'inline-flex size-11 items-center justify-center rounded-full transition-colors sm:hidden',
+              'inline-flex size-11 items-center justify-center rounded-full transition-colors xl:hidden',
               dark ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-chore-50 text-navy-800 hover:bg-chore-100',
             )}
           >

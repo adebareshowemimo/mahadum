@@ -1,3 +1,4 @@
+import { websiteCopy } from '@/lib/seo/copy'
 import { useState, type CSSProperties } from 'react'
 import { Figure } from '@/components/landing/Figure'
 import { LANDING_LANGUAGES } from '@/components/landing/languages'
@@ -80,12 +81,8 @@ export function LandingV4Page() {
           <div className="relative z-10 mx-auto flex min-h-[calc(100svh-8rem)] max-w-[90rem] items-center px-4 py-16 sm:min-h-[calc(100svh-4.75rem)] sm:px-6 lg:px-10">
             <div className="motion-hero-copy max-w-[43rem] text-white">
               <p className="font-display text-xl font-extrabold text-[#ffd36a]">Language belongs in the life you already share.</p>
-              <h1 className="mt-4 max-w-[11ch] font-display text-[clamp(3.1rem,6.5vw,6rem)] font-extrabold leading-[0.95] tracking-[-0.035em]">
-                Hear it at breakfast. Say it by bedtime.
-              </h1>
-              <p className="mt-6 max-w-xl text-lg font-semibold leading-relaxed text-white/85 sm:text-xl">
-                Mahadum turns five-minute lessons into greetings, stories and little family moments a child can actually use.
-              </p>
+              <h1 className="mt-4 max-w-[11ch] font-display text-[clamp(3.1rem,6.5vw,6rem)] font-extrabold leading-[0.95] tracking-[-0.035em]">{websiteCopy('heading', "Hear it at breakfast. Say it by bedtime.")}</h1>
+              <p data-public-intro="true" className="mt-6 max-w-xl text-lg font-semibold leading-relaxed text-white/85 sm:text-xl">{websiteCopy('intro', "Mahadum turns five-minute lessons into greetings, stories and little family moments a child can actually use.")}</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <a href="#v4-journey" className="motion-press inline-flex h-12 items-center justify-center rounded-xl bg-[#ff650f] px-6 font-display font-extrabold text-white hover:bg-[#d94d00]">Follow one word home</a>
                 <LinkButton to="/register" size="lg" variant="ghost" className="border-2 border-white/55 bg-white/10 text-white hover:bg-white/20">Start free</LinkButton>
@@ -250,7 +247,7 @@ const ECOSYSTEM_VIEWS = [
     label: 'Learner',
     heading: 'A playful path from free Level 0 to deeper learning.',
     body: 'Five-minute listening, speaking, quiz and culture activities build toward confident use.',
-    features: ['Beginner Level 0 stays free', 'XP, badges and leagues', 'Out of data? Buy data on Mahadum360.'],
+    features: ['Start free with Level 0', 'XP, badges and leagues', 'Out of data? Buy data on Mahadum360.'],
   },
   {
     id: 'family',
@@ -298,17 +295,15 @@ export function LandingV5Page() {
           <div className="relative z-10 mx-auto flex min-h-[calc(100svh-8rem)] max-w-[90rem] items-center px-4 py-16 sm:min-h-[calc(100svh-4.75rem)] sm:px-6 lg:px-10">
             <div className="motion-hero-copy max-w-[44rem] text-white">
               <p className="font-display text-xl font-extrabold text-[#ffb277]">The platform behind every confident voice.</p>
-              <h1 className="mt-4 max-w-[11ch] font-display text-[clamp(3.1rem,6.4vw,5.9rem)] font-extrabold leading-[0.96] tracking-[-0.035em]">
-                Build the place where a language keeps growing.
-              </h1>
-              <p className="mt-6 max-w-xl text-lg font-semibold leading-relaxed text-white/82 sm:text-xl">One curriculum connects the child learning, the family listening, the teacher guiding and the school making it sustainable.</p>
+              <h1 className="mt-4 max-w-[11ch] font-display text-[clamp(3.1rem,6.4vw,5.9rem)] font-extrabold leading-[0.96] tracking-[-0.035em]">{websiteCopy('heading', "Build the place where a language keeps growing.")}</h1>
+              <p data-public-intro="true" className="mt-6 max-w-xl text-lg font-semibold leading-relaxed text-white/82 sm:text-xl">{websiteCopy('intro', "One curriculum connects the child learning, the family listening, the teacher guiding and the school making it sustainable.")}</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <LinkButton to="/register" size="lg" variant="accent">Start a learning circle</LinkButton>
                 <a href="#v5-system" className="motion-press inline-flex h-12 items-center justify-center rounded-xl border-2 border-white/45 bg-white/8 px-6 font-display font-bold text-white hover:bg-white/15">Explore the system</a>
               </div>
               <ul className="mt-8 grid max-w-xl gap-3 sm:grid-cols-2">
                 <CheckLine inverse>Families and schools in one platform</CheckLine>
-                <CheckLine inverse>Beginner Level 0 stays free</CheckLine>
+                <CheckLine inverse>Start free with Level 0</CheckLine>
                 <CheckLine inverse>Child-safe roles and approvals</CheckLine>
                 <CheckLine inverse>Clubs, competitions and culture</CheckLine>
               </ul>

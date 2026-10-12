@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Services\SignupDiscovery;
 use App\Support\Phone;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Password;
@@ -19,6 +20,9 @@ class RegisterRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
+        if (is_string($this->input('email'))) {
+            $this->merge(['email' => mb_strtolower(trim($this->input('email')))]);
+        }
         if (is_string($this->input('phone')) && ($this->input('dial_code') === null || is_string($this->input('dial_code')))) {
             $this->merge([
                 'phone' => Phone::normalize($this->input('phone'), $this->input('dial_code')) ?? $this->input('phone'),
@@ -28,7 +32,7 @@ class RegisterRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
+        return array_merge(SignupDiscovery::rules(), [
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
@@ -45,7 +49,7 @@ class RegisterRequest extends FormRequest
             'date_of_birth' => ['nullable', 'date', 'before:today'],
             'referral_code' => ['nullable', 'string', 'max:50'],
             'class_invitation_token' => ['nullable', 'string', 'size:64'],
-        ];
+        ]);
     }
 
     /** @return array<string, string> */

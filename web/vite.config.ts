@@ -19,7 +19,7 @@ function proxyTargets() {
   return { '/api': proxy, '/sanctum': proxy, '/storage': proxy }
 }
 
-export default defineConfig({
+export default defineConfig(({ isSsrBuild }) => ({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
@@ -32,7 +32,7 @@ export default defineConfig({
       output: {
         // Split the rarely-changing framework/data-layer deps into their own
         // chunk so app-code deploys don't bust the vendor cache entry.
-        manualChunks: {
+        manualChunks: isSsrBuild ? undefined : {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-data': ['@tanstack/react-query', 'axios'],
         },
@@ -44,4 +44,4 @@ export default defineConfig({
     port: Number(process.env.PORT) || 5173,
     proxy: proxyTargets(),
   },
-})
+}))

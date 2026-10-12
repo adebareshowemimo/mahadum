@@ -45,7 +45,7 @@ describe('October 1 public feedback', () => {
     show(<LandingV5Page />)
     await user.click(screen.getByRole('tab', { name: /Teacher/ }))
     await user.click(screen.getByRole('tab', { name: /Learner/ }))
-    expect(screen.getAllByText('Beginner Level 0 stays free')).toHaveLength(2)
+    expect(screen.getAllByText('Start free with Level 0')).toHaveLength(2)
     expect(screen.getByRole('heading', { name: 'A playful path from free Level 0 to deeper learning.' })).toBeInTheDocument()
     expect(screen.queryByText(/never locks the next lesson/)).not.toBeInTheDocument()
     expect(screen.getByText('Out of data? Buy data on Mahadum360.')).toBeInTheDocument()

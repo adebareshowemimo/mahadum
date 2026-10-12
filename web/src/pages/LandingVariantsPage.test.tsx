@@ -46,7 +46,7 @@ describe('landing concepts', () => {
 
   it('gives every concept a distinct primary promise', () => {
     const { unmount: unmountV1 } = renderConcept(<LandingV1Page />)
-    expect(screen.getByRole('heading', { level: 1, name: /One hello can bring the whole family closer/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: /Learn Igbo, Yorùbá and Hausa together/i })).toBeInTheDocument()
     unmountV1()
 
     const { unmount: unmountV2 } = renderConcept(<LandingV2Page />)
@@ -69,9 +69,11 @@ describe('landing concepts', () => {
     const user = userEvent.setup()
     renderConcept(<LandingV1Page />)
 
-    expect(screen.getByRole('heading', { name: /One hello can bring the whole family closer/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: /Learn Igbo, Yorùbá and Hausa together/i })).toBeInTheDocument()
     await user.click(screen.getByRole('tab', { name: 'Educator/School' }))
     expect(screen.getByRole('heading', { name: /The policy says teach it/i })).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Igbo, Yorùbá and Hausa')
     await user.click(screen.getByRole('button', { name: 'Next story' }))
     expect(screen.getByRole('heading', { name: /Connect across generations/i })).toBeInTheDocument()
   })

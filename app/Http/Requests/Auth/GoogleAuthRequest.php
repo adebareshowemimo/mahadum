@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Services\SignupDiscovery;
 use App\Support\Phone;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -24,7 +25,7 @@ class GoogleAuthRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
+        return array_merge(SignupDiscovery::rules(), [
             'id_token' => ['required', 'string'],
             'device_name' => ['required', 'string', 'max:255'],
             'account_type' => ['nullable', Rule::in(['individual', 'family', 'teacher', 'school', 'educator_school', 'institution'])],
@@ -33,6 +34,6 @@ class GoogleAuthRequest extends FormRequest
             'phone' => ['required_with:account_type', 'nullable', 'string', 'regex:/^\+[1-9][0-9]{7,14}$/', 'max:20', Rule::unique('users', 'phone')],
             'date_of_birth' => ['nullable', 'date', 'before:today'],
             'referral_code' => ['nullable', 'string', 'max:50'],
-        ];
+        ]);
     }
 }

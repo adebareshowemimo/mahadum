@@ -1,3 +1,4 @@
+import { websiteCopy } from '@/lib/seo/copy'
 import { useState } from 'react'
 import { Figure } from '@/components/landing/Figure'
 import { Reveal } from '@/components/landing/Reveal'
@@ -273,13 +274,8 @@ function AboutHero() {
             <span aria-hidden="true" className="size-2 rounded-full bg-rainbow-orange" />
             Why Mahadum360 exists
           </p>
-          <h1 className="mt-6 max-w-[13ch] font-display text-[clamp(3rem,6vw,5.5rem)] font-extrabold leading-[0.98] tracking-[-0.035em] text-navy-950">
-            A language should feel like home, not homework.
-          </h1>
-          <p className="mt-6 max-w-[39rem] text-lg font-semibold leading-relaxed text-navy-700 sm:text-xl">
-            Mahadum360 helps Nigerian children, young adults and families rebuild the everyday language that connects
-            generations—through short lessons, native voices and culture they can recognise themselves in.
-          </p>
+          <h1 className="mt-6 max-w-[13ch] font-display text-[clamp(3rem,6vw,5.5rem)] font-extrabold leading-[0.98] tracking-[-0.035em] text-navy-950">{websiteCopy('heading', "A language should feel like home, not homework.")}</h1>
+          <p data-public-intro="true" className="mt-6 max-w-[39rem] text-lg font-semibold leading-relaxed text-navy-700 sm:text-xl">{websiteCopy('intro', "Mahadum360 helps Nigerian children, young adults and families rebuild the everyday language that connects generations—through short lessons, native voices and culture they can recognise themselves in.")}</p>
           <p className="mt-5 max-w-[34rem] font-display text-xl font-extrabold leading-relaxed text-chore-700">
             We are building digital infrastructure for Nigerian identity.
           </p>
@@ -391,7 +387,7 @@ function PrinciplesSection() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <Reveal className="max-w-3xl">
           <h2 className="font-display text-4xl font-extrabold leading-tight text-navy-950 sm:text-5xl">
-            What guides every lesson we build
+            What guides our lessons
           </h2>
         </Reveal>
         <div className="mt-10 overflow-hidden rounded-[1rem] border border-chore-100 bg-white md:grid md:grid-cols-3">

@@ -26,6 +26,7 @@ class ConfigController extends Controller
             // parental consent — admin-configurable via system settings.
             // Drives the sign-up age gate on the web SPA.
             'digital_age' => $this->settings->get('compliance.minor_age', config('compliance.minor_age')),
+            'language_vote_options' => config('language-votes.languages'),
             'feature_flags' => [
                 'show_google_login' => $this->settings->get('auth.show_google_login'),
                 'telco_billing' => $this->settings->get('feature.telco_billing'),

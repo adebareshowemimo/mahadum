@@ -1,3 +1,4 @@
+import { websiteCopy } from '@/lib/seo/copy'
 import { useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
@@ -11,6 +12,7 @@ import { Button, Icon, Input, LinkButton, Textarea, type IconName } from '@/comp
 
 const UPDATED = '25 July 2026'
 const SUPPORT_EMAIL = 'support@mahadum360.app'
+const WHATSAPP_URL = 'https://wa.me/2349028111111?text=Hello%20Mahadum360%2C%20I%27d%20like%20to%20learn%20more.'
 
 const PRIVACY_SECTIONS = [
   {
@@ -219,12 +221,8 @@ export function ChildSafetyPage() {
         <div className="mx-auto grid max-w-[90rem] lg:grid-cols-[0.92fr_1.08fr] lg:items-stretch">
           <div className="motion-hero-copy flex flex-col justify-center px-4 py-16 sm:px-6 lg:px-10 lg:py-24">
             <p className="font-display text-xl font-extrabold text-[#a93403]">Kids get the adventure. Parents keep the controls.</p>
-            <h1 className="mt-4 max-w-[12ch] font-display text-[clamp(3rem,6vw,5.5rem)] font-extrabold leading-[0.98] tracking-[-0.035em]">
-              Child safety is part of the learning design.
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-navy-700 sm:text-xl">
-              Under-13 learners use supervised profiles—not independent logins. Parents and authorised schools control the account, consent and sensitive actions.
-            </p>
+            <h1 className="mt-4 max-w-[12ch] font-display text-[clamp(3rem,6vw,5.5rem)] font-extrabold leading-[0.98] tracking-[-0.035em]">{websiteCopy('heading', "Child safety is part of the learning design.")}</h1>
+            <p data-public-intro="true" className="mt-6 max-w-2xl text-lg leading-relaxed text-navy-700 sm:text-xl">{websiteCopy('intro', "Under-13 learners use supervised profiles—not independent logins. Parents and authorised schools control the account, consent and sensitive actions.")}</p>
             <LinkButton to="/register" variant="parent" size="lg" className="mt-8 self-start">Create a parent account</LinkButton>
           </div>
           <img
@@ -279,12 +277,8 @@ export function AccessibilityPage() {
       <section className="bg-navy-950 py-16 text-white sm:py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <p className="font-display text-xl font-extrabold text-[#ffb277]">Access is part of quality</p>
-          <h1 className="mt-4 max-w-[13ch] font-display text-[clamp(3rem,6vw,5.5rem)] font-extrabold leading-[0.98] tracking-[-0.035em]">
-            Learning should work for more people, in more situations.
-          </h1>
-          <p className="mt-6 max-w-3xl text-lg leading-relaxed text-white/80 sm:text-xl">
-            We design MAHADUM.360 for keyboard access, readable contrast, meaningful structure, reduced motion and connections that are not always fast.
-          </p>
+          <h1 className="mt-4 max-w-[13ch] font-display text-[clamp(3rem,6vw,5.5rem)] font-extrabold leading-[0.98] tracking-[-0.035em]">{websiteCopy('heading', "Learning should work for more people, in more situations.")}</h1>
+          <p data-public-intro="true" className="mt-6 max-w-3xl text-lg leading-relaxed text-white/80 sm:text-xl">{websiteCopy('intro', "We design MAHADUM.360 for keyboard access, readable contrast, meaningful structure, reduced motion and connections that are not always fast.")}</p>
         </div>
       </section>
 
@@ -387,12 +381,9 @@ export function ContactPage() {
         <Reveal className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <p className="font-display text-lg font-extrabold text-[#a93403]">Talk to the right Mahadum team</p>
           <div className="mt-3 grid gap-5 lg:grid-cols-[1fr_0.72fr] lg:items-end">
-            <h1 className="max-w-[14ch] text-wrap-balance font-display text-[clamp(3rem,6vw,5.5rem)] font-extrabold leading-[0.98] tracking-[-0.035em]">
-              Let’s start with what you need.
-            </h1>
-            <p className="max-w-2xl text-lg leading-relaxed text-navy-700 sm:text-xl">
-              Tell us what brings you here. We will prepare your message for the team best placed to help.
-            </p>
+            <h1 className="max-w-[14ch] text-wrap-balance font-display text-[clamp(3rem,6vw,5.5rem)] font-extrabold leading-[0.98] tracking-[-0.035em]">{websiteCopy('heading', "Let’s start with what you need.")}</h1>
+            <p data-public-intro="true" className="max-w-2xl text-lg leading-relaxed text-navy-700 sm:text-xl">{websiteCopy('intro', "Tell us what brings you here. We will prepare your message for the team best placed to help.")}</p>
+            <a href={WHATSAPP_URL} className="inline-flex min-h-11 items-center font-bold text-chore-700 underline">Chat with us on WhatsApp</a>
           </div>
         </Reveal>
 

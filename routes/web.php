@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\PublicContentController;
+use App\Http\Controllers\PublicWebsiteController;
 use App\Http\Controllers\UnsubscribeController;
-use Illuminate\Http\Request;
+use App\Http\Middleware\CanonicalPublicHost;
 use Illuminate\Support\Facades\Route;
 
 // One-click marketing unsubscribe (signed link embedded in campaign emails).
@@ -9,31 +11,21 @@ Route::get('/email/unsubscribe/{email}', UnsubscribeController::class)
     ->middleware('signed')
     ->name('email.unsubscribe');
 
+Route::middleware(CanonicalPublicHost::class)->group(function () {
+    Route::get('/sitemap.xml', [PublicContentController::class, 'sitemap']);
+    Route::get('/robots.txt', [PublicContentController::class, 'robots']);
+    Route::get('/llms.txt', [PublicContentController::class, 'llms']);
+    Route::get('/languages', [PublicContentController::class, 'languages']);
+    Route::get('/learn-{language}', [PublicContentController::class, 'language'])->where('language', 'igbo|yoruba|hausa');
+    Route::get('/guides', [PublicContentController::class, 'guides']);
+    Route::get('/guides/{slug}', [PublicContentController::class, 'guide'])->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*');
+    Route::get('/vote', [PublicContentController::class, 'vote']);
+});
+
 // Serve the built React SPA for every route except the API, Sanctum, storage,
 // and health-check paths. The deploy script builds `web/` and copies its
 // index.html to resources/spa/index.html; client-side routing (React Router)
 // takes over from there. Keep this LAST — routes above must match first.
-Route::get('/{any?}', function (Request $request) {
-    // Older hosted checkouts already carry the homepage return URL. Send
-    // those data references to the store without trusting a claimed status.
-    $paymentReference = $request->query('paymentReference');
-    if ($request->path() === '/' && is_string($paymentReference) && preg_match('/^data_[a-f0-9]{64}$/D', $paymentReference)) {
-        return redirect('/billing/data?'.http_build_query($request->query()));
-    }
-
-    $index = base_path('resources/spa/index.html');
-
-    abort_unless(file_exists($index), 404, 'SPA build not found — run the deploy script to build web/ first.');
-
-    $response = response()->file($index, [
-        'Content-Type' => 'text/html',
-        // The HTML points at versioned Vite assets. Revalidate it on every
-        // navigation so a production deployment cannot strand users on an
-        // older bundle while the hashed assets themselves remain cacheable.
-        'Cache-Control' => 'no-cache, no-store, must-revalidate',
-        'Pragma' => 'no-cache',
-        'Expires' => '0',
-    ]);
-
-    return $response->setPrivate();
-})->where('any', '^(?!api|sanctum|storage|up).*$');
+Route::get('/{any?}', [PublicWebsiteController::class, 'shell'])
+    ->middleware(CanonicalPublicHost::class)
+    ->where('any', '^(?!api(?:/|$)|sanctum(?:/|$)|storage(?:/|$)|up$).*$');

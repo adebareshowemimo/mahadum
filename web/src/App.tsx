@@ -9,10 +9,12 @@ import { Spinner } from '@/components/ui/Spinner'
 import { ComingSoon } from '@/pages/ComingSoon'
 import { allNavItems } from '@/lib/nav/navigation'
 import { DISPLAY_NAME } from '@/lib/brand'
+import { applyPublicMetadata } from '@/lib/seo/metadata'
 
 // Every real page is route-split. All page components are named exports, hence
 // the `.then(m => ({ default: m.X }))` shim React.lazy requires.
 const AboutPage = lazy(() => import('@/pages/AboutPage').then((m) => ({ default: m.AboutPage })))
+const WebsiteEditorPage = lazy(() => import('@/pages/WebsiteEditorPage').then((m) => ({ default: m.WebsiteEditorPage })))
 const FamiliesPage = lazy(() => import('@/pages/PublicAudiencePages').then((m) => ({ default: m.FamiliesPage })))
 const InstitutionsPage = lazy(() => import('@/pages/PublicAudiencePages').then((m) => ({ default: m.InstitutionsPage })))
 const ContactPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.ContactPage })))
@@ -149,6 +151,7 @@ function PageTitleManager() {
     if (!title && pathname.startsWith('/admin/')) title = 'Administration'
     if (!title && pathname.startsWith('/courses/')) title = 'Course'
     document.title = title ? `${title} · ${DISPLAY_NAME}` : DISPLAY_NAME
+    applyPublicMetadata(pathname)
   }, [pathname])
 
   return null
@@ -228,6 +231,7 @@ function ShellSuspense() {
 // Destinations that already have real screens; everything else in the nav
 // resolves to a ComingSoon placeholder so links never dead-end.
 const REAL_PAGES = new Set([
+  '/content/website',
   '/family/goals', '/school/students', '/school/teachers', '/notifications',
   '/verify-email',
   '/home',
@@ -397,6 +401,7 @@ export function App() {
               console gated to super_admin + content_owner. */}
           <Route path="/competitions" element={<CompetitionsPage />} />
           <Route element={<RoleRoute roles={['super_admin', 'content_owner']} />}>
+            <Route path="/content/website" element={<WebsiteEditorPage />} />
             <Route path="/competitions/manage" element={<CompetitionsAdminPage />} />
             <Route path="/content/performance" element={<CoursePerformancePage />} />
           </Route>

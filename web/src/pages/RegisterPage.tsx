@@ -7,7 +7,8 @@ import { GoogleButton } from '@/components/auth/GoogleButton'
 import { cn } from '@/lib/cn'
 import { ApiError, classInvitationApi, type RegisterInput } from '@/lib/api'
 import { useAuth } from '@/lib/auth/AuthProvider'
-import { useDigitalAge } from '@/lib/config/useConfig'
+import { useConfig, useDigitalAge } from '@/lib/config/useConfig'
+import { signupAttribution, VOTE_OPTIONS } from '@/lib/seo/discovery'
 
 type Step = 'account' | 'age' | 'guardian' | 'form'
 type SignupAccountType = 'individual' | 'family' | 'teacher' | 'school' | 'institution'
@@ -74,6 +75,13 @@ export function RegisterPage() {
   const invitationToken = searchParams.get('class_invitation') ?? ''
   const teacherToken = searchParams.get('teacher_invitation') ?? ''
   const referralCode = (searchParams.get('ref') ?? '').trim().toUpperCase()
+  const [preferredLanguage, setPreferredLanguage] = useState(() => {
+    const language = searchParams.get('lang') ?? ''
+    return ['igbo', 'yoruba', 'hausa', 'english'].includes(language) ? language : ''
+  })
+  const [languageVote, setLanguageVote] = useState('')
+  const [otherLanguage, setOtherLanguage] = useState('')
+  const discovery = { ...signupAttribution(), preferred_language: preferredLanguage || undefined, language_vote: languageVote || undefined, other_language: languageVote === 'Other' ? otherLanguage.trim() : undefined }
   const invitation = useQuery({
     queryKey: ['class-invitation', invitationToken],
     queryFn: () => classInvitationApi.show(invitationToken),
@@ -81,6 +89,7 @@ export function RegisterPage() {
     retry: false,
   })
   const digitalAge = useDigitalAge()
+  const { data: config } = useConfig()
 
   const [step, setStep] = useState<Step>(invitationToken ? 'age' : 'account')
   const [accountType, setAccountType] = useState<SignupAccountType | null>(teacherToken ? 'teacher' : null)
@@ -185,6 +194,7 @@ export function RegisterPage() {
     setFieldErrors({})
     try {
       const payload: RegisterInput = {
+        ...discovery,
         first_name: values.first_name,
         last_name: values.last_name,
         email: values.email,
@@ -523,6 +533,21 @@ export function RegisterPage() {
               />
               <p className="mt-1 text-xs text-muted">Used for airtime billing and account recovery.</p>
             </div>
+            <label className="block text-sm font-bold">Start learning in
+              <select className="mt-2 block min-h-11 w-full rounded-xl border border-chore-200 bg-white px-3 text-navy-950" value={preferredLanguage} onChange={(e) => setPreferredLanguage(e.target.value)}>
+                <option value="">Choose a language</option>
+                <option value="igbo">Igbo</option><option value="yoruba">Yorùbá</option><option value="hausa">Hausa</option><option value="english">English</option>
+              </select>
+            </label>
+            <label className="block text-sm font-bold">Which language should we add next?
+              <select className="mt-2 block min-h-11 w-full rounded-xl border border-chore-200 bg-white px-3 text-navy-950" value={languageVote} onChange={(e) => setLanguageVote(e.target.value)}>
+                <option value="">Choose a language (optional)</option>
+                {(config?.language_vote_options ?? VOTE_OPTIONS).map((language) => <option key={language} value={language}>{language}</option>)}
+              </select>
+              <span className="mt-1 block text-xs font-normal text-muted">One vote per account. <a href="/vote" className="underline">See progress toward 10,000 sign-ups.</a></span>
+            </label>
+            {languageVote === 'Other' && <Input label="Language name" value={otherLanguage} onChange={(e) => setOtherLanguage(e.target.value)} maxLength={60} error={fieldErrors.other_language} required />}
+            {fieldErrors.language_vote && <Alert variant="danger">{fieldErrors.language_vote}</Alert>}
 
             {(signupMethod === 'email' || invitationToken) && (
               <>
@@ -573,6 +598,7 @@ export function RegisterPage() {
                 label="Continue with Google"
                 onBeforeStart={validateGoogleSignup}
                 signupContext={{
+                  ...discovery,
                   account_type: accountType ?? 'family',
                   phone: values.phone.trim(),
                   dial_code: dialCode,

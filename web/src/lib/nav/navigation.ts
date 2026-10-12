@@ -75,6 +75,7 @@ export const NAV_SECTIONS: NavSection[] = [
     // media management stays with the content team + global admin.
     title: 'Content',
     items: [
+      { label: 'Website content', to: '/content/website', icon: 'book', roles: ['super_admin', 'content_owner'] },
       { label: 'Courses', to: '/courses', icon: 'layers', roles: ['super_admin', 'content_owner', 'school_admin'] },
       { label: 'Media', to: '/media', icon: 'book', roles: ['super_admin', 'content_owner'] },
       { label: 'Performance', to: '/content/performance', icon: 'sparkles', roles: ['super_admin', 'content_owner'] },

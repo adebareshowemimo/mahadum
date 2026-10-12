@@ -18,6 +18,7 @@ use App\Services\Gamification\StreakService;
 use App\Services\Learning\LessonScorer;
 use App\Services\Learning\XapiRecorder;
 use App\Services\Referral\ReferralService;
+use App\Services\SignupDiscovery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -61,7 +62,8 @@ class LessonCompletionController extends Controller
             ? ['practice_mode' => false, 'competitive_paused_until' => null]
             : $practice->state($learner);
 
-        $result = DB::transaction(function () use ($lesson, $learner, $progress, $byComponent, $score, $heartState, $xapi, $levels, $streaks, $badges) {
+        $accountUserId = $learner->user_id ?? $request->user()?->id;
+        $result = DB::transaction(function () use ($lesson, $learner, $progress, $byComponent, $score, $heartState, $xapi, $levels, $streaks, $badges, $accountUserId) {
             // Answer requests lock the learner first too. Re-read completion
             // under the lock; a request's earlier snapshot may be stale.
             LearnerProfile::whereKey($learner->id)->lockForUpdate()->firstOrFail();
@@ -87,6 +89,7 @@ class LessonCompletionController extends Controller
             }
 
             if (! $alreadyDone) {
+                app(SignupDiscovery::class)->firstLesson($accountUserId);
                 $xapi->record($learner->id, XapiRecorder::VERB_COMPLETED, 'lessons', $lesson->id, $lesson->title, XapiRecorder::ACTIVITY_LESSON, [
                     'completion' => true,
                     'score' => ['scaled' => round($score, 4)],

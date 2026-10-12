@@ -1,3 +1,4 @@
+import { websiteCopy } from '@/lib/seo/copy'
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { Figure } from '@/components/landing/Figure'
@@ -42,6 +43,8 @@ export function ConceptFooter({ tone = 'light' }: { tone?: ConceptTone }) {
               <Link className="inline-flex min-h-11 items-center hover:underline" to="/institutions">Institutions</Link>
               <Link className="inline-flex min-h-11 items-center hover:underline" to="/about">About us</Link>
               <Link className="inline-flex min-h-11 items-center hover:underline" to="/pricing">Pricing</Link>
+              <a className="inline-flex min-h-11 items-center hover:underline" href="/guides">Language guides</a>
+              <a className="inline-flex min-h-11 items-center hover:underline" href="/vote">Vote for the next language</a>
               <Link className="inline-flex min-h-11 items-center hover:underline" to={accountLink.to}>
                 {accountLink.label}
               </Link>
@@ -51,6 +54,10 @@ export function ConceptFooter({ tone = 'light' }: { tone?: ConceptTone }) {
             <h2 className={cn('font-display text-sm font-extrabold', dark ? 'text-[#ffb277]' : 'text-chore-700')}>Help &amp; trust</h2>
             <div className="mt-3 grid text-sm font-bold">
               <Link className="inline-flex min-h-11 items-center hover:underline" to="/contact">Contact us</Link>
+              <a className="inline-flex min-h-11 items-center hover:underline" href="https://wa.me/2349028111111?text=Hello%20Mahadum360%2C%20I%27d%20like%20to%20learn%20more.">Chat with us on WhatsApp</a>
+              <a className="inline-flex min-h-11 items-center hover:underline" href="https://www.youtube.com/@mahadum360" aria-label="Mahadum360 on YouTube"><svg aria-hidden="true" viewBox="0 0 24 24" className="mr-2 size-4" fill="currentColor"><path d="M22 7s-.3-2-2-2.3C17.5 4.4 12 4.4 12 4.4s-5.5 0-8 .3C2.3 5 2 7 2 7s-.4 2.3-.4 5 .4 5 .4 5 .3 2 2 2.3c2.5.3 8 .3 8 .3s5.5 0 8-.3c1.7-.3 2-2.3 2-2.3s.4-2.3.4-5-.4-5-.4-5ZM10 16V8l6 4Z" /></svg>YouTube</a>
+              <a className="inline-flex min-h-11 items-center hover:underline" href="https://www.instagram.com/mahadum360/" aria-label="Mahadum360 on Instagram"><svg aria-hidden="true" viewBox="0 0 24 24" className="mr-2 size-4" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="18" cy="6" r="1"/></svg>Instagram</a>
+              <a className="inline-flex min-h-11 items-center hover:underline" href="https://www.facebook.com/Mahadum360/" aria-label="Mahadum360 on Facebook"><svg aria-hidden="true" viewBox="0 0 24 24" className="mr-2 size-4" fill="currentColor"><path d="M14 22v-9h3l.5-4H14V7c0-1 .3-2 2-2h2V1h-3c-3 0-5 2-5 5v3H7v4h3v9Z"/></svg>Facebook</a>
               <Link className="inline-flex min-h-11 items-center hover:underline" to="/child-safety">Child safety</Link>
               <Link className="inline-flex min-h-11 items-center hover:underline" to="/accessibility">Accessibility</Link>
               <Link className="inline-flex min-h-11 items-center hover:underline" to="/privacy">Privacy</Link>
@@ -68,7 +75,7 @@ export function ConceptFooter({ tone = 'light' }: { tone?: ConceptTone }) {
             © Mahadum360, RC 9601595. · {new Date().getFullYear()} · Lagos, Nigeria
           </p>
           <p className={cn('text-xs font-semibold', dark ? 'text-white/60' : 'text-navy-500')}>
-            Yorùbá · Igbo · Hausa · English
+            <a href="/learn-yoruba" className="hover:underline">Yorùbá</a> · <a href="/learn-igbo" className="hover:underline">Igbo</a> · <a href="/learn-hausa" className="hover:underline">Hausa</a> · English
           </p>
           <button
             type="button"
@@ -156,7 +163,7 @@ const HERO_SLIDES = [
     focus: 'object-center',
     mobileFocus: 'object-[68%_center]',
     eyebrow: 'For families raising children between cultures',
-    headline: 'One hello can bring the whole family closer.',
+    headline: 'Learn Igbo, Yorùbá and Hausa together, five minutes a day.',
     body: 'Five joyful minutes a day connects your child to your roots. They can greet mama, follow family conversations and answer back with confidence.',
     cta: { label: 'Start your family free', to: '/register' },
   },
@@ -249,11 +256,10 @@ export function LandingV1Page() {
                   <span aria-hidden="true" className="size-2 rounded-full bg-rainbow-orange" />
                   {slide.eyebrow}
                 </p>
-                <h1 className="mt-6 max-w-[14ch] font-display text-[clamp(3rem,6.1vw,5.8rem)] font-extrabold leading-[0.98] tracking-[-0.035em] text-navy-950">
-                  {slide.headline}
-                </h1>
-                <p className="mt-6 max-w-[36rem] text-lg font-semibold leading-relaxed text-navy-700 sm:text-xl">
-                  {slide.body}
+                <h1 className="mt-6 max-w-[18ch] font-display text-[clamp(2.7rem,4.8vw,4.4rem)] font-extrabold leading-[1.06] tracking-[-0.035em] text-navy-950">{websiteCopy('heading', "Learn Igbo, Yorùbá and Hausa together, five minutes a day.")}</h1>
+                {slideIndex > 0 && <h2 className="mt-4 font-display text-xl font-bold text-navy-800">{slide.headline}</h2>}
+                <p data-public-intro="true" className="mt-6 max-w-[36rem] text-lg font-semibold leading-relaxed text-navy-700 sm:text-xl">
+                  {websiteCopy('intro', slide.body)}
                 </p>
                 <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                   <LinkButton to={slide.cta.to} size="lg" variant="parent">{slide.cta.label}</LinkButton>
@@ -511,12 +517,8 @@ export function LandingV2Page() {
           <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4.75rem)] max-w-[90rem] items-center px-4 py-16 sm:px-6 lg:px-10">
             <div className="motion-hero-copy max-w-[42rem]">
               <p className="font-display text-xl font-extrabold text-[#ffd36a]">A Nigerian language world children can enter.</p>
-              <h1 className="mt-4 max-w-[10ch] font-display text-[clamp(3.2rem,6.7vw,6rem)] font-extrabold leading-[0.94] tracking-[-0.035em] text-white">
-                Every new word opens a bigger world.
-              </h1>
-              <p className="mt-6 max-w-xl text-lg font-bold leading-relaxed text-white/88 sm:text-xl">
-                Stories, market missions, speaking games and friendly challenges make Yorùbá, Igbo, Hausa and English feel like play with a purpose.
-              </p>
+              <h1 className="mt-4 max-w-[10ch] font-display text-[clamp(3.2rem,6.7vw,6rem)] font-extrabold leading-[0.94] tracking-[-0.035em] text-white">{websiteCopy('heading', "Every new word opens a bigger world.")}</h1>
+              <p data-public-intro="true" className="mt-6 max-w-xl text-lg font-bold leading-relaxed text-white/88 sm:text-xl">{websiteCopy('intro', "Stories, market missions, speaking games and friendly challenges make Yorùbá, Igbo, Hausa and English feel like play with a purpose.")}</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <a href="#v2-play" className="inline-flex h-12 items-center justify-center rounded-xl bg-[#ff650f] px-6 font-display font-extrabold text-white hover:bg-[#d94d00]">Play a one-minute lesson</a>
                 <LinkButton to="/register" size="lg" variant="ghost" className="border-2 border-white/55 bg-white/10 text-white hover:bg-white/20">Start free</LinkButton>
@@ -758,12 +760,8 @@ export function LandingV3Page() {
           <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4.75rem)] max-w-[90rem] items-center px-4 py-16 sm:px-6 lg:px-10">
             <div className="motion-hero-copy max-w-[43rem] text-white">
               <p className="font-display text-xl font-extrabold text-[#ffb277]">One learning system from home to school.</p>
-              <h1 className="mt-4 max-w-[11ch] font-display text-[clamp(3.1rem,6.4vw,5.9rem)] font-extrabold leading-[0.96] tracking-[-0.035em]">
-                Keep the language moving everywhere a child learns.
-              </h1>
-              <p className="mt-6 max-w-xl text-lg font-semibold leading-relaxed text-white/78 sm:text-xl">
-                A complete Nigerian-language platform for learners, families, teachers and schools—joined by one curriculum and one view of progress.
-              </p>
+              <h1 className="mt-4 max-w-[11ch] font-display text-[clamp(3.1rem,6.4vw,5.9rem)] font-extrabold leading-[0.96] tracking-[-0.035em]">{websiteCopy('heading', "Keep the language moving everywhere a child learns.")}</h1>
+              <p data-public-intro="true" className="mt-6 max-w-xl text-lg font-semibold leading-relaxed text-white/78 sm:text-xl">{websiteCopy('intro', "A complete Nigerian-language platform for learners, families, teachers and schools—joined by one curriculum and one view of progress.")}</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <LinkButton to="/register" size="lg" variant="accent">Start learning free</LinkButton>
                 <a href="#v3-school" className="inline-flex h-12 items-center justify-center rounded-xl border-2 border-white/45 bg-white/8 px-6 font-display font-bold text-white hover:bg-white/15">Price a school</a>

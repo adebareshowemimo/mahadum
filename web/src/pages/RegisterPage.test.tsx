@@ -21,11 +21,11 @@ function yearsAgo(n: number): string {
   return d.toISOString().slice(0, 10)
 }
 
-function setup() {
+function setup(path = '/register') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[path]}>
         <RegisterPage />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -33,6 +33,16 @@ function setup() {
 }
 
 describe('RegisterPage age gate', () => {
+  it('preselects Hausa from its landing-page link and allows an Other language vote', async () => {
+    setup('/register?lang=hausa')
+    await userEvent.click(screen.getByRole('radio', { name: /Family/i }))
+    await userEvent.click(screen.getByRole('button', { name: /continue/i }))
+    fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: yearsAgo(30) } })
+    await userEvent.click(screen.getByRole('button', { name: /continue/i }))
+    expect(screen.getByLabelText('Start learning in')).toHaveValue('hausa')
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: /Which language should we add next/i }), 'Other')
+    expect(screen.getByLabelText('Language name')).toBeRequired()
+  })
   it('starts with separate teacher and school account choices', () => {
     setup()
     expect(screen.getByRole('radio', { name: /Individual/i })).toBeInTheDocument()

@@ -1,3 +1,4 @@
+import { websiteCopy } from '@/lib/seo/copy'
 import { Figure } from '@/components/landing/Figure'
 import {
   AudiencePath,
@@ -80,12 +81,8 @@ export function FamiliesPage() {
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(6,26,60,0.99)_0%,rgba(6,26,60,0.92)_32%,rgba(6,26,60,0.33)_60%,rgba(6,26,60,0.05)_100%)]" />
         <div className="relative z-10 mx-auto flex min-h-[31.25rem] max-w-[90rem] items-center px-4 py-8 sm:px-6 lg:px-10">
           <div className="motion-hero-copy max-w-[38rem]">
-            <h1 className="max-w-[11ch] text-wrap-balance font-display text-[clamp(3.2rem,5.7vw,5.5rem)] font-extrabold leading-[0.98] tracking-[-0.035em]">
-              Hear your child say it in your language.
-            </h1>
-            <p className="mt-5 max-w-[32rem] text-lg leading-relaxed text-white/86">
-              Mahadum360 helps families speak, listen, and learn together—through the languages that make your home yours.
-            </p>
+            <h1 className="max-w-[11ch] text-wrap-balance font-display text-[clamp(3.2rem,5.7vw,5.5rem)] font-extrabold leading-[0.98] tracking-[-0.035em]">{websiteCopy('heading', "Hear your child say it in your language.")}</h1>
+            <p data-public-intro="true" className="mt-5 max-w-[32rem] text-lg leading-relaxed text-white/86">{websiteCopy('intro', "Mahadum360 helps families speak, listen, and learn together—through the languages that make your home yours.")}</p>
             <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center">
               <LinkButton to="/register" variant="accent" size="lg">Start your family free <span aria-hidden="true">→</span></LinkButton>
               <a href="/#v1-quiz" className="inline-flex min-h-12 items-center gap-3 font-display font-extrabold text-white hover:underline">
@@ -222,12 +219,8 @@ export function InstitutionsPage() {
         <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4.75rem)] max-w-[90rem] items-center px-4 py-14 sm:px-6 lg:min-h-[40rem]! lg:px-10">
           <div className="motion-hero-copy max-w-[43rem]">
             <p className="font-display text-xl font-extrabold text-[#ffb277]">Built for programmes with real reach</p>
-            <h1 className="mt-4 max-w-[11ch] text-wrap-balance font-display text-[clamp(3.2rem,6vw,5.7rem)] font-extrabold leading-[0.98] tracking-[-0.035em]">
-              Take Nigerian languages further.
-            </h1>
-            <p className="mt-6 max-w-[38rem] text-lg leading-relaxed text-white/86 sm:text-xl">
-              Launch culturally grounded learning across campuses, communities, public initiatives and connected channels—with one adaptable platform behind it.
-            </p>
+            <h1 className="mt-4 max-w-[11ch] text-wrap-balance font-display text-[clamp(3.2rem,6vw,5.7rem)] font-extrabold leading-[0.98] tracking-[-0.035em]">{websiteCopy('heading', "Take Nigerian languages further.")}</h1>
+            <p data-public-intro="true" className="mt-6 max-w-[38rem] text-lg leading-relaxed text-white/86 sm:text-xl">{websiteCopy('intro', "Launch culturally grounded learning across campuses, communities, public initiatives and connected channels—with one adaptable platform behind it.")}</p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <LinkButton to="/contact?topic=partnership" variant="accent" size="lg">Discuss a partnership</LinkButton>
               <a href="#institution-flow" className="inline-flex min-h-12 items-center justify-center gap-3 px-5 font-display font-extrabold text-white hover:underline">

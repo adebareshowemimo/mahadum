@@ -1,6 +1,8 @@
 // Shared shapes for the Mahadum.360 API. These mirror the Laravel API resources
 // (UserResource, FamilyResource, MeController) — keep them in sync with the backend.
 
+import type { SignupDiscoveryInput } from '@/lib/seo/discovery'
+
 export type Role =
   | 'super_admin'
   | 'content_owner'
@@ -2032,6 +2034,7 @@ export interface PromoCode {
 
 /** Response from GET /config — launch-time bootstrap (public). */
 export interface AppConfig {
+  language_vote_options?: string[]
   min_supported_version: { ios: string | null; android: string | null }
   /** Age below which a learner needs verifiable parental consent (admin-set). */
   digital_age: number
@@ -2049,7 +2052,7 @@ export interface LoginInput {
   class_invitation_token?: string
 }
 
-export interface RegisterInput {
+export interface RegisterInput extends SignupDiscoveryInput {
   first_name: string
   last_name: string
   email: string
@@ -2068,7 +2071,7 @@ export interface RegisterInput {
   class_invitation_token?: string
 }
 
-export interface GoogleAuthInput {
+export interface GoogleAuthInput extends SignupDiscoveryInput {
   id_token: string
   account_type?: 'individual' | 'family' | 'teacher' | 'school' | 'educator_school' | 'institution'
   organization_name?: string

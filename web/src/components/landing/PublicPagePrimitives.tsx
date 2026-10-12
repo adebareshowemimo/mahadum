@@ -1,3 +1,4 @@
+import { websiteCopy } from '@/lib/seo/copy'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Icon, LinkButton, type IconName } from '@/components/ui'
@@ -193,8 +194,8 @@ export function PolicyPage({
       <section className="bg-navy-950 py-14 text-white sm:py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <p className="font-display text-lg font-extrabold text-[#ffb277]">Trust, explained clearly</p>
-          <h1 className="mt-3 max-w-[16ch] font-display text-4xl font-extrabold leading-tight sm:text-6xl">{title}</h1>
-          <p className="mt-5 max-w-3xl text-lg leading-relaxed text-white/80">{summary}</p>
+          <h1 className="mt-3 max-w-[16ch] font-display text-4xl font-extrabold leading-tight sm:text-6xl">{websiteCopy('heading', title)}</h1>
+          <p data-public-intro="true" className="mt-5 max-w-3xl text-lg leading-relaxed text-white/80">{websiteCopy('intro', summary)}</p>
           <p className="mt-5 text-sm font-bold text-white/72">Last updated: {updated}</p>
         </div>
       </section>

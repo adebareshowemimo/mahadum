@@ -18,6 +18,7 @@ use App\Notifications\NewDeviceAlert;
 use App\Services\AuditLogger;
 use App\Services\Referral\ReferralService;
 use App\Services\School\ClassLearnerInvitationService;
+use App\Services\SignupDiscovery;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -72,6 +73,7 @@ class AuthController extends Controller
             if ($invitationToken !== '') {
                 $classInvitations->accept($invitationToken, $user);
             }
+            app(SignupDiscovery::class)->record($user, $request);
 
             return [$user, $organization];
         });
@@ -177,6 +179,7 @@ class AuthController extends Controller
                     $request->input('account_type', 'family'),
                     $request->input('organization_name'),
                 );
+                app(SignupDiscovery::class)->record($user, $request);
 
                 return [$user, $organization];
             });

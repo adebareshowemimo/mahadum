@@ -1,3 +1,4 @@
+import { websiteCopy } from '@/lib/seo/copy'
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Navigate } from 'react-router-dom'
@@ -71,12 +72,8 @@ function PricingHero() {
             <span aria-hidden="true" className="size-2 rounded-full bg-rainbow-orange" />
             Straightforward pricing for families and schools
           </p>
-          <h1 className="mt-6 max-w-[12ch] font-display text-[clamp(3rem,6vw,5.5rem)] font-extrabold leading-[0.98] tracking-[-0.035em] text-navy-950">
-            Start with Level 0. Unlock more with a paid plan.
-          </h1>
-          <p className="mt-6 max-w-[38rem] text-lg font-semibold leading-relaxed text-navy-700 sm:text-xl">
-            Start your learning journey and build basic language skills at no cost with Level 0. Only commit to a paid plan when you are satisfied. Unlock the paid curriculum for deeper learning and unlimited hearts, with family tools on Family plans.
-          </p>
+          <h1 className="mt-6 max-w-[12ch] font-display text-[clamp(3rem,6vw,5.5rem)] font-extrabold leading-[0.98] tracking-[-0.035em] text-navy-950">{websiteCopy('heading', "Start with Level 0. Unlock more with a paid plan.")}</h1>
+          <p data-public-intro="true" className="mt-6 max-w-[38rem] text-lg font-semibold leading-relaxed text-navy-700 sm:text-xl">{websiteCopy('intro', "Start your learning journey and build basic language skills at no cost with Level 0. Only commit to a paid plan when you are satisfied. Unlock the paid curriculum for deeper learning and unlimited hearts, with family tools on Family plans.")}</p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <a
               href="#plans"

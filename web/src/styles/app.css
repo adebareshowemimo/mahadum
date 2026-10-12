@@ -3,6 +3,7 @@
 @import 'tailwindcss';
 @import '../../tokens/tokens.css';
 @import '../../tokens/tokens-v2.css';
+@source '../../../resources/views/public';
 
 /* Dark mode driven by a `.dark` class on <html> (see ThemeProvider). */
 @custom-variant dark (&:where(.dark, .dark *));
