@@ -37,13 +37,14 @@ export function DataPurchaseStatusPage() {
           <div className="flex justify-between gap-4"><dt className="text-muted">Recipient</dt><dd>{order.phone_number}</dd></div>
           <div className="flex justify-between gap-4"><dt className="text-muted">Amount</dt><dd>{formatMoney(order.amount_minor, 'NGN')}</dd></div>
           <div className="flex justify-between gap-4"><dt className="text-muted">Payment</dt><dd>{order.payment_confirmed ? 'Confirmed' : order.status === 'payment_failed' ? 'Unsuccessful' : order.status === 'needs_review' ? 'Needs review' : 'Awaiting confirmation'}</dd></div>
-          <div className="flex justify-between gap-4"><dt className="text-muted">Data delivery</dt><dd>{order.status === 'success' ? 'Delivered' : order.status === 'failed' ? 'Failed' : order.status === 'needs_review' ? 'Needs review' : order.delivery_started ? 'In progress' : 'Not started'}</dd></div>
+          <div className="flex justify-between gap-4"><dt className="text-muted">Data delivery</dt><dd>{order.status === 'success' ? 'Delivered' : order.status === 'failed' ? 'Failed' : order.delivery_started ? order.status === 'needs_review' ? 'Needs review' : 'In progress' : 'Not started'}</dd></div>
         </dl>
         {order.status === 'awaiting_payment' && <Alert variant="info" title="Awaiting payment confirmation">Monnify has not yet confirmed this payment. We’ll check again automatically.</Alert>}
         {order.status === 'processing' && <Alert variant="info" title="Delivering your data">Your payment is confirmed. Your network is processing the bundle. This page will update automatically.</Alert>}
         {order.status === 'success' && <Alert variant="success" title="Data delivered">Payment and data delivery have been confirmed.</Alert>}
         {order.status === 'payment_failed' && <Alert variant="danger" title="Payment unsuccessful">Monnify did not confirm a successful payment. You can choose another bundle.</Alert>}
-        {(order.status === 'failed' || order.status === 'needs_review') && <Alert variant="danger" title="Your purchase needs attention">Data delivery could not be confirmed. Contact support with the reference below to resolve this order.</Alert>}
+        {order.status === 'needs_review' && !order.payment_confirmed && <Alert variant="danger" title="Payment needs review">Monnify has not confirmed the payment details for this order, so data has not been sent. Check again or contact support with the reference below.</Alert>}
+        {(order.status === 'failed' || (order.status === 'needs_review' && order.payment_confirmed)) && <Alert variant="danger" title="Your purchase needs attention">Data delivery could not be confirmed. Contact support with the reference below to resolve this order.</Alert>}
       </>}
       {reference && <p className="break-all text-xs text-muted">Reference: {reference}</p>}
       <div className="flex flex-wrap gap-3">

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Jobs\ProcessDataBundlePurchase;
 use App\Models\AuditLog;
 use App\Models\DataBundlePurchase;
+use App\Services\Billing\DataPurchaseActivity;
 use App\Services\Billing\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory;
@@ -280,6 +281,54 @@ class MonnifyDataBundleTest extends TestCase
         $this->provider(paid: 100);
         $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()->assertJsonPath('data.status', 'needs_review');
         Http::assertNotSent(fn ($r) => str_ends_with($r->url(), '/vend'));
+    }
+
+    public function test_verified_currency_alias_recovers_a_previously_held_payment_without_duplicate_vending(): void
+    {
+        $id = $this->buy('currency-alias')->json('data.purchase_id');
+        $purchase = DataBundlePurchase::findOrFail($id);
+        $payment = ['paymentStatus' => 'PAID', 'amountPaid' => 750,
+            'paymentReference' => $purchase->payment_reference];
+        $this->provider(overrides: ['/api/v2/merchant/transactions/query' => Http::response([
+            'responseBody' => $payment + ['currency' => 'NGN'],
+        ])]);
+        $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()
+            ->assertJsonPath('data.status', 'success')->assertJsonPath('data.payment_confirmed', true);
+        $this->assertCount(1, Http::recorded(fn ($r) => str_ends_with($r->url(), '/vend')));
+
+        // Simulate a row held by the previous code, which required currencyCode.
+        $held = $this->buy('held-currency-alias')->json('data.purchase_id');
+        $heldPurchase = DataBundlePurchase::findOrFail($held);
+        $this->provider(overrides: ['/api/v2/merchant/transactions/query' => Http::response([
+            'responseBody' => array_replace($payment, ['paymentReference' => $heldPurchase->payment_reference]),
+        ])]);
+        $this->getJson('/api/v1/data-bundles/purchases/'.$held)->assertOk()
+            ->assertJsonPath('data.status', 'needs_review')->assertJsonPath('data.payment_confirmed', false);
+        // The provider now confirms the same purchase with an accepted currency field.
+        $this->provider(overrides: ['/api/v2/merchant/transactions/query' => Http::response([
+            'responseBody' => array_replace($payment, [
+                'paymentReference' => $heldPurchase->payment_reference, 'currency' => 'NGN',
+            ]),
+        ])]);
+        $this->getJson('/api/v1/data-bundles/purchases/'.$held)->assertOk()
+            ->assertJsonPath('data.status', 'success')->assertJsonPath('data.payment_confirmed', true);
+        $this->assertCount(1, Http::recorded(fn ($r) => str_ends_with($r->url(), '/vend')));
+    }
+
+    public function test_refunded_review_order_cannot_be_reopened_by_a_paid_verification(): void
+    {
+        $id = $this->buy('refunded-review')->json('data.purchase_id');
+        $purchase = DataBundlePurchase::findOrFail($id);
+        $purchase->update(['status' => 'needs_review']);
+        $activity = app(DataPurchaseActivity::class);
+        $activity->record('payment_mismatch', $purchase);
+        $activity->record('refund_received', $purchase);
+
+        Http::swap(new Factory);
+        Http::preventStrayRequests();
+        $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()
+            ->assertJsonPath('data.status', 'needs_review');
+        Http::assertNothingSent();
     }
 
     public function test_verified_payment_vends_once_and_omits_unneeded_validation_reference(): void

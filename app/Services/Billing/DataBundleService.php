@@ -3,6 +3,7 @@
 namespace App\Services\Billing;
 
 use App\Jobs\ProcessDataBundlePurchase;
+use App\Models\AuditLog;
 use App\Models\DataBundlePurchase;
 use App\Models\User;
 use App\Services\Billing\Gateways\MonnifyGateway;
@@ -79,7 +80,18 @@ class DataBundleService
         }
         try {
             $purchase->refresh();
-            if (! in_array($purchase->status, ['awaiting_payment', 'processing'], true) || ! $purchase->payment_reference) {
+            // An older paid order may have been held only because Monnify's
+            // verification returned `currency` instead of `currencyCode`.
+            // Recheck that precise case, but never revive a refunded order or
+            // retry a vend that may already have reached the network.
+            $recheckPaymentMismatch = $purchase->status === 'needs_review'
+                && ! $purchase->paid_at && ! $purchase->vend_started_at
+                && AuditLog::where('subject_type', $purchase->getMorphClass())->where('subject_id', $purchase->id)
+                    ->where('action', 'billing.data_bundle.payment_mismatch')->exists()
+                && ! AuditLog::where('subject_type', $purchase->getMorphClass())->where('subject_id', $purchase->id)
+                    ->where('action', 'billing.data_bundle.refund_received')->exists();
+            if ((! in_array($purchase->status, ['awaiting_payment', 'processing'], true) && ! $recheckPaymentMismatch)
+                || ! $purchase->payment_reference) {
                 return $purchase;
             }
             if (! $purchase->paid_at) {
@@ -95,10 +107,15 @@ class DataBundleService
                 if ($verified->status !== 'success') {
                     return $purchase;
                 }
-                if ($verified->amountMinor !== $purchase->amount_minor || ($verified->raw['responseBody']['currencyCode'] ?? null) !== 'NGN'
+                $currency = $verified->raw['responseBody']['currencyCode'] ?? $verified->raw['responseBody']['currency'] ?? null;
+                if ($verified->amountMinor !== $purchase->amount_minor || $currency !== 'NGN'
                     || ($verified->raw['responseBody']['paymentReference'] ?? null) !== $purchase->payment_reference) {
                     $purchase->update(['status' => 'needs_review']);
-                    app(DataPurchaseActivity::class)->record('payment_mismatch', $purchase);
+                    app(DataPurchaseActivity::class)->record('payment_mismatch', $purchase, [
+                        'provider_amount_minor' => $verified->amountMinor,
+                        'provider_currency' => $currency,
+                        'reference_matches' => ($verified->raw['responseBody']['paymentReference'] ?? null) === $purchase->payment_reference,
+                    ]);
 
                     return $purchase;
                 }
