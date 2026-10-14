@@ -106,6 +106,13 @@ only after provider-confirmed success. Existing paid orders do not require
 a second customer payment. Verify their order status and activity trail;
 unconfirmed/failed delivery requires support reconciliation.
 
+New data checkouts are paused by default with `MONNIFY_BILLS_ENABLED=false`.
+Keep this flag off while Monnify vending is returning errors. Existing order
+status checks and requery remain available. After Monnify confirms Bills Payment
+activation, wallet funding, and a successful live vend, set
+`MONNIFY_BILLS_ENABLED=true` in the server environment and refresh Laravel's
+configuration cache before accepting new data payments.
+
 ```bash
 cd /var/www/mahadum && ./deploy/deploy.sh
 ```
