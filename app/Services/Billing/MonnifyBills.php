@@ -52,7 +52,9 @@ class MonnifyBills
 
     public function requery(string $reference): array
     {
-        return $this->request('get', 'requery', ['vendReference' => $reference]);
+        // Live Bills Payment requires `reference`; the published PHP package
+        // sends `vendReference`. Include both for compatible read-only requery.
+        return $this->request('get', 'requery', ['reference' => $reference, 'vendReference' => $reference]);
     }
 
     private function pages(string $endpoint, array $query): array

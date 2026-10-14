@@ -338,7 +338,8 @@ class MonnifyDataBundleTest extends TestCase
         $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()->assertJsonPath('data.status', 'success');
         $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()->assertJsonPath('data.status', 'success');
         Http::assertSent(fn ($r) => str_ends_with($r->url(), '/vend') && $r['vendAmount'] == 750
-            && str_starts_with($r['vendReference'], 'vend_data_') && ! isset($r['amount']) && ! isset($r['reference'])
+            && $r['amount'] == 750 && $r['reference'] === $r['vendReference']
+            && str_starts_with($r['vendReference'], 'vend_data_')
             && ! isset($r['emailAddress']) && ! isset($r['phoneNumber']) && ! isset($r['validationReference']));
         $this->assertCount(1, Http::recorded(fn ($r) => str_ends_with($r->url(), '/vend')));
     }
@@ -356,6 +357,21 @@ class MonnifyDataBundleTest extends TestCase
         $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()
             ->assertJsonPath('data.status', 'success')->assertJsonPath('data.payment_confirmed', true);
         $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()->assertJsonPath('data.status', 'success');
+        $this->assertCount(1, Http::recorded(fn ($r) => str_ends_with($r->url(), '/vend')));
+    }
+
+    public function test_live_response_field_names_confirm_delivery_without_a_second_vend(): void
+    {
+        $id = $this->buy('live-vend-response')->json('data.purchase_id');
+        $reference = DataBundlePurchase::findOrFail($id)->vend_reference;
+        $this->provider(overrides: ['/api/v1/vas/bills-payment/vend' => Http::response([
+            'requestSuccessful' => true, 'responseBody' => [
+                'reference' => $reference, 'status' => 'SUCCESSFUL', 'amount' => 750,
+            ],
+        ])]);
+
+        $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()
+            ->assertJsonPath('data.status', 'success');
         $this->assertCount(1, Http::recorded(fn ($r) => str_ends_with($r->url(), '/vend')));
     }
 
@@ -389,7 +405,8 @@ class MonnifyDataBundleTest extends TestCase
         Http::assertSent(fn ($r) => str_ends_with($r->url(), '/vend') && $r['validationReference'] === 'validation-1');
         $this->provider();
         $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()->assertJsonPath('data.status', 'success');
-        Http::assertSent(fn ($r) => str_contains($r->url(), '/requery') && str_starts_with($r['vendReference'], 'vend_data_') && ! isset($r['reference']));
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/requery') && str_starts_with($r['reference'], 'vend_data_')
+            && $r['vendReference'] === $r['reference']);
     }
 
     public function test_top_level_validation_instructions_can_complete_a_paid_purchase(): void

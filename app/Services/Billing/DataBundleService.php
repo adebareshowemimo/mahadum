@@ -138,6 +138,9 @@ class DataBundleService
                 $payload = [
                     'productCode' => $purchase->product_code, 'customerId' => $purchase->phone_number,
                     'vendAmount' => round($purchase->amount_minor / 100, 2), 'vendReference' => $purchase->vend_reference,
+                    // The live endpoint reads these names while the published
+                    // Bills Payment guide documents the vend-prefixed names.
+                    'amount' => round($purchase->amount_minor / 100, 2), 'reference' => $purchase->vend_reference,
                 ];
                 if ($instruction['requireValidationRef']) {
                     abort_unless(filled($instruction['validationReference'] ?? null), 502, 'Monnify did not return a required validation reference.');
@@ -148,7 +151,8 @@ class DataBundleService
                 app(DataPurchaseActivity::class)->record('delivery_started', $purchase);
                 $result = $this->bills->vend($payload);
             }
-            $status = match ($result['vendStatus'] ?? null) {
+            $providerStatus = $result['vendStatus'] ?? $result['status'] ?? null;
+            $status = match ($providerStatus) {
                 'SUCCESS', 'SUCCESSFUL' => 'success',
                 'FAILED' => 'failed',
                 default => 'processing',
@@ -156,15 +160,16 @@ class DataBundleService
             // Monnify documents vendStatus and vendReference on success. Some
             // responses also echo product, recipient and amount; check those
             // when present, without rejecting a valid minimal response.
-            if ($status === 'success' && (($result['vendReference'] ?? null) !== $purchase->vend_reference
+            if ($status === 'success' && (($result['vendReference'] ?? $result['reference'] ?? null) !== $purchase->vend_reference
                 || (isset($result['productCode']) && $result['productCode'] !== $purchase->product_code)
                 || (isset($result['customerId']) && $result['customerId'] !== $purchase->phone_number)
-                || (isset($result['vendAmount']) && (int) round((float) $result['vendAmount'] * 100) !== $purchase->amount_minor))) {
+                || (isset($result['vendAmount']) && (int) round((float) $result['vendAmount'] * 100) !== $purchase->amount_minor)
+                || (isset($result['amount']) && (int) round((float) $result['amount'] * 100) !== $purchase->amount_minor))) {
                 $status = 'needs_review';
             }
             app(DataPurchaseActivity::class)->record('delivery_result', $purchase, [
                 'result_status' => $status,
-                'provider_vend_status' => is_string($result['vendStatus'] ?? null) ? $result['vendStatus'] : null,
+                'provider_vend_status' => is_string($providerStatus) ? $providerStatus : null,
             ]);
             if ($status !== 'processing') {
                 $purchase->update(['status' => $status]);
