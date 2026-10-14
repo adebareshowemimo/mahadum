@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { LoginPage } from './LoginPage'
@@ -15,12 +15,18 @@ vi.mock('@/lib/auth/AuthProvider', () => ({
   useAuth: () => ({ login, loginWithGoogle: vi.fn(), hasRole: () => false }),
 }))
 
-function setup() {
+function CurrentLocation() {
+  const location = useLocation()
+  return <p data-testid="current-location">{location.pathname}{location.search}{location.hash}</p>
+}
+
+function setup(from?: { pathname: string; search?: string; hash?: string }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[{ pathname: '/login', state: from ? { from } : undefined }]}>
         <LoginPage />
+        <CurrentLocation />
       </MemoryRouter>
     </QueryClientProvider>,
   )
@@ -61,5 +67,15 @@ describe('LoginPage', () => {
     await userEvent.type(screen.getByLabelText(/^password$/i), 'wrong')
     await userEvent.click(screen.getByRole('button', { name: /^sign in$/i }))
     expect(await screen.findByText(/credentials are incorrect/i)).toBeInTheDocument()
+  })
+
+  it('preserves the payment reference when returning to purchase status after login', async () => {
+    login.mockResolvedValueOnce(undefined)
+    const search = `?paymentReference=data_${'a'.repeat(64)}`
+    setup({ pathname: '/billing/data/status', search, hash: '#status' })
+    await userEvent.type(screen.getByLabelText(/email or username/i), 'ada@demo.test')
+    await userEvent.type(screen.getByLabelText(/^password$/i), 'Password123!')
+    await userEvent.click(screen.getByRole('button', { name: /^sign in$/i }))
+    expect(screen.getByTestId('current-location')).toHaveTextContent(`/billing/data/status${search}#status`)
   })
 })

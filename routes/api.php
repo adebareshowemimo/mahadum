@@ -337,6 +337,8 @@ Route::prefix('v1')->group(function () {
         Route::post('data-bundles/events', [DataBundleController::class, 'event'])->middleware('throttle:120,1');
         Route::get('data-bundles/purchases', [DataBundleController::class, 'history'])
             ->middleware('can:billing.databundles.manage');
+        Route::get('data-bundles/purchases/verify', [DataBundleController::class, 'verify'])
+            ->middleware('can:billing.databundles.manage');
         Route::get('data-bundles/purchases/{purchase}', [DataBundleController::class, 'show'])
             ->middleware('can:billing.databundles.manage');
 

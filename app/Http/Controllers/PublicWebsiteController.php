@@ -13,8 +13,8 @@ class PublicWebsiteController extends Controller
     public function shell(Request $request): Response
     {
         $paymentReference = $request->query('paymentReference');
-        if ($request->path() === '/' && is_string($paymentReference) && preg_match('/^data_[a-f0-9]{64}$/D', $paymentReference)) {
-            return redirect('/billing/data?'.http_build_query($request->query()));
+        if (in_array($request->path(), ['/', 'billing/data'], true) && is_string($paymentReference) && preg_match('/^data_[a-f0-9]{64}$/D', $paymentReference)) {
+            return redirect('/billing/data/status?'.http_build_query(['paymentReference' => $paymentReference]));
         }
         $path = '/'.trim($request->path(), '/');
         $redirects = ['/v1' => '/', '/v5' => '/schools'];

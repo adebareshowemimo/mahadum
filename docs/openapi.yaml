@@ -2119,6 +2119,31 @@ paths:
         "502": { description: Provider validation unavailable }
         "503": { description: Monnify checkout disabled or unconfigured }
 
+  /data-bundles/purchases/verify:
+    get:
+      tags: [Billing]
+      summary: Verify own data purchase by the checkout return reference (billing.databundles.manage)
+      description: Resolves the exact order for the authenticated buyer and verifies payment with Monnify before vending. Browser payment-status parameters are ignored. Repeated calls cannot vend twice.
+      parameters:
+        - in: query
+          name: payment_reference
+          required: true
+          schema: { type: string, pattern: '^data_[a-f0-9]{64}$' }
+      responses:
+        "200":
+          description: Verified payment and current delivery status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/DataBundlePurchase" }
+        "403": { description: Permission denied }
+        "404": { description: Reference not found for this buyer }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "502": { description: Provider unavailable }
+        "503": { description: Provider unreachable }
+
   /data-bundles/purchases/{purchase}:
     get:
       tags: [Billing]
@@ -3862,6 +3887,8 @@ components:
         phone_number: { type: string }
         checkout_url: { type: string, nullable: true }
         payment_reference: { type: string }
+        payment_confirmed: { type: boolean, description: Payment was verified server-side }
+        delivery_started: { type: boolean, description: A persisted vend attempt exists }
     ErrorEnvelope:
       type: object
       description: Coded error envelope returned by money/idempotency/version guards and explicit business rules.

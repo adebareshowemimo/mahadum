@@ -21,7 +21,10 @@ export function LoginPage() {
     enabled: invitationToken.length === 64,
     retry: false,
   })
-  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/home'
+  const returnLocation = (location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null)?.from
+  const from = returnLocation?.pathname?.startsWith('/') && !returnLocation.pathname.startsWith('//')
+    && !['/login', '/register'].includes(returnLocation.pathname)
+    ? `${returnLocation.pathname}${returnLocation.search ?? ''}${returnLocation.hash ?? ''}` : '/home'
 
   const [values, setValues] = useState({ login: '', password: '' })
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})

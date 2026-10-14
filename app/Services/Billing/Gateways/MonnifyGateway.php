@@ -41,7 +41,7 @@ class MonnifyGateway implements PaymentGateway
                 'currencyCode' => 'NGN',
                 'contractCode' => $this->contractCode,
                 'redirectUrl' => ($metadata['purpose'] ?? null) === 'data_bundle'
-                    ? rtrim((string) config('app.url'), '/').'/billing/data'
+                    ? rtrim((string) config('app.url'), '/').'/billing/data/status'
                     : (string) config('app.url'),
                 'metaData' => $metadata,
             ])

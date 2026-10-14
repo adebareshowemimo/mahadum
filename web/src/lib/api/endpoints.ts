@@ -885,6 +885,11 @@ export const billingApi = {
     const { data } = await api.get('/data-bundles/purchases')
     return data.data
   },
+
+  async verifyDataBundlePurchase(reference: string): Promise<DataBundlePurchase> {
+    const { data } = await api.get('/data-bundles/purchases/verify', { params: { payment_reference: reference } })
+    return data.data
+  },
 }
 
 export const adminApi = {

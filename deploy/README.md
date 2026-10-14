@@ -67,6 +67,15 @@ Assumes Apache2, PHP 8.3, Composer, and Node are already installed.
 
 ## Subsequent deploys
 
+Mobile data checkout returns now use
+`/billing/data/status?paymentReference=data_...`. The status page verifies the
+exact reference on the server, scoped to the signed-in buyer, and displays
+payment confirmation separately from data delivery. Older returns to
+`/billing/data?paymentReference=...` or `/?paymentReference=...` redirect to
+this page. Browser session storage and redirect payment-status parameters
+are not used as payment confirmation. No new migration or provider setting
+is required for this return-page update; deploy both API routes and SPA.
+
 When updating an existing server with the mobile data queue fix (14 October
 2026), install the updated worker unit after pulling the release:
 

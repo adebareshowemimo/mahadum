@@ -85,4 +85,14 @@ class DataBundleController extends Controller
 
         return response()->json(['data' => $service->response($purchase)]);
     }
+
+    public function verify(Request $request, DataBundleService $service): JsonResponse
+    {
+        $input = $request->validate(['payment_reference' => ['required', 'string', 'regex:/^data_[a-f0-9]{64}$/D']]);
+        $purchase = DataBundlePurchase::where('user_id', $request->user()->id)
+            ->where('payment_reference', $input['payment_reference'])->firstOrFail();
+
+        // The redirect identifies the order; only server-side Monnify verification confirms payment.
+        return $this->show($request, $purchase, $service);
+    }
 }

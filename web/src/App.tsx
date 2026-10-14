@@ -27,6 +27,7 @@ const AssignmentDetailPage = lazy(() => import('@/pages/AssignmentDetailPage').t
 const TasksPage = lazy(() => import('@/pages/TasksPage').then((m) => ({ default: m.TasksPage })))
 const BillingPage = lazy(() => import('@/pages/BillingPage').then((m) => ({ default: m.BillingPage })))
 const MobileDataPage = lazy(() => import('@/pages/MobileDataPage').then((m) => ({ default: m.MobileDataPage })))
+const DataPurchaseStatusPage = lazy(() => import('@/pages/DataPurchaseStatusPage').then((m) => ({ default: m.DataPurchaseStatusPage })))
 const ClassesPage = lazy(() => import('@/pages/ClassesPage').then((m) => ({ default: m.ClassesPage })))
 const ClassPage = lazy(() => import('@/pages/ClassPage').then((m) => ({ default: m.ClassPage })))
 const InviteClassLearnerPage = lazy(() => import('@/pages/InviteClassLearnerPage').then((m) => ({ default: m.InviteClassLearnerPage })))
@@ -122,6 +123,7 @@ const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then((m) => ({ de
 
 const PAGE_TITLES: Record<string, string> = {
   '/billing/data': 'Buy mobile data',
+  '/billing/data/status': 'Data purchase status',
   '/': 'Learn Nigerian Languages',
   '/home': 'Dashboard',
   '/learn': 'My Learning',
@@ -290,6 +292,7 @@ const REAL_PAGES = new Set([
   '/admin/promos',
   '/billing',
   '/billing/data',
+  '/billing/data/status',
   '/classes',
   '/assignments',
   '/earnings',
@@ -376,6 +379,7 @@ export function App() {
           <Route path="/tasks" element={<TasksPage />} />
           <Route path="/billing" element={<BillingPage />} />
           <Route path="/billing/data" element={<MobileDataPage />} />
+          <Route path="/billing/data/status" element={<DataPurchaseStatusPage />} />
           <Route element={<RoleRoute roles={['teacher', 'school_admin']} />}>
             <Route path="/classes" element={<ClassesPage />} />
             <Route path="/classes/:classId" element={<ClassPage />} />

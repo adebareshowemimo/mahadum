@@ -104,13 +104,13 @@ class MonnifyDataBundleTest extends TestCase
         return $this->postJson('/api/v1/data-bundles/purchase', array_replace($this->payload, $overrides), ['Idempotency-Key' => $key]);
     }
 
-    public function test_data_checkout_returns_to_the_data_page(): void
+    public function test_data_checkout_returns_to_the_status_page(): void
     {
         config(['app.url' => 'https://mahadum360.com/']);
         $this->buy('data-return')->assertCreated();
 
         Http::assertSent(fn ($request) => str_contains($request->url(), '/init-transaction')
-            && $request['redirectUrl'] === 'https://mahadum360.com/billing/data'
+            && $request['redirectUrl'] === 'https://mahadum360.com/billing/data/status'
             && $request['paymentDescription'] === 'Mahadum360 mobile data purchase');
     }
 
@@ -138,11 +138,55 @@ class MonnifyDataBundleTest extends TestCase
         $this->assertSame(1, Http::recorded(fn ($r) => str_ends_with($r->url(), '/vend'))->count());
     }
 
-    public function test_existing_data_checkout_root_return_redirects_to_data_page(): void
+    public function test_existing_data_checkout_returns_redirect_to_the_status_page_with_only_the_reference(): void
     {
         $query = ['paymentReference' => 'data_'.str_repeat('a', 64), 'paymentStatus' => 'CANCELLED'];
-        $this->get('/?'.http_build_query($query))
-            ->assertRedirect('/billing/data?'.http_build_query($query));
+        foreach (['/', '/billing/data'] as $path) {
+            $this->get($path.'?'.http_build_query($query))
+                ->assertRedirect('/billing/data/status?'.http_build_query(['paymentReference' => $query['paymentReference']]));
+        }
+    }
+
+    public function test_return_reference_verifies_the_exact_purchase_and_delivers_only_once(): void
+    {
+        $first = $this->buy('earlier-order')->assertCreated()->json('data');
+        $current = $this->buy('returned-order')->assertCreated()->json('data');
+        $url = '/api/v1/data-bundles/purchases/verify?'.http_build_query(['payment_reference' => $current['payment_reference']]);
+        $this->getJson($url)->assertOk()->assertJsonPath('data.purchase_id', $current['purchase_id'])
+            ->assertJsonPath('data.status', 'success')->assertJsonPath('data.payment_confirmed', true)->assertJsonPath('data.delivery_started', true);
+        $this->getJson($url)->assertOk()->assertJsonPath('data.status', 'success');
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/merchant/transactions/query') && $r['paymentReference'] === $current['payment_reference']);
+        $this->assertCount(1, Http::recorded(fn ($r) => str_ends_with($r->url(), '/vend')));
+        $this->assertDatabaseHas('data_bundle_purchases', ['id' => $first['purchase_id'], 'status' => 'awaiting_payment', 'paid_at' => null]);
+    }
+
+    public function test_return_reference_requires_owner_permission_and_valid_reference_without_provider_calls(): void
+    {
+        $reference = $this->buy()->assertCreated()->json('data.payment_reference');
+        Http::swap(new Factory);
+        Http::preventStrayRequests();
+        $url = '/api/v1/data-bundles/purchases/verify?'.http_build_query(['payment_reference' => $reference]);
+        $this->getJson('/api/v1/data-bundles/purchases/verify')->assertUnprocessable();
+        $this->getJson('/api/v1/data-bundles/purchases/verify?payment_reference=bad')->assertUnprocessable();
+        $this->actingAsUser($this->userWithRole('parent'));
+        $this->getJson($url)->assertNotFound();
+        $this->getJson('/api/v1/data-bundles/purchases/verify?payment_reference=data_'.str_repeat('f', 64))->assertNotFound();
+        $this->actingAsUser($this->userWithRole('student'));
+        $this->getJson($url)->assertForbidden();
+        Http::assertNothingSent();
+    }
+
+    public function test_return_status_cannot_confirm_pending_payment_and_mismatches_never_vend(): void
+    {
+        $reference = $this->buy()->assertCreated()->json('data.payment_reference');
+        $url = '/api/v1/data-bundles/purchases/verify?'.http_build_query(['payment_reference' => $reference, 'paymentStatus' => 'PAID']);
+        $this->provider(paymentStatus: 'PENDING');
+        $this->getJson($url)->assertOk()->assertJsonPath('data.status', 'awaiting_payment')
+            ->assertJsonPath('data.payment_confirmed', false)->assertJsonPath('data.delivery_started', false);
+        Http::assertNotSent(fn ($r) => str_ends_with($r->url(), '/vend'));
+        $this->provider(paid: 749);
+        $this->getJson($url)->assertOk()->assertJsonPath('data.status', 'needs_review')->assertJsonPath('data.payment_confirmed', false);
+        Http::assertNotSent(fn ($r) => str_ends_with($r->url(), '/vend'));
     }
 
     public function test_catalogue_uses_provider_names_codes_prices_and_validity(): void

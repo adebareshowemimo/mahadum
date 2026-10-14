@@ -195,6 +195,8 @@ export interface DataBundlePurchase {
   phone_number: string
   checkout_url: string | null
   payment_reference: string
+  payment_confirmed?: boolean
+  delivery_started?: boolean
 }
 
 export interface AppLanguage {

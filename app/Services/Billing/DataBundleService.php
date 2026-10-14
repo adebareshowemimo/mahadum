@@ -162,6 +162,7 @@ class DataBundleService
             'purchase_id' => $purchase->id, 'status' => $purchase->status, 'amount_minor' => $purchase->amount_minor,
             'product_name' => $purchase->product_name, 'phone_number' => $purchase->phone_number,
             'checkout_url' => $purchase->checkout_url, 'payment_reference' => $purchase->payment_reference,
+            'payment_confirmed' => $purchase->paid_at !== null, 'delivery_started' => $purchase->vend_started_at !== null,
         ];
     }
 }

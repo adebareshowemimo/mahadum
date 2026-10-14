@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { Alert, Button, Icon, Input, LinkButton, Skeleton } from '@/components/ui'
 import type { DataBundle, DataBundlePurchase } from '@/lib/api'
 import { cn } from '@/lib/cn'
@@ -34,6 +34,15 @@ const purchaseStatus: Record<DataBundlePurchase['status'], string> = {
 }
 
 export function MobileDataPage() {
+  const [params] = useSearchParams()
+  // Older checkouts return here. The reference takes precedence over saved browser state.
+  if (params.has('paymentReference')) {
+    return <Navigate replace to={`/billing/data/status?paymentReference=${encodeURIComponent(params.get('paymentReference') ?? '')}`} />
+  }
+  return <MobileDataStorePage />
+}
+
+function MobileDataStorePage() {
   const store = useDataStore()
   const [filter, setFilter] = useState('all')
   const [sort, setSort] = useState('low')
