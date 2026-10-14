@@ -383,6 +383,7 @@ class MonnifyDataBundleTest extends TestCase
         $this->provider(vendStatus: 'IN_PROGRESS', validationRef: true);
         $id = $this->buy()->json('data.purchase_id');
         $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()->assertJsonPath('data.status', 'processing');
+        $this->assertSame('IN_PROGRESS', AuditLog::where('action', 'billing.data_bundle.delivery_result')->latest('id')->firstOrFail()->after['provider_vend_status']);
         Http::assertSent(fn ($r) => str_ends_with($r->url(), '/vend') && $r['validationReference'] === 'validation-1');
         $this->provider();
         $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()->assertJsonPath('data.status', 'success');

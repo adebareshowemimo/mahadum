@@ -29,7 +29,7 @@ function networkStyle(code: string): string {
 }
 
 const purchaseStatus: Record<DataBundlePurchase['status'], string> = {
-  awaiting_payment: 'Awaiting payment', processing: 'Delivering data', success: 'Data delivered',
+  awaiting_payment: 'Awaiting payment', processing: 'Delivery pending', success: 'Data delivered',
   failed: 'Delivery failed', payment_failed: 'Payment unsuccessful', needs_review: 'Needs review',
 }
 
@@ -86,7 +86,7 @@ function MobileDataStorePage() {
               {store.purchase.data.checkout_url ? <a className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-gold-500 px-4 font-semibold text-charcoal-900 hover:bg-gold-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring" onClick={() => store.track('checkout_opened')} href={store.purchase.data.checkout_url} target="_blank" rel="noopener noreferrer">Open Monnify checkout <span className="sr-only">(opens a new tab)</span></a> : <Alert variant="danger">Checkout could not be opened. Contact support with the reference below.</Alert>}
             </>}
             {store.purchase.data.check_issue && <Alert variant="danger" title="Delivery check delayed">{store.purchase.data.payment_confirmed ? 'Your payment is confirmed, but Monnify could not complete or check data delivery right now. Keep this reference and do not pay again for this order.' : 'Monnify could not confirm this order right now. Check again shortly.'}</Alert>}
-            {store.status === 'processing' && !store.purchase.data.check_issue && <Alert variant="info" title="Delivering your data">Payment confirmed. Your network is processing the bundle. You can leave this page and check back.</Alert>}
+            {store.status === 'processing' && !store.purchase.data.check_issue && <Alert variant="info" title={store.purchase.data.delivery_started ? 'Waiting for delivery confirmation' : 'Preparing data delivery'}>{store.purchase.data.delivery_started ? 'Payment confirmed. Monnify has not returned a final data delivery result yet. We’ll check again automatically; do not pay again for this order.' : 'Payment confirmed. We are validating the recipient before sending the bundle. You can check back shortly.'}</Alert>}
             {store.status === 'success' && <Alert variant="success" title="Data delivered">Monnify confirmed your purchase. You’re ready to keep going.</Alert>}
             {store.status === 'payment_failed' && <Alert variant="danger" title="Payment unsuccessful">Your data purchase was not submitted. You can choose a plan and try again.</Alert>}
             {(store.status === 'failed' || store.status === 'needs_review') && <Alert variant="danger" title="Let’s check your purchase">Delivery couldn’t be confirmed. Contact support with this reference to resolve this purchase.</Alert>}

@@ -161,7 +161,10 @@ class DataBundleService
                 || (isset($result['vendAmount']) && (int) round((float) $result['vendAmount'] * 100) !== $purchase->amount_minor))) {
                 $status = 'needs_review';
             }
-            app(DataPurchaseActivity::class)->record('delivery_result', $purchase, ['result_status' => $status]);
+            app(DataPurchaseActivity::class)->record('delivery_result', $purchase, [
+                'result_status' => $status,
+                'provider_vend_status' => is_string($result['vendStatus'] ?? null) ? $result['vendStatus'] : null,
+            ]);
             if ($status !== 'processing') {
                 $purchase->update(['status' => $status]);
                 app(DataPurchaseActivity::class)->record($status, $purchase);
