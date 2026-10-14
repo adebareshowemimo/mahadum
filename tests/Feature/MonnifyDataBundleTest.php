@@ -292,6 +292,43 @@ class MonnifyDataBundleTest extends TestCase
         $this->assertCount(1, Http::recorded(fn ($r) => str_ends_with($r->url(), '/vend')));
     }
 
+    public function test_documented_minimal_success_response_confirms_delivery_without_a_second_vend(): void
+    {
+        $id = $this->buy('minimal-vend-response')->json('data.purchase_id');
+        $reference = DataBundlePurchase::findOrFail($id)->vend_reference;
+        $this->provider(overrides: ['/api/v1/vas/bills-payment/vend' => Http::response([
+            'requestSuccessful' => true, 'responseBody' => [
+                'transactionReference' => 'MNFY-VEND-1', 'vendReference' => $reference, 'vendStatus' => 'SUCCESS',
+            ],
+        ])]);
+
+        $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()
+            ->assertJsonPath('data.status', 'success')->assertJsonPath('data.payment_confirmed', true);
+        $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()->assertJsonPath('data.status', 'success');
+        $this->assertCount(1, Http::recorded(fn ($r) => str_ends_with($r->url(), '/vend')));
+    }
+
+    public function test_signed_payment_webhook_wakes_verification_without_trusting_the_webhook_for_delivery(): void
+    {
+        $purchase = $this->buy('signed-data-payment')->assertCreated()->json('data');
+        $body = json_encode(['eventType' => 'SUCCESSFUL_TRANSACTION', 'eventData' => [
+            'paymentReference' => $purchase['payment_reference'], 'transactionReference' => 'MNFY-DATA-1',
+            'paymentStatus' => 'PAID', 'amountPaid' => 750, 'currencyCode' => 'NGN',
+        ]]);
+
+        $this->call('POST', '/api/v1/webhooks/monnify', [], [], [], [
+            'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json',
+            'HTTP_MONNIFY_SIGNATURE' => hash_hmac('sha512', $body, 'secret'),
+        ], $body)->assertOk()->assertJsonPath('status', 'data_payment_received');
+        $this->assertNull(DataBundlePurchase::findOrFail($purchase['purchase_id'])->paid_at);
+        Http::assertNotSent(fn ($r) => str_ends_with($r->url(), '/vend'));
+        Queue::assertPushed(ProcessDataBundlePurchase::class);
+
+        $this->getJson('/api/v1/data-bundles/purchases/verify?payment_reference='.$purchase['payment_reference'])
+            ->assertOk()->assertJsonPath('data.status', 'success');
+        $this->assertCount(1, Http::recorded(fn ($r) => str_ends_with($r->url(), '/vend')));
+    }
+
     public function test_required_validation_reference_is_used_and_in_progress_is_only_requeried(): void
     {
         $this->provider(vendStatus: 'IN_PROGRESS', validationRef: true);

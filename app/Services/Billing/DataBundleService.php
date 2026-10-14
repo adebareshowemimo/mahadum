@@ -135,10 +135,13 @@ class DataBundleService
                 'FAILED' => 'failed',
                 default => 'processing',
             };
+            // Monnify documents vendStatus and vendReference on success. Some
+            // responses also echo product, recipient and amount; check those
+            // when present, without rejecting a valid minimal response.
             if ($status === 'success' && (($result['vendReference'] ?? null) !== $purchase->vend_reference
-                || ($result['productCode'] ?? null) !== $purchase->product_code
-                || ($result['customerId'] ?? null) !== $purchase->phone_number
-                || ! isset($result['vendAmount']) || (int) round((float) $result['vendAmount'] * 100) !== $purchase->amount_minor)) {
+                || (isset($result['productCode']) && $result['productCode'] !== $purchase->product_code)
+                || (isset($result['customerId']) && $result['customerId'] !== $purchase->phone_number)
+                || (isset($result['vendAmount']) && (int) round((float) $result['vendAmount'] * 100) !== $purchase->amount_minor))) {
                 $status = 'needs_review';
             }
             app(DataPurchaseActivity::class)->record('delivery_result', $purchase, ['result_status' => $status]);
