@@ -35,7 +35,9 @@ class MonnifyGateway implements PaymentGateway
                 'customerEmail' => $email,
                 'customerName' => $email,
                 'paymentReference' => $reference,
-                'paymentDescription' => 'MAHADUM.360 payment',
+                'paymentDescription' => ($metadata['purpose'] ?? null) === 'data_bundle'
+                    ? 'Mahadum360 mobile data purchase'
+                    : 'MAHADUM.360 payment',
                 'currencyCode' => 'NGN',
                 'contractCode' => $this->contractCode,
                 'redirectUrl' => ($metadata['purpose'] ?? null) === 'data_bundle'

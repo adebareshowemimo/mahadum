@@ -67,6 +67,36 @@ Assumes Apache2, PHP 8.3, Composer, and Node are already installed.
 
 ## Subsequent deploys
 
+When updating an existing server with the mobile data queue fix (14 October
+2026), install the updated worker unit after pulling the release:
+
+```bash
+sudo cp deploy/systemd/mahadum-queue.service /etc/systemd/system/mahadum-queue.service
+sudo systemctl daemon-reload
+sudo systemctl restart mahadum-queue
+sudo systemctl status mahadum-queue --no-pager
+```
+
+The worker must listen to both `default` and `data-bundles`. The old unit
+listened only to `default`, leaving paid data purchases queued. A normal
+`php artisan queue:restart` reloads application code but does not install
+changes to the systemd unit. Pending data jobs can continue once the worker
+is updated: the service verifies payment before vending and requeries an
+existing vend attempt rather than submitting another.
+
+In Monnify Developers → Webhook URLs, set Transaction Completion and Refund
+Completion to `https://YOUR_APP_HOST/api/v1/webhooks/monnify` using the actual
+public application host. A blank URL with notification status NOT FOUND
+does not notify the application. Queue reconciliation also verifies payment
+independently, so delivery does not depend solely on this callback.
+
+Monnify may still display `ACCOUNT_TRANSFER` as the collection payment method.
+For data orders, new checkouts describe the payment as “Mahadum360 mobile data
+purchase”. Data delivery is a separate Bills Payment vend: accept delivery
+only after provider-confirmed success. Existing paid orders do not require
+a second customer payment. Verify their order status and activity trail;
+unconfirmed/failed delivery requires support reconciliation.
+
 ```bash
 cd /var/www/mahadum && ./deploy/deploy.sh
 ```

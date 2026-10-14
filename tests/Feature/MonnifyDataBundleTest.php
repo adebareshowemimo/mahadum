@@ -8,6 +8,8 @@ use App\Models\DataBundlePurchase;
 use App\Services\Billing\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory;
+use Illuminate\Queue\Connectors\DatabaseConnector;
+use Illuminate\Queue\QueueManager;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -108,7 +110,32 @@ class MonnifyDataBundleTest extends TestCase
         $this->buy('data-return')->assertCreated();
 
         Http::assertSent(fn ($request) => str_contains($request->url(), '/init-transaction')
-            && $request['redirectUrl'] === 'https://mahadum360.com/billing/data');
+            && $request['redirectUrl'] === 'https://mahadum360.com/billing/data'
+            && $request['paymentDescription'] === 'Mahadum360 mobile data purchase');
+    }
+
+    public function test_deployed_worker_delivers_paid_data_without_a_webhook_or_browser_status_check(): void
+    {
+        config(['queue.default' => 'database']);
+        $manager = new QueueManager($this->app);
+        $manager->addConnector('database', fn () => new DatabaseConnector($this->app['db']));
+        Queue::swap($manager);
+        $id = $this->buy('worker-delivery')->assertCreated()->json('data.purchase_id');
+        $this->assertDatabaseHas('jobs', ['queue' => 'data-bundles']);
+        $this->assertDatabaseHas('data_bundle_purchases', ['id' => $id, 'status' => 'awaiting_payment']);
+
+        // Exercise the queues in the shipped unit, rather than calling the job directly.
+        $unit = file_get_contents(base_path('deploy/systemd/mahadum-queue.service'));
+        preg_match('/^ExecStart=.*?--queue=([^\s]+)/m', $unit, $matches);
+        $queues = $matches[1] ?? config('queue.connections.database.queue');
+        $this->travel(31)->seconds();
+        $this->artisan('queue:work', ['--once' => true, '--queue' => $queues, '--sleep' => 0])->assertExitCode(0);
+
+        $this->assertDatabaseHas('data_bundle_purchases', ['id' => $id, 'status' => 'success']);
+        $this->assertDatabaseCount('jobs', 0);
+        $this->assertDatabaseCount('webhook_events', 0);
+        $this->assertNotNull(DataBundlePurchase::findOrFail($id)->paid_at);
+        $this->assertSame(1, Http::recorded(fn ($r) => str_ends_with($r->url(), '/vend'))->count());
     }
 
     public function test_existing_data_checkout_root_return_redirects_to_data_page(): void
