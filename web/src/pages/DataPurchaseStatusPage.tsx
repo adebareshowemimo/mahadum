@@ -16,7 +16,8 @@ export function DataPurchaseStatusPage() {
     queryFn: () => billingApi.verifyDataBundlePurchase(reference),
     enabled: validReference && !!user?.user.id,
     retry: false,
-    refetchInterval: (query) => !query.state.error && ['awaiting_payment', 'processing'].includes(query.state.data?.status ?? '') ? 5000 : false,
+    refetchInterval: (query) => !query.state.error && ['awaiting_payment', 'processing'].includes(query.state.data?.status ?? '')
+      ? query.state.data?.check_issue ? 30000 : 5000 : false,
   })
   const order = purchase.data
   const unavailable = purchase.error instanceof ApiError && [403, 404].includes(purchase.error.status)
@@ -40,7 +41,8 @@ export function DataPurchaseStatusPage() {
           <div className="flex justify-between gap-4"><dt className="text-muted">Data delivery</dt><dd>{order.status === 'success' ? 'Delivered' : order.status === 'failed' ? 'Failed' : order.delivery_started ? order.status === 'needs_review' ? 'Needs review' : 'In progress' : 'Not started'}</dd></div>
         </dl>
         {order.status === 'awaiting_payment' && <Alert variant="info" title="Awaiting payment confirmation">Monnify has not yet confirmed this payment. We’ll check again automatically.</Alert>}
-        {order.status === 'processing' && <Alert variant="info" title="Delivering your data">Your payment is confirmed. Your network is processing the bundle. This page will update automatically.</Alert>}
+        {order.check_issue && <Alert variant="danger" title="Delivery check delayed">{order.payment_confirmed ? 'Your payment is confirmed, but Monnify could not complete or check data delivery right now. Keep this reference and do not pay again for this order.' : 'Monnify could not confirm this order right now. Check again shortly.'}</Alert>}
+        {order.status === 'processing' && !order.check_issue && <Alert variant="info" title="Delivering your data">Your payment is confirmed. Your network is processing the bundle. This page will update automatically.</Alert>}
         {order.status === 'success' && <Alert variant="success" title="Data delivered">Payment and data delivery have been confirmed.</Alert>}
         {order.status === 'payment_failed' && <Alert variant="danger" title="Payment unsuccessful">Monnify did not confirm a successful payment. You can choose another bundle.</Alert>}
         {order.status === 'needs_review' && !order.payment_confirmed && <Alert variant="danger" title="Payment needs review">Monnify has not confirmed the payment details for this order, so data has not been sent. Check again or contact support with the reference below.</Alert>}

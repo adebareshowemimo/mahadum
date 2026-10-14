@@ -88,7 +88,8 @@ class MonnifyBills
     {
         $base = rtrim((string) config('services.monnify.base_url'), '/');
         if (! filled(config('services.monnify.api_key')) || ! filled(config('services.monnify.secret'))) {
-            throw new HttpException(503, 'Configure Monnify credentials in Payment gateways to load mobile data plans.');
+            throw new MonnifyBillsRequestException('configuration', 0, null, null,
+                'Configure Monnify credentials in Payment gateways to load mobile data plans.', 503);
         }
         try {
             if ($this->token === null) {
@@ -96,15 +97,24 @@ class MonnifyBills
                     ->acceptJson()->connectTimeout(5)->timeout(15)->post($base.'/api/v1/auth/login');
                 $this->token = $auth->successful() ? $auth->json('responseBody.accessToken') : null;
                 if (! filled($this->token)) {
-                    throw new HttpException(503, 'Monnify authentication failed. Check the configured credentials.');
+                    throw new MonnifyBillsRequestException('auth/login', $auth->status(),
+                        is_scalar($auth->json('responseCode')) ? (string) $auth->json('responseCode') : null,
+                        is_string($auth->json('responseMessage')) ? $auth->json('responseMessage') : null,
+                        'Monnify authentication failed. Check the configured credentials.', 503);
                 }
             }
             $response = Http::withToken($this->token)->acceptJson()->connectTimeout(5)->timeout(15)
                 ->{$method}($base.'/api/v1/vas/bills-payment/'.$endpoint, $payload);
             if (! $response->successful() || $response->json('requestSuccessful') !== true) {
-                throw new HttpException(502, in_array($response->status(), [401, 403, 406], true)
-                    ? 'Mobile data plans are unavailable because Monnify Bills Payment access is not enabled or was rejected. Please contact support.'
-                    : 'Monnify’s Bills Payment service is unavailable. Please try again later.');
+                throw new MonnifyBillsRequestException(
+                    $endpoint,
+                    $response->status(),
+                    is_scalar($response->json('responseCode')) ? (string) $response->json('responseCode') : null,
+                    is_string($response->json('responseMessage')) ? $response->json('responseMessage') : null,
+                    in_array($response->status(), [401, 403, 406], true)
+                        ? 'Mobile data plans are unavailable because Monnify Bills Payment access is not enabled or was rejected. Please contact support.'
+                        : 'Monnify could not complete the data request. Your order is saved; check its status or contact support.',
+                );
             }
             $body = $response->json('responseBody');
             if (! is_array($body)) {
@@ -113,7 +123,8 @@ class MonnifyBills
 
             return $body;
         } catch (ConnectionException) {
-            throw new HttpException(503, 'Monnify is unavailable. Please try again later.');
+            throw new MonnifyBillsRequestException($endpoint, 0, null, null,
+                'Monnify is unavailable. Please try again later.', 503);
         }
     }
 }

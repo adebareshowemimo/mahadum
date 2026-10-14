@@ -169,7 +169,20 @@ class DataBundleService
 
             return $purchase;
         } catch (\Throwable $error) {
-            app(DataPurchaseActivity::class)->record('processing_error', $purchase, ['error_type' => class_basename($error)]);
+            $details = ['error_type' => class_basename($error)];
+            if ($error instanceof MonnifyBillsRequestException) {
+                $details += [
+                    'endpoint' => $error->endpoint,
+                    'provider_http_status' => $error->providerHttpStatus,
+                    'provider_code' => $error->providerCode,
+                    // Keep provider text out of the customer response and redact
+                    // recipient/contact details before recording it for support.
+                    'provider_message' => mb_substr(preg_replace([
+                        '/\b0\d{10}\b/', '/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i',
+                    ], '[redacted]', $error->providerMessage ?? '') ?? '', 0, 200),
+                ];
+            }
+            app(DataPurchaseActivity::class)->record('processing_error', $purchase, $details);
             throw $error;
         } finally {
             $lock->release();

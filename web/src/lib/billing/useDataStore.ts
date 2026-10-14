@@ -34,7 +34,8 @@ export function useDataStore() {
     queryKey: ['data-purchase', user?.user.id, purchaseId],
     queryFn: () => billingApi.dataBundlePurchase(purchaseId!),
     enabled: purchaseId !== null, retry: false,
-    refetchInterval: (query) => ['success', 'failed', 'payment_failed', 'needs_review'].includes(query.state.data?.status ?? '') ? false : 5000,
+    refetchInterval: (query) => ['success', 'failed', 'payment_failed', 'needs_review'].includes(query.state.data?.status ?? '')
+      ? false : query.state.data?.check_issue ? 30000 : 5000,
   })
   const history = useQuery({
     queryKey: ['data-purchase-history', user?.user.id, purchaseId, purchase.data?.status],

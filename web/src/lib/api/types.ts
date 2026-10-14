@@ -197,6 +197,7 @@ export interface DataBundlePurchase {
   payment_reference: string
   payment_confirmed?: boolean
   delivery_started?: boolean
+  check_issue?: 'provider_unavailable'
 }
 
 export interface AppLanguage {

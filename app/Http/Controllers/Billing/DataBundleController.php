@@ -8,12 +8,12 @@ use App\Models\DataBundlePurchase;
 use App\Services\AuditLogger;
 use App\Services\Billing\DataBundleService;
 use App\Services\Billing\MonnifyBills;
+use App\Services\Billing\MonnifyBillsRequestException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class DataBundleController extends Controller
 {
@@ -79,8 +79,11 @@ class DataBundleController extends Controller
         abort_unless($purchase->user_id === $request->user()->id, 403);
         try {
             $service->refresh($purchase);
-        } catch (RequestException|ConnectionException) {
-            throw new HttpException(503, 'Monnify is unavailable. Your purchase reference is saved; check its status again later.');
+        } catch (MonnifyBillsRequestException|RequestException|ConnectionException) {
+            $data = $service->response($purchase->fresh());
+            $data['check_issue'] = 'provider_unavailable';
+
+            return response()->json(['data' => $data]);
         }
 
         return response()->json(['data' => $service->response($purchase)]);

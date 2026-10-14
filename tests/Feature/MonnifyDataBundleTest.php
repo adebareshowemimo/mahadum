@@ -393,11 +393,37 @@ class MonnifyDataBundleTest extends TestCase
     {
         $id = $this->buy()->json('data.purchase_id');
         $this->provider(overrides: ['/api/v1/vas/bills-payment/vend' => Http::failedConnection()]);
-        $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertStatus(503);
+        $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()
+            ->assertJsonPath('data.status', 'processing')->assertJsonPath('data.payment_confirmed', true)
+            ->assertJsonPath('data.check_issue', 'provider_unavailable');
         $this->assertNotNull(DataBundlePurchase::find($id)->vend_started_at);
         $this->provider();
         $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()->assertJsonPath('data.status', 'success');
         Http::assertNotSent(fn ($r) => str_ends_with($r->url(), '/vend'));
+    }
+
+    public function test_provider_rejection_keeps_paid_order_visible_and_records_diagnostics_without_duplicate_vend(): void
+    {
+        $id = $this->buy('provider-rejection')->json('data.purchase_id');
+        $this->provider(overrides: ['/api/v1/vas/bills-payment/vend' => Http::response([
+            'requestSuccessful' => false, 'responseCode' => 'BALANCE_LOW',
+            'responseMessage' => 'Insufficient merchant balance for 08012345678',
+        ], 400)]);
+        $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()
+            ->assertJsonPath('data.status', 'processing')->assertJsonPath('data.payment_confirmed', true)
+            ->assertJsonPath('data.check_issue', 'provider_unavailable');
+        $log = AuditLog::where('action', 'billing.data_bundle.processing_error')->latest('id')->firstOrFail();
+        $this->assertSame($id, $log->subject_id);
+        $this->assertSame('vend', $log->after['endpoint']);
+        $this->assertSame(400, $log->after['provider_http_status']);
+        $this->assertSame('BALANCE_LOW', $log->after['provider_code']);
+        $this->assertSame('Insufficient merchant balance for [redacted]', $log->after['provider_message']);
+        $this->assertSame(1, Http::recorded(fn ($r) => str_ends_with($r->url(), '/vend'))->count());
+
+        $this->provider(vendStatus: 'IN_PROGRESS');
+        $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()->assertJsonPath('data.status', 'processing');
+        Http::assertNotSent(fn ($r) => str_ends_with($r->url(), '/vend'));
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/requery'));
     }
 
     public function test_malformed_validation_instructions_never_start_delivery(): void
