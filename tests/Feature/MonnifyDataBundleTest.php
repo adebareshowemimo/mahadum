@@ -392,6 +392,21 @@ class MonnifyDataBundleTest extends TestCase
         Http::assertSent(fn ($r) => str_contains($r->url(), '/requery') && str_starts_with($r['vendReference'], 'vend_data_') && ! isset($r['reference']));
     }
 
+    public function test_top_level_validation_instructions_can_complete_a_paid_purchase(): void
+    {
+        $id = $this->buy('top-level-validation')->json('data.purchase_id');
+        $this->provider(overrides: ['/api/v1/vas/bills-payment/validate-customer' => Http::response([
+            'requestSuccessful' => true, 'responseBody' => [
+                'requireValidationRef' => true, 'validationReference' => 'validation-top-level',
+            ],
+        ])]);
+
+        $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()
+            ->assertJsonPath('data.status', 'success');
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/vend')
+            && $r['validationReference'] === 'validation-top-level');
+    }
+
     public function test_timeout_after_vend_is_requeried_without_another_charge(): void
     {
         $id = $this->buy()->json('data.purchase_id');

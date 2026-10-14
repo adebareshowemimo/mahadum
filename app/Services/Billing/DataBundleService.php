@@ -129,7 +129,9 @@ class DataBundleService
                 app(DataPurchaseActivity::class)->record('recipient_validation_started', $purchase);
                 $validation = $this->bills->validate($purchase->product_code, $purchase->phone_number);
                 app(DataPurchaseActivity::class)->record('recipient_validated', $purchase);
-                $instruction = $validation['vendInstruction'] ?? null;
+                // Monnify's guide nests these fields in vendInstruction, while
+                // its Laravel examples show them directly in responseBody.
+                $instruction = $validation['vendInstruction'] ?? $validation;
                 if (! is_array($instruction) || ! is_bool($instruction['requireValidationRef'] ?? null)) {
                     throw new HttpException(502, 'Monnify did not return vending instructions.');
                 }
