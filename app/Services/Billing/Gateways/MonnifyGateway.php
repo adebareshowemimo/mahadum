@@ -43,7 +43,7 @@ class MonnifyGateway implements PaymentGateway
                 'redirectUrl' => ($metadata['purpose'] ?? null) === 'data_bundle'
                     ? rtrim((string) config('app.url'), '/').'/billing/data/status'
                     : (string) config('app.url'),
-                'metaData' => $metadata,
+                'metadata' => $metadata,
             ])
             ->throw()
             ->json();

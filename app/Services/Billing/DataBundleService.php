@@ -136,7 +136,6 @@ class DataBundleService
                 $payload = [
                     'productCode' => $purchase->product_code, 'customerId' => $purchase->phone_number,
                     'vendAmount' => round($purchase->amount_minor / 100, 2), 'vendReference' => $purchase->vend_reference,
-                    'emailAddress' => $purchase->user->email, 'phoneNumber' => $purchase->phone_number,
                 ];
                 if ($instruction['requireValidationRef']) {
                     abort_unless(filled($instruction['validationReference'] ?? null), 502, 'Monnify did not return a required validation reference.');

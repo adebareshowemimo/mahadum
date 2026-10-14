@@ -112,6 +112,7 @@ class MonnifyDataBundleTest extends TestCase
 
         Http::assertSent(fn ($request) => str_contains($request->url(), '/init-transaction')
             && $request['redirectUrl'] === 'https://mahadum360.com/billing/data/status'
+            && $request['metadata']['purpose'] === 'data_bundle'
             && $request['paymentDescription'] === 'Mahadum360 mobile data purchase');
     }
 
@@ -337,7 +338,8 @@ class MonnifyDataBundleTest extends TestCase
         $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()->assertJsonPath('data.status', 'success');
         $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()->assertJsonPath('data.status', 'success');
         Http::assertSent(fn ($r) => str_ends_with($r->url(), '/vend') && $r['vendAmount'] == 750
-            && str_starts_with($r['vendReference'], 'vend_data_') && ! isset($r['amount']) && ! isset($r['reference']) && ! isset($r['validationReference']));
+            && str_starts_with($r['vendReference'], 'vend_data_') && ! isset($r['amount']) && ! isset($r['reference'])
+            && ! isset($r['emailAddress']) && ! isset($r['phoneNumber']) && ! isset($r['validationReference']));
         $this->assertCount(1, Http::recorded(fn ($r) => str_ends_with($r->url(), '/vend')));
     }
 
