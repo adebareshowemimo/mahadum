@@ -37,6 +37,8 @@ class DataBundleService
 
                 return $existing;
             }
+            abort_unless(config('services.monnify.bills_enabled'), 503,
+                'Mobile data purchases are temporarily unavailable while we verify Monnify delivery. No payment has been taken.');
             $gateway = $this->gateway();
             $product = collect($this->bills->products($input['biller_code'], fresh: true))->firstWhere('product_code', $input['product_code']);
             abort_unless($product && $product['price_type'] === 'FIXED' && $product['amount_minor'] > 0, 422, 'Choose an available fixed-price data plan.');

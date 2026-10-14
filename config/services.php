@@ -60,6 +60,8 @@ return [
         'contract_code' => env('MONNIFY_CONTRACT_CODE'),
         // Sandbox by default; live is https://api.monnify.com.
         'base_url' => env('MONNIFY_BASE_URL', 'https://sandbox.monnify.com'),
+        // Keep new data checkouts closed until live Bills Payment vending is verified.
+        'bills_enabled' => (bool) env('MONNIFY_BILLS_ENABLED', false),
     ],
 
     'telco' => [

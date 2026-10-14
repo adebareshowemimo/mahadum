@@ -32,7 +32,7 @@ class MonnifyDataBundleTest extends TestCase
         Http::preventStrayRequests();
         config(['services.monnify.api_key' => 'test', 'services.monnify.secret' => 'secret',
             'services.monnify.contract_code' => 'contract', 'services.monnify.base_url' => 'https://sandbox.monnify.com',
-            'services.payments.live' => true]);
+            'services.monnify.bills_enabled' => true, 'services.payments.live' => true]);
         $this->seedRbac();
         $this->actingAsUser($this->userWithRole('parent'));
         $this->provider();
@@ -103,6 +103,24 @@ class MonnifyDataBundleTest extends TestCase
     private function buy(string $key = 'purchase-1', array $overrides = [])
     {
         return $this->postJson('/api/v1/data-bundles/purchase', array_replace($this->payload, $overrides), ['Idempotency-Key' => $key]);
+    }
+
+    public function test_disabled_bills_payment_never_starts_a_new_checkout(): void
+    {
+        config(['services.monnify.bills_enabled' => false]);
+
+        $this->buy('bills-paused')->assertStatus(503);
+        $this->assertDatabaseCount('data_bundle_purchases', 0);
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), '/init-transaction'));
+    }
+
+    public function test_pausing_new_checkouts_does_not_block_existing_order_status_checks(): void
+    {
+        $id = $this->buy('existing-before-pause')->json('data.purchase_id');
+        config(['services.monnify.bills_enabled' => false]);
+
+        $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertOk()
+            ->assertJsonPath('data.status', 'success');
     }
 
     public function test_data_checkout_returns_to_the_status_page(): void
