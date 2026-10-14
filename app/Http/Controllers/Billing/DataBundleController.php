@@ -64,6 +64,16 @@ class DataBundleController extends Controller
         return response()->json(['data' => $service->response($purchase)], 201);
     }
 
+    public function history(Request $request, DataBundleService $service): JsonResponse
+    {
+        $purchases = DataBundlePurchase::where('user_id', $request->user()->id)
+            ->whereNotNull('payment_reference')
+            ->orderByDesc('id')->limit(20)->get();
+
+        // Listing history must not initiate payment verification or another vend.
+        return response()->json(['data' => $purchases->map(fn (DataBundlePurchase $purchase) => $service->response($purchase))]);
+    }
+
     public function show(Request $request, DataBundlePurchase $purchase, DataBundleService $service): JsonResponse
     {
         abort_unless($purchase->user_id === $request->user()->id, 403);

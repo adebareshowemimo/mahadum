@@ -36,6 +36,11 @@ export function useDataStore() {
     enabled: purchaseId !== null, retry: false,
     refetchInterval: (query) => ['success', 'failed', 'payment_failed', 'needs_review'].includes(query.state.data?.status ?? '') ? false : 5000,
   })
+  const history = useQuery({
+    queryKey: ['data-purchase-history', user?.user.id, purchaseId, purchase.data?.status],
+    queryFn: () => billingApi.dataBundlePurchases(),
+    enabled: !!user?.user.id, retry: false,
+  })
   useEffect(() => {
     const saved = Number(sessionStorage.getItem(storageKey))
     setPurchaseId(Number.isSafeInteger(saved) && saved > 0 ? saved : null)
@@ -63,6 +68,9 @@ export function useDataStore() {
   function reset() {
     track('reset_clicked')
     sessionStorage.removeItem(storageKey); setPurchaseId(null); setSelected(null); changed()
+  }
+  function viewPurchase(id: number) {
+    sessionStorage.setItem(storageKey, String(id)); setPurchaseId(id); changed()
   }
   async function buy() {
     if (!selected || selected.amount_minor === null || !consent || busy) return
@@ -100,6 +108,6 @@ export function useDataStore() {
     changed()
   }
   return { billers, billerCode, bundles, selected, setSelected, search, setSearch, phone, setPhone,
-    consent, setConsent, busy, error, fields, purchaseId, purchase, status, catalogueError, results,
-    changed, reset, buy, chooseNetwork, track }
+    consent, setConsent, busy, error, fields, purchaseId, purchase, history, status, catalogueError, results,
+    changed, reset, viewPurchase, buy, chooseNetwork, track }
 }

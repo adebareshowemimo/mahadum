@@ -302,6 +302,30 @@ class MonnifyDataBundleTest extends TestCase
         $this->getJson('/api/v1/data-bundles/purchases/'.$id)->assertForbidden();
     }
 
+    public function test_history_keeps_unresolved_purchases_and_only_lists_the_buyers_orders_without_vending(): void
+    {
+        $owner = auth()->user();
+        $oldId = $this->buy('old-review-order')->assertCreated()->json('data.purchase_id');
+        DataBundlePurchase::findOrFail($oldId)->update(['status' => 'needs_review', 'paid_at' => now()]);
+        $newId = $this->buy('separate-new-order')->assertCreated()->json('data.purchase_id');
+        DataBundlePurchase::create(['user_id' => $owner->id, 'operator' => 'MTN', 'bundle_mb' => 1000,
+            'amount_minor' => 75000, 'status' => 'pending']); // Legacy scaffold with no checkout.
+        $this->actingAsUser($this->userWithRole('parent'));
+        $otherId = $this->buy('another-buyers-order')->assertCreated()->json('data.purchase_id');
+        $this->actingAsUser($owner);
+
+        Http::swap(new Factory);
+        Http::preventStrayRequests();
+        $this->getJson('/api/v1/data-bundles/purchases')->assertOk()->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.purchase_id', $newId)
+            ->assertJsonPath('data.1.purchase_id', $oldId)->assertJsonPath('data.1.status', 'needs_review')
+            ->assertJsonMissing(['purchase_id' => $otherId]);
+        Http::assertNothingSent();
+        $this->assertDatabaseHas('data_bundle_purchases', ['id' => $oldId, 'status' => 'needs_review']);
+        $this->actingAsUser($this->userWithRole('student'));
+        $this->getJson('/api/v1/data-bundles/purchases')->assertForbidden();
+    }
+
     public function test_real_catalogue_shape_excludes_airtime_and_follows_next_page(): void
     {
         Http::swap(new Factory);

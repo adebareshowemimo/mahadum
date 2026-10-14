@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Alert, Button, Icon, Input, LinkButton, Skeleton } from '@/components/ui'
-import type { DataBundle } from '@/lib/api'
+import type { DataBundle, DataBundlePurchase } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { formatMoney } from '@/lib/format'
 import { dataStoreError, useDataStore } from '@/lib/billing/useDataStore'
@@ -26,6 +26,11 @@ function networkStyle(code: string): string {
   if (/airtel/i.test(code)) return 'bg-red-600 text-white'
   if (/glo/i.test(code)) return 'bg-green-700 text-white'
   return 'bg-emerald-900 text-white'
+}
+
+const purchaseStatus: Record<DataBundlePurchase['status'], string> = {
+  awaiting_payment: 'Awaiting payment', processing: 'Delivering data', success: 'Data delivered',
+  failed: 'Delivery failed', payment_failed: 'Payment unsuccessful', needs_review: 'Needs review',
 }
 
 export function MobileDataPage() {
@@ -74,10 +79,11 @@ export function MobileDataPage() {
             {store.status === 'processing' && <Alert variant="info" title="Delivering your data">Payment confirmed. Your network is processing the bundle. You can leave this page and check back.</Alert>}
             {store.status === 'success' && <Alert variant="success" title="Data delivered">Monnify confirmed your purchase. You’re ready to keep going.</Alert>}
             {store.status === 'payment_failed' && <Alert variant="danger" title="Payment unsuccessful">Your data purchase was not submitted. You can choose a plan and try again.</Alert>}
-            {(store.status === 'failed' || store.status === 'needs_review') && <Alert variant="danger" title="Let’s check your purchase">Delivery couldn’t be confirmed. Contact support before making another purchase.</Alert>}
+            {(store.status === 'failed' || store.status === 'needs_review') && <Alert variant="danger" title="Let’s check your purchase">Delivery couldn’t be confirmed. Contact support with this reference to resolve this purchase.</Alert>}
             <p className="break-all text-xs text-muted">Reference: {store.purchase.data.payment_reference}</p>
           </>}
-          <div className="flex flex-wrap gap-3"><Button variant="outline" loading={store.purchase.isFetching} onClick={() => { store.track('status_check_clicked'); void store.purchase.refetch() }}>Check status</Button>{(store.status === 'success' || store.status === 'payment_failed') && <Button onClick={store.reset}>Choose another plan</Button>}<LinkButton to="/support" onClick={() => store.track('support_clicked')} variant="ghost">Get help</LinkButton></div>
+          <div className="flex flex-wrap gap-3"><Button variant="outline" loading={store.purchase.isFetching} onClick={() => { store.track('status_check_clicked'); void store.purchase.refetch() }}>Check status</Button><Button onClick={store.reset}>Buy another bundle</Button><LinkButton to="/support" onClick={() => store.track('support_clicked')} variant="ghost">Get help</LinkButton></div>
+          <p className="text-xs leading-5 text-muted">Buying another bundle creates a separate purchase. This order stays in your recent purchases below.</p>
         </section>
       ) : (
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_310px]">
@@ -138,6 +144,18 @@ export function MobileDataPage() {
           </aside>
         </div>
       )}
+      <section className={panel} aria-labelledby="data-history-heading">
+        <h2 id="data-history-heading" className="font-display text-xl font-bold">Recent purchases</h2>
+        {store.history.isLoading && <p role="status" className="mt-3 text-sm text-muted">Loading your purchases…</p>}
+        {store.history.error && <div className="mt-3 space-y-3"><Alert variant="danger">Could not load your purchase history.</Alert><Button variant="outline" onClick={() => void store.history.refetch()}>Retry history</Button></div>}
+        {!store.history.isLoading && !store.history.error && !store.history.data?.length && <p className="mt-3 text-sm text-muted">Your purchases will appear here.</p>}
+        {!!store.history.data?.length && <ul className="mt-4 divide-y divide-border">
+          {store.history.data.map((order) => <li key={order.purchase_id} className="flex flex-wrap items-center justify-between gap-3 py-4">
+            <div className="min-w-0"><p className="break-words text-sm font-semibold">{order.product_name.replace(/_/g, ' ')}</p><p className="mt-1 text-xs text-muted">Number ending {order.phone_number.slice(-4)} · {formatMoney(order.amount_minor, 'NGN')} · {purchaseStatus[order.status]}</p></div>
+            <Button variant="outline" size="sm" disabled={store.busy} aria-label={`View ${order.product_name.replace(/_/g, ' ')} purchase ${order.purchase_id}`} onClick={() => store.viewPurchase(order.purchase_id)}>View purchase</Button>
+          </li>)}
+        </ul>}
+      </section>
     </div>
   )
 }

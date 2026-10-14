@@ -9,7 +9,7 @@ import axe from 'axe-core'
 vi.mock('@/lib/auth/AuthProvider', () => ({ useAuth: () => ({ user: { user: { id: 1 } } }) }))
 vi.mock('@/lib/api', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/lib/api')>()
-  return { ...original, billingApi: { dataPurchaseEvent: vi.fn().mockResolvedValue(undefined), dataBillers: vi.fn(), dataBundles: vi.fn(), purchaseDataBundle: vi.fn(), dataBundlePurchase: vi.fn() } }
+  return { ...original, billingApi: { dataPurchaseEvent: vi.fn().mockResolvedValue(undefined), dataBillers: vi.fn(), dataBundles: vi.fn(), purchaseDataBundle: vi.fn(), dataBundlePurchase: vi.fn(), dataBundlePurchases: vi.fn() } }
 })
 const clients: QueryClient[] = []
 function show() {
@@ -20,6 +20,7 @@ function show() {
 const plan = { product_code: 'weekly', biller_code: 'MTN_DATA', name: 'MTN 1GB weekly', amount_minor: 75000, price_type: 'FIXED', currency: 'NGN', duration: 7, duration_unit: 'DAYS' }
 beforeEach(() => {
   vi.clearAllMocks(); sessionStorage.clear()
+  vi.mocked(billingApi.dataBundlePurchases).mockResolvedValue([])
   vi.mocked(billingApi.dataBillers).mockResolvedValue([{ code: 'MTN_DATA', name: 'MTN Data' }, { code: 'AIRTEL_DATA', name: 'Airtel Data' }])
   vi.mocked(billingApi.dataBundles).mockImplementation(async (code) => code === 'MTN_DATA' ? [plan, { ...plan, product_code: 'monthly', name: 'MTN 1GB monthly', amount_minor: 100000, duration: 30 }] : [{ ...plan, biller_code: code, product_code: 'airtel', name: 'Airtel weekly' }])
 })
@@ -94,5 +95,45 @@ describe('Monnify mobile data store', () => {
     show()
     expect(await screen.findByRole('link', { name: /Open Monnify checkout/ })).toHaveAttribute('href', 'https://sandbox.monnify.com/checkout')
     expect(screen.queryByText('Data delivered')).not.toBeInTheDocument()
+  })
+  it.each(['failed', 'needs_review', 'processing', 'awaiting_payment'] as const)('allows a separate purchase while retaining an order with status %s', async (status) => {
+    const oldOrder = { purchase_id: 25, status, amount_minor: 80000, product_name: 'Old weekly bundle', phone_number: '08012345678', payment_reference: 'old_data_ref', checkout_url: null }
+    sessionStorage.setItem('mahadum:data-purchase:1', '25')
+    vi.mocked(billingApi.dataBundlePurchase).mockImplementation(async (id) => id === 26
+      ? { ...oldOrder, purchase_id: 26, status: 'awaiting_payment', payment_reference: 'new_data_ref' }
+      : oldOrder)
+    vi.mocked(billingApi.dataBundlePurchases).mockResolvedValue([oldOrder])
+    vi.mocked(billingApi.purchaseDataBundle).mockResolvedValue({ ...oldOrder, purchase_id: 26, status: 'awaiting_payment', payment_reference: 'new_data_ref' })
+    const firstView = show()
+    expect(await screen.findByText('Reference: old_data_ref')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Buy another bundle' }))
+    expect(sessionStorage.getItem('mahadum:data-purchase:1')).toBeNull()
+    expect(billingApi.purchaseDataBundle).not.toHaveBeenCalled()
+    expect(await screen.findByRole('button', { name: /MTN 1GB weekly/ })).toBeInTheDocument()
+
+    // Leaving the status screen must survive reload without losing the earlier order.
+    firstView.unmount()
+    show()
+    expect(await screen.findByRole('button', { name: /MTN 1GB weekly/ })).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: 'View Old weekly bundle purchase 25' }))
+    expect(await screen.findByText('Reference: old_data_ref')).toBeInTheDocument()
+    expect(sessionStorage.getItem('mahadum:data-purchase:1')).toBe('25')
+    fireEvent.click(screen.getByRole('button', { name: 'Buy another bundle' }))
+    fireEvent.click(await screen.findByRole('button', { name: /MTN 1GB weekly/ }))
+    fireEvent.change(screen.getByLabelText('Recipient phone number'), { target: { value: '08012345678' } })
+    fireEvent.click(screen.getByRole('checkbox'))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue to payment' }))
+    await waitFor(() => expect(sessionStorage.getItem('mahadum:data-purchase:1')).toBe('26'))
+    expect(billingApi.purchaseDataBundle).toHaveBeenCalledTimes(1)
+    expect(await screen.findByRole('button', { name: 'View Old weekly bundle purchase 25' })).toBeInTheDocument()
+  })
+  it('provides a way to start another purchase when the old status request fails', async () => {
+    sessionStorage.setItem('mahadum:data-purchase:1', '25')
+    vi.mocked(billingApi.dataBundlePurchase).mockRejectedValue(new ApiError('Monnify is unavailable.', 'provider', 503))
+    show()
+    expect(await screen.findByText('Monnify is unavailable.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Buy another bundle' }))
+    expect(await screen.findByRole('button', { name: /MTN 1GB weekly/ })).toBeInTheDocument()
+    expect(billingApi.purchaseDataBundle).not.toHaveBeenCalled()
   })
 })

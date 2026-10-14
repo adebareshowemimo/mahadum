@@ -880,6 +880,11 @@ export const billingApi = {
     const { data } = await api.get(`/data-bundles/purchases/${id}`)
     return data.data
   },
+
+  async dataBundlePurchases(): Promise<DataBundlePurchase[]> {
+    const { data } = await api.get('/data-bundles/purchases')
+    return data.data
+  },
 }
 
 export const adminApi = {
