@@ -1,3 +1,6 @@
+import TERMS_SECTIONS from '@/lib/legal/terms.json'
+import REFUND_SECTIONS from '@/lib/legal/refunds.json'
+import CHILDREN_SECTIONS from '@/lib/legal/children.json'
 import { websiteCopy } from '@/lib/seo/copy'
 import { useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -10,8 +13,8 @@ import {
 import { Reveal } from '@/components/landing/Reveal'
 import { Button, Icon, Input, LinkButton, Textarea, type IconName } from '@/components/ui'
 
-const UPDATED = '25 July 2026'
-const SUPPORT_EMAIL = 'support@mahadum360.app'
+const UPDATED = '15 October 2026'
+const SUPPORT_EMAIL = 'support@mahadum360.com'
 const WHATSAPP_URL = 'https://wa.me/2349028111111?text=Hello%20Mahadum360%2C%20I%27d%20like%20to%20learn%20more.'
 
 const PRIVACY_SECTIONS = [
@@ -20,7 +23,7 @@ const PRIVACY_SECTIONS = [
     title: 'Who this notice covers',
     paragraphs: [
       'This notice covers visitors, adult learners, parents and guardians, learner profiles, teachers, school staff, institutional partners and other people who use or interact with MAHADUM.360.',
-      'A child under 13 does not need a separate login. A parent or authorised organisation creates and supervises the learner profile and controls the associated account.',
+      'Every learner under 18 must use a supervised learner profile inside a Family or School account. A parent, legal guardian or authorised school adult manages consent, supervision and payments. Read the Children’s Privacy and Parental Consent Notice for details.',
     ],
   },
   {
@@ -98,93 +101,6 @@ const PRIVACY_SECTIONS = [
   },
 ]
 
-const TERMS_SECTIONS = [
-  {
-    id: 'agreement',
-    title: 'Using MAHADUM.360',
-    paragraphs: [
-      'These terms govern use of the MAHADUM.360 website, learning service and related features. By creating an account, purchasing a plan or using an organisation-provided account, you agree to follow these terms and any plan or organisation terms that apply.',
-      'If you use the service for a school or institution, you confirm that you have authority to act for that organisation.',
-    ],
-  },
-  {
-    id: 'accounts',
-    title: 'Accounts and learner profiles',
-    paragraphs: [
-      'Provide accurate information, protect account credentials and tell us promptly about suspected unauthorised access. You are responsible for activity carried out through your account unless the law says otherwise.',
-      'Learners under 13 use supervised profiles rather than independent logins. The parent, guardian or authorised organisation is responsible for creating and supervising that profile and for providing any required consent.',
-    ],
-  },
-  {
-    id: 'learning',
-    title: 'Learning access',
-    paragraphs: [
-      'The Free plan includes Level 0 in each language. Paid card and bank plans unlock all lessons; airtime subscriptions include Level 1 only. Free learners use one heart per four quiz answers. At zero hearts, lessons and quizzes pause for 12 hours, unless hearts are refilled or the learner upgrades to unlimited hearts.',
-      'Courses, language availability, lesson order and features may change as content is corrected, improved or expanded. We aim to communicate material service changes appropriately.',
-    ],
-  },
-  {
-    id: 'conduct',
-    title: 'Acceptable use',
-    paragraphs: ['Use the service for lawful learning, teaching, family and programme purposes.'],
-    bullets: [
-      'Do not harass, exploit, impersonate or endanger another person.',
-      'Do not attempt to bypass access controls, probe security or interfere with service operation.',
-      'Do not upload unlawful, abusive, infringing or malicious material.',
-      'Do not scrape, resell or reproduce protected content except where a written agreement permits it.',
-      'Do not manipulate rewards, competitions, referrals, payments or reporting.',
-    ],
-  },
-  {
-    id: 'payments',
-    title: 'Plans, payments and cancellation',
-    paragraphs: [
-      'Prices, billing frequency, included features and applicable taxes are shown before purchase or set out in an organisation agreement. Payment providers may apply their own terms.',
-      'You may cancel a recurring consumer plan through the available account or support route. Access to paid lessons and features normally continues until the end of the paid billing period unless law or the purchase terms require otherwise. Refund rights depend on the transaction, service delivery and applicable law.',
-    ],
-  },
-  {
-    id: 'rewards',
-    title: 'Coins, rewards and competitions',
-    paragraphs: [
-      'Coins, XP, badges and similar learning rewards are platform features, not cash or stored value, unless a specific promotion clearly states otherwise. Chore coins are released only after parent approval.',
-      'Competition or promotional rules may add eligibility, timing, judging, prize and conduct terms. Those specific rules apply alongside these terms.',
-    ],
-  },
-  {
-    id: 'organisations',
-    title: 'Educators, schools and institutions',
-    paragraphs: [
-      'Organisation administrators control authorised seats, roles, rosters and programme access. A separate order, proposal or service agreement may define pricing, term, data responsibilities, support and programme requirements.',
-      'Where an organisation supplies or controls an account, its authorised administrators may access information and learning activity according to their role and the applicable agreement.',
-    ],
-  },
-  {
-    id: 'content',
-    title: 'Content and intellectual property',
-    paragraphs: [
-      'MAHADUM.360 and its licensors retain rights in the platform, curriculum, audio, artwork, software and brand materials. We grant users a limited, revocable, non-transferable right to use the service for its intended purpose.',
-      'You retain rights in content you submit. You give us the limited permission needed to host, process and display it for service delivery, safety, support and the authorised learning relationship.',
-    ],
-  },
-  {
-    id: 'changes',
-    title: 'Suspension, changes and responsibility',
-    paragraphs: [
-      'We may restrict or suspend access where reasonably necessary for safety, security, non-payment, legal compliance or serious breach of these terms. Where appropriate, we will provide notice and a way to contact us.',
-      'We work to keep the service available and accurate, but online services can experience interruptions and learning outcomes vary. Nothing in these terms excludes rights or responsibilities that cannot legally be excluded.',
-    ],
-  },
-  {
-    id: 'law',
-    title: 'Governing terms and contact',
-    paragraphs: [
-      'These terms are intended to operate under applicable Nigerian law, while preserving mandatory consumer and privacy rights that may apply where a user lives. Organisation agreements may specify additional governing-law and dispute terms.',
-      `Questions about these terms can be sent to ${SUPPORT_EMAIL}. We may update these terms when the service or legal requirements change; the current version and update date will remain available on this page.`,
-    ],
-  },
-]
-
 export function PrivacyPage() {
   return (
     <PolicyPage
@@ -207,6 +123,30 @@ export function TermsPage() {
   )
 }
 
+export function RefundPolicyPage() {
+  return (
+    <PolicyPage
+      title="No refund policy for lessons and subscriptions"
+      effective="1 October 2026"
+      summary="Try Level 0 free in every language before paying. Learning purchases are final, subject to billing corrections and rights under applicable law. Data top-ups are separate."
+      updated={UPDATED}
+      sections={REFUND_SECTIONS}
+    />
+  )
+}
+
+export function ChildrenPrivacyPage() {
+  return (
+    <PolicyPage
+      title="Children’s privacy and parental consent notice"
+      effective="15 October 2026"
+      summary="How Mahadum360 handles information about learners under 18, the role of parents and guardians, retention periods and how to exercise your child’s privacy rights."
+      updated={UPDATED}
+      sections={CHILDREN_SECTIONS}
+    />
+  )
+}
+
 const SAFETY_FLOW = [
   { title: 'Parent creates', body: 'The adult creates the account and adds an age-appropriate learner profile.', icon: 'users' as const },
   { title: 'Child learns', body: 'The learner uses lessons and activities without managing payments or an adult account.', icon: 'book' as const },
@@ -222,7 +162,7 @@ export function ChildSafetyPage() {
           <div className="motion-hero-copy flex flex-col justify-center px-4 py-16 sm:px-6 lg:px-10 lg:py-24">
             <p className="font-display text-xl font-extrabold text-[#a93403]">Kids get the adventure. Parents keep the controls.</p>
             <h1 className="mt-4 max-w-[12ch] font-display text-[clamp(3rem,6vw,5.5rem)] font-extrabold leading-[0.98] tracking-[-0.035em]">{websiteCopy('heading', "Child safety is part of the learning design.")}</h1>
-            <p data-public-intro="true" className="mt-6 max-w-2xl text-lg leading-relaxed text-navy-700 sm:text-xl">{websiteCopy('intro', "Under-13 learners use supervised profiles—not independent logins. Parents and authorised schools control the account, consent and sensitive actions.")}</p>
+            <p data-public-intro="true" className="mt-6 max-w-2xl text-lg leading-relaxed text-navy-700 sm:text-xl">{websiteCopy('intro', "Learners under 18 must use supervised profiles inside a Family or School account. Parents and authorised schools control the account, consent and sensitive actions.")}</p>
             <LinkButton to="/register" variant="parent" size="lg" className="mt-8 self-start">Create a parent account</LinkButton>
           </div>
           <img
@@ -265,7 +205,7 @@ export function ChildSafetyPage() {
         heading="A safety question should never be hard to ask."
         body="Contact us to report a concern, ask about a learner profile or understand the controls available to your family or organisation."
         primary={{ label: 'Contact the safety team', to: '/contact?topic=safety' }}
-        secondary={{ label: 'Read the privacy notice', to: '/privacy' }}
+        secondary={{ label: 'Children’s privacy and consent', to: '/children-privacy' }}
       />
     </PublicPageShell>
   )

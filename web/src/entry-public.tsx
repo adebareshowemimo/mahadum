@@ -9,7 +9,7 @@ import { ThemeProvider } from '@/lib/theme'
 import { App } from '@/App'
 import { DocumentWebsiteChrome, type WebsiteRegion } from '@/components/landing/DocumentWebsiteChrome'
 
-export const paths = ['/', '/families', '/schools', '/institutions', '/about', '/pricing', '/contact', '/privacy', '/terms', '/child-safety', '/accessibility']
+export const paths = ['/', '/families', '/schools', '/institutions', '/about', '/pricing', '/contact', '/privacy', '/terms', '/refunds', '/children-privacy', '/child-safety', '/accessibility']
 
 export async function render(path: string): Promise<string> {
   if (!paths.includes(path)) throw new Error(`No public renderer for ${path}`)

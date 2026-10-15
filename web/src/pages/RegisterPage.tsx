@@ -383,6 +383,7 @@ export function RegisterPage() {
               autoFocus
               required
             />
+            <p className="text-sm text-navy-700">Learners under 18 must use a supervised Family or School profile. Read our <Link className="underline" to="/children-privacy" target="_blank" rel="noopener noreferrer">children’s privacy and parental consent notice</Link>.</p>
             <Button type="submit" fullWidth size="lg" variant="parent">
               Continue
             </Button>
@@ -584,7 +585,7 @@ export function RegisterPage() {
                 />
                 <span>
                   I am the parent or legal guardian and I consent to creating and managing this child’s
-                  account.
+                  account. I have read the <Link to="/children-privacy" className="underline" target="_blank" rel="noopener noreferrer">children’s privacy and parental consent notice</Link>.
                 </span>
               </label>
             )}

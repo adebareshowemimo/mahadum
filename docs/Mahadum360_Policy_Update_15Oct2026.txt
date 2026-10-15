@@ -1,0 +1,78 @@
+Mahadum360 policy website update
+15 October 2026
+
+Prepared from the three supplied Word documents. The user directed use of the
+provided values, including those originally bracketed for confirmation. Source
+documents were read only. This change updates website information and policy
+links; it does not certify legal review or implement the operational commitments.
+
+Website changes
+- /terms: all 17 sections from the supplied clean terms, including company
+  identity, adult account requirements, referrals, practice guides, liability,
+  cancellation, billing corrections and dispute handling.
+- /refunds: all 10 sections, retaining statutory rights, billing corrections,
+  cancellation rules and the exclusion of mobile data top-ups.
+- /children-privacy: all 13 sections, including 90-day recording retention,
+  photo deletion 30 days after a decision, 24-month inactivity handling,
+  deletion/anonymisation within 30 days, and a 30-day privacy response period.
+- Main privacy and Child Safety copy now reference under-18 supervision.
+- Corrected the public trust/contact support email to support@mahadum360.com.
+- Linked policies from the shared footer, related-policy navigation, Pricing,
+  signup age step, parental consent, billing, wallet funding and airtime opt-in.
+- Registered both new pages for routes, search metadata, sitemap discovery and
+  server-rendered content. The build renders 13 public pages without JavaScript.
+
+Editorial handling
+- Removed draft instructions and confirmation brackets from public content.
+- Preserved the refund draft's effective date of 1 October 2026; last updated
+  is 15 October 2026. Children's notice effective date is 15 October 2026.
+- Matched the refund claim deadline (30 days) and response target (5 working
+  days) to the supplied clean terms.
+- Replaced the draft cancellation menu placeholder with the actual Plans &
+  billing label. The supplied annual reminder commitment is 7 days by email.
+- No named Data Protection Officer was supplied. The public notice uses
+  Privacy enquiries and the supplied support address rather than inventing one.
+
+Operational gaps needing implementation or production verification
+1. Under-18 enforcement: config/compliance.php and the frontend fallback default
+   to 13; /config can override this through compliance.minor_age. Registration
+   validation also accepts an omitted date of birth. Check every email, Google,
+   invitation, guardian and payment path before claiming under-18 enforcement.
+   Updating policy text does not close those paths.
+2. Retention and deletion: no scheduled command was found implementing the
+   supplied 90/30-day media periods or 24-month inactivity deletion. Verify and
+   implement these processes and the stated parent-dashboard deletion controls.
+3. Advertising: InlineAdvert and AdvertLeaderboard can open target URLs in a
+   new tab. Verify a parent gate for minors, non-personalisation, appropriate
+   placement and screening before treating the notice as proof of enforcement.
+4. Verify under-18 leaderboard restrictions or parent opt-out and the stated
+   permissions for recordings and photos across parent, guide and school roles.
+5. Annual reminders: the scheduled subscriptions:remind command currently
+   uses its default 3-day window, rather than the supplied 7-day annual promise.
+6. The supplied terms describe checkout consent to immediate digital access
+   and loss of cancellation rights where lawful. Policy links alone do not
+   capture an express consent record; verify this purchase requirement.
+7. No Data Top-Up Terms were supplied in this request. The learning refund
+   exclusion is retained, but the separate terms need an approved document.
+8. Existing published website-editor headings/intros can override source
+   defaults. Check stored Child Safety copy after deployment for old wording.
+
+Verification
+- Production build and TypeScript check passed.
+- 31 focused frontend tests passed: public pages, registration, wallet funding
+  and search metadata. Existing public page accessibility checks passed.
+- 10 backend public website/SEO tests passed with 105 assertions.
+- Built policy HTML checked for one H1, complete section counts, valid section
+  anchors, related-policy links and absence of draft placeholders.
+- Browser preview automation timed out; visual browser verification was not
+  completed. This is an information update using the existing policy layout.
+- Live deployment blocked: verified-host SSH login to the existing production
+  endpoint was rejected with Permission denied (publickey,password). No server
+  settings, keys or accounts were changed, and no live deployment is claimed.
+
+Release
+Deploy the updated branch codex/beta-feedback-20260903 using the established
+application deployment process after resolving the operational gaps relevant to
+the public promises. Deploy both application source (SEO metadata) and the built
+web output. Verify /terms, /refunds, /children-privacy, /privacy, /child-safety,
+Pricing, signup and payment links on the real host.

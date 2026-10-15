@@ -1,7 +1,7 @@
 import { websiteCopy } from '@/lib/seo/copy'
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { Figure } from '@/components/landing/Figure'
 import { Reveal } from '@/components/landing/Reveal'
 import { Alert, Button, Input, LinkButton, Modal, Skeleton } from '@/components/ui'
@@ -182,6 +182,8 @@ function PricingBody({ data, onOpenQuote }: { data: PricingInfo; onOpenQuote: ()
           Family tools let adults review progress and approve chore rewards before coins are released.
         </PromisePoint>
       </Reveal>
+
+      <p className="mt-6 text-sm leading-relaxed text-navy-700">Learning payments are final, subject to billing corrections and applicable law. Cancelling stops future payments. <Link to="/refunds" className="font-bold underline">Read the refund policy</Link> and <Link to="/terms" className="font-bold underline">terms and conditions</Link> before purchasing.</p>
 
       <SchoolPricing
         bands={data.school.bands}

@@ -19,6 +19,8 @@ const FamiliesPage = lazy(() => import('@/pages/PublicAudiencePages').then((m) =
 const InstitutionsPage = lazy(() => import('@/pages/PublicAudiencePages').then((m) => ({ default: m.InstitutionsPage })))
 const ContactPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.ContactPage })))
 const PrivacyPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.PrivacyPage })))
+const RefundPolicyPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.RefundPolicyPage })))
+const ChildrenPrivacyPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.ChildrenPrivacyPage })))
 const TermsPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.TermsPage })))
 const ChildSafetyPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.ChildSafetyPage })))
 const AccessibilityPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.AccessibilityPage })))
@@ -329,6 +331,8 @@ export function App() {
       <Route path="/contact" element={<ContactPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/terms" element={<TermsPage />} />
+      <Route path="/refunds" element={<RefundPolicyPage />} />
+      <Route path="/children-privacy" element={<ChildrenPrivacyPage />} />
       <Route path="/child-safety" element={<ChildSafetyPage />} />
       <Route path="/accessibility" element={<AccessibilityPage />} />
       <Route path="/class-invitations/:token" element={<ClassInvitationPage />} />

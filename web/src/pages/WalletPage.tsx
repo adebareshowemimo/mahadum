@@ -1,3 +1,4 @@
+import { PurchasePolicyNotice } from '@/components/billing/PurchasePolicyNotice'
 import { useState, type FormEvent } from 'react'
 import {
   Alert,
@@ -161,6 +162,7 @@ function FundCard({ currency, gateways }: { currency: string; gateways: FundingG
         <CardTitle>Add money</CardTitle>
       </CardHeader>
       <CardBody>
+        <PurchasePolicyNotice />
         {!gateways.length ? <Alert variant="info">Wallet funding is currently unavailable. Please try again later.</Alert> : <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
           {error && <Alert variant="danger">{error}</Alert>}
           {pending && (

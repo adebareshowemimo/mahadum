@@ -1,3 +1,4 @@
+import { PurchasePolicyNotice } from '@/components/billing/PurchasePolicyNotice'
 import { useState } from 'react'
 import { Alert, Button, CodeInput, Input, Modal } from '@/components/ui'
 import { ApiError, billingApi, type Plan, type TelcoOperator } from '@/lib/api'
@@ -76,7 +77,7 @@ export function TelcoOptInModal({ plan, open, onClose }: { plan: Plan | null; op
             </Alert>
           ) : (
             <Alert variant="success" title="You're subscribed">
-              Daily airtime billing is active on {msisdn}. To stop, text STOP to 3600.
+              Daily airtime billing is active on {msisdn}. To stop, send STOP to the shortcode in your subscription confirmation message, or follow your network’s opt-out instructions.
             </Alert>
           )}
           <Button fullWidth onClick={close}>
@@ -106,6 +107,7 @@ export function TelcoOptInModal({ plan, open, onClose }: { plan: Plan | null; op
               ))}
             </select>
           </label>
+          <PurchasePolicyNotice />
           <Button fullWidth size="lg" loading={busy} disabled={!msisdn} onClick={sendCode}>
             Send code
           </Button>
@@ -120,6 +122,7 @@ export function TelcoOptInModal({ plan, open, onClose }: { plan: Plan | null; op
           ) : (
             <p className="text-sm text-muted">Enter the 6-digit code sent to {msisdn}.</p>
           )}
+          <PurchasePolicyNotice />
           <CodeInput value={code} onChange={(v) => { setCode(v); setError(null) }} length={6} error={!!error} aria-label="OTP code" />
           {error && <p className="text-xs font-medium text-danger">{error}</p>}
           <div className="flex w-full gap-2">

@@ -7,8 +7,10 @@ import { FamiliesPage, InstitutionsPage } from './PublicAudiencePages'
 import {
   AccessibilityPage,
   ChildSafetyPage,
+  ChildrenPrivacyPage,
   ContactPage,
   PrivacyPage,
+  RefundPolicyPage,
   TermsPage,
 } from './PublicTrustPages'
 
@@ -44,6 +46,8 @@ describe('public information pages', () => {
     [<ContactPage />, /Let’s start with what you need/i],
     [<PrivacyPage />, /Privacy notice/i],
     [<TermsPage />, /Terms and conditions/i],
+    [<RefundPolicyPage />, /No refund policy for lessons and subscriptions/i],
+    [<ChildrenPrivacyPage />, /Children’s privacy and parental consent notice/i],
     [<ChildSafetyPage />, /Child safety is part of the learning design/i],
     [<AccessibilityPage />, /Learning should work for more people/i],
   ])('renders the expected page heading', (page, heading) => {
@@ -71,6 +75,22 @@ describe('public information pages', () => {
     renderPage(<ContactPage />, '/contact?topic=partnership')
     expect(screen.getByRole('radio', { name: /Partnerships/i })).toBeChecked()
     expect(screen.getByRole('button', { name: /Partnerships team/i })).toBeInTheDocument()
+  })
+
+  it('preserves billing corrections and separates data purchases from the no-refund rule', () => {
+    renderPage(<RefundPolicyPage />, '/refunds')
+    expect(screen.getByText(/Duplicate charge: you were charged more than once/)).toBeInTheDocument()
+    expect(screen.getByText(/This policy does not cover data top-ups/)).toBeInTheDocument()
+    expect(screen.getByText(/Nothing in this policy takes away rights/)).toBeInTheDocument()
+    expect(screen.getByText(/within 30 days of the charge/)).toBeInTheDocument()
+  })
+
+  it('publishes the supplied child privacy periods without editorial placeholders', () => {
+    const { container } = renderPage(<ChildrenPrivacyPage />, '/children-privacy')
+    expect(screen.getByText(/Recordings are deleted after 90 days/)).toHaveTextContent(/30 days after approval or rejection/)
+    expect(screen.getByText(/inactive for 24 months/)).toHaveTextContent(/within 30 days/)
+    expect(container.textContent).not.toMatch(/DRAFT FOR LEGAL REVIEW|\[confirm|\[\[|Name \/ role/i)
+    expect(screen.getAllByRole('link', { name: /Refund policy/i })[0]).toHaveAttribute('href', '/refunds')
   })
 
   it('has no automated accessibility violations on the contact form', async () => {

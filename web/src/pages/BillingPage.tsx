@@ -1,3 +1,4 @@
+import { PurchasePolicyNotice } from '@/components/billing/PurchasePolicyNotice'
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -229,6 +230,8 @@ export function BillingPage() {
       )}
       {notice && <Alert variant="info">{notice}</Alert>}
       {error && <Alert variant="danger">{error}</Alert>}
+
+      <PurchasePolicyNotice />
 
       {/* Promo code — previews the discount against the plans it applies to. */}
       <div className="flex flex-wrap items-end gap-3">

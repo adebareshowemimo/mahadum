@@ -66,5 +66,13 @@
   "/languages": {
     "title": "Learn Nigerian Languages | Mahadum360",
     "description": "Choose Igbo, Yorùbá or Hausa. Learn with five-minute lessons, native voices and stories. Start free with Level 0."
+  },
+  "/refunds": {
+    "title": "No Refund Policy | Mahadum360",
+    "description": "Learning payments, cancellation, billing corrections and your consumer rights. Data top-ups are separate from lessons and subscriptions."
+  },
+  "/children-privacy": {
+    "title": "Children’s Privacy and Parental Consent | Mahadum360",
+    "description": "How Mahadum360 handles information about learners under 18, parental consent, recordings, photos, retention and privacy requests."
   }
 }

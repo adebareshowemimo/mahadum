@@ -182,11 +182,13 @@ export function PolicyPage({
   title,
   summary,
   updated,
+  effective,
   sections,
 }: {
   title: string
   summary: string
   updated: string
+  effective?: string
   sections: PolicySection[]
 }) {
   return (
@@ -197,6 +199,7 @@ export function PolicyPage({
           <h1 className="mt-3 max-w-[16ch] font-display text-4xl font-extrabold leading-tight sm:text-6xl">{websiteCopy('heading', title)}</h1>
           <p data-public-intro="true" className="mt-5 max-w-3xl text-lg leading-relaxed text-white/80">{websiteCopy('intro', summary)}</p>
           <p className="mt-5 text-sm font-bold text-white/72">Last updated: {updated}</p>
+          {effective && <p className="mt-2 text-sm font-bold text-white/72">Effective: {effective}</p>}
         </div>
       </section>
 
@@ -209,6 +212,12 @@ export function PolicyPage({
                 {section.title}
               </a>
             ))}
+          </nav>
+          <nav aria-label="Related policies" className="mt-5 grid gap-2 text-sm font-bold">
+            <Link to="/terms" className="min-h-11 py-2 hover:underline">Terms and conditions</Link>
+            <Link to="/refunds" className="min-h-11 py-2 hover:underline">Refund policy</Link>
+            <Link to="/privacy" className="min-h-11 py-2 hover:underline">Privacy notice</Link>
+            <Link to="/children-privacy" className="min-h-11 py-2 hover:underline">Children’s privacy and consent</Link>
           </nav>
           <Link to="/contact" className="mt-5 inline-flex min-h-11 items-center font-display font-extrabold text-[#a93403] hover:underline">
             Ask a question →

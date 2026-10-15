@@ -1,0 +1,131 @@
+[
+  {
+    "id": "children-1",
+    "title": "1. Our promise to parents",
+    "paragraphs": [
+      "Mahadum360 is a family learning platform. In this notice, a child means anyone under 18, in line with the Nigeria Data Protection Act 2023. Children under 18 cannot sign up on their own. Only a parent or legal guardian can create an account, add a child's learner profile and give consent. We collect only what a child needs to learn and what a parent needs to supervise. We do not sell children's information.",
+      "We have built safeguards to protect children, but no online service can remove every risk. Parents and guardians remain responsible for monitoring their child's activity on Mahadum360, including the recordings and photos their child submits and their contact with family guides and teachers.",
+      "This notice explains what we collect from learners under 18, why we collect it, who can see it and what you can do about it. It adds to our main Privacy Notice."
+    ]
+  },
+  {
+    "id": "children-2",
+    "title": "2. How a child joins Mahadum360",
+    "paragraphs": [
+      "Age check: at signup we ask for the learner's date of birth. If the learner is under 18, signup stops and a parent or guardian must continue. No one under 18 can hold a stand-alone account; every learner under 18 uses a supervised profile in a Family or School account.",
+      "Parent account: the parent creates the account using their own details and confirms: \"I am the parent or legal guardian and I consent to creating and managing this child's account.\"",
+      "Learner profile: the parent adds the child's profile inside the parent account. The parent picks the display name, which can be a first name or any nickname.",
+      "Unique access code: the parent generates a unique code that lets the child enter their own learning space. The child does not need an email address, phone number or password, and cannot make payments."
+    ]
+  },
+  {
+    "id": "children-3",
+    "title": "3. What we collect about your child",
+    "paragraphs": [
+      "Display name: chosen by the parent. Dashboards show only this name (first name or nickname). We recommend not using a full name.",
+      "Date of birth: collected at signup to confirm age and give age-appropriate lessons. It is kept inside the parent account and is not shown on the child's profile or to other users.",
+      "Learning preferences: chosen language, level and goals.",
+      "Progress and scores: lessons completed, quiz answers and scores, speaking scores, XP, streaks, badges, coins and reward history.",
+      "Speaking recordings: short audio clips the child records for pronunciation practice and assignments.",
+      "Chore photo evidence: photos a child may submit to show a completed chore so the parent can approve coins.",
+      "Technical information: device type, app version and security logs, needed to run and protect the service.",
+      "We do not ask a child for an email address, phone number, home address, precise location, school name (unless the school enrols them) or payment details. Children have no public profile."
+    ]
+  },
+  {
+    "id": "children-4",
+    "title": "4. Why we use it",
+    "paragraphs": [
+      "To give lessons, speaking practice and rewards suited to the child's age and level;",
+      "To show the parent (and, for school learners, the teacher) the child's progress, recordings and chore submissions for review;",
+      "To release coins only after a parent approves a chore;",
+      "To keep the platform safe, prevent misuse and investigate concerns that are reported to us;",
+      "To fix problems and improve lessons, using information that is combined or de-identified where possible.",
+      "We rely on parental consent and on providing the service the parent asked for. Under the Nigeria Data Protection Act 2023 (NDPA), consent for a child must come from a parent or legal guardian."
+    ]
+  },
+  {
+    "id": "children-5",
+    "title": "5. Speaking recordings and photos: extra care",
+    "paragraphs": [
+      "Recordings and chore photos are visible only to the child's parent and, for school learners, the authorised teacher. They are never public.",
+      "Speaking review is done by the parent or teacher. Recordings are not used to train AI or speech models without separate parental consent.",
+      "Tip for chore photos: photograph the completed task, not the child. Avoid faces, school uniforms, house numbers or anything that shows where you live.",
+      "Recordings are deleted after 90 days. Chore photos are deleted 30 days after approval or rejection. A parent can delete any of them sooner from the parent dashboard or by contacting us."
+    ]
+  },
+  {
+    "id": "children-6",
+    "title": "6. Who can see your child's information",
+    "paragraphs": [
+      "You (the parent or guardian): all of your child's profile, progress, recordings and submissions.",
+      "Teachers and school administrators: only if your child takes part through a school or institution, and only for that programme.",
+      "Leaderboards and leagues: show only the display name, a badge or avatar, and XP. Learners under 18 appear only in family or class leagues, or leaderboards can be switched off by the parent.",
+      "Service providers: hosting, storage, security, communications and customer support companies that work for us under contracts requiring them to protect the data. They cannot use it for their own purposes.",
+      "Authorities: only where the law requires it or to protect a child's safety.",
+      "We never sell, rent or trade children's information, and we never share it with advertisers."
+    ]
+  },
+  {
+    "id": "children-7",
+    "title": "7. Advertising and children",
+    "paragraphs": [
+      "Free-plan learners may see age-appropriate adverts. For learners under 18:",
+      "adverts are not personalised and are not based on the child's behaviour, location or profile;",
+      "adverts are screened for age-appropriateness and are never placed inside a lesson activity;",
+      "the child's information is not shared with advertisers;",
+      "tapping an advert does not lead to purchases or open external sites without a parent.",
+      "Paid plans are ad-free."
+    ]
+  },
+  {
+    "id": "children-8",
+    "title": "8. How long we keep it",
+    "paragraphs": [
+      "We keep a child's information while the learner profile is active. If a profile is deleted, or an account is inactive for 24 months, we delete or anonymise the child's information within 30 days. We keep only what the law requires, such as billing records held in the parent's name."
+    ]
+  },
+  {
+    "id": "children-9",
+    "title": "9. Your rights as a parent",
+    "paragraphs": [
+      "You can, at any time:",
+      "see the information we hold about your child;",
+      "correct it, including changing the display name;",
+      "delete recordings, photos or the whole learner profile;",
+      "withdraw consent. We will then stop collecting your child's information and delete the profile;",
+      "object to or restrict particular uses, or ask for a copy of the data.",
+      "Email support@mahadum360.com with the subject \"Child privacy\". We may need to confirm that you are the account holder. We will respond within 30 days."
+    ]
+  },
+  {
+    "id": "children-10",
+    "title": "10. Security",
+    "paragraphs": [
+      "We protect children's information with access controls, encryption in transit, role-based permissions (so each adult sees only what their role allows) and audit logs. Please keep your account password and your child's access code private, and generate a new code if you think it has been shared."
+    ]
+  },
+  {
+    "id": "children-11",
+    "title": "11. Families outside Nigeria",
+    "paragraphs": [
+      "Many Mahadum360 families live outside Nigeria. Children's information may be processed in Nigeria and in other countries where our service providers operate, with safeguards in place. Where they apply, we also respect children's privacy laws such as the UK and EU GDPR and the US Children's Online Privacy Protection Act (COPPA)."
+    ]
+  },
+  {
+    "id": "children-12",
+    "title": "12. Changes to this notice",
+    "paragraphs": [
+      "If we change how we use children's information in a significant way, we will tell parents first and ask for fresh consent where the law requires it."
+    ]
+  },
+  {
+    "id": "children-13",
+    "title": "13. Contact and complaints",
+    "paragraphs": [
+      "Mahadum360 (RC 9601595) · 3rd Floor, 927/928 Bishop Aboyade Cole Street, Victoria Island, Lagos, Nigeria",
+      "Privacy enquiries: support@mahadum360.com",
+      "If you are not satisfied with our response, you can complain to the Nigeria Data Protection Commission (NDPC) or to the data protection authority in your country."
+    ]
+  }
+]

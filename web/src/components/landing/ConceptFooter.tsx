@@ -53,6 +53,8 @@ export function ConceptFooter({ tone = 'light' }: { tone?: ConceptTone }) {
               <Link className="inline-flex min-h-11 items-center hover:underline" to="/accessibility">Accessibility</Link>
               <Link className="inline-flex min-h-11 items-center hover:underline" to="/privacy">Privacy</Link>
               <Link className="inline-flex min-h-11 items-center hover:underline" to="/terms">Terms</Link>
+              <Link className="inline-flex min-h-11 items-center hover:underline" to="/refunds">Refund policy</Link>
+              <Link className="inline-flex min-h-11 items-center hover:underline" to="/children-privacy">Children’s privacy</Link>
             </div>
           </nav>
         </div>
