@@ -16,7 +16,15 @@ const API_TARGET = process.env.API_PROXY_TARGET || 'http://localhost:8000'
 function proxyTargets() {
   const proxy = { target: API_TARGET, changeOrigin: true }
 
-  return { '/api': proxy, '/sanctum': proxy, '/storage': proxy }
+  return {
+    '/api': proxy, '/sanctum': proxy, '/storage': proxy,
+    // These public pages are rendered by Laravel, outside the React router.
+    '^/(languages|vote|guides)(/|[?]|$)': proxy,
+    '^/learn-(igbo|yoruba|hausa)([?]|$)': proxy,
+    '/assets/': proxy,
+    '/vote.css': proxy, '/vote.js': proxy,
+    '/public-pages.js': proxy,
+  }
 }
 
 export default defineConfig(({ isSsrBuild }) => ({

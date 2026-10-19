@@ -52,7 +52,7 @@ class PublicContentController extends Controller
 
     public function vote(): Response
     {
-        $counts = DB::table('language_votes')->select('language', DB::raw('COUNT(*) AS total'))->groupBy('language')->pluck('total', 'language');
+        $counts = DB::table('language_votes')->join('users', 'users.id', '=', 'language_votes.user_id')->whereNotNull('users.email_verified_at')->select('language', DB::raw('COUNT(*) AS total'))->groupBy('language')->pluck('total', 'language');
 
         return $this->page('/vote', 'public.vote', ['languages' => config('language-votes.languages'), 'counts' => $counts, 'target' => config('language-votes.target')]);
     }

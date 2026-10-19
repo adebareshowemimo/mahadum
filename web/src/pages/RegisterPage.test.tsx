@@ -33,6 +33,15 @@ function setup(path = '/register') {
 }
 
 describe('RegisterPage age gate', () => {
+  it('keeps a suggested language when continuing from the vote page', async () => {
+    setup('/register?vote=Other&other_language=Esan')
+    await userEvent.click(screen.getByRole('radio', { name: /Family/i }))
+    await userEvent.click(screen.getByRole('button', { name: /continue/i }))
+    fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: yearsAgo(18) } })
+    await userEvent.click(screen.getByRole('button', { name: /continue/i }))
+    expect(screen.getByLabelText('Language name')).toHaveValue('Esan')
+    expect(screen.getByRole('combobox', { name: /Which language should we add next/i })).toHaveValue('Other')
+  })
   it('preselects Hausa from its landing-page link and allows an Other language vote', async () => {
     setup('/register?lang=hausa')
     await userEvent.click(screen.getByRole('radio', { name: /Family/i }))

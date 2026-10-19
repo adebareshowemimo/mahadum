@@ -79,8 +79,11 @@ export function RegisterPage() {
     const language = searchParams.get('lang') ?? ''
     return ['igbo', 'yoruba', 'hausa', 'english'].includes(language) ? language : ''
   })
-  const [languageVote, setLanguageVote] = useState('')
-  const [otherLanguage, setOtherLanguage] = useState('')
+  const [languageVote, setLanguageVote] = useState(() => {
+    const vote = searchParams.get('vote') ?? ''
+    return VOTE_OPTIONS.includes(vote) ? vote : ''
+  })
+  const [otherLanguage, setOtherLanguage] = useState(() => (searchParams.get('other_language') ?? '').trim().slice(0, 60))
   const discovery = { ...signupAttribution(), preferred_language: preferredLanguage || undefined, language_vote: languageVote || undefined, other_language: languageVote === 'Other' ? otherLanguage.trim() : undefined }
   const invitation = useQuery({
     queryKey: ['class-invitation', invitationToken],

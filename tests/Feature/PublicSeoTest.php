@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Language;
 use App\Models\PublicDocument;
+use App\Models\User;
 use App\Services\SignupDiscovery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -144,6 +145,8 @@ class PublicSeoTest extends TestCase
         app(SignupDiscovery::class)->firstLesson($id);
         app(SignupDiscovery::class)->firstLesson($id);
         $this->assertSame(1, DB::table('discovery_events')->where('name', 'first_lesson_completed')->count());
+        $this->get('/vote')->assertOk()->assertDontSee('1 of 10,000 votes');
+        DB::table('users')->where('id', $id)->update(['email_verified_at' => now()]);
         $this->get('/vote')->assertOk()->assertSee('1 of 10,000 votes');
     }
 
@@ -164,6 +167,21 @@ class PublicSeoTest extends TestCase
         $this->getJson('/api/v1/website/reports')->assertForbidden();
         $this->actingAsUser($this->userWithRole('super_admin'));
         $this->get('/api/v1/website/votes.csv')->assertOk();
+    }
+
+    public function test_language_voting_requires_verified_account_and_prevents_duplicates(): void
+    {
+        $this->postJson('/api/v1/language-votes', ['language' => 'Tiv'])->assertUnauthorized();
+        $user = User::factory()->create(['email_verified_at' => null]);
+        $this->actingAsUser($user);
+        $this->postJson('/api/v1/language-votes', ['language' => 'Tiv'])->assertForbidden();
+        $this->assertDatabaseCount('language_votes', 0);
+        $user->forceFill(['email_verified_at' => now()])->save();
+        $this->postJson('/api/v1/language-votes', ['language' => 'Invalid'])->assertUnprocessable();
+        $this->postJson('/api/v1/language-votes', ['language' => 'Other', 'other_language' => '   '])->assertUnprocessable();
+        $this->postJson('/api/v1/language-votes', ['language' => 'Tiv'])->assertCreated();
+        $this->postJson('/api/v1/language-votes', ['language' => 'Edo'])->assertConflict();
+        $this->assertDatabaseCount('language_votes', 1);
     }
 
     /** @return array<string, mixed> */

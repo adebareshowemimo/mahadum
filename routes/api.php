@@ -165,6 +165,7 @@ Route::prefix('v1')->group(function () {
 
     /* ------------------------------------------------------------- protected */
     Route::middleware(['auth:sanctum', RequireVerifiedEmail::class, 'identify.tenant', 'min.app.version'])->group(function () {
+        Route::post('language-votes', [\App\Http\Controllers\LanguageVoteController::class, 'store'])->middleware('throttle:10,1');
         Route::post('me/learner-profile', [MeController::class, 'ensureLearnerProfile']);
         Route::post('me/devices', [DeviceController::class, 'store']);
         Route::post('profiles/{learner}/switch', [ProfileController::class, 'switch'])
