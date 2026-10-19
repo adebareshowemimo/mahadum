@@ -23,7 +23,7 @@ const PRIVACY_SECTIONS = [
     id: 'scope',
     title: 'Who this notice covers',
     paragraphs: [
-      'This notice covers visitors, adult learners, parents and guardians, learner profiles, teachers, school staff, institutional partners and other people who use or interact with MAHADUM.360.',
+      'This notice covers visitors, adult learners, parents and guardians, learner profiles, teachers, school staff, institutional partners and other people who use or interact with Mahadum360.',
       'Every learner under 18 must use a supervised learner profile inside a Family or School account. A parent, legal guardian or authorised school adult manages consent, supervision and payments. Read the Children’s Privacy and Parental Consent Notice for details.',
     ],
   },
@@ -89,7 +89,7 @@ const PRIVACY_SECTIONS = [
     id: 'international',
     title: 'International use',
     paragraphs: [
-      'MAHADUM.360 serves people in Nigeria and the diaspora. Information may therefore be processed in countries other than the one where you live. Where required, we use contractual and organisational measures intended to protect information across borders.',
+      'Mahadum360 serves people in Nigeria and the diaspora. Information may therefore be processed in countries other than the one where you live. Where required, we use contractual and organisational measures intended to protect information across borders.',
     ],
   },
   {
@@ -106,7 +106,7 @@ export function PrivacyPage() {
   return (
     <PolicyPage
       title="Privacy notice"
-      summary="How MAHADUM.360 handles account, learner, family, school and institutional information—including the additional care required for supervised child profiles."
+      summary="How Mahadum360 handles account, learner, family, school and institutional information—including the additional care required for supervised child profiles."
       updated={UPDATED}
       sections={PRIVACY_SECTIONS}
     />
@@ -117,7 +117,7 @@ export function TermsPage() {
   return (
     <PolicyPage
       title="Terms and conditions"
-      summary="The ground rules for accounts, supervised learner profiles, learning access, subscriptions, rewards, organisations and responsible use of MAHADUM.360."
+      summary="The ground rules for accounts, supervised learner profiles, learning access, subscriptions, rewards, organisations and responsible use of Mahadum360."
       updated={TERMS_UPDATED}
       sections={TERMS_SECTIONS}
     />
