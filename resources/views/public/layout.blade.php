@@ -37,6 +37,7 @@
       #main a{text-decoration:underline}
       #main .cta{text-decoration:none}
     </style>
+    @stack('page-styles')
     <script src="/public-pages.js" defer></script>
     <script type="module" src="{{ $chrome['script'] }}"></script>
 </head>

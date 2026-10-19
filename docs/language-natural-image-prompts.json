@@ -1,0 +1,25 @@
+{
+  "generator": "Built-in image_gen",
+  "images": [
+    {
+      "key": "yoruba",
+      "prompt": "Precise image edit of attached illustration. Correct the physically wrong tablet orientation. Grandmother holds the tablet at a comfortable reading angle on her lap, with its screen facing up and toward herself and the girl beside her. Camera sees mostly the plain dark navy rear shell and a slim edge. Both look down at the learner-facing display; granddaughter gently touches the far screen surface. CRITICAL: The tablet display faces the learners, NOT the viewer/camera. Remove ALL colourful quiz UI currently painted on the viewer-facing surface and replace it with a believable plain matte tablet BACK with small rear camera and subtle rim. Do not show a screen on the back of the device. This is a candid moment of people actually using a web learning app, not posing to demonstrate a product to a camera. Device remains recognizable and visible without revealing its screen. Change hands/forearms/eye gaze only as necessary for believable use. Preserve the same people, cultural clothing, warm illustrative style, colours, setting, expressions and landscape 3:2 framing. No physical books, added objects, words or logos.",
+      "file": "web/public/images/languages/yoruba-natural.webp"
+    },
+    {
+      "key": "igbo",
+      "prompt": "Precise image edit of attached illustration. Correct the physically wrong tablet orientation. Father and son sit side by side. Father supports tablet in landscape orientation tilted inward toward both of their faces. Camera in front of them sees the matte charcoal rear shell, not the display. Son's fingertip naturally reaches over a side edge toward the screen facing him. Their eyes look down at their actual screen. CRITICAL: The tablet display faces the learners, NOT the viewer/camera. Remove ALL colourful quiz UI currently painted on the viewer-facing surface and replace it with a believable plain matte tablet BACK with small rear camera and subtle rim. Do not show a screen on the back of the device. This is a candid moment of people actually using a web learning app, not posing to demonstrate a product to a camera. Device remains recognizable and visible without revealing its screen. Change hands/forearms/eye gaze only as necessary for believable use. Preserve the same people, cultural clothing, warm illustrative style, colours, setting, expressions and landscape 3:2 framing. No physical books, added objects, words or logos.",
+      "file": "web/public/images/languages/igbo-natural.webp"
+    },
+    {
+      "key": "hausa",
+      "prompt": "Precise image edit of attached illustration. Correct the physically wrong tablet orientation. Mother and daughter share a tablet resting gently on mother's lap, screen tilted upward toward their faces. Camera sees the matte dark rear shell at a three-quarter angle with thin side edge, no exposed front display. Mother's finger gestures over the far screen surface and both learners look down at the same screen. CRITICAL: The tablet display faces the learners, NOT the viewer/camera. Remove ALL colourful quiz UI currently painted on the viewer-facing surface and replace it with a believable plain matte tablet BACK with small rear camera and subtle rim. Do not show a screen on the back of the device. This is a candid moment of people actually using a web learning app, not posing to demonstrate a product to a camera. Device remains recognizable and visible without revealing its screen. Change hands/forearms/eye gaze only as necessary for believable use. Preserve the same people, cultural clothing, warm illustrative style, colours, setting, expressions and landscape 3:2 framing. No physical books, added objects, words or logos.",
+      "file": "web/public/images/languages/hausa-natural.webp"
+    },
+    {
+      "key": "english",
+      "prompt": "Precise image edit of attached illustration. Correct the physically wrong tablet orientation. Teacher and children lean naturally together around a tablet resting low on the desk, its display tilted toward the group behind it. Camera facing the people sees the back panel and slim top edge of tablet with a small rear camera lens. All eyes are directed toward the screen on their side, with children's hands naturally resting near it. CRITICAL: The tablet display faces the learners, NOT the viewer/camera. Remove ALL colourful quiz UI currently painted on the viewer-facing surface and replace it with a believable plain matte tablet BACK with small rear camera and subtle rim. Do not show a screen on the back of the device. This is a candid moment of people actually using a web learning app, not posing to demonstrate a product to a camera. Device remains recognizable and visible without revealing its screen. Change hands/forearms/eye gaze only as necessary for believable use. Preserve the same people, cultural clothing, warm illustrative style, colours, setting, expressions and landscape 3:2 framing. No physical books, added objects, words or logos.",
+      "file": "web/public/images/languages/english-natural.webp"
+    }
+  ]
+}
