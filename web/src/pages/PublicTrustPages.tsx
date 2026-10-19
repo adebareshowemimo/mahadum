@@ -14,6 +14,7 @@ import { Reveal } from '@/components/landing/Reveal'
 import { Button, Icon, Input, LinkButton, Textarea, type IconName } from '@/components/ui'
 
 const UPDATED = '15 October 2026'
+const TERMS_UPDATED = '19 October 2026'
 const SUPPORT_EMAIL = 'support@mahadum360.com'
 const WHATSAPP_URL = 'https://wa.me/2349028111111?text=Hello%20Mahadum360%2C%20I%27d%20like%20to%20learn%20more.'
 
@@ -117,7 +118,7 @@ export function TermsPage() {
     <PolicyPage
       title="Terms and conditions"
       summary="The ground rules for accounts, supervised learner profiles, learning access, subscriptions, rewards, organisations and responsible use of MAHADUM.360."
-      updated={UPDATED}
+      updated={TERMS_UPDATED}
       sections={TERMS_SECTIONS}
     />
   )
