@@ -1717,6 +1717,26 @@ export interface SubscriptionsReport {
   total: number
 }
 
+export interface SubscriptionRecord {
+  id: number
+  user_id: number
+  name: string
+  email: string
+  phone: string | null
+  account_status: string
+  subscription_plan: string | null
+  subscription_status: string
+  subscription_start: string | null
+  subscription_expiry: string | null
+  payment_status: string
+}
+
+export interface SubscriptionRecordsQuery {
+  q?: string
+  status?: string
+  page?: number
+}
+
 export interface ReferralsReport {
   from: string
   to: string

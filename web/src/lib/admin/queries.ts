@@ -20,6 +20,7 @@ import {
   type EmailTemplateContent,
   type InviteOrgAdminInput,
   type IncomeReportQuery,
+  type SubscriptionRecordsQuery,
   type OrgStatus,
   type CreatePlanInput,
   type SettingValue,
@@ -44,6 +45,7 @@ export const adminKeys = {
   incomeReport: (params: IncomeReportQuery) => ['admin-income', params] as const,
   growthReport: (params: IncomeReportQuery) => ['admin-growth', params] as const,
   subscriptionsReport: (params: IncomeReportQuery) => ['admin-subscriptions', params] as const,
+  subscriptionRecords: (params: SubscriptionRecordsQuery) => ['admin-subscription-records', params] as const,
   referralsReport: (params: IncomeReportQuery) => ['admin-referrals-report', params] as const,
   orgActivityReport: (params: IncomeReportQuery) => ['admin-org-activity', params] as const,
   renewalsReport: (params: IncomeReportQuery) => ['admin-renewals', params] as const,
@@ -357,6 +359,14 @@ export function useSubscriptionsReport(params: IncomeReportQuery) {
     queryKey: adminKeys.subscriptionsReport(params),
     queryFn: () => adminApi.subscriptionsReport(params),
     placeholderData: (prev) => prev,
+  })
+}
+
+export function useSubscriptionRecords(params: SubscriptionRecordsQuery) {
+  return useQuery({
+    queryKey: adminKeys.subscriptionRecords(params),
+    queryFn: () => adminApi.subscriptionRecords(params),
+    placeholderData: (previous) => previous,
   })
 }
 

@@ -542,6 +542,7 @@ Route::prefix('v1')->group(function () {
             Route::get('reports/income', [ReportController::class, 'income'])->middleware('can:analytics.platform.view');
             Route::get('reports/growth', [ReportController::class, 'growth'])->middleware('can:analytics.platform.view');
             Route::get('reports/subscriptions', [ReportController::class, 'subscriptions'])->middleware('can:analytics.platform.view');
+            Route::get('reports/subscriptions/records', [ReportController::class, 'subscriptionRecords'])->middleware('can:analytics.platform.view');
             Route::get('reports/referrals', [ReportController::class, 'referrals'])->middleware('can:analytics.platform.view');
             Route::get('reports/org-activity', [ReportController::class, 'orgActivity'])->middleware('can:analytics.platform.view');
             Route::get('reports/renewals', [ReportController::class, 'renewals'])->middleware('can:analytics.platform.view');
