@@ -61,6 +61,8 @@ import type {
   RenewalsReport,
   ReferralsReport,
   SubscriptionsReport,
+  SubscriptionRecord,
+  SubscriptionRecordsQuery,
   AdminOrgDetail,
   AdminOrgList,
   AdminOrgQuery,
@@ -1079,6 +1081,11 @@ export const adminApi = {
   async subscriptionsReport(params: IncomeReportQuery = {}): Promise<SubscriptionsReport> {
     const { data } = await api.get('/admin/reports/subscriptions', { params })
     return data.data
+  },
+
+  async subscriptionRecords(params: SubscriptionRecordsQuery = {}): Promise<Paginated<SubscriptionRecord>> {
+    const { data } = await api.get('/admin/reports/subscriptions/records', { params })
+    return data
   },
 
   async referralsReport(params: IncomeReportQuery = {}): Promise<ReferralsReport> {
