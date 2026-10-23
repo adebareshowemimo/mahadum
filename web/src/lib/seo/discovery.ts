@@ -25,4 +25,4 @@ export function signupAttribution(): Pick<SignupDiscoveryInput, 'utm_source' | '
   try { return JSON.parse(sessionStorage.getItem(KEY) ?? '{}') } catch { return {} }
 }
 
-export const VOTE_OPTIONS = ['Ebira', 'Edo', 'Efik', 'Fulfulde', 'Gbagyi', 'Ibibio', 'Idoma', 'Igala', 'Ijaw', 'Isoko', 'Itsekiri', 'Kanuri', 'Nupe', 'Tiv', 'Urhobo', 'Other']
+export const VOTE_OPTIONS = ['Benin', 'Ebira', 'Efik', 'Fulfulde', 'Gbagyi', 'Ibibio', 'Idoma', 'Igala', 'Ijaw', 'Isoko', 'Itsekiri', 'Kanuri', 'Nupe', 'Tiv', 'Urhobo', 'Other']

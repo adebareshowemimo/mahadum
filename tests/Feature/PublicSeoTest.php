@@ -179,9 +179,26 @@ class PublicSeoTest extends TestCase
         $user->forceFill(['email_verified_at' => now()])->save();
         $this->postJson('/api/v1/language-votes', ['language' => 'Invalid'])->assertUnprocessable();
         $this->postJson('/api/v1/language-votes', ['language' => 'Other', 'other_language' => '   '])->assertUnprocessable();
-        $this->postJson('/api/v1/language-votes', ['language' => 'Tiv'])->assertCreated();
-        $this->postJson('/api/v1/language-votes', ['language' => 'Edo'])->assertConflict();
+        $this->postJson('/api/v1/language-votes', ['language' => 'Benin'])->assertCreated();
+        $this->postJson('/api/v1/language-votes', ['language' => 'Tiv'])->assertConflict();
         $this->assertDatabaseCount('language_votes', 1);
+    }
+
+    public function test_benin_replaces_edo_and_existing_votes_keep_their_count(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        DB::table('language_votes')->insert([
+            'user_id' => $user->id,
+            'language' => 'Edo',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        (require database_path('migrations/2026_10_23_000001_rename_edo_votes_to_benin.php'))->up();
+
+        $this->assertDatabaseHas('language_votes', ['user_id' => $user->id, 'language' => 'Benin']);
+        $this->get('/vote')->assertOk()->assertSee('Choose Benin')->assertSee('1 of 10,000 votes')->assertDontSee('Choose Edo');
+        $this->get('/languages')->assertOk()->assertSee('Benin')->assertDontSee('>Edo<');
     }
 
     /** @return array<string, mixed> */

@@ -11,7 +11,7 @@ beforeEach(() => {
   document.body.innerHTML = `
     <input id="language-search"><select id="vote-sort"><option value="name">A to Z</option><option value="votes">Most votes</option></select>
     <button id="vote-clear" hidden>Clear</button><p id="vote-results"></p><div id="vote-empty" hidden></div><button id="vote-reset">Reset</button>
-    <div id="vote-grid">${[['Tiv', 5], ['Edo', 2]].map(([name, count]) => `<article data-language="${name}" data-count="${count}" data-target="10000"><span class="vote-count">${count} of 10,000 votes</span><span class="vote-percent"></span><progress max="10000" value="${count}"></progress><button data-vote="${name}">Choose ${name}</button></article>`).join('')}</div>
+    <div id="vote-grid">${[['Tiv', 5], ['Benin', 2]].map(([name, count]) => `<article data-language="${name}" data-count="${count}" data-target="10000"><span class="vote-count">${count} of 10,000 votes</span><span class="vote-percent"></span><progress max="10000" value="${count}"></progress><button data-vote="${name}">Choose ${name}</button></article>`).join('')}</div>
     <input id="other-language"><button data-vote="Other">Suggest</button><span id="vote-total-count">7</span>
     <div id="vote-feedback" hidden><p id="vote-feedback-text"></p><a id="vote-feedback-link" hidden>Sign in</a></div>
     <dialog id="vote-dialog"><span id="vote-selected-name"></span><p id="vote-dialog-description"></p><p id="vote-dialog-message"></p><p id="vote-dialog-auth"></p><button id="vote-confirm">Confirm</button><button id="vote-dialog-close">Close</button><button id="vote-dialog-back">Back</button></dialog>`
@@ -31,18 +31,18 @@ describe('public vote interactions', () => {
   it('filters, reports no matches and restores the full shortlist', () => {
     fireEvent.input(element('language-search'), { target: { value: 'TIV' } })
     expect(element('vote-results')).toHaveTextContent('1 language matches')
-    expect(document.querySelector('[data-language="Edo"]')).not.toBeVisible()
+    expect(document.querySelector('[data-language="Benin"]')).not.toBeVisible()
     fireEvent.input(element('language-search'), { target: { value: 'Missing' } })
     expect(element('vote-empty')).toBeVisible()
     element('vote-reset').click()
     expect(element('vote-empty')).not.toBeVisible()
-    expect(document.querySelector('[data-language="Edo"]')).toBeVisible()
+    expect(document.querySelector('[data-language="Benin"]')).toBeVisible()
   })
 
   it('sorts by verified votes without losing the current filter', () => {
     fireEvent.change(element('vote-sort'), { target: { value: 'votes' } })
     expect(document.querySelector('#vote-grid > article')?.getAttribute('data-language')).toBe('Tiv')
-    fireEvent.input(element('language-search'), { target: { value: 'Edo' } })
+    fireEvent.input(element('language-search'), { target: { value: 'Benin' } })
     expect(document.querySelector('[data-language="Tiv"]')).not.toBeVisible()
   })
 
@@ -69,7 +69,7 @@ describe('public vote interactions', () => {
     await waitFor(() => expect(element('vote-feedback-text')).toHaveTextContent('vote for Tiv has been counted'))
     expect(element('vote-total-count')).toHaveTextContent('8')
     expect(document.querySelector('[data-language="Tiv"] .vote-count')).toHaveTextContent('6 of 10,000')
-    expect(document.querySelector('[data-vote="Edo"]')).toBeDisabled()
+    expect(document.querySelector('[data-vote="Benin"]')).toBeDisabled()
   })
 
   it('explains verification failures without incrementing the tally', async () => {
@@ -94,7 +94,7 @@ describe('public vote interactions', () => {
   it('explains an already-recorded vote without adding to the total', async () => {
     localStorage.setItem('mahadum.token', 'test-token')
     vi.mocked(fetch).mockResolvedValue({ ok: false, status: 409, json: async () => ({}) } as Response)
-    choose('Edo'); element('vote-confirm').click()
+    choose('Benin'); element('vote-confirm').click()
     await waitFor(() => expect(element('vote-feedback-text')).toHaveTextContent('already been recorded'))
     expect(element('vote-total-count')).toHaveTextContent('7')
     expect(document.querySelector('[data-vote="Tiv"]')).toBeDisabled()
