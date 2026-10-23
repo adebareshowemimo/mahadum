@@ -11,5 +11,5 @@ return [
      * Age (years) below which a learner is treated as a minor requiring COPPA /
      * NDPA verifiable parental consent.
      */
-    'minor_age' => (int) env('COMPLIANCE_MINOR_AGE', 13),
+    'minor_age' => (int) env('COMPLIANCE_MINOR_AGE', 18),
 ];

@@ -50,7 +50,7 @@ return [
                     'type' => 'int',
                     'min' => 4,
                     'max' => 18,
-                    'default' => (int) env('COMPLIANCE_MINOR_AGE', 13),
+                    'default' => (int) env('COMPLIANCE_MINOR_AGE', 18),
                 ],
             ],
         ],

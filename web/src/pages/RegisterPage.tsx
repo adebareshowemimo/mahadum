@@ -558,6 +558,7 @@ export function RegisterPage() {
                 <Input
                   label="Password"
                   type="password"
+                  passwordToggle
                   autoComplete="new-password"
                   hint="At least 8 characters."
                   value={values.password}
@@ -569,6 +570,7 @@ export function RegisterPage() {
                 <Input
                   label="Confirm password"
                   type="password"
+                  passwordToggle
                   autoComplete="new-password"
                   value={values.password_confirmation}
                   onChange={update('password_confirmation')}

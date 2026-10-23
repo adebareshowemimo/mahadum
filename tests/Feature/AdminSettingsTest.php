@@ -5,12 +5,26 @@ namespace Tests\Feature;
 use App\Models\Course;
 use App\Models\Language;
 use App\Models\LessonComponent;
+use App\Services\Settings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class AdminSettingsTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_public_signup_age_defaults_to_18(): void
+    {
+        $this->getJson('/api/v1/config')->assertOk()->assertJsonPath('data.digital_age', 18);
+    }
+
+    public function test_age_policy_migration_replaces_an_existing_13_override(): void
+    {
+        app(Settings::class)->set(['compliance.minor_age' => 13]);
+        $migration = require database_path('migrations/2026_10_19_000001_set_digital_consent_age_to_18.php');
+        $migration->up();
+        $this->getJson('/api/v1/config')->assertOk()->assertJsonPath('data.digital_age', 18);
+    }
 
     public function test_google_login_visibility_can_be_changed_by_admin_and_is_public(): void
     {

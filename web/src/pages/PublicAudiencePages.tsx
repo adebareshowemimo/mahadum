@@ -170,7 +170,7 @@ export function FamiliesPage() {
             <p className="font-display text-xl font-extrabold text-[#a93403]">Kids get the adventure. Parents keep the controls.</p>
             <h2 className="mt-3 max-w-[14ch] font-display text-4xl font-extrabold leading-tight sm:text-5xl">A child can learn without managing an adult account.</h2>
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-navy-700">
-              Under-13 learners use supervised profiles. Parents manage consent, see progress, review recordings and approve chore rewards before coins are released.
+              Under-18 learners use supervised profiles. Parents manage consent, see progress, review recordings and approve chore rewards before coins are released.
             </p>
             <div className="mt-8 divide-y divide-chore-200 border-y border-chore-200">
               {[

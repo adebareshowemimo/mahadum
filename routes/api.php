@@ -74,6 +74,7 @@ use App\Http\Controllers\Gamification\HeartController;
 use App\Http\Controllers\Gamification\LeaderboardController;
 use App\Http\Controllers\Gamification\StreakController;
 use App\Http\Controllers\Identity\WebPushController;
+use App\Http\Controllers\LanguageVoteController;
 use App\Http\Controllers\Learning\AnswerController;
 use App\Http\Controllers\Learning\AssessmentController;
 use App\Http\Controllers\Learning\AssignmentSubmissionController;
@@ -165,7 +166,7 @@ Route::prefix('v1')->group(function () {
 
     /* ------------------------------------------------------------- protected */
     Route::middleware(['auth:sanctum', RequireVerifiedEmail::class, 'identify.tenant', 'min.app.version'])->group(function () {
-        Route::post('language-votes', [\App\Http\Controllers\LanguageVoteController::class, 'store'])->middleware('throttle:10,1');
+        Route::post('language-votes', [LanguageVoteController::class, 'store'])->middleware('throttle:10,1');
         Route::post('me/learner-profile', [MeController::class, 'ensureLearnerProfile']);
         Route::post('me/devices', [DeviceController::class, 'store']);
         Route::post('profiles/{learner}/switch', [ProfileController::class, 'switch'])

@@ -1,0 +1,594 @@
+{
+ "mode": "read_only",
+ "account": null,
+ "same_name_learners_not_merge_targets": [],
+ "cleanup_candidates_not_approved_targets": {
+ "organizations": [],
+ "promo_codes": [
+ {
+ "id": 2,
+ "code": "SCHOOL25",
+ "status": "inactive",
+ "dependencies": {
+ "promo_redemptions.promo_code_id": 0
+ }
+ },
+ {
+ "id": 4,
+ "code": "TERM2024",
+ "status": "active",
+ "dependencies": {
+ "promo_redemptions.promo_code_id": 0
+ }
+ }
+ ],
+ "course_levels": [],
+ "advert_placements": [
+ {
+ "id": 1,
+ "name": "Demo leaderboard",
+ "is_active": 1,
+ "dependencies": []
+ },
+ {
+ "id": 2,
+ "name": "Demo inline",
+ "is_active": 1,
+ "dependencies": []
+ },
+ {
+ "id": 3,
+ "name": "Demo family learning leaderboard",
+ "is_active": 1,
+ "dependencies": []
+ },
+ {
+ "id": 4,
+ "name": "Demo culture lesson inline advert",
+ "is_active": 1,
+ "dependencies": []
+ }
+ ]
+ },
+ "cleanup_limit": "Only three of the six reported school names are known. No blanket name-based deletion is safe. Snapshot exact records and dependencies before approved cleanup.",
+ "videos": [
+ {
+ "id": 1,
+ "lesson_component_id": 1,
+ "duration_seconds": 105,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 2,
+ "lesson_component_id": 3,
+ "duration_seconds": 143,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 3,
+ "lesson_component_id": 5,
+ "duration_seconds": 76,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 4,
+ "lesson_component_id": 7,
+ "duration_seconds": 41,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 5,
+ "lesson_component_id": 9,
+ "duration_seconds": 118,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 6,
+ "lesson_component_id": 11,
+ "duration_seconds": 64,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 7,
+ "lesson_component_id": 13,
+ "duration_seconds": 85,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 8,
+ "lesson_component_id": 15,
+ "duration_seconds": 48,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 9,
+ "lesson_component_id": 17,
+ "duration_seconds": 109,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 10,
+ "lesson_component_id": 19,
+ "duration_seconds": 56,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 11,
+ "lesson_component_id": 21,
+ "duration_seconds": 77,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 12,
+ "lesson_component_id": 23,
+ "duration_seconds": 133,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 13,
+ "lesson_component_id": 25,
+ "duration_seconds": 137,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 14,
+ "lesson_component_id": 27,
+ "duration_seconds": 47,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 15,
+ "lesson_component_id": 29,
+ "duration_seconds": 140,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 16,
+ "lesson_component_id": 31,
+ "duration_seconds": 149,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 17,
+ "lesson_component_id": 33,
+ "duration_seconds": 96,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 18,
+ "lesson_component_id": 35,
+ "duration_seconds": 139,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 19,
+ "lesson_component_id": 37,
+ "duration_seconds": 169,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 20,
+ "lesson_component_id": 39,
+ "duration_seconds": 90,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 21,
+ "lesson_component_id": 41,
+ "duration_seconds": 61,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 22,
+ "lesson_component_id": 43,
+ "duration_seconds": 116,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 23,
+ "lesson_component_id": 45,
+ "duration_seconds": 98,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 24,
+ "lesson_component_id": 47,
+ "duration_seconds": 42,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 25,
+ "lesson_component_id": 49,
+ "duration_seconds": 132,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 26,
+ "lesson_component_id": 51,
+ "duration_seconds": 136,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 27,
+ "lesson_component_id": 53,
+ "duration_seconds": 177,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 28,
+ "lesson_component_id": 55,
+ "duration_seconds": 65,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 29,
+ "lesson_component_id": 57,
+ "duration_seconds": 159,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 30,
+ "lesson_component_id": 59,
+ "duration_seconds": 126,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 31,
+ "lesson_component_id": 61,
+ "duration_seconds": 140,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 32,
+ "lesson_component_id": 63,
+ "duration_seconds": 178,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 33,
+ "lesson_component_id": 65,
+ "duration_seconds": 159,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 34,
+ "lesson_component_id": 67,
+ "duration_seconds": 111,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 35,
+ "lesson_component_id": 69,
+ "duration_seconds": 46,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 36,
+ "lesson_component_id": 71,
+ "duration_seconds": 133,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 37,
+ "lesson_component_id": 73,
+ "duration_seconds": 78,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 38,
+ "lesson_component_id": 75,
+ "duration_seconds": 170,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 39,
+ "lesson_component_id": 77,
+ "duration_seconds": 170,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 40,
+ "lesson_component_id": 79,
+ "duration_seconds": 126,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 41,
+ "lesson_component_id": 81,
+ "duration_seconds": 141,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 42,
+ "lesson_component_id": 83,
+ "duration_seconds": 54,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 43,
+ "lesson_component_id": 85,
+ "duration_seconds": 80,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 44,
+ "lesson_component_id": 87,
+ "duration_seconds": 70,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 45,
+ "lesson_component_id": 89,
+ "duration_seconds": 169,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 46,
+ "lesson_component_id": 91,
+ "duration_seconds": 58,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 47,
+ "lesson_component_id": 93,
+ "duration_seconds": 173,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ },
+ {
+ "id": 48,
+ "lesson_component_id": 95,
+ "duration_seconds": 148,
+ "source_type": "upload",
+ "source_asset_id": null,
+ "status": "ready",
+ "ready_qualities": [],
+ "caption_languages": [],
+ "require_watch": false
+ }
+ ],
+ "providers": {
+ "monnify_key_present": true,
+ "monnify_secret_present": true,
+ "monnify_contract_present": true,
+ "monnify_environment": "sandbox",
+ "payments_live": true,
+ "telco_enrollment_enabled": false,
+ "telco_live": false,
+ "provider_authentication_and_fulfillment": "NOT RUN; presence of configuration does not prove valid credentials or delivery"
+ }
+}

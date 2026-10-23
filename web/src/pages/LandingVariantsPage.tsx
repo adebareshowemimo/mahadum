@@ -508,7 +508,7 @@ export function LandingV2Page() {
           <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:items-center lg:px-8">
             <Reveal>
               <h2 className="font-display text-4xl font-extrabold leading-tight text-white sm:text-6xl">Kids get the adventure. Parents keep the controls.</h2>
-              <p className="mt-5 max-w-xl text-lg font-bold leading-relaxed text-white/88">Under-13 learners have profiles, not logins. You see progress, review recordings and approve chore rewards before coins move.</p>
+              <p className="mt-5 max-w-xl text-lg font-bold leading-relaxed text-white/88">Under-18 learners have profiles, not logins. You see progress, review recordings and approve chore rewards before coins move.</p>
               <ul className="mt-7 space-y-3">
                 <CheckLine inverse>Up to six learner profiles</CheckLine>
                 <CheckLine inverse>Parent PIN and consent record</CheckLine>

@@ -22,7 +22,7 @@ class WebPushService
     {
         return $user->status === 'active' && $user->hasVerifiedEmail()
             && ($user->hasAnyRole(['parent', 'teacher', 'school_admin', 'super_admin', 'content_owner', 'supervisor'])
-                || ($user->date_of_birth && $user->date_of_birth->age >= (int) config('compliance.minor_age', 13)));
+                || ($user->date_of_birth && $user->date_of_birth->age >= (int) config('compliance.minor_age', 18)));
     }
 
     public function validEndpoint(string $endpoint): bool

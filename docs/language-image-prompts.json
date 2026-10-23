@@ -1,0 +1,29 @@
+{
+  "generator": "Built-in image_gen",
+  "images": [
+    {
+      "key": "yoruba",
+      "scene": "A Yoruba grandmother wearing a tasteful indigo adire blouse and gele, sharing a story with her young granddaughter in a bright contemporary southwestern Nigerian courtyard; warm ochre wall, leafy greenery, affectionate eye contact.",
+      "palette": "indigo, golden ochre, warm cream",
+      "prompt": "Use case: illustration-story. Asset: landscape image for a Mahadum360 language-learning website card. Create one polished editorial digital painting, softly textured, rich natural skin tones, gently simplified shapes, sophisticated friendly family education aesthetic. Scene: A Yoruba grandmother wearing a tasteful indigo adire blouse and gele, sharing a story with her young granddaughter in a bright contemporary southwestern Nigerian courtyard; warm ochre wall, leafy greenery, affectionate eye contact. Palette: indigo, golden ochre, warm cream. Landscape 3:2 framing, medium shot with faces and book clearly visible, subjects centred with generous room around them for responsive crops. Natural daylight. No text, letters, labels, flags, logos or watermarks. Respectful contemporary cultural detail, no caricatures. Full bleed opaque image."
+    },
+    {
+      "key": "igbo",
+      "scene": "An Igbo father in a contemporary shirt with subtle isi agu pattern reading a picture book with his young son at a sunny southeastern Nigerian home; a woven basket and greenery, engaged smiles.",
+      "palette": "terracotta, deep navy, warm cream",
+      "prompt": "Use case: illustration-story. Asset: landscape image for a Mahadum360 language-learning website card. Create one polished editorial digital painting, softly textured, rich natural skin tones, gently simplified shapes, sophisticated friendly family education aesthetic. Scene: An Igbo father in a contemporary shirt with subtle isi agu pattern reading a picture book with his young son at a sunny southeastern Nigerian home; a woven basket and greenery, engaged smiles. Palette: terracotta, deep navy, warm cream. Landscape 3:2 framing, medium shot with faces and book clearly visible, subjects centred with generous room around them for responsive crops. Natural daylight. No text, letters, labels, flags, logos or watermarks. Respectful contemporary cultural detail, no caricatures. Full bleed opaque image."
+    },
+    {
+      "key": "hausa",
+      "scene": "A Hausa mother in a teal hijab and modest contemporary dress helping her young daughter with an open picture book in a welcoming northern Nigerian courtyard; soft earth-toned architectural arches and potted greenery.",
+      "palette": "teal, sand, warm cream",
+      "prompt": "Use case: illustration-story. Asset: landscape image for a Mahadum360 language-learning website card. Create one polished editorial digital painting, softly textured, rich natural skin tones, gently simplified shapes, sophisticated friendly family education aesthetic. Scene: A Hausa mother in a teal hijab and modest contemporary dress helping her young daughter with an open picture book in a welcoming northern Nigerian courtyard; soft earth-toned architectural arches and potted greenery. Palette: teal, sand, warm cream. Landscape 3:2 framing, medium shot with faces and book clearly visible, subjects centred with generous room around them for responsive crops. Natural daylight. No text, letters, labels, flags, logos or watermarks. Respectful contemporary cultural detail, no caricatures. Full bleed opaque image."
+    },
+    {
+      "key": "english",
+      "scene": "A Nigerian woman teacher and two Nigerian schoolchildren, a girl and a boy, enjoying conversation and an open picture book in a bright contemporary library; comfortable everyday clothes, inclusive lively learning.",
+      "palette": "sky blue, navy, warm cream",
+      "prompt": "Use case: illustration-story. Asset: landscape image for a Mahadum360 language-learning website card. Create one polished editorial digital painting, softly textured, rich natural skin tones, gently simplified shapes, sophisticated friendly family education aesthetic. Scene: A Nigerian woman teacher and two Nigerian schoolchildren, a girl and a boy, enjoying conversation and an open picture book in a bright contemporary library; comfortable everyday clothes, inclusive lively learning. Palette: sky blue, navy, warm cream. Landscape 3:2 framing, medium shot with faces and book clearly visible, subjects centred with generous room around them for responsive crops. Natural daylight. No text, letters, labels, flags, logos or watermarks. Respectful contemporary cultural detail, no caricatures. Full bleed opaque image."
+    }
+  ]
+}

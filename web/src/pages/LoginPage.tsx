@@ -98,6 +98,7 @@ export function LoginPage() {
           <Input
             label="Password"
             type="password"
+            passwordToggle
             autoComplete="current-password"
             value={values.password}
             onChange={update('password')}

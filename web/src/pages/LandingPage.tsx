@@ -376,7 +376,7 @@ function FamilySection() {
               {
                 icon: 'users' as IconName,
                 title: 'Up to 6 child profiles',
-                body: 'Each child gets their own path and progress. Under-13s have no login at all — you operate their profile, protected by a parent PIN.',
+                body: 'Each child gets their own path and progress. Under-18s have no login at all — you operate their profile, protected by a parent PIN.',
               },
               {
                 icon: 'wallet' as IconName,
@@ -708,7 +708,7 @@ const TRUST = [
   {
     icon: 'shield' as IconName,
     title: 'Children have no login',
-    body: 'An under-13 learner has a profile, not an account. There is no password to leak and no inbox to reach them through.',
+    body: 'An under-18 learner has a profile, not an account. There is no password to leak and no inbox to reach them through.',
   },
   {
     icon: 'users' as IconName,

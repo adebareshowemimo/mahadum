@@ -21,7 +21,7 @@ class LanguageVoteController extends Controller
             'other_language' => $data['language'] === 'Other' ? trim($data['other_language']) : null,
             'created_at' => now(), 'updated_at' => now(),
         ]);
-        abort_unless($inserted, 409, 'Your language vote has already been recorded. Each account gets one vote.');
+        abort_unless($inserted > 0, 409, 'Your language vote has already been recorded. Each account gets one vote.');
 
         return response()->json(['message' => 'Your vote has been counted. Thank you!'], 201);
     }

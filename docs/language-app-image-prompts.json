@@ -1,0 +1,30 @@
+{
+  "generator": "Built-in image_gen",
+  "style_reference": "web/public/images/hero-grandmother-child.webp",
+  "images": [
+    {
+      "key": "yoruba",
+      "subject": "Yoruba grandmother and granddaughter in indigo adire, in their warm courtyard",
+      "prompt": "Edit image 1, using image 2 solely as the site's illustration style reference. Preserve image 1's Yoruba grandmother and granddaughter in indigo adire, in their warm courtyard, faces, cultural clothing, joyful relationship and general composition. Replace the physical picture book COMPLETELY with a clearly recognizable slim modern tablet, held naturally, showing a colorful digital language-learning web application: simple picture quiz choices, a speaker audio icon, progress strip, friendly app UI in navy, sky blue and orange. Angle screen so viewer can see it and people can interact with it. No physical books or paper in scene. Convert the image from photorealism into the polished warm hand-painted character illustration aesthetic of reference image 2, with expressive faces, clean illustrated contours, soft shading, rich natural dark skin, bright brand colours. Tablet must be obvious at small card size, with upper body and tablet together in the centre 80% safe crop. Landscape 3:2 full-bleed website card, no labels, no typography or watermarks.",
+      "file": "web/public/images/languages/yoruba-app.webp"
+    },
+    {
+      "key": "igbo",
+      "subject": "Igbo father in subtle isi agu patterned shirt and his young son at their sunny home",
+      "prompt": "Edit image 1, using image 2 solely as the site's illustration style reference. Preserve image 1's Igbo father in subtle isi agu patterned shirt and his young son at their sunny home, faces, cultural clothing, joyful relationship and general composition. Replace the physical picture book COMPLETELY with a clearly recognizable slim modern tablet, held naturally, showing a colorful digital language-learning web application: simple picture quiz choices, a speaker audio icon, progress strip, friendly app UI in navy, sky blue and orange. Angle screen so viewer can see it and people can interact with it. No physical books or paper in scene. Convert the image from photorealism into the polished warm hand-painted character illustration aesthetic of reference image 2, with expressive faces, clean illustrated contours, soft shading, rich natural dark skin, bright brand colours. Tablet must be obvious at small card size, with upper body and tablet together in the centre 80% safe crop. Landscape 3:2 full-bleed website card, no labels, no typography or watermarks.",
+      "file": "web/public/images/languages/igbo-app.webp"
+    },
+    {
+      "key": "hausa",
+      "subject": "Hausa mother in a teal hijab and her young daughter in a welcoming courtyard",
+      "prompt": "Edit image 1, using image 2 solely as the site's illustration style reference. Preserve image 1's Hausa mother in a teal hijab and her young daughter in a welcoming courtyard, faces, cultural clothing, joyful relationship and general composition. Replace the physical picture book COMPLETELY with a clearly recognizable slim modern tablet, held naturally, showing a colorful digital language-learning web application: simple picture quiz choices, a speaker audio icon, progress strip, friendly app UI in navy, sky blue and orange. Angle screen so viewer can see it and people can interact with it. No physical books or paper in scene. Convert the image from photorealism into the polished warm hand-painted character illustration aesthetic of reference image 2, with expressive faces, clean illustrated contours, soft shading, rich natural dark skin, bright brand colours. Tablet must be obvious at small card size, with upper body and tablet together in the centre 80% safe crop. Landscape 3:2 full-bleed website card, no labels, no typography or watermarks.",
+      "file": "web/public/images/languages/hausa-app.webp"
+    },
+    {
+      "key": "english",
+      "subject": "Nigerian teacher and two children in a bright contemporary classroom",
+      "prompt": "Edit image 1, using image 2 solely as the site's illustration style reference. Preserve image 1's Nigerian teacher and two children in a bright contemporary classroom, faces, cultural clothing, joyful relationship and general composition. Replace the physical picture book COMPLETELY with a clearly recognizable slim modern tablet, held naturally, showing a colorful digital language-learning web application: simple picture quiz choices, a speaker audio icon, progress strip, friendly app UI in navy, sky blue and orange. Angle screen so viewer can see it and people can interact with it. No physical books or paper in scene. Convert the image from photorealism into the polished warm hand-painted character illustration aesthetic of reference image 2, with expressive faces, clean illustrated contours, soft shading, rich natural dark skin, bright brand colours. Tablet must be obvious at small card size, with upper body and tablet together in the centre 80% safe crop. Landscape 3:2 full-bleed website card, no labels, no typography or watermarks.",
+      "file": "web/public/images/languages/english-app.webp"
+    }
+  ]
+}

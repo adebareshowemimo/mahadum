@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { configApi, type AppConfig } from '@/lib/api'
 
 /** Fallback digital age if /config hasn't loaded yet (matches backend default). */
-export const DEFAULT_DIGITAL_AGE = 13
+export const DEFAULT_DIGITAL_AGE = 18
 
 /**
  * Public launch-time config (digital age, feature flags, languages). Cached for

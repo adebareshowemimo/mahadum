@@ -182,14 +182,18 @@ if ! curl --fail --silent --show-error --max-time 10 "$HEALTH_URL" > /dev/null; 
     false # triggers the ERR trap → rollback
 fi
 # A healthy API does not prove that Apache can serve the SPA. Check every
-# bundled script/stylesheet against the same origin before accepting release.
+# bundled script/stylesheet, including lazy page chunks, against the same
+# origin before accepting release.
 SPA_ORIGIN="${SPA_ORIGIN:-${HEALTH_URL%/up}}"
 while IFS= read -r asset_path; do
     if ! curl --fail --silent --show-error --max-time 10 "$SPA_ORIGIN$asset_path" > /dev/null; then
         echo "==> SPA asset check failed: $asset_path" >&2
         false # triggers rollback
     fi
-done < <(php -r 'preg_match_all("~(?:src|href)=\"(/assets/[^\"]+\\.(?:js|css))\"~", file_get_contents("resources/spa/index.html"), $matches); echo implode(PHP_EOL, array_unique($matches[1])).PHP_EOL;')
+done < <({
+    php -r 'preg_match_all("~(?:src|href)=\"(/assets/[^\"]+\\.(?:js|css))\"~", file_get_contents("resources/spa/index.html"), $matches); echo implode(PHP_EOL, array_unique($matches[1])).PHP_EOL;'
+    find public/assets -type f \( -name '*.js' -o -name '*.css' \) -printf '/assets/%P\n'
+} | sort -u)
 
 trap - ERR
 if [ -n "$PREVIOUS_COMMIT" ]; then

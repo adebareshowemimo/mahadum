@@ -192,7 +192,7 @@ export function LandingV4Page() {
             <Reveal>
               <p className="font-display text-xl font-extrabold text-chore-700">Parents participate without hovering.</p>
               <h2 className="mt-3 font-display text-4xl font-extrabold leading-tight sm:text-5xl">One calm place for progress, speaking and rewards.</h2>
-              <p className="mt-5 text-lg font-semibold leading-relaxed text-navy-700">Under-13 learners use profiles instead of managing logins. Grown-ups keep consent, payments and coin approvals in the adult view.</p>
+              <p className="mt-5 text-lg font-semibold leading-relaxed text-navy-700">Under-18 learners use profiles instead of managing logins. Grown-ups keep consent, payments and coin approvals in the adult view.</p>
               <ul className="mt-7 space-y-3">
                 <CheckLine>Listen to speaking submissions</CheckLine>
                 <CheckLine>See lessons, words and weekly progress</CheckLine>
@@ -254,7 +254,7 @@ const ECOSYSTEM_VIEWS = [
     label: 'Family',
     heading: 'Progress becomes something the household can hear.',
     body: 'Parents manage learner profiles, review speech and approve rewards while relatives join the reason to speak.',
-    features: ['Under-13 profiles', 'Speaking review', 'Approval-gated coins'],
+    features: ['Under-18 profiles', 'Speaking review', 'Approval-gated coins'],
   },
   {
     id: 'teacher',
@@ -429,7 +429,7 @@ export function LandingV5Page() {
             <div className="mt-12 divide-y divide-white/25 border-y border-white/25">
               {[
                 ['Free learning', 'Level 0 is available without payment; paid plans unlock further learning.'],
-                ['Child-safe identity', 'Under-13 learners use profiles while adults manage consent and sensitive actions.'],
+                ['Child-safe identity', 'Under-18 learners use profiles while adults manage consent and sensitive actions.'],
                 ['Reliable connection', 'Low data won’t keep you from learning, buy data directly from the website and continue learning.'],
                 ['Real school operations', 'Seats, rosters, classes, invoices, assignments and reporting are part of the platform.'],
               ].map(([title, body], index) => (

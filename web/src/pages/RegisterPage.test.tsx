@@ -10,8 +10,8 @@ vi.mock('@/lib/auth/AuthProvider', () => ({
 }))
 
 vi.mock('@/lib/config/useConfig', () => ({
-  useDigitalAge: () => 13,
-  DEFAULT_DIGITAL_AGE: 13,
+  useDigitalAge: () => 18,
+  DEFAULT_DIGITAL_AGE: 18,
   useConfig: () => ({ data: undefined }),
 }))
 
@@ -46,7 +46,7 @@ describe('RegisterPage age gate', () => {
     setup('/register?lang=hausa')
     await userEvent.click(screen.getByRole('radio', { name: /Family/i }))
     await userEvent.click(screen.getByRole('button', { name: /continue/i }))
-    fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: yearsAgo(30) } })
+    fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: yearsAgo(18) } })
     await userEvent.click(screen.getByRole('button', { name: /continue/i }))
     expect(screen.getByLabelText('Start learning in')).toHaveValue('hausa')
     await userEvent.selectOptions(screen.getByRole('combobox', { name: /Which language should we add next/i }), 'Other')
@@ -73,10 +73,10 @@ describe('RegisterPage age gate', () => {
     expect(screen.getByLabelText(/date of birth/i)).toBeInTheDocument()
   })
 
-  it('routes an under-13 DOB to the guardian-setup step', async () => {
+  it('routes an under-18 DOB to the guardian-setup step', async () => {
     setup()
     await continueAsFamily()
-    fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: yearsAgo(8) } })
+    fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: yearsAgo(17) } })
     await userEvent.click(screen.getByRole('button', { name: /continue/i }))
     expect(await screen.findByText(/grown-up needs to help/i)).toBeInTheDocument()
   })
@@ -84,7 +84,7 @@ describe('RegisterPage age gate', () => {
   it('sends an adult DOB straight to the details form', async () => {
     setup()
     await continueAsFamily()
-    fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: yearsAgo(30) } })
+    fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: yearsAgo(18) } })
     await userEvent.click(screen.getByRole('button', { name: /continue/i }))
     expect(await screen.findByLabelText(/first name/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/^email$/i)).toBeInTheDocument()
@@ -102,16 +102,16 @@ describe('RegisterPage age gate', () => {
     setup()
     await userEvent.click(screen.getByRole('radio', { name: /^School/i }))
     await userEvent.click(screen.getByRole('button', { name: /continue/i }))
-    fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: yearsAgo(8) } })
+    fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: yearsAgo(17) } })
     await userEvent.click(screen.getByRole('button', { name: /continue/i }))
-    expect(await screen.findByText(/must be at least 13/i)).toBeInTheDocument()
+    expect(await screen.findByText(/must be at least 18/i)).toBeInTheDocument()
   })
 
   it('asks an adult institution registrant for the institution name', async () => {
     setup()
     await userEvent.click(screen.getByRole('radio', { name: /Institution/i }))
     await userEvent.click(screen.getByRole('button', { name: /continue/i }))
-    fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: yearsAgo(30) } })
+    fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: yearsAgo(18) } })
     await userEvent.click(screen.getByRole('button', { name: /continue/i }))
     expect(await screen.findByLabelText(/institution name/i)).toBeRequired()
   })
@@ -119,7 +119,7 @@ describe('RegisterPage age gate', () => {
   it('shows only the missing registration fields for Google signup', async () => {
     setup()
     await continueAsFamily()
-    fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: yearsAgo(30) } })
+    fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: yearsAgo(18) } })
     await userEvent.click(screen.getByRole('button', { name: /continue/i }))
     await userEvent.click(screen.getByRole('radio', { name: 'Google' }))
 

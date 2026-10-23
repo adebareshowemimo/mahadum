@@ -126,6 +126,17 @@
     color-scheme: light;
   }
 
+  /* Public forms stay light even when the account theme is dark. */
+  .variant-page [role="alert"][data-variant="info"] {
+    background-color: #eef4ff;
+    border-color: #8eb2f5;
+    color: #1b3c7e;
+  }
+
+  .variant-page [role="alert"][data-variant="info"] > div > div {
+    opacity: 1;
+  }
+
   .variant-skip-link {
     position: fixed;
     left: 1rem;

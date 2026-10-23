@@ -20,7 +20,7 @@ export interface AlertProps extends HTMLAttributes<HTMLDivElement> {
 
 export function Alert({ variant = 'info', title, icon, className, children, ...props }: AlertProps) {
   return (
-    <div role="alert" className={cn('flex gap-3 rounded-xl border p-4 text-sm', VARIANTS[variant], className)} {...props}>
+    <div role="alert" data-variant={variant} className={cn('flex gap-3 rounded-xl border p-4 text-sm', VARIANTS[variant], className)} {...props}>
       {icon && <span className="mt-0.5 shrink-0">{icon}</span>}
       <div className="flex flex-col gap-0.5">
         {title && <p className="font-display font-semibold">{title}</p>}

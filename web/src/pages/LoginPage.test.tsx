@@ -60,6 +60,20 @@ describe('LoginPage', () => {
     expect(login).toHaveBeenCalledWith({ login: 'ada@demo.test', password: 'Password123!' })
   })
 
+  it('shows and hides the password without changing it or submitting', async () => {
+    setup()
+    const password = screen.getByLabelText(/^password$/i)
+    await userEvent.type(password, 'Password123!')
+    expect(password).toHaveAttribute('type', 'password')
+    await userEvent.click(screen.getByRole('button', { name: /^show password$/i }))
+    expect(password).toHaveAttribute('type', 'text')
+    expect(password).toHaveValue('Password123!')
+    await userEvent.click(screen.getByRole('button', { name: /^hide password$/i }))
+    expect(password).toHaveAttribute('type', 'password')
+    expect(password).toHaveValue('Password123!')
+    expect(login).not.toHaveBeenCalled()
+  })
+
   it('surfaces an invalid-credentials error', async () => {
     login.mockRejectedValueOnce(new ApiError('The provided credentials are incorrect.', 'invalid_credentials', 401))
     setup()
