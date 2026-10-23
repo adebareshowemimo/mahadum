@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ApiError, billingApi, type DataBundle } from '@/lib/api'
-import { useDataBillers, useDataBundles } from './queries'
+import { ApiError, billingApi, type DataOffer } from '@/lib/api'
+import { useDataNetworks, useDataOffers, useDataProviders } from './queries'
 import { useAuth } from '@/lib/auth/AuthProvider'
 
 export function dataStoreError(error: unknown): string {
@@ -11,11 +11,12 @@ export function dataStoreError(error: unknown): string {
 export function useDataStore() {
   const { user } = useAuth()
   const storageKey = `mahadum:data-purchase:${user?.user.id}`
-  const billers = useDataBillers()
+  const providers = useDataProviders()
+  const billers = useDataNetworks(!!providers.data?.length)
   const [biller, setBiller] = useState('')
   const billerCode = biller || billers.data?.find((b) => b.code === 'MTN')?.code || billers.data?.[0]?.code || ''
-  const bundles = useDataBundles(billerCode)
-  const [selected, setSelected] = useState<DataBundle | null>(null)
+  const bundles = useDataOffers(billerCode, !!providers.data?.length)
+  const [selected, setSelected] = useState<DataOffer | null>(null)
   const [search, setSearch] = useState('')
   const [phone, setPhone] = useState('')
   const [consent, setConsent] = useState(false)
@@ -80,7 +81,8 @@ export function useDataStore() {
     purchaseKey.current ??= crypto.randomUUID()
     try {
       const result = await billingApi.purchaseDataBundle({
-        biller_code: billerCode, product_code: selected.product_code, phone_number: phone,
+        provider: selected.provider,
+        biller_code: selected.biller_code, product_code: selected.product_code, phone_number: phone,
         amount_minor: selected.amount_minor, consent,
       }, purchaseKey.current)
       sessionStorage.setItem(storageKey, String(result.purchase_id)); setPurchaseId(result.purchase_id)
@@ -100,7 +102,7 @@ export function useDataStore() {
   }
   const results = bundles.data?.filter((b) => b.name.toLowerCase().includes(search.toLowerCase())) ?? []
   const status = purchase.data?.status
-  const catalogueError = billers.error || bundles.error
+  const catalogueError = providers.error || billers.error || bundles.error
   function chooseNetwork(code: string) {
     track('network_selected', { value: code })
     setBiller(code)
@@ -108,7 +110,7 @@ export function useDataStore() {
     setSearch('')
     changed()
   }
-  return { billers, billerCode, bundles, selected, setSelected, search, setSearch, phone, setPhone,
+  return { providers, billers, billerCode, bundles, selected, setSelected, search, setSearch, phone, setPhone,
     consent, setConsent, busy, error, fields, purchaseId, purchase, history, status, catalogueError, results,
     changed, reset, viewPurchase, buy, chooseNetwork, track }
 }

@@ -400,6 +400,22 @@ export function useUpdateMonnify() {
   })
 }
 
+export function useUpdateFlutterwave() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: adminApi.updateFlutterwave,
+    onSuccess: (data) => qc.setQueryData(adminKeys.gateways, data),
+  })
+}
+
+export function useUpdateDataDefault() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: adminApi.updateDataDefault,
+    onSuccess: (data) => qc.setQueryData(adminKeys.gateways, data),
+  })
+}
+
 export function useEmailConfiguration() {
   return useQuery({ queryKey: adminKeys.emailConfiguration, queryFn: adminApi.emailConfiguration })
 }

@@ -182,6 +182,10 @@ export interface DataBundle {
   duration_unit: string | null
 }
 
+export interface DataOffer extends DataBundle {
+  provider: 'monnify' | 'flutterwave'
+}
+
 export interface DataBiller {
   code: string
   name: string
@@ -195,6 +199,9 @@ export interface DataBundlePurchase {
   phone_number: string
   checkout_url: string | null
   payment_reference: string
+    bill_tx_ref?: string | null
+    payment_provider?: 'monnify' | 'flutterwave'
+    fulfillment_provider?: 'monnify' | 'flutterwave'
   payment_confirmed?: boolean
   delivery_started?: boolean
   check_issue?: 'provider_unavailable'
@@ -1575,6 +1582,8 @@ export interface GatewayProvider {
   webhook_url: string
   requirements: GatewayRequirement[]
   environment?: 'sandbox' | 'live'
+  enabled?: boolean
+  bills_enabled?: boolean
 }
 
 /**
@@ -1594,6 +1603,7 @@ export interface GatewayStatus {
   /** PAYMENT_GATEWAY_LIVE — whether outbound checkout calls are enabled. */
   live: boolean
   default: string
+  data_default_provider: 'monnify' | 'flutterwave'
   providers: GatewayProvider[]
   telco: TelcoGatewayStatus
 }
@@ -1609,6 +1619,15 @@ export interface MonnifyConfigurationInput {
   api_key?: string
   secret?: string
   contract_code?: string
+}
+
+export interface FlutterwaveConfigurationInput {
+  enabled: boolean
+  bills_enabled: boolean
+  public_key?: string
+  secret?: string
+  encryption_key?: string
+  secret_hash?: string
 }
 
 export interface EmailConfiguration {

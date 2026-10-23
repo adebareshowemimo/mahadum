@@ -346,7 +346,7 @@ export function BillingPage() {
         <CardBody className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="font-display text-lg font-bold text-foreground">Mobile data</p>
-            <p className="text-sm text-muted">Browse your network’s data plans and pay securely through Monnify.</p>
+            <p className="text-sm text-muted">Browse your network’s data plans and choose an available payment provider.</p>
           </div>
           <LinkButton variant="billing" to="/billing/data">
             Buy data

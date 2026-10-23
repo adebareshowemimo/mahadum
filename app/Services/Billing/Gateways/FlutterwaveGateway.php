@@ -16,15 +16,19 @@ class FlutterwaveGateway implements PaymentGateway
 
     public function initialize(string $reference, int $amountMinor, string $email, array $metadata = []): GatewayCheckout
     {
+        $payload = [
+            'tx_ref' => $reference,
+            'amount' => round($amountMinor / 100, 2),
+            'currency' => 'NGN',
+            'redirect_url' => ($metadata['purpose'] ?? null) === 'data_bundle'
+                ? rtrim((string) config('app.url'), '/').'/billing/data/status'
+                : (string) config('app.url'),
+            'customer' => ['email' => $email],
+            'meta' => $metadata,
+        ];
         $response = Http::withToken($this->secret)
             ->acceptJson()
-            ->post(rtrim($this->baseUrl, '/').'/payments', [
-                'tx_ref' => $reference,
-                'amount' => round($amountMinor / 100, 2),
-                'currency' => 'NGN',
-                'customer' => ['email' => $email],
-                'meta' => $metadata,
-            ])
+            ->post(rtrim($this->baseUrl, '/').'/payments', $payload)
             ->throw()
             ->json();
 

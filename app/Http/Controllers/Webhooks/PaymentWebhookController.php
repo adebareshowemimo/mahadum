@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Webhooks;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessDataBundlePurchase;
+use App\Models\DataBundlePurchase;
 use App\Services\Billing\PaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -58,6 +60,18 @@ class PaymentWebhookController extends Controller
         $payload = $request->json()->all();
         $event = $payload['event'] ?? null;
         $data = $payload['data'] ?? [];
+        if ($event === 'singlebillpayment.status' && is_array($data)) {
+            $customerReference = $data['customer_reference'] ?? null;
+            $purchase = $customerReference ? DataBundlePurchase::where('vend_reference', $customerReference)
+                ->where('fulfillment_provider', 'flutterwave')->first() : null;
+            if ($purchase && $purchase->vend_started_at && filled($data['tx_ref'] ?? null)
+                && (! $purchase->bill_tx_ref || $purchase->bill_tx_ref === (string) $data['tx_ref'])) {
+                $purchase->update(['bill_tx_ref' => (string) $data['tx_ref']]);
+                ProcessDataBundlePurchase::dispatch($purchase->id);
+            }
+
+            return response()->json(['status' => $purchase ? 'data_bill_received' : 'unmatched']);
+        }
         $reference = $data['tx_ref'] ?? null;
 
         // Anything not explicitly recognised is recorded but moves no money.

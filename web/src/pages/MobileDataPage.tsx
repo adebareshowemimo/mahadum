@@ -36,20 +36,24 @@ const purchaseStatus: Record<DataBundlePurchase['status'], string> = {
 export function MobileDataPage() {
   const [params] = useSearchParams()
   // Older checkouts return here. The reference takes precedence over saved browser state.
-  if (params.has('paymentReference')) {
-    return <Navigate replace to={`/billing/data/status?paymentReference=${encodeURIComponent(params.get('paymentReference') ?? '')}`} />
+  if (params.has('paymentReference') || params.has('tx_ref')) {
+    return <Navigate replace to={`/billing/data/status?paymentReference=${encodeURIComponent(params.get('paymentReference') ?? params.get('tx_ref') ?? '')}`} />
   }
   return <MobileDataStorePage />
 }
 
 function MobileDataStorePage() {
   const store = useDataStore()
+  const providerName = store.selected?.provider === 'flutterwave' ? 'Flutterwave' : 'Monnify'
+  const orderProviderName = store.purchase.data?.payment_provider === 'flutterwave' ? 'Flutterwave' : 'Monnify'
   const [filter, setFilter] = useState('all')
-  const [sort, setSort] = useState('low')
+  const [sort, setSort] = useState('recommended')
   const network = store.billers.data?.find((b) => b.code === store.billerCode)
   const plans = store.results.filter((p) => filter === 'all' || (days(p) !== null && (filter === 'short' ? days(p)! <= 7 : days(p)! > 7)))
     .sort((a, b) => sort === 'validity' ? (days(a) ?? Infinity) - (days(b) ?? Infinity) : sort === 'high'
-      ? (b.amount_minor ?? -1) - (a.amount_minor ?? -1) : (a.amount_minor ?? Infinity) - (b.amount_minor ?? Infinity))
+      ? (b.amount_minor ?? -1) - (a.amount_minor ?? -1) : sort === 'recommended'
+        ? (store.providers.data?.indexOf(a.provider) ?? 0) - (store.providers.data?.indexOf(b.provider) ?? 0) || (a.amount_minor ?? Infinity) - (b.amount_minor ?? Infinity)
+        : (a.amount_minor ?? Infinity) - (b.amount_minor ?? Infinity))
   const validPhone = /^0[789][01][0-9]{8}$/.test(store.phone)
   const canPay = store.selected && store.consent && validPhone && !store.catalogueError && !store.bundles.isFetching
   const panel = 'rounded-3xl border border-border bg-surface p-5 sm:p-6'
@@ -82,12 +86,12 @@ function MobileDataStorePage() {
               <dl className="mt-3 space-y-2 text-sm"><div className="flex justify-between gap-3"><dt className="text-muted">Recipient</dt><dd>{store.purchase.data.phone_number}</dd></div><div className="flex justify-between gap-3"><dt className="text-muted">Total</dt><dd className="font-bold">{formatMoney(store.purchase.data.amount_minor, 'NGN')}</dd></div></dl>
             </div>
             {store.status === 'awaiting_payment' && <>
-              <Alert variant="info" title="Ready for payment">Your checkout is ready. Pay by card or bank transfer through Monnify. Delivery starts after payment is confirmed.</Alert>
-              {store.purchase.data.checkout_url ? <a className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-gold-500 px-4 font-semibold text-charcoal-900 hover:bg-gold-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring" onClick={() => store.track('checkout_opened')} href={store.purchase.data.checkout_url} target="_blank" rel="noopener noreferrer">Open Monnify checkout <span className="sr-only">(opens a new tab)</span></a> : <Alert variant="danger">Checkout could not be opened. Contact support with the reference below.</Alert>}
+              <Alert variant="info" title="Ready for payment">Your checkout is ready with {orderProviderName}. Delivery starts after payment is confirmed.</Alert>
+              {store.purchase.data.checkout_url ? <a className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-gold-500 px-4 font-semibold text-charcoal-900 hover:bg-gold-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring" onClick={() => store.track('checkout_opened')} href={store.purchase.data.checkout_url} target="_blank" rel="noopener noreferrer">Open {orderProviderName} checkout <span className="sr-only">(opens a new tab)</span></a> : <Alert variant="danger">Checkout could not be opened. Contact support with the reference below.</Alert>}
             </>}
-            {store.purchase.data.check_issue && <Alert variant="danger" title="Delivery check delayed">{store.purchase.data.payment_confirmed ? 'Your payment is confirmed, but Monnify could not complete or check data delivery right now. Keep this reference and do not pay again for this order.' : 'Monnify could not confirm this order right now. Check again shortly.'}</Alert>}
-            {store.status === 'processing' && !store.purchase.data.check_issue && <Alert variant="info" title={store.purchase.data.delivery_started ? 'Waiting for delivery confirmation' : 'Preparing data delivery'}>{store.purchase.data.delivery_started ? 'Payment confirmed. Monnify has not returned a final data delivery result yet. We’ll check again automatically; do not pay again for this order.' : 'Payment confirmed. We are validating the recipient before sending the bundle. You can check back shortly.'}</Alert>}
-            {store.status === 'success' && <Alert variant="success" title="Data delivered">Monnify confirmed your purchase. You’re ready to keep going.</Alert>}
+            {store.purchase.data.check_issue && <Alert variant="danger" title="Delivery check delayed">{store.purchase.data.payment_confirmed ? `Your payment is confirmed, but ${orderProviderName} could not complete or check data delivery right now. Keep this reference and do not pay again for this order.` : `${orderProviderName} could not confirm this order right now. Check again shortly.`}</Alert>}
+            {store.status === 'processing' && !store.purchase.data.check_issue && <Alert variant="info" title={store.purchase.data.delivery_started ? 'Waiting for delivery confirmation' : 'Preparing data delivery'}>{store.purchase.data.delivery_started ? `Payment confirmed. ${orderProviderName} has not returned a final data delivery result yet. We’ll check again automatically; do not pay again for this order.` : 'Payment confirmed. We are preparing the bundle. You can check back shortly.'}</Alert>}
+            {store.status === 'success' && <Alert variant="success" title="Data delivered">{orderProviderName} confirmed your purchase. You’re ready to keep going.</Alert>}
             {store.status === 'payment_failed' && <Alert variant="danger" title="Payment unsuccessful">Your data purchase was not submitted. You can choose a plan and try again.</Alert>}
             {(store.status === 'failed' || store.status === 'needs_review') && <Alert variant="danger" title="Let’s check your purchase">Delivery couldn’t be confirmed. Contact support with this reference to resolve this purchase.</Alert>}
             <p className="break-all text-xs text-muted">Reference: {store.purchase.data.payment_reference}</p>
@@ -98,6 +102,7 @@ function MobileDataStorePage() {
       ) : (
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_310px]">
           <div className="min-w-0 space-y-6">
+            {!store.providers.isLoading && !store.providers.data?.length && <Alert variant="warning">Data purchases are temporarily unavailable. Please check back later.</Alert>}
             <section className={panel} aria-labelledby="network-heading">
               <div className="mb-5"><p className="text-xs font-semibold uppercase tracking-wider text-primary">Step 01</p><h2 id="network-heading" className="mt-1 font-display text-xl font-bold">Choose your network</h2><p className="mt-1 text-sm text-muted">Use the network of the number receiving the data.</p></div>
               {store.billers.isLoading && <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" role="status" aria-label="Loading networks">{[1, 2, 3, 4].map((n) => <Skeleton key={n} className="h-24 rounded-2xl" />)}</div>}
@@ -116,22 +121,23 @@ function MobileDataStorePage() {
               <Input label="Find a plan" type="search" value={store.search} onChange={(e) => store.setSearch(e.target.value)} placeholder="Search data size or plan name" disabled={store.busy} leftIcon={<Icon name="search" className="size-4" />} />
               <div className="my-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap gap-2" role="group" aria-label="Plan validity">{[['all', 'All plans'], ['short', 'Up to 7 days'], ['long', '8 days or more']].map(([value, label]) => <button type="button" key={value} aria-pressed={filter === value} onClick={() => { store.track('filter_changed', { value }); setFilter(value) }} className={cn('min-h-9 rounded-full px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', filter === value ? 'bg-primary text-primary-fg' : 'bg-surface-muted text-muted hover:text-foreground')}>{label}</button>)}</div>
-                <label className="flex items-center gap-2 text-xs text-muted"><span className="sr-only">Sort plans</span><select value={sort} onChange={(e) => { store.track('sort_changed', { value: e.target.value }); setSort(e.target.value) }} className="min-h-9 max-w-full rounded-lg border border-border bg-surface px-2 text-xs text-foreground focus-visible:outline focus-visible:outline-ring"><option value="low">Price: low to high</option><option value="high">Price: high to low</option><option value="validity">Validity: shortest first</option></select></label>
+                <label className="flex items-center gap-2 text-xs text-muted"><span className="sr-only">Sort plans</span><select value={sort} onChange={(e) => { store.track('sort_changed', { value: e.target.value }); setSort(e.target.value) }} className="min-h-9 max-w-full rounded-lg border border-border bg-surface px-2 text-xs text-foreground focus-visible:outline focus-visible:outline-ring"><option value="recommended">Recommended provider</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option><option value="validity">Validity: shortest first</option></select></label>
               </div>
               {store.catalogueError && <div className="space-y-3"><Alert variant="danger">{dataStoreError(store.catalogueError)}</Alert><Button variant="outline" onClick={() => { store.track('catalogue_retry_clicked'); void store.billers.refetch(); if (store.billerCode) void store.bundles.refetch() }}>Retry catalogue</Button></div>}
               {store.bundles.isFetching ? <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" role="status" aria-label="Loading plans">{[1, 2].map((n) => <Skeleton key={n} className="h-44 rounded-2xl" />)}</div> : !store.catalogueError && plans.length === 0 ? <div className="rounded-2xl border border-dashed border-border-strong px-5 py-10 text-center"><Icon name="signal" className="mx-auto mb-3 size-8 text-subtle" /><p className="font-semibold">{store.search || filter !== 'all' ? 'No matching plans' : 'No plans available yet'}</p><p className="mt-2 text-sm leading-6 text-muted">{store.search || filter !== 'all' ? 'Try a different search or validity filter.' : 'There are no data bundles for this network right now. Try another network or check back later.'}</p>{(store.search || filter !== 'all') && <Button variant="ghost" className="mt-3" onClick={() => { store.setSearch(''); setFilter('all') }}>Clear filters</Button>}</div> : <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-label="Data plans">
                 {plans.map((p) => {
                   const available = p.price_type === 'FIXED' && p.amount_minor !== null && p.amount_minor > 0
-                  const active = store.selected?.product_code === p.product_code
-                  return <button key={p.product_code} type="button" aria-label={`${p.name}, ${validity(p)}, ${available ? formatMoney(p.amount_minor!, p.currency) : 'unavailable'}`} aria-pressed={active} disabled={!available || store.busy} onClick={() => { store.track('plan_selected', { product_code: p.product_code }); store.setSelected(p); store.changed() }} className={cn('flex min-h-44 min-w-0 flex-col rounded-2xl border-2 p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50', active ? 'border-primary bg-primary-soft' : 'border-border bg-surface hover:border-primary/50 hover:bg-surface-muted')}>
+                  const active = store.selected?.provider === p.provider && store.selected?.biller_code === p.biller_code && store.selected?.product_code === p.product_code
+                  return <button key={`${p.provider}:${p.biller_code}:${p.product_code}`} type="button" aria-label={`${p.name}, ${p.provider === 'flutterwave' ? 'Flutterwave' : 'Monnify'}, ${validity(p)}, ${available ? formatMoney(p.amount_minor!, p.currency) : 'unavailable'}`} aria-pressed={active} disabled={!available || store.busy} onClick={() => { store.track('plan_selected', { product_code: p.product_code }); store.setSelected(p); store.changed() }} className={cn('flex min-h-44 min-w-0 flex-col rounded-2xl border-2 p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50', active ? 'border-primary bg-primary-soft' : 'border-border bg-surface hover:border-primary/50 hover:bg-surface-muted')}>
                     <span className="mb-4 flex items-center justify-between gap-2"><span className="rounded-lg bg-surface-muted px-2 py-1 text-xs font-medium text-muted">{validity(p)}</span><span className={cn('flex size-5 shrink-0 items-center justify-center rounded-full border', active ? 'border-primary bg-primary text-primary-fg' : 'border-border-strong')}>{active && <Icon name="check" className="size-3" />}</span></span>
                     <span className="break-words font-display text-2xl font-bold tracking-tight">{size(p)}</span>
                     <span className="mt-2 text-xs text-muted">One-time data bundle</span>
+                    {store.providers.data && store.providers.data.length > 1 && <span className="mt-2 text-xs font-medium text-muted">{p.provider === 'flutterwave' ? 'Flutterwave' : 'Monnify'}{p.provider === store.providers.data[0] ? ' · Preferred' : ''}</span>}
                     <span className="mt-auto pt-5 text-lg font-bold">{available ? formatMoney(p.amount_minor!, p.currency) : 'Unavailable'}</span>
                   </button>
                 })}
               </div>}
-              <p className="mt-4 text-xs leading-5 text-muted">Plans and prices are supplied by your network through Monnify.</p>
+              <p className="mt-4 text-xs leading-5 text-muted">{store.providers.data?.length === 1 ? `Plans and prices are supplied through ${store.providers.data[0] === 'flutterwave' ? 'Flutterwave' : 'Monnify'}.` : 'Plans and prices are supplied by the provider shown on each offer.'}</p>
             </section>
 
             <section className={panel} aria-labelledby="recipient-heading"><p className="text-xs font-semibold uppercase tracking-wider text-primary">Step 02</p><h2 id="recipient-heading" className="mb-4 mt-1 font-display text-xl font-bold">Who’s receiving the data?</h2>
@@ -148,7 +154,7 @@ function MobileDataStorePage() {
             <label className="my-5 flex items-start gap-3 text-xs leading-5 text-muted"><input type="checkbox" checked={store.consent} disabled={store.busy} onChange={(e) => { store.track('consent_changed', { value: String(e.target.checked) }); store.setConsent(e.target.checked) }} className="mt-0.5 size-4 shrink-0 accent-primary" /><span>I’ve checked the network, plan, and recipient number.</span></label>
             {store.error && <div className="mb-4"><Alert variant="danger">{store.error}</Alert></div>}
             <Button variant="billing" size="lg" fullWidth loading={store.busy} disabled={!canPay} onClick={store.buy}>{store.selected ? 'Continue to payment' : 'Choose a plan'}</Button>
-            <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted"><Icon name="shield" className="size-3.5" /> Secure checkout with Monnify</p>
+            {store.selected && <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted"><Icon name="shield" className="size-3.5" /> Secure checkout with {providerName}</p>}
             <p className="mt-5 border-t border-border pt-4 text-xs leading-5 text-muted">We confirm your payment before delivering data. Double-check the number and network before paying.</p>
             <Link to="/support" onClick={() => store.track('support_clicked')} className="mt-3 inline-flex min-h-9 items-center text-xs font-semibold text-primary">Need a hand? Get help</Link>
           </aside>

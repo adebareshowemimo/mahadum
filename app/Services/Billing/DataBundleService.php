@@ -6,45 +6,53 @@ use App\Jobs\ProcessDataBundlePurchase;
 use App\Models\AuditLog;
 use App\Models\DataBundlePurchase;
 use App\Models\User;
-use App\Services\Billing\Gateways\MonnifyGateway;
+use App\Services\Billing\Gateways\PaymentGateway;
 use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class DataBundleService
 {
-    public function __construct(private MonnifyBills $bills) {}
+    public function __construct(private MonnifyBills $bills, private FlutterwaveBills $flutterwaveBills, private PaymentGatewayManager $gateways) {}
 
-    private function gateway(): MonnifyGateway
+    private function gateway(string $provider): PaymentGateway
     {
-        abort_unless(config('services.payments.live') && filled(config('services.monnify.contract_code')), 503,
-            'Enable Monnify checkout in Payment gateways before purchasing mobile data.');
+        abort_unless(config('services.payments.live') && in_array($provider, $this->gateways->available(), true), 503,
+            'Enable the selected payment gateway before purchasing mobile data.');
 
-        return new MonnifyGateway((string) config('services.monnify.api_key'), (string) config('services.monnify.secret'),
-            (string) config('services.monnify.contract_code'), (string) config('services.monnify.base_url'));
+        return $this->gateways->driver($provider);
+    }
+
+    private function bills(string $provider): MonnifyBills|FlutterwaveBills
+    {
+        return $provider === 'flutterwave' ? $this->flutterwaveBills : $this->bills;
     }
 
     public function purchase(User $user, array $input, string $key): DataBundlePurchase
     {
+        $provider = $input['provider'] ?? 'monnify';
         $reference = 'data_'.hash('sha256', $user->id.'|'.$key);
 
-        return Cache::lock('data-create:'.$reference, 120)->block(2, function () use ($user, $input, $reference) {
+        return Cache::lock('data-create:'.$reference, 120)->block(2, function () use ($user, $input, $reference, $provider) {
             if ($existing = DataBundlePurchase::where('payment_reference', $reference)->first()) {
                 abort_unless($existing->product_code === $input['product_code'] && $existing->biller_code === $input['biller_code']
-                    && $existing->phone_number === $input['phone_number'] && $existing->amount_minor === $input['amount_minor'],
+                    && $existing->phone_number === $input['phone_number'] && $existing->amount_minor === $input['amount_minor']
+                    && ($existing->payment_provider ?? 'monnify') === $provider,
                     409, 'This purchase reference was already used for a different request.');
 
                 app(DataPurchaseActivity::class)->record('checkout_reused', $existing);
 
                 return $existing;
             }
-            abort_unless(config('services.monnify.bills_enabled'), 503,
-                'Mobile data purchases are temporarily unavailable while we verify Monnify delivery. No payment has been taken.');
-            $gateway = $this->gateway();
-            $product = collect($this->bills->products($input['biller_code'], fresh: true))->firstWhere('product_code', $input['product_code']);
+            abort_unless(config('services.'.$provider.'.bills_enabled'), 503,
+                'Mobile data purchases are temporarily unavailable for this provider. No payment has been taken.');
+            $gateway = $this->gateway($provider);
+            $bills = $this->bills($provider);
+            $product = collect($bills->products($input['biller_code'], fresh: true))->firstWhere('product_code', $input['product_code']);
             abort_unless($product && $product['price_type'] === 'FIXED' && $product['amount_minor'] > 0, 422, 'Choose an available fixed-price data plan.');
             abort_unless($product['amount_minor'] === $input['amount_minor'], 422, 'This plan price has changed. Refresh the catalogue before paying.');
-            $this->bills->validate($product['product_code'], $input['phone_number']);
+            $bills->validate($product['product_code'], $input['phone_number']);
             $purchase = DataBundlePurchase::create([
+                'payment_provider' => $provider, 'fulfillment_provider' => $provider,
                 'user_id' => $user->id, 'operator' => $input['biller_code'], 'biller_code' => $input['biller_code'],
                 'product_code' => $product['product_code'], 'product_name' => $product['name'],
                 'phone_number' => $input['phone_number'], 'amount_minor' => $product['amount_minor'],
@@ -56,11 +64,11 @@ class DataBundleService
                 $checkout = $gateway->initialize($reference, $purchase->amount_minor, (string) $user->email,
                     ['purpose' => 'data_bundle', 'purchase_id' => $purchase->id]);
                 if (! $checkout->checkoutUrl) {
-                    throw new HttpException(502, 'Monnify did not return a checkout URL.');
+                    throw new HttpException(502, 'The payment gateway did not return a checkout URL.');
                 }
                 $purchase->update(['checkout_url' => $checkout->checkoutUrl, 'gateway_txn_ref' => $checkout->providerReference]);
             } catch (\Throwable $error) {
-                // Initialization can time out after Monnify accepts it. Retain the reference for reconciliation.
+                // Initialization can time out after the gateway accepts it. Retain the reference for reconciliation.
                 ProcessDataBundlePurchase::dispatch($purchase->id)->delay(now()->addSeconds(30));
                 app(DataPurchaseActivity::class)->record('checkout_uncertain', $purchase, ['error_type' => class_basename($error)]);
 
@@ -98,7 +106,7 @@ class DataBundleService
             }
             if (! $purchase->paid_at) {
                 app(DataPurchaseActivity::class)->record('payment_verification_started', $purchase);
-                $verified = $this->gateway()->verify($purchase->payment_reference);
+                $verified = $this->gateway($purchase->payment_provider ?? 'monnify')->verify($purchase->payment_reference);
                 app(DataPurchaseActivity::class)->record('payment_verification_result', $purchase, ['provider_status' => $verified->status]);
                 if ($verified->status === 'failed') {
                     $purchase->update(['status' => 'payment_failed']);
@@ -109,14 +117,17 @@ class DataBundleService
                 if ($verified->status !== 'success') {
                     return $purchase;
                 }
-                $currency = $verified->raw['responseBody']['currencyCode'] ?? $verified->raw['responseBody']['currency'] ?? null;
+                $provider = $purchase->payment_provider ?? 'monnify';
+                $paymentData = $provider === 'flutterwave' ? ($verified->raw['data'] ?? []) : ($verified->raw['responseBody'] ?? []);
+                $currency = $paymentData['currencyCode'] ?? $paymentData['currency'] ?? null;
+                $reference = $paymentData[$provider === 'flutterwave' ? 'tx_ref' : 'paymentReference'] ?? null;
                 if ($verified->amountMinor !== $purchase->amount_minor || $currency !== 'NGN'
-                    || ($verified->raw['responseBody']['paymentReference'] ?? null) !== $purchase->payment_reference) {
+                    || $reference !== $purchase->payment_reference) {
                     $purchase->update(['status' => 'needs_review']);
                     app(DataPurchaseActivity::class)->record('payment_mismatch', $purchase, [
                         'provider_amount_minor' => $verified->amountMinor,
                         'provider_currency' => $currency,
-                        'reference_matches' => ($verified->raw['responseBody']['paymentReference'] ?? null) === $purchase->payment_reference,
+                        'reference_matches' => $reference === $purchase->payment_reference,
                     ]);
 
                     return $purchase;
@@ -124,12 +135,16 @@ class DataBundleService
                 $purchase->update(['paid_at' => now(), 'status' => 'processing']);
                 app(DataPurchaseActivity::class)->record('payment_confirmed', $purchase);
             }
+            $bills = $this->bills($purchase->fulfillment_provider ?? 'monnify');
             if ($purchase->vend_started_at) {
                 app(DataPurchaseActivity::class)->record('delivery_requery_started', $purchase);
-                $result = $this->bills->requery($purchase->vend_reference);
+                $result = $purchase->fulfillment_provider === 'flutterwave'
+                    ? $bills->requery($purchase->bill_tx_ref ?: $purchase->vend_reference,
+                        $purchase->bill_tx_ref ? $purchase->vend_reference : null)
+                    : $bills->requery($purchase->vend_reference);
             } else {
                 app(DataPurchaseActivity::class)->record('recipient_validation_started', $purchase);
-                $validation = $this->bills->validate($purchase->product_code, $purchase->phone_number);
+                $validation = $bills->validate($purchase->product_code, $purchase->phone_number);
                 app(DataPurchaseActivity::class)->record('recipient_validated', $purchase);
                 // Monnify's guide nests these fields in vendInstruction, while
                 // its Laravel examples show them directly in responseBody.
@@ -151,7 +166,16 @@ class DataBundleService
                 // Persist before HTTP: crashes/timeouts can never trigger a second vend.
                 $purchase->update(['vend_started_at' => now()]);
                 app(DataPurchaseActivity::class)->record('delivery_started', $purchase);
-                $result = $this->bills->vend($payload);
+                $result = $purchase->fulfillment_provider === 'flutterwave'
+                    ? $bills->vend([
+                        'biller_code' => $purchase->biller_code, 'product_code' => $purchase->product_code,
+                        'phone_number' => $purchase->phone_number, 'amount_minor' => $purchase->amount_minor,
+                        'reference' => $purchase->vend_reference,
+                    ])
+                    : $bills->vend($payload);
+                if ($purchase->fulfillment_provider === 'flutterwave' && filled($result['bill_tx_ref'] ?? null)) {
+                    $purchase->update(['bill_tx_ref' => $result['bill_tx_ref']]);
+                }
             }
             $providerStatus = $result['vendStatus'] ?? $result['status'] ?? null;
             $status = match ($providerStatus) {
@@ -206,6 +230,9 @@ class DataBundleService
             'purchase_id' => $purchase->id, 'status' => $purchase->status, 'amount_minor' => $purchase->amount_minor,
             'product_name' => $purchase->product_name, 'phone_number' => $purchase->phone_number,
             'checkout_url' => $purchase->checkout_url, 'payment_reference' => $purchase->payment_reference,
+            'bill_tx_ref' => $purchase->bill_tx_ref,
+            'payment_provider' => $purchase->payment_provider ?? 'monnify',
+            'fulfillment_provider' => $purchase->fulfillment_provider ?? 'monnify',
             'payment_confirmed' => $purchase->paid_at !== null, 'delivery_started' => $purchase->vend_started_at !== null,
         ];
     }

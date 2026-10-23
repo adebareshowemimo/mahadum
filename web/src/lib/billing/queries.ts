@@ -5,7 +5,7 @@ export const billingKeys = {
   plans: ['plans'] as const,
   subscriptions: ['subscriptions'] as const,
   telcoStatus: ['telco-status'] as const,
-  dataBundles: ['data-bundles', 'monnify'] as const,
+  dataBundles: ['data-bundles'] as const,
 }
 
 export function usePlans() {
@@ -94,10 +94,22 @@ export function useTelcoSubscribe() {
   })
 }
 
-export function useDataBillers(enabled = true) {
-  return useQuery({ queryKey: [...billingKeys.dataBundles, 'billers'], queryFn: billingApi.dataBillers, enabled, retry: false, staleTime: 5 * 60_000 })
+export function useDataProviders() {
+  return useQuery({ queryKey: [...billingKeys.dataBundles, 'providers'], queryFn: billingApi.dataProviders, retry: false })
 }
 
-export function useDataBundles(billerCode: string, enabled = true) {
-  return useQuery({ queryKey: [...billingKeys.dataBundles, billerCode], queryFn: () => billingApi.dataBundles(billerCode), enabled: enabled && !!billerCode, retry: false, staleTime: 5 * 60_000 })
+export function useDataNetworks(enabled = true) {
+  return useQuery({ queryKey: [...billingKeys.dataBundles, 'networks'], queryFn: billingApi.dataNetworks, enabled, retry: false, staleTime: 60_000 })
+}
+
+export function useDataOffers(network: string, enabled = true) {
+  return useQuery({ queryKey: [...billingKeys.dataBundles, 'offers', network], queryFn: () => billingApi.dataOffers(network), enabled: enabled && !!network, retry: false, staleTime: 60_000 })
+}
+
+export function useDataBillers(provider: 'monnify' | 'flutterwave' = 'monnify', enabled = true) {
+  return useQuery({ queryKey: [...billingKeys.dataBundles, provider, 'billers'], queryFn: () => billingApi.dataBillers(provider), enabled, retry: false, staleTime: 5 * 60_000 })
+}
+
+export function useDataBundles(billerCode: string, provider: 'monnify' | 'flutterwave' = 'monnify', enabled = true) {
+  return useQuery({ queryKey: [...billingKeys.dataBundles, provider, billerCode], queryFn: () => billingApi.dataBundles(billerCode, provider), enabled: enabled && !!billerCode, retry: false, staleTime: 5 * 60_000 })
 }

@@ -7,6 +7,8 @@ use App\Http\Requests\Billing\PurchaseDataBundleRequest;
 use App\Models\DataBundlePurchase;
 use App\Services\AuditLogger;
 use App\Services\Billing\DataBundleService;
+use App\Services\Billing\DataCatalogue;
+use App\Services\Billing\FlutterwaveBills;
 use App\Services\Billing\MonnifyBills;
 use App\Services\Billing\MonnifyBillsRequestException;
 use Illuminate\Http\Client\ConnectionException;
@@ -17,6 +19,23 @@ use Illuminate\Validation\Rule;
 
 class DataBundleController extends Controller
 {
+    public function providers(DataCatalogue $catalogue): JsonResponse
+    {
+        return response()->json(['data' => $catalogue->providers()]);
+    }
+
+    public function networks(DataCatalogue $catalogue): JsonResponse
+    {
+        return response()->json(['data' => $catalogue->networks()]);
+    }
+
+    public function offers(Request $request, DataCatalogue $catalogue): JsonResponse
+    {
+        $input = $request->validate(['network' => ['required', 'string', 'max:255']]);
+
+        return response()->json(['data' => $catalogue->offers($input['network'])]);
+    }
+
     public function event(Request $request, AuditLogger $audit): JsonResponse
     {
         $input = $request->validate([
@@ -37,22 +56,25 @@ class DataBundleController extends Controller
         return response()->json(['recorded' => true], 201);
     }
 
-    public function billers(MonnifyBills $bills): JsonResponse
+    public function billers(Request $request, MonnifyBills $bills, FlutterwaveBills $flutterwave): JsonResponse
     {
-        return response()->json(['data' => $bills->billers()]);
+        $provider = $request->validate(['provider' => ['sometimes', Rule::in(['monnify', 'flutterwave'])]])['provider'] ?? 'monnify';
+
+        return response()->json(['data' => ($provider === 'flutterwave' ? $flutterwave : $bills)->billers()]);
     }
 
-    public function index(Request $request, MonnifyBills $bills): JsonResponse
+    public function index(Request $request, MonnifyBills $bills, FlutterwaveBills $flutterwave): JsonResponse
     {
-        $input = $request->validate(['biller_code' => ['required', 'string', 'max:255']]);
+        $input = $request->validate(['biller_code' => ['required', 'string', 'max:255'],
+            'provider' => ['sometimes', Rule::in(['monnify', 'flutterwave'])]]);
 
-        return response()->json(['data' => $bills->products($input['biller_code'])]);
+        return response()->json(['data' => (($input['provider'] ?? 'monnify') === 'flutterwave' ? $flutterwave : $bills)->products($input['biller_code'])]);
     }
 
     public function purchase(PurchaseDataBundleRequest $request, DataBundleService $service): JsonResponse
     {
         $audit = app(AuditLogger::class);
-        $details = ['source' => 'server', 'biller_code' => $request->validated('biller_code'), 'product_code' => $request->validated('product_code'), 'amount_minor' => $request->validated('amount_minor')];
+        $details = ['source' => 'server', 'provider' => $request->validated('provider', 'monnify'), 'biller_code' => $request->validated('biller_code'), 'product_code' => $request->validated('product_code'), 'amount_minor' => $request->validated('amount_minor')];
         $audit->record('billing.data_bundle.purchase_requested', $request->user(), [], $details);
         try {
             $purchase = $service->purchase($request->user(), $request->validated(), (string) $request->header('Idempotency-Key'));
@@ -95,7 +117,7 @@ class DataBundleController extends Controller
         $purchase = DataBundlePurchase::where('user_id', $request->user()->id)
             ->where('payment_reference', $input['payment_reference'])->firstOrFail();
 
-        // The redirect identifies the order; only server-side Monnify verification confirms payment.
+        // The redirect identifies the order; only server-side provider verification confirms payment.
         return $this->show($request, $purchase, $service);
     }
 }

@@ -14,6 +14,7 @@ class PurchaseDataBundleRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'provider' => ['sometimes', 'in:monnify,flutterwave'],
             'biller_code' => ['required', 'string', 'max:255'],
             'product_code' => ['required', 'string', 'max:255'],
             'phone_number' => ['required', 'regex:/^0[789][01][0-9]{8}$/'],

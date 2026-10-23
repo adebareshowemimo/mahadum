@@ -83,8 +83,8 @@ class PaymentService
         }
 
         if ($purchase = DataBundlePurchase::where('payment_reference', $reference)->orWhere('gateway_txn_ref', $reference)->first()) {
-            // Signed notification wakes reconciliation; fulfillment still verifies with Monnify directly.
-            if ($purchase->amount_minor !== $amountMinor) {
+            // Signed notification wakes reconciliation; fulfillment still verifies with its selected provider.
+            if ($purchase->amount_minor !== $amountMinor || ($purchase->payment_provider ?? 'monnify') !== $source) {
                 return 'ignored';
             }
             ProcessDataBundlePurchase::dispatch($purchase->id);
@@ -121,6 +121,9 @@ class PaymentService
         }
 
         if ($purchase = DataBundlePurchase::where('payment_reference', $reference)->orWhere('gateway_txn_ref', $reference)->first()) {
+            if (($purchase->payment_provider ?? 'monnify') !== $source) {
+                return 'ignored';
+            }
             Cache::lock('data-process:'.$purchase->id, 120)->block(2, function () use ($purchase) {
                 $purchase->update(['status' => 'needs_review']);
                 $this->audit->record('billing.data_bundle.refund_received', $purchase);

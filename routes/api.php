@@ -334,6 +334,9 @@ Route::prefix('v1')->group(function () {
         Route::post('subscriptions/{subscription}/cancel', [SubscriptionController::class, 'cancel'])
             ->middleware('can:billing.subscriptions.manage');
         Route::get('data-bundles', [DataBundleController::class, 'index']);
+        Route::get('data-bundles/providers', [DataBundleController::class, 'providers']);
+        Route::get('data-bundles/networks', [DataBundleController::class, 'networks']);
+        Route::get('data-bundles/offers', [DataBundleController::class, 'offers']);
         Route::get('data-bundles/billers', [DataBundleController::class, 'billers']);
         Route::post('data-bundles/events', [DataBundleController::class, 'event'])->middleware('throttle:120,1');
         Route::get('data-bundles/purchases', [DataBundleController::class, 'history'])
@@ -575,6 +578,8 @@ Route::prefix('v1')->group(function () {
             // Payment gateway console (env-configured; secrets never leave the server)
             Route::get('payment-gateways', [GatewayController::class, 'index'])->middleware('can:system.settings.manage');
             Route::put('payment-gateways/monnify', [GatewayController::class, 'updateMonnify'])->middleware('can:system.settings.manage');
+            Route::put('payment-gateways/flutterwave', [GatewayController::class, 'updateFlutterwave'])->middleware('can:system.settings.manage');
+            Route::put('payment-gateways/data-default', [GatewayController::class, 'updateDataDefault'])->middleware('can:system.settings.manage');
             Route::post('payment-gateways/{provider}/test', [GatewayController::class, 'test'])->middleware('can:system.settings.manage');
         });
     });

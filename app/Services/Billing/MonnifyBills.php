@@ -18,7 +18,14 @@ class MonnifyBills
             'code' => (string) $b['code'], 'name' => (string) $b['name'],
         ], $this->pages('billers', ['category_code' => 'DATA_BUNDLE']));
 
-        return $fresh ? $fetch() : Cache::remember($this->cacheKey('billers:DATA_BUNDLE'), 300, $fetch);
+        if ($fresh) {
+            $billers = $fetch();
+            Cache::put($this->cacheKey('billers:DATA_BUNDLE'), $billers, 300);
+
+            return $billers;
+        }
+
+        return Cache::remember($this->cacheKey('billers:DATA_BUNDLE'), 300, $fetch);
     }
 
     public function products(string $billerCode, bool $fresh = false): array

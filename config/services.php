@@ -47,9 +47,14 @@ return [
     ],
 
     'flutterwave' => [
+        'public_key' => env('FLUTTERWAVE_PUBLIC_KEY'),
         'secret' => env('FLUTTERWAVE_SECRET'),
+        'encryption_key' => env('FLUTTERWAVE_ENCRYPTION_KEY'),
         'secret_hash' => env('FLUTTERWAVE_SECRET_HASH'),
         'base_url' => env('FLUTTERWAVE_BASE_URL', 'https://api.flutterwave.com/v3'),
+        'enabled' => (bool) env('FLUTTERWAVE_ENABLED', false),
+        // Keep new Flutterwave data purchases closed until bill access and source funding are verified.
+        'bills_enabled' => (bool) env('FLUTTERWAVE_BILLS_ENABLED', false),
     ],
 
     'monnify' => [
@@ -79,6 +84,10 @@ return [
         // never hit a live gateway (PaymentGatewayManager → NullGateway).
         'live' => (bool) env('PAYMENT_GATEWAY_LIVE', false),
         'default' => env('PAYMENT_DEFAULT_GATEWAY', 'monnify'),
+    ],
+
+    'data_bundles' => [
+        'default_provider' => env('DATA_BUNDLE_DEFAULT_PROVIDER', 'monnify'),
     ],
 
     'messaging' => [

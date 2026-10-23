@@ -2,6 +2,7 @@ import { api } from './client'
 import { deviceName } from './storage'
 import type {
   DataBiller,
+  DataOffer,
   DataBundlePurchase,
   AddChildInput,
   AnswerResult,
@@ -50,6 +51,7 @@ import type {
   GatewayStatus,
   GatewayTestResult,
   MonnifyConfigurationInput,
+  FlutterwaveConfigurationInput,
   EmailConfiguration,
   EmailConfigurationInput,
   GrowthReport,
@@ -855,13 +857,25 @@ export const billingApi = {
   },
 
   // --- Data bundles ---
-  async dataBillers(): Promise<DataBiller[]> {
-    const { data } = await api.get('/data-bundles/billers')
+  async dataProviders(): Promise<Array<'monnify' | 'flutterwave'>> {
+    const { data } = await api.get('/data-bundles/providers')
+    return data.data
+  },
+  async dataNetworks(): Promise<DataBiller[]> {
+    const { data } = await api.get('/data-bundles/networks')
+    return data.data
+  },
+  async dataOffers(network: string): Promise<DataOffer[]> {
+    const { data } = await api.get('/data-bundles/offers', { params: { network } })
+    return data.data
+  },
+  async dataBillers(provider: 'monnify' | 'flutterwave' = 'monnify'): Promise<DataBiller[]> {
+    const { data } = await api.get('/data-bundles/billers', { params: { provider } })
     return data.data
   },
 
-  async dataBundles(billerCode: string): Promise<DataBundle[]> {
-    const { data } = await api.get('/data-bundles', { params: { biller_code: billerCode } })
+  async dataBundles(billerCode: string, provider: 'monnify' | 'flutterwave' = 'monnify'): Promise<DataBundle[]> {
+    const { data } = await api.get('/data-bundles', { params: { biller_code: billerCode, provider } })
     return data.data
   },
 
@@ -869,7 +883,7 @@ export const billingApi = {
     await api.post('/data-bundles/events', input)
   },
 
-  async purchaseDataBundle(input: { biller_code: string; product_code: string; phone_number: string; amount_minor: number; consent: boolean }, key: string): Promise<DataBundlePurchase> {
+  async purchaseDataBundle(input: { provider?: 'monnify' | 'flutterwave'; biller_code: string; product_code: string; phone_number: string; amount_minor: number; consent: boolean }, key: string): Promise<DataBundlePurchase> {
     const { data } = await api.post('/data-bundles/purchase', input, {
       headers: { 'Idempotency-Key': key },
     })
@@ -1216,6 +1230,15 @@ export const adminApi = {
 
   async updateMonnify(input: MonnifyConfigurationInput): Promise<GatewayStatus> {
     const { data } = await api.put('/admin/payment-gateways/monnify', input)
+    return data.data
+  },
+
+  async updateFlutterwave(input: FlutterwaveConfigurationInput): Promise<GatewayStatus> {
+    const { data } = await api.put('/admin/payment-gateways/flutterwave', input)
+    return data.data
+  },
+  async updateDataDefault(provider: 'monnify' | 'flutterwave'): Promise<GatewayStatus> {
+    const { data } = await api.put('/admin/payment-gateways/data-default', { provider })
     return data.data
   },
 

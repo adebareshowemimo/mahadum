@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Operations console for payment gateways. Monnify credentials may come from
+ * Operations console for payment gateways. Credentials may come from
  * environment variables or encrypted DB overrides and are never returned.
  */
 class GatewayController extends Controller
@@ -30,6 +30,7 @@ class GatewayController extends Controller
         return response()->json(['data' => [
             'live' => (bool) config('services.payments.live'),
             'default' => (string) config('services.payments.default', 'monnify'),
+            'data_default_provider' => (string) config('services.data_bundles.default_provider', 'monnify'),
             'providers' => [
                 [
                     'key' => 'monnify',
@@ -59,11 +60,19 @@ class GatewayController extends Controller
                 [
                     'key' => 'flutterwave',
                     'label' => 'Flutterwave',
-                    'configured' => filled(config('services.flutterwave.secret')),
+                    'configured' => filled(config('services.flutterwave.public_key'))
+                        && filled(config('services.flutterwave.secret'))
+                        && filled(config('services.flutterwave.encryption_key'))
+                        && filled(config('services.flutterwave.secret_hash')),
                     'is_default' => config('services.payments.default') === 'flutterwave',
+                    'enabled' => (bool) config('services.flutterwave.enabled'),
+                    'bills_enabled' => (bool) config('services.flutterwave.bills_enabled'),
+                    'environment' => str_starts_with((string) config('services.flutterwave.secret'), 'FLWSECK_TEST-') ? 'sandbox' : 'live',
                     'webhook_url' => url('/api/v1/webhooks/flutterwave'),
                     'requirements' => [
+                        ['label' => 'Public key', 'env' => 'FLUTTERWAVE_PUBLIC_KEY', 'set' => filled(config('services.flutterwave.public_key'))],
                         ['label' => 'Secret key', 'env' => 'FLUTTERWAVE_SECRET', 'set' => filled(config('services.flutterwave.secret'))],
+                        ['label' => 'Encryption key', 'env' => 'FLUTTERWAVE_ENCRYPTION_KEY', 'set' => filled(config('services.flutterwave.encryption_key'))],
                         ['label' => 'Webhook hash', 'env' => 'FLUTTERWAVE_SECRET_HASH', 'set' => filled(config('services.flutterwave.secret_hash'))],
                     ],
                 ],
@@ -104,11 +113,7 @@ class GatewayController extends Controller
                 rtrim((string) config('services.paystack.base_url'), '/').'/transaction?perPage=1',
                 (string) config('services.paystack.secret'),
             ),
-            'flutterwave' => $this->ping(
-                config('services.flutterwave.secret'),
-                rtrim((string) config('services.flutterwave.base_url'), '/').'/payment-plans?page=1',
-                (string) config('services.flutterwave.secret'),
-            ),
+            'flutterwave' => $this->pingFlutterwaveBills(),
             default => response()->json(['data' => ['ok' => false, 'message' => 'Unknown provider.']], 404),
         };
     }
@@ -165,6 +170,127 @@ class GatewayController extends Controller
         $this->audit->record('payment.monnify_configuration_updated', null, $before, $after);
 
         return $this->index();
+    }
+
+    public function updateFlutterwave(Request $request): JsonResponse
+    {
+        $this->payments->apply();
+        $clean = $request->validate([
+            'enabled' => ['required', 'boolean'],
+            'bills_enabled' => ['required', 'boolean'],
+            'public_key' => ['nullable', 'string', 'max:1000'],
+            'secret' => ['nullable', 'string', 'max:1000'],
+            'encryption_key' => ['nullable', 'string', 'max:1000'],
+            'secret_hash' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $publicKey = filled($clean['public_key'] ?? null) ? $clean['public_key'] : config('services.flutterwave.public_key');
+        $secret = filled($clean['secret'] ?? null) ? $clean['secret'] : config('services.flutterwave.secret');
+        $encryptionKey = filled($clean['encryption_key'] ?? null) ? $clean['encryption_key'] : config('services.flutterwave.encryption_key');
+        $secretChanged = filled($clean['secret'] ?? null) && $clean['secret'] !== config('services.flutterwave.secret');
+        $secretHash = filled($clean['secret_hash'] ?? null) ? $clean['secret_hash']
+            : ($secretChanged ? '' : config('services.flutterwave.secret_hash'));
+        if ($secretChanged && (! filled($clean['public_key'] ?? null) || ! filled($clean['encryption_key'] ?? null))) {
+            throw ValidationException::withMessages([
+                'public_key' => ['Enter the matching public and encryption keys when replacing the secret key.'],
+            ]);
+        }
+        if (filled($publicKey) && filled($secret) && filled($encryptionKey)
+            && count(array_unique([
+                str_contains((string) $publicKey, '_TEST'),
+                str_contains((string) $secret, '_TEST'),
+                str_contains((string) $encryptionKey, '_TEST'),
+            ])) !== 1) {
+            throw ValidationException::withMessages([
+                'public_key' => ['Use three keys from the same Flutterwave test or live account mode.'],
+            ]);
+        }
+        if ($clean['enabled'] && (! filled($publicKey) || ! filled($secret) || ! filled($encryptionKey) || ! filled($secretHash))) {
+            throw ValidationException::withMessages([
+                'secret' => ['All three API keys and a separate webhook hash are required before Flutterwave checkout can be enabled.'],
+            ]);
+        }
+        if ($clean['bills_enabled'] && ! $clean['enabled']) {
+            throw ValidationException::withMessages([
+                'bills_enabled' => ['Enable Flutterwave checkout before enabling data purchases.'],
+            ]);
+        }
+
+        $before = [
+            'enabled' => (bool) config('services.flutterwave.enabled'),
+            'bills_enabled' => (bool) config('services.flutterwave.bills_enabled'),
+            'configured' => filled(config('services.flutterwave.public_key')) && filled(config('services.flutterwave.secret'))
+                && filled(config('services.flutterwave.encryption_key')) && filled(config('services.flutterwave.secret_hash')),
+        ];
+        $values = [
+            'flutterwave.enabled' => (bool) $clean['enabled'],
+            'flutterwave.bills_enabled' => (bool) $clean['bills_enabled'],
+        ];
+        if (filled($clean['public_key'] ?? null)) {
+            $values['flutterwave.public_key'] = $clean['public_key'];
+        }
+        if (filled($clean['secret'] ?? null)) {
+            $values['flutterwave.secret'] = $clean['secret'];
+        }
+        if (filled($clean['encryption_key'] ?? null)) {
+            $values['flutterwave.encryption_key'] = $clean['encryption_key'];
+        }
+        if (filled($clean['secret_hash'] ?? null)) {
+            $values['flutterwave.secret_hash'] = $clean['secret_hash'];
+        } elseif ($secretChanged) {
+            // Do not reuse a webhook hash from a different test/live key set.
+            $values['flutterwave.secret_hash'] = '';
+        }
+
+        $this->settings->set($values);
+        $this->payments->apply();
+        $after = [
+            'enabled' => (bool) config('services.flutterwave.enabled'),
+            'bills_enabled' => (bool) config('services.flutterwave.bills_enabled'),
+            'configured' => filled(config('services.flutterwave.public_key')) && filled(config('services.flutterwave.secret'))
+                && filled(config('services.flutterwave.encryption_key')) && filled(config('services.flutterwave.secret_hash')),
+        ];
+        $this->audit->record('payment.flutterwave_configuration_updated', null, $before, $after);
+
+        return $this->index();
+    }
+
+    public function updateDataDefault(Request $request): JsonResponse
+    {
+        $clean = $request->validate(['provider' => ['required', 'in:monnify,flutterwave']]);
+        $before = ['provider' => $this->settings->get('data_bundles.default_provider', config('services.data_bundles.default_provider', 'monnify'))];
+        $this->settings->set(['data_bundles.default_provider' => $clean['provider']]);
+        $this->payments->apply();
+        $this->audit->record('billing.data_bundle.default_provider_updated', null, $before, ['provider' => $clean['provider']]);
+
+        return $this->index();
+    }
+
+    private function pingFlutterwaveBills(): JsonResponse
+    {
+        $secret = config('services.flutterwave.secret');
+        if (blank($secret)) {
+            return response()->json(['data' => ['ok' => false, 'message' => 'Save a Flutterwave secret key before testing the data catalogue.']]);
+        }
+
+        try {
+            $response = Http::withToken((string) $secret)->acceptJson()->timeout(10)
+                ->get(rtrim((string) config('services.flutterwave.base_url'), '/').'/top-bill-categories', ['country' => 'NG']);
+            $categories = $response->json('data');
+            $hasMobileData = $response->successful() && is_array($categories)
+                && collect($categories)->contains(fn (mixed $category) => is_array($category) && ($category['code'] ?? null) === 'MOBILEDATA');
+
+            return response()->json(['data' => [
+                'ok' => $hasMobileData,
+                'message' => $hasMobileData
+                    ? 'Flutterwave mobile data catalogue is available.'
+                    : ($response->successful()
+                        ? 'Flutterwave responded, but mobile data is not available for this account.'
+                        : 'Flutterwave bill catalogue rejected the request (HTTP '.$response->status().'): '.(string) ($response->json('message') ?? 'Check bill access and IP whitelisting.')),
+            ]]);
+        } catch (\Throwable) {
+            return response()->json(['data' => ['ok' => false, 'message' => 'Could not reach the Flutterwave bill catalogue.']]);
+        }
     }
 
     /**

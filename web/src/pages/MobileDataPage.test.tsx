@@ -9,7 +9,7 @@ import axe from 'axe-core'
 vi.mock('@/lib/auth/AuthProvider', () => ({ useAuth: () => ({ user: { user: { id: 1 } } }) }))
 vi.mock('@/lib/api', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/lib/api')>()
-  return { ...original, billingApi: { dataPurchaseEvent: vi.fn().mockResolvedValue(undefined), dataBillers: vi.fn(), dataBundles: vi.fn(), purchaseDataBundle: vi.fn(), dataBundlePurchase: vi.fn(), dataBundlePurchases: vi.fn() } }
+  return { ...original, billingApi: { dataPurchaseEvent: vi.fn().mockResolvedValue(undefined), dataProviders: vi.fn(), dataNetworks: vi.fn(), dataOffers: vi.fn(), purchaseDataBundle: vi.fn(), dataBundlePurchase: vi.fn(), dataBundlePurchases: vi.fn() } }
 })
 const clients: QueryClient[] = []
 function show() {
@@ -17,16 +17,30 @@ function show() {
   clients.push(client)
   return render(<QueryClientProvider client={client}><MemoryRouter><MobileDataPage /></MemoryRouter></QueryClientProvider>)
 }
-const plan = { product_code: 'weekly', biller_code: 'MTN_DATA', name: 'MTN 1GB weekly', amount_minor: 75000, price_type: 'FIXED', currency: 'NGN', duration: 7, duration_unit: 'DAYS' }
+const plan = { provider: 'monnify' as const, product_code: 'weekly', biller_code: 'MTN_DATA', name: 'MTN 1GB weekly', amount_minor: 75000, price_type: 'FIXED', currency: 'NGN', duration: 7, duration_unit: 'DAYS' }
 beforeEach(() => {
   vi.clearAllMocks(); sessionStorage.clear()
+  vi.mocked(billingApi.dataProviders).mockResolvedValue(['monnify'])
   vi.mocked(billingApi.dataBundlePurchases).mockResolvedValue([])
-  vi.mocked(billingApi.dataBillers).mockResolvedValue([{ code: 'MTN_DATA', name: 'MTN Data' }, { code: 'AIRTEL_DATA', name: 'Airtel Data' }])
-  vi.mocked(billingApi.dataBundles).mockImplementation(async (code) => code === 'MTN_DATA' ? [plan, { ...plan, product_code: 'monthly', name: 'MTN 1GB monthly', amount_minor: 100000, duration: 30 }] : [{ ...plan, biller_code: code, product_code: 'airtel', name: 'Airtel weekly' }])
+  vi.mocked(billingApi.dataNetworks).mockResolvedValue([{ code: 'MTN', name: 'MTN Data' }, { code: 'Airtel', name: 'Airtel Data' }])
+  vi.mocked(billingApi.dataOffers).mockImplementation(async (code) => code === 'MTN' ? [plan, { ...plan, product_code: 'monthly', name: 'MTN 1GB monthly', amount_minor: 100000, duration: 30 }] : [{ ...plan, biller_code: 'AIRTEL_DATA', product_code: 'airtel', name: 'Airtel weekly' }])
 })
 afterEach(() => { cleanup(); clients.splice(0).forEach((c) => c.clear()) })
 
 describe('Monnify mobile data store', () => {
+  it('offers Flutterwave alongside Monnify when enabled and sends the selected provider', async () => {
+    vi.mocked(billingApi.dataProviders).mockResolvedValue(['monnify', 'flutterwave'])
+    vi.mocked(billingApi.purchaseDataBundle).mockRejectedValue(new ApiError('Try again', 'provider', 503))
+    show()
+    vi.mocked(billingApi.dataOffers).mockResolvedValue([plan, { ...plan, provider: 'flutterwave', biller_code: 'BIL108', product_code: 'MD142', amount_minor: 70000 }])
+    fireEvent.click(await screen.findByRole('button', { name: /MTN 1GB weekly, Flutterwave/ }))
+    fireEvent.change(screen.getByLabelText('Recipient phone number'), { target: { value: '08012345678' } })
+    fireEvent.click(screen.getByRole('checkbox'))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue to payment' }))
+    await waitFor(() => expect(billingApi.purchaseDataBundle).toHaveBeenCalledWith(expect.objectContaining({ provider: 'flutterwave' }), expect.any(String)))
+    expect(billingApi.purchaseDataBundle).toHaveBeenCalledWith(expect.objectContaining({ biller_code: 'BIL108', product_code: 'MD142' }), expect.any(String))
+  })
+
   it('records plan clicks without recipient numbers or raw searches', async () => {
     show()
     fireEvent.click(await screen.findByRole('button', { name: /MTN 1GB weekly/ }))
@@ -69,7 +83,7 @@ describe('Monnify mobile data store', () => {
     expect(screen.getByRole('checkbox')).not.toBeChecked()
   })
   it('displays provider failures without substituting fixed bundles', async () => {
-    vi.mocked(billingApi.dataBillers).mockRejectedValue(new ApiError('Monnify is unavailable.', 'provider', 502))
+    vi.mocked(billingApi.dataNetworks).mockRejectedValue(new ApiError('Monnify is unavailable.', 'provider', 502))
     show()
     expect(await screen.findByText('Monnify is unavailable.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Retry catalogue' })).toBeInTheDocument()
@@ -86,7 +100,7 @@ describe('Monnify mobile data store', () => {
     fireEvent.click(screen.getByRole('button', { name: /Continue to payment/ }))
     await waitFor(() => expect(billingApi.purchaseDataBundle).toHaveBeenCalledTimes(2))
     const calls = vi.mocked(billingApi.purchaseDataBundle).mock.calls
-    expect(calls[0][0]).toEqual({ biller_code: 'MTN_DATA', product_code: 'weekly', phone_number: '08012345678', amount_minor: 75000, consent: true })
+    expect(calls[0][0]).toEqual({ provider: 'monnify', biller_code: 'MTN_DATA', product_code: 'weekly', phone_number: '08012345678', amount_minor: 75000, consent: true })
     expect(calls[0][1]).toEqual(calls[1][1])
   })
   it('resumes an existing purchase after reload and shows checkout instead of delivery success', async () => {

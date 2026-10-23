@@ -40,6 +40,14 @@ beforeEach(() => {
 afterEach(() => { cleanup(); clients.splice(0).forEach((client) => client.clear()); vi.useRealTimers() })
 
 describe('data purchase payment return', () => {
+  it('uses Flutterwave tx_ref to find the order without trusting redirect status', async () => {
+    vi.mocked(billingApi.verifyDataBundlePurchase).mockResolvedValue({ ...order, payment_provider: 'flutterwave', status: 'awaiting_payment', payment_confirmed: false })
+    show(`/billing/data/status?tx_ref=${reference}&status=successful`)
+    expect(await screen.findByText('Awaiting payment confirmation')).toBeInTheDocument()
+    expect(billingApi.verifyDataBundlePurchase).toHaveBeenCalledWith(reference)
+    expect(screen.queryByText('Data delivered')).not.toBeInTheDocument()
+  })
+
   it.each([null, '999'])('uses the returned reference with saved purchase %s', async (saved) => {
     if (saved) sessionStorage.setItem('mahadum:data-purchase:1', saved)
     show()
@@ -74,7 +82,7 @@ describe('data purchase payment return', () => {
   it('shows verification progress before receiving a result', async () => {
     vi.mocked(billingApi.verifyDataBundlePurchase).mockReturnValue(new Promise(() => {}))
     show()
-    expect(screen.getByText('Verifying your payment with Monnify…')).toHaveAttribute('role', 'status')
+    expect(screen.getByText('Verifying your payment…')).toHaveAttribute('role', 'status')
     expect(screen.queryByText('Data delivered')).not.toBeInTheDocument()
   })
 
@@ -84,7 +92,7 @@ describe('data purchase payment return', () => {
       .mockResolvedValueOnce({ ...order, status: 'processing' }).mockResolvedValue(order)
     show()
     await act(async () => { await vi.advanceTimersByTimeAsync(1) })
-    expect(screen.getByText('Delivering your data')).toBeInTheDocument()
+    expect(screen.getByText('Waiting for delivery confirmation')).toBeInTheDocument()
     await act(async () => { await vi.advanceTimersByTimeAsync(5000) })
     expect(screen.getByText('Data delivered')).toBeInTheDocument()
     await act(async () => { await vi.advanceTimersByTimeAsync(10000) })
@@ -96,7 +104,7 @@ describe('data purchase payment return', () => {
     vi.mocked(billingApi.verifyDataBundlePurchase).mockResolvedValue({ ...order, status, payment_confirmed: status === 'failed' })
     sessionStorage.setItem('mahadum:data-purchase:1', '26')
     show()
-    expect(await screen.findByText(status === 'payment_failed' ? 'Payment unsuccessful' : 'Your purchase needs attention')).toBeInTheDocument()
+    expect(await screen.findByText(status === 'payment_failed' ? 'Payment unsuccessful' : status === 'failed' ? 'Your purchase needs attention' : 'Payment needs review')).toBeInTheDocument()
     expect(screen.queryByText('Data delivered')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('link', { name: 'Buy another bundle' }))
     expect(await screen.findByText('Buy data catalogue')).toBeInTheDocument()

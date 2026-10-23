@@ -8,7 +8,7 @@ import {
   type GatewayTestResult,
   type TelcoGatewayStatus,
 } from '@/lib/api'
-import { usePaymentGateways, useTestGateway, useUpdateMonnify } from '@/lib/admin/queries'
+import { usePaymentGateways, useTestGateway, useUpdateDataDefault, useUpdateFlutterwave, useUpdateMonnify } from '@/lib/admin/queries'
 
 export function GatewaysPage() {
   const { data, isLoading, isError } = usePaymentGateways()
@@ -20,32 +20,143 @@ export function GatewaysPage() {
     <div className="flex flex-col gap-6">
       <AdminPageHeader
         title="Payment gateways"
-        description="Configure Monnify as the default checkout provider, verify credentials, and monitor the fallback gateways. Saved secrets are encrypted and never displayed."
+        description="Configure Monnify and Flutterwave independently, verify credentials, and monitor other gateways. Saved secrets are encrypted and never displayed."
       />
 
       <Alert variant={data.live ? 'success' : 'warning'}>
         {data.live ? (
           <>
-            <strong>Live mode is ON.</strong> Outbound checkouts hit the real gateways. Default:{' '}
+            <strong>Gateway calls are ON.</strong> Checkouts use each provider’s configured test or live account. Default:{' '}
             <span className="capitalize">{data.default}</span>.
           </>
         ) : (
-          <><strong>Live mode is OFF.</strong> Checkouts use a no-op gateway and no money moves. Enable it in the Monnify configuration after testing sandbox credentials.</>
+          <><strong>Gateway calls are OFF.</strong> Checkouts use a no-op gateway and no money moves. The shared gateway switch is in the Monnify card.</>
         )}
       </Alert>
+
+      <DataDefaultCard provider={data.data_default_provider ?? 'monnify'} />
 
       {data.providers.filter((provider) => provider.key === 'monnify').map((provider) => (
         <MonnifyCard key={provider.key} provider={provider} live={data.live} />
       ))}
 
+      {data.providers.filter((provider) => provider.key === 'flutterwave').map((provider) => (
+        <FlutterwaveCard key={provider.key} provider={provider} live={data.live} />
+      ))}
+
       <div className="grid gap-4 md:grid-cols-2">
-        {data.providers.filter((provider) => provider.key !== 'monnify').map((p) => (
+        {data.providers.filter((provider) => provider.key !== 'monnify' && provider.key !== 'flutterwave').map((p) => (
           <GatewayCard key={p.key} provider={p} isDefault={p.is_default} />
         ))}
       </div>
 
       <TelcoCard telco={data.telco} />
     </div>
+  )
+}
+
+function DataDefaultCard({ provider }: { provider: 'monnify' | 'flutterwave' }) {
+  const update = useUpdateDataDefault()
+  const [choice, setChoice] = useState(provider)
+  return <Card><CardBody className="space-y-4">
+    <div><h2 className="font-display text-lg font-bold">Preferred mobile data provider</h2><p className="text-sm text-muted">Offers from this provider appear first when its catalogue is working. Customers can still choose offers from another working provider.</p></div>
+    <label className="block text-sm font-medium">Default provider
+      <select aria-label="Default mobile data provider" className="mt-2 block min-h-11 rounded-xl border border-border bg-surface px-3" value={choice} onChange={(e) => setChoice(e.target.value as 'monnify' | 'flutterwave')}>
+        <option value="monnify">Monnify</option><option value="flutterwave">Flutterwave</option>
+      </select>
+    </label>
+    <Button disabled={choice === provider || update.isPending} loading={update.isPending} onClick={() => update.mutate(choice)}>Save mobile data default</Button>
+    {update.isError && <Alert variant="danger">Could not save the mobile data default.</Alert>}
+    {update.isSuccess && <Alert variant="success">Mobile data default saved.</Alert>}
+  </CardBody></Card>
+}
+
+function FlutterwaveCard({ provider, live }: { provider: GatewayProvider; live: boolean }) {
+  const update = useUpdateFlutterwave()
+  const test = useTestGateway()
+  const [enabled, setEnabled] = useState(provider.enabled ?? false)
+  const [billsEnabled, setBillsEnabled] = useState(provider.bills_enabled ?? false)
+  const [publicKey, setPublicKey] = useState('')
+  const [secret, setSecret] = useState('')
+  const [encryptionKey, setEncryptionKey] = useState('')
+  const [secretHash, setSecretHash] = useState('')
+  const [result, setResult] = useState<GatewayTestResult | null>(null)
+  const isSet = (env: string) => provider.requirements.some((requirement) => requirement.env === env && requirement.set)
+
+  async function save() {
+    setResult(null)
+    try {
+      await update.mutateAsync({
+        enabled,
+        bills_enabled: billsEnabled,
+        ...(publicKey ? { public_key: publicKey } : {}),
+        ...(secret ? { secret } : {}),
+        ...(encryptionKey ? { encryption_key: encryptionKey } : {}),
+        ...(secretHash ? { secret_hash: secretHash } : {}),
+      })
+      setPublicKey('')
+      setSecret('')
+      setEncryptionKey('')
+      setSecretHash('')
+      setResult({ ok: true, message: 'Flutterwave configuration saved securely.' })
+    } catch (error) {
+      setResult({ ok: false, message: error instanceof ApiError ? error.message : 'Could not save Flutterwave configuration.' })
+    }
+  }
+
+  async function testCatalogue() {
+    setResult(null)
+    try {
+      setResult(await test.mutateAsync('flutterwave'))
+    } catch (error) {
+      setResult({ ok: false, message: error instanceof ApiError ? error.message : 'Catalogue test failed.' })
+    }
+  }
+
+  return (
+    <Card>
+      <CardBody className="flex flex-col gap-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-bold text-foreground">Flutterwave</h2>
+              <Badge variant="neutral">Additional option</Badge>
+              <Badge variant={provider.configured ? 'success' : 'warning'}>{provider.configured ? 'Configured' : 'Incomplete'}</Badge>
+              {provider.configured && <Badge variant="neutral">{provider.environment === 'sandbox' ? 'Test key' : 'Live key'}</Badge>}
+            </div>
+            <p className="mt-1 text-sm text-muted">Hosted checkout and Nigerian mobile data. Monnify stays the default.</p>
+          </div>
+          <Switch label="Enable Flutterwave checkout" checked={enabled} onChange={(value) => {
+            setEnabled(value)
+            if (!value) setBillsEnabled(false)
+          }} />
+        </div>
+
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-foreground">Flutterwave API keys</h3>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Input label="Flutterwave public key" type="password" value={publicKey} onChange={(event) => setPublicKey(event.target.value)} placeholder={isSet('FLUTTERWAVE_PUBLIC_KEY') ? 'Saved — enter only to replace' : 'FLWPUBK_TEST-…'} autoComplete="new-password" />
+            <Input label="Flutterwave secret key" type="password" value={secret} onChange={(event) => setSecret(event.target.value)} placeholder={isSet('FLUTTERWAVE_SECRET') ? 'Saved — enter only to replace' : 'FLWSECK_TEST-…'} autoComplete="new-password" />
+            <Input label="Flutterwave encryption key" type="password" value={encryptionKey} onChange={(event) => setEncryptionKey(event.target.value)} placeholder={isSet('FLUTTERWAVE_ENCRYPTION_KEY') ? 'Saved — enter only to replace' : 'FLWSECK_TEST…'} autoComplete="new-password" />
+          </div>
+        </div>
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-foreground">Webhook security</h3>
+          <Input label="Flutterwave webhook hash" type="password" value={secretHash} onChange={(event) => setSecretHash(event.target.value)} placeholder={isSet('FLUTTERWAVE_SECRET_HASH') ? 'Saved — enter only to replace' : 'Set a separate hash in the Flutterwave dashboard'} autoComplete="new-password" />
+          <p className="mt-2 text-sm text-muted">The webhook hash is separate from the three API keys. Flutterwave sends it with webhook events so we can verify them. Replacing the secret key without a new hash clears the previous hash; checkout cannot be enabled until a new one is saved.</p>
+        </div>
+        <Switch label="Enable Flutterwave data purchases" checked={billsEnabled} disabled={!enabled} onChange={setBillsEnabled} />
+        {!live && <Alert variant="warning">Gateway calls are off for every provider. Use the shared switch in the Monnify card before testing a checkout.</Alert>}
+        {billsEnabled && <Alert variant="warning">Enable data purchases only after Flutterwave bill access, source balance, and webhook delivery have been verified.</Alert>}
+        <WebhookUrl url={provider.webhook_url} label="Flutterwave" />
+        {result && <Alert variant={result.ok ? 'success' : 'danger'}>{result.message}</Alert>}
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button variant="secondary" loading={test.isPending} disabled={!isSet('FLUTTERWAVE_SECRET')} onClick={testCatalogue}>Test data catalogue</Button>
+          <Button variant="parent" loading={update.isPending} onClick={save}>Save Flutterwave</Button>
+        </div>
+        <p className="text-xs text-muted">The catalogue test only reads available bill types. It does not charge or purchase data.</p>
+      </CardBody>
+    </Card>
   )
 }
 

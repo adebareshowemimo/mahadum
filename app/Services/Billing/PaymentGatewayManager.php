@@ -25,7 +25,11 @@ class PaymentGatewayManager
         $configured = [
             'monnify' => filled(config('services.monnify.api_key')) && filled(config('services.monnify.secret')) && filled(config('services.monnify.contract_code')),
             'paystack' => filled(config('services.paystack.secret')),
-            'flutterwave' => filled(config('services.flutterwave.secret')) && filled(config('services.flutterwave.secret_hash')),
+            'flutterwave' => config('services.flutterwave.enabled')
+                && filled(config('services.flutterwave.public_key'))
+                && filled(config('services.flutterwave.secret'))
+                && filled(config('services.flutterwave.encryption_key'))
+                && filled(config('services.flutterwave.secret_hash')),
         ];
 
         return array_keys(array_filter($configured));

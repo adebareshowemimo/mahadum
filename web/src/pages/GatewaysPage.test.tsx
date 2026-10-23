@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
   usePaymentGateways: vi.fn(),
   useTestGateway: vi.fn(),
   useUpdateMonnify: vi.fn(),
+  useUpdateFlutterwave: vi.fn(),
+  useUpdateDataDefault: vi.fn(),
 }))
 
 vi.mock('@/lib/admin/queries', () => mocks)
@@ -27,6 +29,17 @@ describe('GatewaysPage', () => {
     })
     mocks.useTestGateway.mockReturnValue({ isPending: false, mutateAsync: vi.fn() })
     mocks.useUpdateMonnify.mockReturnValue({ isPending: false, mutateAsync: vi.fn().mockResolvedValue({}) })
+    mocks.useUpdateFlutterwave.mockReturnValue({ isPending: false, mutateAsync: vi.fn().mockResolvedValue({}) })
+    mocks.useUpdateDataDefault.mockReturnValue({ isPending: false, mutate: vi.fn(), isSuccess: false, isError: false })
+  })
+
+  it('saves the preferred mobile data provider separately', () => {
+    const mutate = vi.fn()
+    mocks.useUpdateDataDefault.mockReturnValue({ isPending: false, mutate, isSuccess: false, isError: false })
+    render(<GatewaysPage />)
+    fireEvent.change(screen.getByLabelText('Default mobile data provider'), { target: { value: 'flutterwave' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save mobile data default' }))
+    expect(mutate).toHaveBeenCalledWith('flutterwave')
   })
 
   it('lets a super admin securely configure Monnify', async () => {
@@ -45,6 +58,46 @@ describe('GatewaysPage', () => {
       contract_code: '123456',
       api_key: 'MK_TEST',
       secret: 'secret',
+    }))
+  })
+
+  it('saves Flutterwave independently with data purchases disabled', async () => {
+    const mutateAsync = vi.fn().mockResolvedValue({})
+    mocks.useUpdateFlutterwave.mockReturnValue({ isPending: false, mutateAsync })
+    mocks.usePaymentGateways.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: {
+        live: true,
+        default: 'monnify',
+        providers: [{
+          key: 'flutterwave', label: 'Flutterwave', configured: false, is_default: false,
+          enabled: false, bills_enabled: false, webhook_url: 'https://example.test/api/v1/webhooks/flutterwave',
+          requirements: [
+            { label: 'Public key', env: 'FLUTTERWAVE_PUBLIC_KEY', set: false },
+            { label: 'Secret key', env: 'FLUTTERWAVE_SECRET', set: false },
+            { label: 'Encryption key', env: 'FLUTTERWAVE_ENCRYPTION_KEY', set: false },
+            { label: 'Webhook hash', env: 'FLUTTERWAVE_SECRET_HASH', set: false },
+          ],
+        }],
+        telco: { label: 'Operator SDP', live: false, configured: false, webhook_url: 'https://example.test/telco', requirements: [] },
+      },
+    })
+
+    render(<GatewaysPage />)
+    fireEvent.change(screen.getByLabelText('Flutterwave public key'), { target: { value: 'FLWPUBK_TEST-example' } })
+    fireEvent.change(screen.getByLabelText('Flutterwave secret key'), { target: { value: 'FLWSECK_TEST-example' } })
+    fireEvent.change(screen.getByLabelText('Flutterwave encryption key'), { target: { value: 'FLWSECK_TESTencryption' } })
+    fireEvent.change(screen.getByLabelText('Flutterwave webhook hash'), { target: { value: 'separate-hash' } })
+    fireEvent.click(screen.getByRole('button', { name: /save flutterwave/i }))
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith({
+      enabled: false,
+      bills_enabled: false,
+      public_key: 'FLWPUBK_TEST-example',
+      secret: 'FLWSECK_TEST-example',
+      encryption_key: 'FLWSECK_TESTencryption',
+      secret_hash: 'separate-hash',
     }))
   })
 })

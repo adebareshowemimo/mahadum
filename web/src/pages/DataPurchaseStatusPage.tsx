@@ -9,7 +9,7 @@ import { dataStoreError } from '@/lib/billing/useDataStore'
 export function DataPurchaseStatusPage() {
   const { user } = useAuth()
   const [params] = useSearchParams()
-  const reference = params.get('paymentReference') ?? ''
+  const reference = params.get('paymentReference') ?? params.get('tx_ref') ?? ''
   const validReference = reference.length === 69 && /^data_[a-f0-9]{64}$/.test(reference)
   const purchase = useQuery({
     queryKey: ['data-purchase-reference', user?.user.id, reference],
@@ -20,6 +20,7 @@ export function DataPurchaseStatusPage() {
       ? query.state.data?.check_issue ? 30000 : 5000 : false,
   })
   const order = purchase.data
+  const providerName = order?.payment_provider === 'flutterwave' ? 'Flutterwave' : 'Monnify'
   const unavailable = purchase.error instanceof ApiError && [403, 404].includes(purchase.error.status)
   function startAnother() {
     sessionStorage.removeItem(`mahadum:data-purchase:${user?.user.id}`)
@@ -30,7 +31,7 @@ export function DataPurchaseStatusPage() {
     <section className="space-y-5 rounded-3xl border border-border bg-surface p-5 sm:p-6" aria-label="Data purchase status">
       <Icon name={order?.status === 'success' ? 'check' : 'card'} className="size-10 text-primary" />
       {!validReference && <Alert variant="danger" title="Purchase reference missing or invalid">Open the payment return link again, or find your order in Recent purchases on the Buy data page.</Alert>}
-      {purchase.isLoading && <p role="status">Verifying your payment with Monnify…</p>}
+      {purchase.isLoading && <p role="status">Verifying your payment…</p>}
       {purchase.error && <Alert variant="danger" title={unavailable ? 'Purchase unavailable' : 'Could not check your purchase'}>{unavailable ? 'This reference is not available for your account. Sign in with the account used to buy the data.' : dataStoreError(purchase.error)}</Alert>}
       {order && <>
         <h2 className="font-display text-xl font-bold">{order.product_name.replace(/_/g, ' ')}</h2>
@@ -40,15 +41,16 @@ export function DataPurchaseStatusPage() {
           <div className="flex justify-between gap-4"><dt className="text-muted">Payment</dt><dd>{order.payment_confirmed ? 'Confirmed' : order.status === 'payment_failed' ? 'Unsuccessful' : order.status === 'needs_review' ? 'Needs review' : 'Awaiting confirmation'}</dd></div>
           <div className="flex justify-between gap-4"><dt className="text-muted">Data delivery</dt><dd>{order.status === 'success' ? 'Delivered' : order.status === 'failed' ? 'Failed' : order.delivery_started ? order.status === 'needs_review' ? 'Needs review' : 'Awaiting confirmation' : 'Not started'}</dd></div>
         </dl>
-        {order.status === 'awaiting_payment' && <Alert variant="info" title="Awaiting payment confirmation">Monnify has not yet confirmed this payment. We’ll check again automatically.</Alert>}
-        {order.check_issue && <Alert variant="danger" title="Delivery check delayed">{order.payment_confirmed ? 'Your payment is confirmed, but Monnify could not complete or check data delivery right now. Keep this reference and do not pay again for this order.' : 'Monnify could not confirm this order right now. Check again shortly.'}</Alert>}
-        {order.status === 'processing' && !order.check_issue && <Alert variant="info" title={order.delivery_started ? 'Waiting for delivery confirmation' : 'Preparing data delivery'}>{order.delivery_started ? 'Your payment is confirmed. Monnify has not returned a final data delivery result yet. We’ll check again automatically; do not pay again for this order.' : 'Your payment is confirmed. We are validating the recipient before sending the bundle. This page will update automatically.'}</Alert>}
+        {order.status === 'awaiting_payment' && <Alert variant="info" title="Awaiting payment confirmation">{providerName} has not yet confirmed this payment. We’ll check again automatically.</Alert>}
+        {order.check_issue && <Alert variant="danger" title="Delivery check delayed">{order.payment_confirmed ? `Your payment is confirmed, but ${providerName} could not complete or check data delivery right now. Keep this reference and do not pay again for this order.` : `${providerName} could not confirm this order right now. Check again shortly.`}</Alert>}
+        {order.status === 'processing' && !order.check_issue && <Alert variant="info" title={order.delivery_started ? 'Waiting for delivery confirmation' : 'Preparing data delivery'}>{order.delivery_started ? `Your payment is confirmed. ${providerName} has not returned a final data delivery result yet. We’ll check again automatically; do not pay again for this order.` : 'Your payment is confirmed. We are preparing the bundle. This page will update automatically.'}</Alert>}
         {order.status === 'success' && <Alert variant="success" title="Data delivered">Payment and data delivery have been confirmed.</Alert>}
-        {order.status === 'payment_failed' && <Alert variant="danger" title="Payment unsuccessful">Monnify did not confirm a successful payment. You can choose another bundle.</Alert>}
-        {order.status === 'needs_review' && !order.payment_confirmed && <Alert variant="danger" title="Payment needs review">Monnify has not confirmed the payment details for this order, so data has not been sent. Check again or contact support with the reference below.</Alert>}
+        {order.status === 'payment_failed' && <Alert variant="danger" title="Payment unsuccessful">{providerName} did not confirm a successful payment. You can choose another bundle.</Alert>}
+        {order.status === 'needs_review' && !order.payment_confirmed && <Alert variant="danger" title="Payment needs review">{providerName} has not confirmed the payment details for this order, so data has not been sent. Check again or contact support with the reference below.</Alert>}
         {(order.status === 'failed' || (order.status === 'needs_review' && order.payment_confirmed)) && <Alert variant="danger" title="Your purchase needs attention">Data delivery could not be confirmed. Contact support with the reference below to resolve this order.</Alert>}
       </>}
       {reference && <p className="break-all text-xs text-muted">Reference: {reference}</p>}
+      {order?.bill_tx_ref && <p className="break-all text-xs text-muted">Data delivery reference: {order.bill_tx_ref}</p>}
       <div className="flex flex-wrap gap-3">
         {validReference && <Button variant="outline" loading={purchase.isFetching} onClick={() => void purchase.refetch()}>Check status</Button>}
         <LinkButton to="/billing/data" onClick={startAnother}>Buy another bundle</LinkButton>
