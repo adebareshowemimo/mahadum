@@ -66,7 +66,7 @@ class PaymentService
 
         $outcome = match ($kind) {
             'refund' => $this->reverse($reference, $amountMinor, $sourceEvent, $source),
-            'failed' => $this->fail($reference),
+            'failed' => $this->fail($reference, $source),
             default => $this->settle($reference, $amountMinor, $sourceEvent, $source, $raw),
         };
 
@@ -99,12 +99,26 @@ class PaymentService
         }
 
         if ($subscription = $this->findSubscription($reference)) {
+            if ($subscription->initial_charge_minor === 0) {
+                return 'ignored';
+            }
+            if ($subscription->payment_gateway && $subscription->payment_gateway !== $source) {
+                return 'ignored';
+            }
+            if ($subscription->status === 'pending' && $subscription->initial_charge_minor !== null
+                && $amountMinor !== $subscription->initial_charge_minor) {
+                return 'ignored';
+            }
             $this->activateSubscription($subscription, $amountMinor, $sourceEvent);
 
             return 'subscription_active';
         }
 
         if ($invoice = $this->findInvoice($reference)) {
+            if (($invoice->payment_gateway && $invoice->payment_gateway !== $source)
+                || $amountMinor !== (int) $invoice->amount_minor) {
+                return 'ignored';
+            }
             $this->settleInvoice($invoice);
 
             return 'invoice_paid';
@@ -142,6 +156,12 @@ class PaymentService
         }
 
         if ($subscription = $this->findSubscription($reference)) {
+            if ($subscription->initial_charge_minor === 0) {
+                return 'ignored';
+            }
+            if ($subscription->payment_gateway && $subscription->payment_gateway !== $source) {
+                return 'ignored';
+            }
             $this->cancelSubscription($subscription);
             $this->recordSubscriptionReceipt($subscription, $sourceEvent, 'refund', $amountMinor);
 
@@ -149,6 +169,19 @@ class PaymentService
         }
 
         if ($invoice = $this->findInvoice($reference)) {
+            if ($invoice->payment_gateway && $invoice->payment_gateway !== $source) {
+                return 'ignored';
+            }
+            if ($invoice->payment_gateway && $amountMinor !== (int) $invoice->amount_minor) {
+                $this->audit->record('invoice.partial_refund_requires_review', $invoice, [], [
+                    'refund_amount_minor' => $amountMinor, 'invoice_amount_minor' => $invoice->amount_minor,
+                ]);
+
+                return 'ignored';
+            }
+            if ($invoice->payment_gateway === null && $invoice->amount_minor === 0) {
+                return 'ignored';
+            }
             $this->reverseInvoice($invoice);
 
             return 'reversed';
@@ -161,13 +194,17 @@ class PaymentService
      * Failed-charge path (dunning): don't touch money — just alert the payer so
      * they can retry before access lapses.
      */
-    private function fail(?string $reference): string
+    private function fail(?string $reference, string $source): string
     {
         if (! $reference) {
             return 'unmatched';
         }
 
         if ($subscription = $this->findSubscription($reference)) {
+            if ($subscription->initial_charge_minor === 0
+                || ($subscription->payment_gateway && $subscription->payment_gateway !== $source)) {
+                return 'ignored';
+            }
             $subscriber = $subscription->subscriber;
             if ($subscriber instanceof User) {
                 $subscriber->notify(new PaymentFailed($subscription));

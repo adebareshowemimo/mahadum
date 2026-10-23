@@ -16,6 +16,10 @@ export function useSubscriptions() {
   return useQuery({ queryKey: billingKeys.subscriptions, queryFn: billingApi.subscriptions })
 }
 
+export function useSubscriptionGateways() {
+  return useQuery({ queryKey: ['subscription-gateways'], queryFn: billingApi.subscriptionGateways, retry: false, staleTime: 60_000 })
+}
+
 export function useCreateSubscription() {
   const qc = useQueryClient()
   return useMutation({

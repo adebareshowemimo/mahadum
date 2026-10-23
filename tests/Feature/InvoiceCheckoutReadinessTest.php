@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Invoice;
 use App\Models\Organization;
 use App\Models\PromoCode;
+use App\Services\Billing\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -77,6 +78,8 @@ class InvoiceCheckoutReadinessTest extends TestCase
         Http::fake(['api.paystack.co/*' => Http::response(['status' => true, 'data' => ['authorization_url' => 'https://checkout.paystack.com/invoice']])]);
         $invoice = $this->invoice();
         $url = "/api/v1/schools/{$invoice->organization_id}/invoices/{$invoice->id}";
+        $this->getJson("/api/v1/schools/{$invoice->organization_id}/invoices/gateways")
+            ->assertOk()->assertJsonPath('data.default', 'paystack');
         PromoCode::create(['code' => 'SCHOOL20', 'discount_type' => 'percent', 'value' => 20, 'applicable_tier' => 'school']);
         $this->postJson($url.'/promo', ['code' => 'SCHOOL20'])->assertOk();
         Http::assertNothingSent();
@@ -85,7 +88,22 @@ class InvoiceCheckoutReadinessTest extends TestCase
         Http::assertSentCount(1);
         Http::assertSent(fn ($request) => $request['amount'] === 400000 && $request['reference'] === 'invoice_'.$invoice->id && $request['email'] === 'billing@example.test');
         $this->assertSame('invoice_'.$invoice->id, $invoice->fresh()->gateway_txn_ref);
+        $this->assertSame('paystack', $invoice->fresh()->payment_gateway);
+        $this->getJson("/api/v1/schools/{$invoice->organization_id}/invoices")
+            ->assertOk()->assertJsonPath('data.0.checkout_started', true)
+            ->assertJsonPath('data.0.checkout_url', 'https://checkout.paystack.com/invoice');
+        $this->postJson($url.'/pay', ['gateway' => 'monnify'])->assertConflict();
+        $this->assertSame('paystack', $invoice->fresh()->payment_gateway);
+        $payments = app(PaymentService::class);
+        $reference = 'invoice_'.$invoice->id;
+        $this->assertSame('ignored', $payments->process('monnify', 'wrong-invoice-source', $reference, 'success', 400000, []));
+        $this->assertSame('ignored', $payments->process('paystack', 'wrong-invoice-amount', $reference, 'success', 399900, []));
         $this->assertSame('unpaid', $invoice->fresh()->status);
+        $this->assertSame('invoice_paid', $payments->process('paystack', 'correct-invoice', $reference, 'success', 400000, []));
+        $this->assertSame('paid', $invoice->fresh()->status);
+        $this->assertSame('ignored', $payments->process('monnify', 'wrong-invoice-refund', $reference, 'refund', 400000, []));
+        $this->assertSame('ignored', $payments->process('paystack', 'partial-invoice-refund', $reference, 'refund', 100, []));
+        $this->assertSame('paid', $invoice->fresh()->status);
         $this->postJson($url.'/promo', ['code' => 'SCHOOL20'])->assertUnprocessable();
         Http::assertSentCount(1);
     }

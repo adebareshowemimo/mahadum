@@ -39,12 +39,27 @@ class InvoiceController extends Controller
             'amount_minor' => $i->amount_minor,
             'lines' => $i->breakdownLines(),
             'status' => $i->status,
+            'payment_gateway' => $i->payment_gateway,
+            'checkout_started' => $i->gateway_txn_ref !== null,
+            'checkout_url' => $i->checkout_url,
             'issued_at' => $i->issued_at,
             'paid_at' => $i->paid_at,
             'has_pdf' => $i->pdf_asset_id !== null,
         ]);
 
         return response()->json(['data' => $invoices]);
+    }
+
+    public function gateways(Request $request, Organization $organization): JsonResponse
+    {
+        $this->authorizeOrg($request->user(), $organization);
+        $available = $this->gateways->available();
+        $preferred = (string) config('services.payments.default', 'monnify');
+
+        return response()->json(['data' => [
+            'available' => $available,
+            'default' => in_array($preferred, $available, true) ? $preferred : ($available[0] ?? null),
+        ]]);
     }
 
     /** Apply a validated discount once, before checkout. */
@@ -112,6 +127,8 @@ class InvoiceController extends Controller
         return DB::transaction(function () use ($request, $organization, $invoice) {
             $invoiceModel = $organization->invoices()->lockForUpdate()->findOrFail($invoice);
             abort_unless($invoiceModel->status === 'unpaid', 422, 'This invoice is not payable.');
+            abort_unless($invoiceModel->gateway_txn_ref === null, 409,
+                'A checkout has already started for this invoice. Check its payment status before trying again.');
 
             if ($invoiceModel->amount_minor === 0) {
                 app(PaymentService::class)->settleZeroInvoice($invoiceModel);
@@ -129,14 +146,17 @@ class InvoiceController extends Controller
                 (string) $organization->contact_email,
                 ['purpose' => 'invoice', 'invoice_id' => $invoiceModel->id],
             );
+            abort_unless(filled($checkout->checkoutUrl), 502, 'The payment gateway did not return a checkout URL.');
 
             // Record the gateway's own transaction id when it returns one, so a later
             // refund that doesn't echo our `invoice_<id>` reference (e.g. Monnify) correlates.
-            $invoiceModel->update(['gateway_txn_ref' => $checkout->providerReference ?? $reference]);
+            $invoiceModel->update(['gateway_txn_ref' => $checkout->providerReference ?? $reference,
+                'payment_gateway' => $gateway, 'checkout_url' => $checkout->checkoutUrl]);
 
             return response()->json(['data' => [
                 'invoice_id' => $invoiceModel->id,
                 'payment_reference' => $reference,
+                'payment_gateway' => $gateway,
                 'checkout_url' => $checkout->checkoutUrl,
             ]]);
         });

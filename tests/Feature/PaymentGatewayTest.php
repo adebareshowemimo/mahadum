@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Plan;
+use App\Models\Subscription;
+use App\Services\Billing\PaymentService;
 use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -18,6 +20,7 @@ class PaymentGatewayTest extends TestCase
         config([
             'services.payments.live' => true,
             'services.payments.default' => $default,
+            'services.subscriptions.default_provider' => $default,
             'services.paystack.secret' => 'sk_test',
             'services.paystack.base_url' => 'https://api.paystack.co',
             'services.flutterwave.public_key' => 'flw_public_test',
@@ -72,6 +75,37 @@ class PaymentGatewayTest extends TestCase
             ->json('data.payment_reference');
 
         Http::assertSent(fn ($request) => $request['amount'] === $plan->price_minor && $request['reference'] === $ref);
+    }
+
+    public function test_subscription_saves_chosen_gateway_and_rejects_an_unavailable_one(): void
+    {
+        $this->goLive('monnify');
+        Http::fake(['api.paystack.co/*' => Http::response(['status' => true, 'data' => ['authorization_url' => 'https://checkout.paystack.com/sub']])]);
+        $this->seedRbac();
+        $this->seed(PlanSeeder::class);
+        $this->actingAsUser($this->userWithRole('parent'));
+        $plan = Plan::where('code', 'premium_individual')->firstOrFail();
+
+        $this->getJson('/api/v1/subscriptions/gateways')->assertOk()
+            ->assertJsonPath('data.default', 'monnify');
+        $id = $this->postJson('/api/v1/subscriptions', ['plan_id' => $plan->id, 'method' => 'card', 'gateway' => 'paystack'], ['Idempotency-Key' => 'sub-preferred'])
+            ->assertCreated()->assertJsonPath('data.payment_gateway', 'paystack')->json('data.subscription_id');
+        $this->assertDatabaseHas('subscriptions', ['id' => $id, 'payment_gateway' => 'paystack']);
+
+        $payments = app(PaymentService::class);
+        $reference = 'sub_'.$id;
+        $this->assertSame('ignored', $payments->process('monnify', 'wrong-source-'.$id, $reference, 'success', $plan->price_minor, []));
+        $this->assertSame('ignored', $payments->process('paystack', 'wrong-amount-'.$id, $reference, 'success', $plan->price_minor - 100, []));
+        $this->assertSame('pending', Subscription::findOrFail($id)->status);
+        $this->assertSame('subscription_active', $payments->process('paystack', 'correct-'.$id, $reference, 'success', $plan->price_minor, []));
+        $this->assertSame('active', Subscription::findOrFail($id)->status);
+        $this->assertSame('ignored', $payments->process('monnify', 'wrong-refund-'.$id, $reference, 'refund', $plan->price_minor, []));
+        $this->assertSame('active', Subscription::findOrFail($id)->status);
+
+        config(['services.paystack.secret' => null]);
+        $this->postJson('/api/v1/subscriptions', ['plan_id' => $plan->id, 'method' => 'card', 'gateway' => 'paystack'], ['Idempotency-Key' => 'sub-unavailable'])
+            ->assertUnprocessable();
+        $this->assertDatabaseCount('subscriptions', 1);
     }
 
     public function test_flutterwave_checkout_when_live(): void

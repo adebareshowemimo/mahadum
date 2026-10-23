@@ -18,6 +18,7 @@ use Illuminate\Support\Carbon;
  * @property string $status
  * @property string $method
  * @property string|null $gateway_txn_ref
+ * @property string|null $payment_gateway
  * @property Carbon|null $started_at
  * @property Carbon|null $renews_at
  * @property Carbon|null $renewal_reminded_at

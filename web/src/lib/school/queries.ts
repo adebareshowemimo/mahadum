@@ -99,6 +99,16 @@ export function useInvoices(orgId: number | null) {
   })
 }
 
+export function useInvoiceGateways(orgId: number | null) {
+  return useQuery({
+    queryKey: ['invoice-gateways', orgId],
+    queryFn: () => schoolApi.invoiceGateways(orgId as number),
+    enabled: !!orgId,
+    retry: false,
+    staleTime: 60_000,
+  })
+}
+
 export function usePayInvoice(orgId: number | null) {
   const qc = useQueryClient()
   return useMutation({

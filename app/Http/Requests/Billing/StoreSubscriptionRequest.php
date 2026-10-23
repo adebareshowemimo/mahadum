@@ -17,6 +17,7 @@ class StoreSubscriptionRequest extends FormRequest
             'plan_id' => ['required', 'integer', 'exists:plans,id'],
             'method' => ['required', 'in:card,invoice'],
             'promo_code' => ['nullable', 'string', 'max:50'],
+            'gateway' => ['sometimes', 'in:monnify,paystack,flutterwave'],
         ];
     }
 }

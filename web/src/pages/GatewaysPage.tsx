@@ -8,7 +8,7 @@ import {
   type GatewayTestResult,
   type TelcoGatewayStatus,
 } from '@/lib/api'
-import { usePaymentGateways, useTestGateway, useUpdateDataDefault, useUpdateFlutterwave, useUpdateMonnify } from '@/lib/admin/queries'
+import { usePaymentGateways, useTestGateway, useUpdateDataDefault, useUpdateFlutterwave, useUpdateMonnify, useUpdateSubscriptionDefault } from '@/lib/admin/queries'
 
 export function GatewaysPage() {
   const { data, isLoading, isError } = usePaymentGateways()
@@ -35,6 +35,7 @@ export function GatewaysPage() {
       </Alert>
 
       <DataDefaultCard provider={data.data_default_provider ?? 'monnify'} />
+      <SubscriptionDefaultCard provider={data.subscription_default_provider ?? 'monnify'} />
 
       {data.providers.filter((provider) => provider.key === 'monnify').map((provider) => (
         <MonnifyCard key={provider.key} provider={provider} live={data.live} />
@@ -53,6 +54,22 @@ export function GatewaysPage() {
       <TelcoCard telco={data.telco} />
     </div>
   )
+}
+
+function SubscriptionDefaultCard({ provider }: { provider: 'monnify' | 'paystack' | 'flutterwave' }) {
+  const update = useUpdateSubscriptionDefault()
+  const [choice, setChoice] = useState(provider)
+  return <Card><CardBody className="space-y-4">
+    <div><h2 className="font-display text-lg font-bold">Preferred subscription payment provider</h2><p className="text-sm text-muted">Customers see this provider first when it is available. Their choice is saved with each checkout and used for later payment checks.</p></div>
+    <label className="block text-sm font-medium">Default subscription provider
+      <select aria-label="Default subscription provider" className="mt-2 block min-h-11 rounded-xl border border-border bg-surface px-3" value={choice} onChange={(event) => setChoice(event.target.value as 'monnify' | 'paystack' | 'flutterwave')}>
+        <option value="monnify">Monnify</option><option value="paystack">Paystack</option><option value="flutterwave">Flutterwave</option>
+      </select>
+    </label>
+    <Button disabled={choice === provider || update.isPending} loading={update.isPending} onClick={() => update.mutate(choice)}>Save subscription default</Button>
+    {update.isError && <Alert variant="danger">Could not save the subscription default.</Alert>}
+    {update.isSuccess && <Alert variant="success">Subscription default saved.</Alert>}
+  </CardBody></Card>
 }
 
 function DataDefaultCard({ provider }: { provider: 'monnify' | 'flutterwave' }) {

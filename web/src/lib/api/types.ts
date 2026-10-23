@@ -142,6 +142,7 @@ export interface SubscriptionHistoryRow {
   id: number
   status: string
   method: string
+  payment_gateway: 'monnify' | 'paystack' | 'flutterwave' | null
   plan_code: string | null
   plan_name: string | null
   price_minor: number | null
@@ -154,6 +155,12 @@ export interface CreateSubscriptionInput {
   plan_id: number
   method: 'card' | 'invoice'
   promo_code?: string
+  gateway?: 'monnify' | 'paystack' | 'flutterwave'
+}
+
+export interface SubscriptionGateways {
+  available: ('monnify' | 'paystack' | 'flutterwave')[]
+  default: 'monnify' | 'paystack' | 'flutterwave' | null
 }
 
 export interface PromoPreview {
@@ -1078,6 +1085,9 @@ export interface SchoolInvoice {
   amount_minor: number
   lines?: { description: string; amount_minor: number }[] | null
   status: string
+  payment_gateway?: 'monnify' | 'paystack' | 'flutterwave' | null
+  checkout_started?: boolean
+  checkout_url?: string | null
   issued_at: string | null
   paid_at: string | null
   has_pdf: boolean
@@ -1604,6 +1614,7 @@ export interface GatewayStatus {
   live: boolean
   default: string
   data_default_provider: 'monnify' | 'flutterwave'
+  subscription_default_provider: 'monnify' | 'paystack' | 'flutterwave'
   providers: GatewayProvider[]
   telco: TelcoGatewayStatus
 }

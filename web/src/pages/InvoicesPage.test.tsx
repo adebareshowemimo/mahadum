@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   refetch: vi.fn(),
   useInvoices: vi.fn(),
   usePayInvoice: vi.fn(),
+  useInvoiceGateways: vi.fn(),
 }))
 
 vi.mock('@/lib/api', async (importOriginal) => {
@@ -23,6 +24,7 @@ vi.mock('@/components/school/SchoolGate', () => ({
 vi.mock('@/lib/school/queries', () => ({
   useInvoices: mocks.useInvoices,
   usePayInvoice: mocks.usePayInvoice,
+  useInvoiceGateways: mocks.useInvoiceGateways,
 }))
 
 describe('InvoicesPage', () => {
@@ -31,6 +33,7 @@ describe('InvoicesPage', () => {
     mocks.applyInvoicePromo.mockResolvedValue({ amount_minor: 34_400_000 })
     mocks.refetch.mockResolvedValue({})
     mocks.usePayInvoice.mockReturnValue({ isPending: false, mutateAsync: vi.fn() })
+    mocks.useInvoiceGateways.mockReturnValue({ data: { available: ['paystack', 'monnify'], default: 'paystack' } })
     mocks.useInvoices.mockReturnValue({
       refetch: mocks.refetch,
       isLoading: false,
@@ -62,6 +65,15 @@ describe('InvoicesPage', () => {
     expect(screen.getByText('₦350,000.00')).toBeInTheDocument()
     expect(screen.getByText('₦50,000.00')).toBeInTheDocument()
     expect(screen.getByText('₦430,000.00')).toBeInTheDocument()
+  })
+
+  it('sends the selected invoice payment provider', async () => {
+    const mutateAsync = vi.fn().mockResolvedValue({ checkout_url: 'https://checkout.example.test/invoice' })
+    mocks.usePayInvoice.mockReturnValue({ isPending: false, mutateAsync })
+    render(<InvoicesPage />)
+    fireEvent.change(screen.getByLabelText('Payment provider'), { target: { value: 'monnify' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Pay now' }))
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith({ invoiceId: 27, gateway: 'monnify' }))
   })
 
   it('validates an entered promo on the server and refreshes the total before payment', async () => {

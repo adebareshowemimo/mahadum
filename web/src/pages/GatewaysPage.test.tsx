@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   useUpdateMonnify: vi.fn(),
   useUpdateFlutterwave: vi.fn(),
   useUpdateDataDefault: vi.fn(),
+  useUpdateSubscriptionDefault: vi.fn(),
 }))
 
 vi.mock('@/lib/admin/queries', () => mocks)
@@ -31,6 +32,7 @@ describe('GatewaysPage', () => {
     mocks.useUpdateMonnify.mockReturnValue({ isPending: false, mutateAsync: vi.fn().mockResolvedValue({}) })
     mocks.useUpdateFlutterwave.mockReturnValue({ isPending: false, mutateAsync: vi.fn().mockResolvedValue({}) })
     mocks.useUpdateDataDefault.mockReturnValue({ isPending: false, mutate: vi.fn(), isSuccess: false, isError: false })
+    mocks.useUpdateSubscriptionDefault.mockReturnValue({ isPending: false, mutate: vi.fn(), isSuccess: false, isError: false })
   })
 
   it('saves the preferred mobile data provider separately', () => {
@@ -40,6 +42,15 @@ describe('GatewaysPage', () => {
     fireEvent.change(screen.getByLabelText('Default mobile data provider'), { target: { value: 'flutterwave' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save mobile data default' }))
     expect(mutate).toHaveBeenCalledWith('flutterwave')
+  })
+
+  it('saves the preferred subscription provider separately', () => {
+    const mutate = vi.fn()
+    mocks.useUpdateSubscriptionDefault.mockReturnValue({ isPending: false, mutate, isSuccess: false, isError: false })
+    render(<GatewaysPage />)
+    fireEvent.change(screen.getByLabelText('Default subscription provider'), { target: { value: 'paystack' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save subscription default' }))
+    expect(mutate).toHaveBeenCalledWith('paystack')
   })
 
   it('lets a super admin securely configure Monnify', async () => {

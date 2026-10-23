@@ -16,6 +16,7 @@ class PaymentConfiguration
             'services.payments.live' => (bool) $this->settings->get('payments.live', config('services.payments.live')),
             'services.payments.default' => $this->settings->get('payments.default', config('services.payments.default', 'monnify')),
             'services.data_bundles.default_provider' => $this->settings->get('data_bundles.default_provider', config('services.data_bundles.default_provider', 'monnify')),
+            'services.subscriptions.default_provider' => $this->settings->get('subscriptions.default_provider', config('services.subscriptions.default_provider', 'monnify')),
             'services.monnify.api_key' => $this->settings->get('monnify.api_key', config('services.monnify.api_key')),
             'services.monnify.secret' => $this->settings->get('monnify.secret', config('services.monnify.secret')),
             'services.monnify.contract_code' => $this->settings->get('monnify.contract_code', config('services.monnify.contract_code')),

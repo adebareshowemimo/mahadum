@@ -137,6 +137,7 @@ import type {
   CreateLevelInput,
   CreatePromoInput,
   CreateSubscriptionInput,
+  SubscriptionGateways,
   PromoCode,
   PromoPreview,
   DataBundle,
@@ -770,6 +771,11 @@ export const billingApi = {
     return data.data
   },
 
+  async subscriptionGateways(): Promise<SubscriptionGateways> {
+    const { data } = await api.get('/subscriptions/gateways')
+    return data.data
+  },
+
   /** Card → returns checkout_url (activated later by webhook). Invoice → active now. */
   async createSubscription(input: CreateSubscriptionInput): Promise<{
     subscription_id: number
@@ -1241,6 +1247,10 @@ export const adminApi = {
     const { data } = await api.put('/admin/payment-gateways/data-default', { provider })
     return data.data
   },
+  async updateSubscriptionDefault(provider: 'monnify' | 'paystack' | 'flutterwave'): Promise<GatewayStatus> {
+    const { data } = await api.put('/admin/payment-gateways/subscription-default', { provider })
+    return data.data
+  },
 
   async emailConfiguration(): Promise<EmailConfiguration> {
     const { data } = await api.get('/admin/email-configuration')
@@ -1534,6 +1544,11 @@ export const schoolApi = {
 
   async invoices(orgId: number): Promise<SchoolInvoice[]> {
     const { data } = await api.get(`/schools/${orgId}/invoices`)
+    return data.data
+  },
+
+  async invoiceGateways(orgId: number): Promise<SubscriptionGateways> {
+    const { data } = await api.get(`/schools/${orgId}/invoices/gateways`)
     return data.data
   },
 

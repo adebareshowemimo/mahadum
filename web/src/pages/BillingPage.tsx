@@ -27,6 +27,7 @@ import {
   useCreateSubscription,
   usePlans,
   useRetrySubscription,
+  useSubscriptionGateways,
   useSubscriptions,
   useTelcoStatus,
 } from '@/lib/billing/queries'
@@ -55,6 +56,11 @@ export function BillingPage() {
   const telcoBillingEnabled = config.data?.feature_flags.telco_billing === true
   const plans = usePlans()
   const history = useSubscriptions()
+  const paymentGateways = useSubscriptionGateways()
+  const [requestedGateway, setRequestedGateway] = useState<'monnify' | 'paystack' | 'flutterwave' | null>(null)
+  const availableGateways = paymentGateways.data?.available ?? []
+  const checkoutGateway = requestedGateway && availableGateways.includes(requestedGateway)
+    ? requestedGateway : paymentGateways.data?.default ?? null
   const createSub = useCreateSubscription()
   const cancelSub = useCancelSubscription()
   const changeSub = useChangeSubscription()
@@ -118,7 +124,7 @@ export function BillingPage() {
     setNotice(null)
     try {
       const promoCode = promo?.byPlan[plan.id] ? promo.code : undefined
-      const res = await createSub.mutateAsync({ plan_id: plan.id, method: 'card', promo_code: promoCode })
+      const res = await createSub.mutateAsync({ plan_id: plan.id, method: 'card', promo_code: promoCode, gateway: checkoutGateway ?? undefined })
       if (res.checkout_url) {
         window.location.href = res.checkout_url
       } else {
@@ -151,7 +157,7 @@ export function BillingPage() {
     setNotice(null)
     try {
       const promoCode = promo?.byPlan[plan.id] ? promo.code : undefined
-      const res = await changeSub.mutateAsync({ id: sub.id, input: { plan_id: plan.id, method: 'card', promo_code: promoCode } })
+      const res = await changeSub.mutateAsync({ id: sub.id, input: { plan_id: plan.id, method: 'card', promo_code: promoCode, gateway: checkoutGateway ?? undefined } })
       if (res.checkout_url) {
         window.location.href = res.checkout_url
       } else {
@@ -252,6 +258,14 @@ export function BillingPage() {
       </div>
       {promoError && <Alert variant="danger">{promoError}</Alert>}
 
+      {paymentGateways.data && availableGateways.length > 1 && <label className="flex max-w-xs flex-col gap-1.5 text-sm font-semibold text-foreground">Payment provider
+        <select className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-foreground" value={checkoutGateway ?? ''} onChange={(event) => setRequestedGateway(event.target.value as 'monnify' | 'paystack' | 'flutterwave')}>
+          {availableGateways.map((gateway) => <option key={gateway} value={gateway}>{gateway === 'paystack' ? 'Paystack' : gateway === 'flutterwave' ? 'Flutterwave' : 'Monnify'}</option>)}
+        </select>
+      </label>}
+      {paymentGateways.data && availableGateways.length === 1 && <p className="text-sm text-muted">Secure checkout with {availableGateways[0] === 'paystack' ? 'Paystack' : availableGateways[0] === 'flutterwave' ? 'Flutterwave' : 'Monnify'}.</p>}
+      {paymentGateways.data && availableGateways.length === 0 && <Alert variant="warning">Card payments are temporarily unavailable. Please check back later.</Alert>}
+
       {plans.isLoading ? (
         <Skeleton className="h-64" />
       ) : (
@@ -319,12 +333,12 @@ export function BillingPage() {
                         Included
                       </Button>
                     ) : hasActiveSub ? (
-                      <Button variant="premium" fullWidth loading={busyPlan === plan.id} onClick={() => changePlan(plan)}>
+                      <Button variant="premium" fullWidth loading={busyPlan === plan.id} disabled={!checkoutGateway && (applied?.final_minor ?? plan.price_minor) > 0} onClick={() => changePlan(plan)}>
                         Switch to this plan
                       </Button>
                     ) : (
                       <div className="flex flex-col gap-2">
-                        <Button variant="premium" fullWidth loading={busyPlan === plan.id} onClick={() => subscribe(plan)}>
+                        <Button variant="premium" fullWidth loading={busyPlan === plan.id} disabled={!checkoutGateway && (applied?.final_minor ?? plan.price_minor) > 0} onClick={() => subscribe(plan)}>
                           Choose {plan.name}
                         </Button>
                         {telcoBillingEnabled && plan.audience === 'individual' && plan.interval === 'month' && (
@@ -394,7 +408,7 @@ export function BillingPage() {
                   <div>
                     <p className="font-semibold text-foreground">{s.plan_name ?? s.plan_code}</p>
                     <p className="text-xs capitalize text-muted">
-                      {s.method} · {s.started_at ? new Date(s.started_at).toLocaleDateString() : 'not started'}
+                      {s.method}{s.payment_gateway ? ` via ${s.payment_gateway}` : ''} · {s.started_at ? new Date(s.started_at).toLocaleDateString() : 'not started'}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">

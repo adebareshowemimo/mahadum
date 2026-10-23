@@ -87,6 +87,24 @@ class SubscriptionRetryTest extends TestCase
         Http::assertSent(fn ($r) => str_contains($r->url(), '/init-transaction') && ($r['paymentReference'] ?? null) === "sub_{$sub->id}");
     }
 
+    public function test_retry_keeps_the_saved_gateway_after_the_default_changes(): void
+    {
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $sub = $this->pendingCardSubscription($parent);
+        $sub->update(['payment_gateway' => 'paystack']);
+        config(['services.payments.default' => 'monnify', 'services.paystack.secret' => 'sk_test', 'services.paystack.base_url' => 'https://api.paystack.co']);
+        Http::fake([
+            'api.paystack.co/transaction/verify/*' => Http::response(['data' => ['status' => 'pending']]),
+            'api.paystack.co/transaction/initialize' => Http::response(['data' => ['authorization_url' => 'https://checkout.paystack.com/retry']]),
+        ]);
+
+        $this->postJson("/api/v1/subscriptions/{$sub->id}/retry", [], ['Idempotency-Key' => 'retry-saved-gateway'])
+            ->assertOk()->assertJsonPath('data.payment_gateway', 'paystack')
+            ->assertJsonPath('data.checkout_url', 'https://checkout.paystack.com/retry');
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'api.paystack.co/transaction/verify/'));
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'monnify.com'));
+    }
+
     public function test_retry_reopens_checkout_when_the_gateway_has_never_seen_the_reference(): void
     {
         // A pending row that was never actually sent to the gateway (e.g. the

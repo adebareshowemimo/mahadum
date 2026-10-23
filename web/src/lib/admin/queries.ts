@@ -416,6 +416,14 @@ export function useUpdateDataDefault() {
   })
 }
 
+export function useUpdateSubscriptionDefault() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: adminApi.updateSubscriptionDefault,
+    onSuccess: (data) => qc.setQueryData(adminKeys.gateways, data),
+  })
+}
+
 export function useEmailConfiguration() {
   return useQuery({ queryKey: adminKeys.emailConfiguration, queryFn: adminApi.emailConfiguration })
 }

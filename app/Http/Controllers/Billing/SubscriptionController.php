@@ -23,6 +23,17 @@ class SubscriptionController extends Controller
         private PaymentService $payments,
     ) {}
 
+    public function gateways(): JsonResponse
+    {
+        $available = $this->gateways->available();
+        $preferred = (string) config('services.subscriptions.default_provider', 'monnify');
+
+        return response()->json(['data' => [
+            'available' => $available,
+            'default' => in_array($preferred, $available, true) ? $preferred : ($available[0] ?? null),
+        ]]);
+    }
+
     /**
      * Preview a promo code against a plan before checkout: returns the discount +
      * final amount, or a 422 with a human reason. No side effects.
@@ -64,6 +75,7 @@ class SubscriptionController extends Controller
                 'id' => $s->id,
                 'status' => $s->status,
                 'method' => $s->method,
+                'payment_gateway' => $s->payment_gateway,
                 'plan_code' => $s->plan->code,
                 'plan_name' => $s->plan->name,
                 'price_minor' => $s->plan->price_minor,
@@ -90,6 +102,7 @@ class SubscriptionController extends Controller
                 $plan,
                 $request->string('method')->value(),
                 $request->input('promo_code'),
+                $request->input('gateway'),
             );
         } catch (PromoException $e) {
             return response()->json(['error' => ['code' => $e->reason, 'message' => $e->getMessage(), 'status' => 422]], 422);
@@ -128,7 +141,7 @@ class SubscriptionController extends Controller
         }
 
         try {
-            $data = $this->createSubscription($user, $plan, $request->string('method')->value(), $request->input('promo_code'));
+            $data = $this->createSubscription($user, $plan, $request->string('method')->value(), $request->input('promo_code'), $request->input('gateway'));
         } catch (PromoException $e) {
             return response()->json(['error' => ['code' => $e->reason, 'message' => $e->getMessage(), 'status' => 422]], 422);
         }
@@ -189,12 +202,14 @@ class SubscriptionController extends Controller
         }
 
         $reference = 'sub_'.$subscription->id;
-        $gateway = $this->gateways->driver();
+        // Legacy subscriptions have no saved gateway; retain the historical global-default fallback.
+        $provider = $subscription->payment_gateway ?? (string) config('services.payments.default', 'monnify');
+        $gateway = $this->gateways->driver($provider);
 
         $verified = $gateway->verify($reference);
         if ($verified->status === 'success') {
             $outcome = $this->payments->process(
-                (string) config('services.payments.default', 'monnify'),
+                $provider,
                 'manual_verify_'.$subscription->id.'_'.now()->getTimestamp(),
                 $reference,
                 'success',
@@ -220,6 +235,7 @@ class SubscriptionController extends Controller
 
         return response()->json(['data' => [
             'status' => $subscription->status,
+            'payment_gateway' => $provider,
             'payment_reference' => $reference,
             'checkout_url' => $checkout->checkoutUrl,
         ]]);
@@ -232,7 +248,7 @@ class SubscriptionController extends Controller
      *
      * @return array<string, mixed>
      */
-    private function createSubscription(User $user, Plan $plan, string $method, ?string $promoCode): array
+    private function createSubscription(User $user, Plan $plan, string $method, ?string $promoCode, ?string $requestedGateway): array
     {
         $chargeMinor = (int) $plan->price_minor;
         $outcome = null;
@@ -241,11 +257,21 @@ class SubscriptionController extends Controller
             $chargeMinor = $outcome->finalMinor;
         }
 
+        $provider = null;
+        if ($method === 'card' && $chargeMinor > 0 && config('services.payments.live')) {
+            $available = $this->gateways->available();
+            $preferred = (string) config('services.subscriptions.default_provider', 'monnify');
+            $provider = $requestedGateway ?: (in_array($preferred, $available, true) ? $preferred : ($available[0] ?? $preferred));
+            abort_unless(in_array($provider, $available, true), 422,
+                'This payment provider is currently unavailable. Please choose another provider.');
+        }
+
         $subscription = new Subscription([
             'plan_id' => $plan->id,
             'initial_charge_minor' => $chargeMinor,
             'method' => $method,
             'status' => $method === 'card' ? 'pending' : 'active',
+            'payment_gateway' => $provider,
         ]);
         $subscription->subscriber()->associate($user);
 
@@ -271,7 +297,7 @@ class SubscriptionController extends Controller
         } elseif ($method === 'card') {
             // Open the hosted checkout; the webhook activates it via this reference.
             $reference = 'sub_'.$subscription->id;
-            $checkout = $this->gateways->driver()->initialize(
+            $checkout = $this->gateways->driver($provider)->initialize(
                 $reference,
                 $chargeMinor,
                 (string) $user->email,
@@ -285,6 +311,7 @@ class SubscriptionController extends Controller
             }
 
             $data['payment_reference'] = $reference;
+            $data['payment_gateway'] = $provider;
             $data['checkout_url'] = $checkout->checkoutUrl;
         }
 

@@ -31,6 +31,7 @@ class GatewayController extends Controller
             'live' => (bool) config('services.payments.live'),
             'default' => (string) config('services.payments.default', 'monnify'),
             'data_default_provider' => (string) config('services.data_bundles.default_provider', 'monnify'),
+            'subscription_default_provider' => (string) config('services.subscriptions.default_provider', 'monnify'),
             'providers' => [
                 [
                     'key' => 'monnify',
@@ -262,6 +263,17 @@ class GatewayController extends Controller
         $this->settings->set(['data_bundles.default_provider' => $clean['provider']]);
         $this->payments->apply();
         $this->audit->record('billing.data_bundle.default_provider_updated', null, $before, ['provider' => $clean['provider']]);
+
+        return $this->index();
+    }
+
+    public function updateSubscriptionDefault(Request $request): JsonResponse
+    {
+        $clean = $request->validate(['provider' => ['required', 'in:monnify,paystack,flutterwave']]);
+        $before = ['provider' => $this->settings->get('subscriptions.default_provider', config('services.subscriptions.default_provider', 'monnify'))];
+        $this->settings->set(['subscriptions.default_provider' => $clean['provider']]);
+        $this->payments->apply();
+        $this->audit->record('billing.subscription.default_provider_updated', null, $before, ['provider' => $clean['provider']]);
 
         return $this->index();
     }

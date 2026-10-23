@@ -47,6 +47,17 @@ class AdminIntegrationConfigurationTest extends TestCase
         $this->putJson('/api/v1/admin/payment-gateways/data-default', ['provider' => 'paystack'])->assertUnprocessable();
     }
 
+    public function test_super_admin_can_choose_the_subscription_default_separately(): void
+    {
+        $this->superAdmin();
+        $this->putJson('/api/v1/admin/payment-gateways/subscription-default', ['provider' => 'flutterwave'])
+            ->assertOk()->assertJsonPath('data.subscription_default_provider', 'flutterwave');
+        $this->assertSame('flutterwave', app(IntegrationSettings::class)->get('subscriptions.default_provider'));
+        $this->assertSame('monnify', config('services.payments.default'));
+        $this->assertDatabaseHas('audit_logs', ['action' => 'billing.subscription.default_provider_updated']);
+        $this->putJson('/api/v1/admin/payment-gateways/subscription-default', ['provider' => 'unknown'])->assertUnprocessable();
+    }
+
     public function test_super_admin_can_save_encrypted_smtp_configuration(): void
     {
         $this->superAdmin();

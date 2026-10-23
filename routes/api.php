@@ -325,6 +325,8 @@ Route::prefix('v1')->group(function () {
         Route::get('plans', [PlanController::class, 'index']);
         Route::get('subscriptions', [SubscriptionController::class, 'index'])
             ->middleware('can:billing.subscriptions.manage');
+        Route::get('subscriptions/gateways', [SubscriptionController::class, 'gateways'])
+            ->middleware('can:billing.subscriptions.manage');
         Route::get('telco/status', [TelcoController::class, 'status'])->middleware('can:billing.telco.view');
         Route::post('telco/otp/request', [TelcoController::class, 'requestOtp'])
             ->middleware(['can:billing.telco.manage', 'throttle:6,1']);
@@ -395,6 +397,7 @@ Route::prefix('v1')->group(function () {
             Route::get('seats', [SeatController::class, 'index'])->middleware('can:schools.seats.view');
             Route::post('seats/purchase', [SeatController::class, 'purchase'])->middleware('can:schools.seats.purchase');
             Route::get('invoices', [InvoiceController::class, 'index'])->middleware('can:billing.invoices.view');
+            Route::get('invoices/gateways', [InvoiceController::class, 'gateways'])->middleware('can:billing.invoices.manage');
             Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'download'])->middleware('can:billing.invoices.view');
             Route::post('invoices/{invoice}/promo', [InvoiceController::class, 'applyPromo'])->middleware('can:billing.invoices.manage');
             Route::post('invoices/{invoice}/pay', [InvoiceController::class, 'pay'])->middleware('can:billing.invoices.manage');
@@ -580,6 +583,7 @@ Route::prefix('v1')->group(function () {
             Route::put('payment-gateways/monnify', [GatewayController::class, 'updateMonnify'])->middleware('can:system.settings.manage');
             Route::put('payment-gateways/flutterwave', [GatewayController::class, 'updateFlutterwave'])->middleware('can:system.settings.manage');
             Route::put('payment-gateways/data-default', [GatewayController::class, 'updateDataDefault'])->middleware('can:system.settings.manage');
+            Route::put('payment-gateways/subscription-default', [GatewayController::class, 'updateSubscriptionDefault'])->middleware('can:system.settings.manage');
             Route::post('payment-gateways/{provider}/test', [GatewayController::class, 'test'])->middleware('can:system.settings.manage');
         });
     });

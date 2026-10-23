@@ -90,6 +90,10 @@ return [
         'default_provider' => env('DATA_BUNDLE_DEFAULT_PROVIDER', 'monnify'),
     ],
 
+    'subscriptions' => [
+        'default_provider' => env('SUBSCRIPTION_DEFAULT_PROVIDER', 'monnify'),
+    ],
+
     'messaging' => [
         // Outbound SMS/WhatsApp/push are OFF unless enabled (→ NullMessagingGateway).
         'live' => (bool) env('MESSAGING_LIVE', false),

@@ -17,6 +17,8 @@ use Illuminate\Support\Carbon;
  * @property list<array{description: string, amount_minor: int}>|null $lines
  * @property string $status
  * @property string|null $gateway_txn_ref
+ * @property string|null $payment_gateway
+ * @property string|null $checkout_url
  * @property int|null $pdf_asset_id
  * @property Carbon|null $issued_at
  * @property Carbon|null $paid_at

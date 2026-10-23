@@ -3,7 +3,7 @@ import { Alert, Badge, Button, Card, CardBody, Icon, Input, Skeleton } from '@/c
 import { ApiError, schoolApi, type SchoolInvoice } from '@/lib/api'
 import { formatMoney } from '@/lib/format'
 import { SchoolGate } from '@/components/school/SchoolGate'
-import { useInvoices, usePayInvoice } from '@/lib/school/queries'
+import { useInvoiceGateways, useInvoices, usePayInvoice } from '@/lib/school/queries'
 
 export function InvoicesPage() {
   return <SchoolGate>{(orgId) => <Invoices orgId={orgId} />}</SchoolGate>
@@ -18,6 +18,11 @@ const STATUS_TONE: Record<string, 'success' | 'gold' | 'danger' | 'neutral'> = {
 
 function Invoices({ orgId }: { orgId: number }) {
   const { data, isLoading, isError, refetch } = useInvoices(orgId)
+  const paymentGateways = useInvoiceGateways(orgId)
+  const [requestedGateway, setRequestedGateway] = useState<'monnify' | 'paystack' | 'flutterwave' | null>(null)
+  const availableGateways = paymentGateways.data?.available ?? []
+  const checkoutGateway = requestedGateway && availableGateways.includes(requestedGateway)
+    ? requestedGateway : paymentGateways.data?.default ?? null
   const pay = usePayInvoice(orgId)
   const [codes, setCodes] = useState<Record<number, string>>({})
   const [applying, setApplying] = useState<number | null>(null)
@@ -72,7 +77,7 @@ function Invoices({ orgId }: { orgId: number }) {
     setError(null)
     setCheckoutUrl(null)
     try {
-      const result = await pay.mutateAsync({ invoiceId: id })
+      const result = await pay.mutateAsync({ invoiceId: id, gateway: checkoutGateway ?? undefined })
       if (result.settled) { await refetch(); return }
       if (result.checkout_url) setCheckoutUrl(result.checkout_url)
       else setError('Payment started — the invoice will be marked paid once confirmed.')
@@ -104,6 +109,12 @@ function Invoices({ orgId }: { orgId: number }) {
           </a>
         </Alert>
       )}
+      {paymentGateways.data && availableGateways.length > 1 && <label className="flex max-w-xs flex-col gap-1.5 text-sm font-semibold text-foreground">Payment provider
+        <select className="min-h-11 rounded-xl border border-border-strong bg-surface px-3 text-foreground" value={checkoutGateway ?? ''} onChange={(event) => setRequestedGateway(event.target.value as 'monnify' | 'paystack' | 'flutterwave')}>
+          {availableGateways.map((gateway) => <option key={gateway} value={gateway}>{gateway === 'paystack' ? 'Paystack' : gateway === 'flutterwave' ? 'Flutterwave' : 'Monnify'}</option>)}
+        </select>
+      </label>}
+      {paymentGateways.data && availableGateways.length === 0 && <Alert variant="warning">Online invoice payment is temporarily unavailable.</Alert>}
 
       {data.length === 0 ? (
         <Card>
@@ -130,18 +141,20 @@ function Invoices({ orgId }: { orgId: number }) {
                   <InvoiceBreakdown invoice={inv} />
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-2 lg:pt-1">
-                  {inv.status === 'unpaid' && !inv.lines?.some(line => line.description.startsWith('Promo code:')) && (
+                  {inv.status === 'unpaid' && !inv.checkout_started && !inv.lines?.some(line => line.description.startsWith('Promo code:')) && (
                     <div className="w-full">
                       <Input label="Have a promo code?" value={codes[inv.id] ?? sharedCode} onChange={e => setCodes(current => ({ ...current, [inv.id]: e.target.value }))} />
                       <Button size="sm" variant="outline" loading={applying === inv.id} disabled={applying !== null || paying !== null || pay.isPending || !(codes[inv.id] ?? sharedCode).trim()} onClick={() => applyCode(inv.id)}>Apply promo code</Button>
                     </div>
                   )}
-                  {inv.status === 'unpaid' && (
+                  {inv.status === 'unpaid' && inv.checkout_started && inv.checkout_url && <a href={inv.checkout_url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center text-sm font-semibold text-primary underline">Open {inv.payment_gateway ?? 'payment'} checkout</a>}
+                  {inv.status === 'unpaid' && inv.checkout_started && !inv.checkout_url && <p className="text-xs text-muted">Payment started. Contact support if you need the checkout link.</p>}
+                  {inv.status === 'unpaid' && !inv.checkout_started && (
                     <Button
                       size="sm"
                       variant="parent"
                       loading={pay.isPending && pay.variables?.invoiceId === inv.id}
-                      disabled={applying !== null || paying !== null || pay.isPending}
+                      disabled={applying !== null || paying !== null || pay.isPending || (!checkoutGateway && inv.amount_minor > 0)}
                       onClick={() => payInvoiceNow(inv.id)}
                     >
                       Pay now
