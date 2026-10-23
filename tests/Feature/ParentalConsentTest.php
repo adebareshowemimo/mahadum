@@ -48,12 +48,23 @@ class ParentalConsentTest extends TestCase
         $this->assertDatabaseCount('learner_profiles', 0);
     }
 
-    public function test_teenager_gets_general_data_processing_consent(): void
+    public function test_teenager_requires_guardian_consent(): void
     {
         $this->parentWithFamily();
 
         $this->postJson('/api/v1/family/children', [
             'display_name' => 'Teen', 'date_of_birth' => now()->subYears(15)->toDateString(), 'consent' => '1',
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('parental_consents', ['type' => 'coppa_parental']);
+    }
+
+    public function test_adult_gets_general_data_processing_consent(): void
+    {
+        $this->parentWithFamily();
+
+        $this->postJson('/api/v1/family/children', [
+            'display_name' => 'Adult', 'date_of_birth' => now()->subYears(18)->toDateString(), 'consent' => '1',
         ])->assertCreated();
 
         $this->assertDatabaseHas('parental_consents', ['type' => 'data_processing']);
