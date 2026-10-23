@@ -19,6 +19,7 @@
 /public/hot
 /public/storage
 /public/assets
+/public/prerender/
 /resources/spa
 /storage/*.key
 /storage/pail
