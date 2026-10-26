@@ -831,6 +831,11 @@ export const billingApi = {
     return data.data
   },
 
+  async confirmSubscription(id: number): Promise<{ status: string }> {
+    const { data } = await api.post(`/subscriptions/${id}/confirm`)
+    return data.data
+  },
+
   // --- Telco (airtime VAS) ---
   async telcoStatus(): Promise<TelcoStatus> {
     const { data } = await api.get('/telco/status')

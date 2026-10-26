@@ -27,8 +27,8 @@ class PathController extends Controller
             $permission = $access->content($learner, $node->lesson, $tier);
             $state = 'locked';
             if ($permission['allowed']) {
-                $state = $node->state === 'completed' ? 'completed' : (($blocked[$node->enrollment_id] ?? false) ? 'locked' : 'active');
-                if ($state !== 'completed') {
+                $state = $node->state === 'completed' ? 'completed' : (($tier !== 'paid' && ($blocked[$node->enrollment_id] ?? false)) ? 'locked' : 'active');
+                if ($state !== 'completed' && $tier !== 'paid') {
                     $blocked[$node->enrollment_id] = true;
                 }
             }

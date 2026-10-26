@@ -22,7 +22,9 @@ class FlutterwaveGateway implements PaymentGateway
             'currency' => 'NGN',
             'redirect_url' => ($metadata['purpose'] ?? null) === 'data_bundle'
                 ? rtrim((string) config('app.url'), '/').'/billing/data/status'
-                : (string) config('app.url'),
+                : (($metadata['purpose'] ?? null) === 'subscription'
+                    ? rtrim((string) config('app.url'), '/').'/billing?subscription_id='.rawurlencode((string) $metadata['subscription_id'])
+                    : (string) config('app.url')),
             'customer' => ['email' => $email],
             'meta' => $metadata,
         ];

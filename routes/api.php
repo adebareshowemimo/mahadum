@@ -336,6 +336,8 @@ Route::prefix('v1')->group(function () {
         Route::post('telco/subscribe', [TelcoController::class, 'subscribe'])->middleware('can:billing.telco.manage');
         Route::post('subscriptions/{subscription}/cancel', [SubscriptionController::class, 'cancel'])
             ->middleware('can:billing.subscriptions.manage');
+        Route::post('subscriptions/{subscription}/confirm', [SubscriptionController::class, 'confirm'])
+            ->middleware('can:billing.subscriptions.manage');
         Route::get('data-bundles', [DataBundleController::class, 'index']);
         Route::get('data-bundles/providers', [DataBundleController::class, 'providers']);
         Route::get('data-bundles/networks', [DataBundleController::class, 'networks']);
