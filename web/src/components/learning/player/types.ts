@@ -102,6 +102,9 @@ export interface QuizSlide extends SlideBase {
   /** Right-side choices for match_pairs (shuffled, no pairing revealed). */
   matchPool: string[]
   passThreshold: number
+  timeLimitSeconds?: number | null
+  xpPerCorrect?: number
+  heartsEnabled?: boolean
   /** Resume: this question was already answered correctly in the open attempt. */
   xpAwarded?: number
   wasCorrect: boolean
@@ -203,6 +206,9 @@ function playComponentToSlides(c: PlayComponent, lessonTitle?: string): Slide[] 
       options: q.options.map((o) => ({ id: o.id, label: o.label })),
       matchPool: q.match_pool ?? [],
       passThreshold: c.quiz?.pass_threshold ?? 0.7,
+      timeLimitSeconds: c.quiz?.time_limit_seconds ?? null,
+      xpPerCorrect: c.quiz?.xp_per_correct ?? 1,
+      heartsEnabled: c.quiz?.hearts_enabled ?? true,
       completed: !!q.answered,
       wasCorrect: !!q.was_correct,
       xpAwarded: q.xp_awarded ?? 0,
@@ -285,6 +291,9 @@ export function authorToSlides(lesson: AuthorLesson): { slides: Slide[]; key: Ma
           options: options.map((o) => ({ id: o.id, label: o.label })),
           matchPool: qtype === 'match_pairs' ? options.map((o) => o.match_target ?? '').filter(Boolean) : [],
           passThreshold: (d.pass_threshold as number) ?? 0.7,
+          timeLimitSeconds: (d.time_limit_seconds as number | null) ?? null,
+          xpPerCorrect: (d.xp_per_correct as number) ?? 1,
+          heartsEnabled: (d.hearts_enabled as boolean) ?? true,
           wasCorrect: false,
         })
         key.set(qid, {
@@ -452,14 +461,14 @@ export function createPreviewService(key: Map<number, QuizKey>, hearts: { value:
           correct = !!k.targetText && norm(answer.text) === norm(k.targetText)
         }
       }
-      if (!correct && hearts.value > 0) hearts.value -= 1
+      if (!correct && slide.heartsEnabled !== false && hearts.value > 0) hearts.value -= 1
       return {
         correct,
         correctOptionIds: k?.correctOptionIds ?? [],
         correctText: k?.targetText ?? null,
         correctPairs: k?.correctPairs ?? [],
         explanation: k?.explanation ?? null,
-        xpAwarded: correct ? 1 : 0,
+        xpAwarded: correct ? (slide.xpPerCorrect ?? 1) : 0,
         heartsRemaining: hearts.value,
         attemptsExhausted: false,
         practiceMode: false,

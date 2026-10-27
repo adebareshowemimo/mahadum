@@ -15,6 +15,7 @@ class UpdateLessonRequest extends FormRequest
     {
         return [
             'title' => ['sometimes', 'string', 'max:255'],
+            'kind' => ['sometimes', 'in:lesson,proverb,trivia'],
             'position' => ['sometimes', 'integer', 'min:1'],
             'est_minutes' => ['sometimes', 'integer', 'min:1'],
             'is_free_preview' => ['prohibited'],

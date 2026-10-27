@@ -48,6 +48,7 @@ use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Billing\DataBundleController;
 use App\Http\Controllers\Billing\InvoiceController;
 use App\Http\Controllers\Billing\PlanController;
+use App\Http\Controllers\Billing\StoryPurchaseController;
 use App\Http\Controllers\Billing\SubscriptionController;
 use App\Http\Controllers\Billing\TelcoController;
 use App\Http\Controllers\Competition\CompetitionController;
@@ -62,6 +63,7 @@ use App\Http\Controllers\Content\LessonComponentController;
 use App\Http\Controllers\Content\LessonController;
 use App\Http\Controllers\Content\MediaController;
 use App\Http\Controllers\Content\QuizImportController;
+use App\Http\Controllers\Content\StoryController;
 use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\Family\ChoreController;
 use App\Http\Controllers\Family\FamilyController;
@@ -84,10 +86,12 @@ use App\Http\Controllers\Learning\LearnerAvatarController;
 use App\Http\Controllers\Learning\LearnerTasksController;
 use App\Http\Controllers\Learning\LessonCompletionController;
 use App\Http\Controllers\Learning\LessonPlayController;
+use App\Http\Controllers\Learning\LibraryLessonController;
 use App\Http\Controllers\Learning\PathController;
 use App\Http\Controllers\Learning\PracticeContactController;
 use App\Http\Controllers\Learning\ProgressController;
 use App\Http\Controllers\Learning\SpeakingSubmissionController;
+use App\Http\Controllers\Learning\StoryCatalogController;
 use App\Http\Controllers\Learning\TonePracticeInvitationController;
 use App\Http\Controllers\MeController;
 use App\Http\Controllers\NotificationController;
@@ -151,6 +155,8 @@ Route::prefix('v1')->group(function () {
     Route::post('webhooks/paystack', [PaymentWebhookController::class, 'paystack']);
     Route::post('webhooks/flutterwave', [PaymentWebhookController::class, 'flutterwave']);
     Route::post('webhooks/monnify', [PaymentWebhookController::class, 'monnify']);
+    Route::get('stories/{story}/asset', [StoryCatalogController::class, 'asset'])
+        ->middleware('throttle:120,1')->name('stories.asset');
     Route::post('webhooks/telco/dlr', [TelcoWebhookController::class, 'dlr']);
     // SendGrid Event Webhook (token in the URL) — bounces/complaints → suppression.
     Route::post('webhooks/sendgrid/{token}', [SendgridWebhookController::class, 'handle']);
@@ -190,6 +196,18 @@ Route::prefix('v1')->group(function () {
         Route::get('website/reports', [WebsiteEditorController::class, 'reports']);
         Route::get('website/votes.csv', [WebsiteEditorController::class, 'votesCsv']);
         Route::get('courses', [CourseController::class, 'index']);
+        Route::get('library-lessons', [LibraryLessonController::class, 'index']);
+        Route::get('content/stories', [StoryController::class, 'index'])->middleware('can:content.courses.view');
+        Route::post('content/stories', [StoryController::class, 'store'])->middleware('can:content.lessons.manage');
+        Route::get('content/stories/{story}', [StoryController::class, 'show'])->middleware('can:content.courses.view');
+        Route::patch('content/stories/{story}', [StoryController::class, 'update'])->middleware('can:content.lessons.manage');
+        Route::delete('content/stories/{story}', [StoryController::class, 'destroy'])->middleware('can:content.lessons.manage');
+        Route::post('content/stories/{story}/publish', [StoryController::class, 'publish'])->middleware('can:content.courses.publish');
+        Route::post('content/stories/{story}/unpublish', [StoryController::class, 'unpublish'])->middleware('can:content.courses.publish');
+        Route::post('content/stories/{story}/pages', [StoryController::class, 'addPage'])->middleware('can:content.lessons.manage');
+        Route::patch('content/stories/{story}/pages/{page}', [StoryController::class, 'updatePage'])->middleware('can:content.lessons.manage');
+        Route::delete('content/stories/{story}/pages/{page}', [StoryController::class, 'deletePage'])->middleware('can:content.lessons.manage');
+        Route::post('content/stories/{story}/upload', [StoryController::class, 'upload'])->middleware('can:content.media.upload');
         Route::get('courses/{course}', [CourseController::class, 'show'])->can('view', 'course');
         Route::post('courses', [CourseController::class, 'store'])->can('create', Course::class);
         Route::match(['put', 'patch'], 'courses/{course}', [CourseController::class, 'update'])->can('update', 'course');
@@ -257,6 +275,10 @@ Route::prefix('v1')->group(function () {
         // parent to enroll only their own child. It deliberately excludes
         // staff who merely have progress-view access.
         Route::post('enrollments', [EnrollmentController::class, 'store']);
+        Route::get('learning/stories', [StoryCatalogController::class, 'index']);
+        Route::get('learning/stories/{story}', [StoryCatalogController::class, 'show']);
+        Route::post('learning/stories/{story}/purchase', [StoryPurchaseController::class, 'store'])->middleware('idempotency');
+        Route::post('learning/story-purchases/{purchase}/confirm', [StoryPurchaseController::class, 'confirm']);
         Route::get('learners/{learner}/path', [PathController::class, 'show'])->can('view', 'learner');
         Route::get('learners/{learner}/progress', [ProgressController::class, 'show'])->can('view', 'learner');
         Route::get('learners/{learner}/practice-contacts', [PracticeContactController::class, 'index'])->can('view', 'learner');

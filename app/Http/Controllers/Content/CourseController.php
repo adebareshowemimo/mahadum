@@ -120,6 +120,8 @@ class CourseController extends Controller
 
     public function destroy(Course $course): JsonResponse
     {
+        abort_if($course->stories()->exists(),
+            409, 'Remove draft stories or unpublish this course instead. Stories use its language.');
         $before = $course->only([...self::AUDITED_FIELDS, 'status']);
         $course->delete();
 

@@ -18,6 +18,7 @@ class LessonResource extends JsonResource
             'is_free_preview' => (bool) $this->courseLevel->is_free,
             'id' => $this->id,
             'title' => $this->title,
+            'kind' => $this->kind,
             'position' => $this->position,
             'est_minutes' => $this->est_minutes,
             'is_locked_by_default' => (bool) $this->is_locked_by_default,

@@ -35,6 +35,7 @@ class LessonController extends Controller
 
         $lesson = $level->lessons()->create([
             'title' => $request->string('title'),
+            'kind' => $request->input('kind', 'lesson'),
             'position' => $position,
             'est_minutes' => $request->input('est_minutes', 5),
             'is_locked_by_default' => $request->boolean('is_locked_by_default', true),

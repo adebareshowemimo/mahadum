@@ -160,11 +160,15 @@ export function CoursesPage() {
           <h1 className="font-display text-2xl font-bold text-foreground">Courses</h1>
           <p className="mt-1 text-muted">Build courses, levels, lessons, videos and quizzes.</p>
         </div>
-        {canManage && (
-          <Button leftIcon={<Icon name="layers" className="size-[18px]" />} onClick={() => setOpen(true)}>
-            New course
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={() => navigate('/courses/proverbs-trivia')}>Proverbs & Trivia</Button>
+          <Button variant="secondary" onClick={() => navigate('/courses/stories')}>Stories</Button>
+          {canManage && (
+            <Button leftIcon={<Icon name="layers" className="size-[18px]" />} onClick={() => setOpen(true)}>
+              New course
+            </Button>
+          )}
+        </div>
       </div>
 
       {actionError && (

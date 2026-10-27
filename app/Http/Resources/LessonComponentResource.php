@@ -49,6 +49,10 @@ class LessonComponentResource extends JsonResource
             'quiz' => $this->whenLoaded('quiz', fn () => $this->quiz ? [
                 'pass_threshold' => (float) $this->quiz->pass_threshold,
                 'hearts_enabled' => (bool) $this->quiz->hearts_enabled,
+                'shuffle_questions' => (bool) $this->quiz->shuffle_questions,
+                'max_attempts' => $this->quiz->max_attempts,
+                'time_limit_seconds' => $this->quiz->time_limit_seconds,
+                'xp_per_correct' => $this->quiz->xp_per_correct,
                 'questions' => $this->quiz->relationLoaded('questions')
                     ? $this->quiz->questions->map(fn ($q) => [
                         'id' => $q->id,

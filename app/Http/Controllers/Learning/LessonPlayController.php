@@ -179,12 +179,17 @@ class LessonPlayController extends Controller
     private function quizPayload(Quiz $quiz, ?LearnerProfile $learner): array
     {
         $answered = $this->answeredMap($learner, $quiz);
+        $questions = $quiz->shuffle_questions
+            ? $quiz->questions->sortBy(fn ($question) => hash('sha256', ($learner->id ?? 0).':'.$quiz->id.':'.$question->id))
+            : $quiz->questions;
 
         return [
             'pass_threshold' => (float) $quiz->pass_threshold,
             'hearts_enabled' => (bool) $quiz->hearts_enabled,
             'max_attempts' => $quiz->max_attempts,
-            'questions' => $quiz->questions->map(fn ($q) => [
+            'time_limit_seconds' => $quiz->time_limit_seconds,
+            'xp_per_correct' => $quiz->xp_per_correct,
+            'questions' => $questions->map(fn ($q) => [
                 'id' => $q->id,
                 'type' => $q->type,
                 'prompt' => $q->prompt,

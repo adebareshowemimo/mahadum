@@ -147,20 +147,39 @@ function QuizSlideView({ slide, service, isLast, onAdvance, onGraded, onHearts, 
   const [verdict, setVerdict] = useState<Verdict | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [remaining, setRemaining] = useState(slide.timeLimitSeconds ?? 0)
+  const deadline = useRef(Date.now() + (slide.timeLimitSeconds ?? 0) * 1000)
+  const submitted = useRef(false)
+  const timeoutAttempted = useRef(false)
   const chip = QUIZ_CHIP[slide.qtype] ?? QUIZ_CHIP.mcq_single
 
-  async function check() {
-    if (!answer) return
+  useEffect(() => {
+    if (!slide.timeLimitSeconds || verdict || busy || remaining <= 0) return
+    const timer = window.setInterval(() => setRemaining(Math.max(0, Math.ceil((deadline.current - Date.now()) / 1000))), 250)
+    return () => window.clearInterval(timer)
+  }, [busy, remaining, slide.timeLimitSeconds, verdict])
+
+  useEffect(() => {
+    if (slide.timeLimitSeconds && remaining === 0 && !verdict && !busy && !timeoutAttempted.current) {
+      timeoutAttempted.current = true
+      void check({ optionId: null })
+    }
+  })
+
+  async function check(selected: Answer | null = answer) {
+    if (!selected || submitted.current) return
+    submitted.current = true
     setBusy(true)
     setError(null)
     try {
-      const res = await service.gradeQuiz(slide, answer)
+      const res = await service.gradeQuiz(slide, selected)
       setVerdict(res)
       onGraded(res.correct, res.xpAwarded)
       onHearts(res.heartsRemaining)
       onPracticeMode(res.practiceMode, res.competitivePausedUntil)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not check your answer.')
+      submitted.current = false
     } finally {
       setBusy(false)
     }
@@ -169,16 +188,18 @@ function QuizSlideView({ slide, service, isLast, onAdvance, onGraded, onHearts, 
   return (
     <>
       <SlideBody chip={chip}>
+        {!!slide.timeLimitSeconds && !verdict && <p className="text-sm font-bold text-primary" role="timer">{remaining}s remaining</p>}
         <p className="font-display text-2xl font-bold leading-snug text-foreground">{slide.prompt}</p>
         <QuizInput slide={slide} verdict={verdict} onAnswer={setAnswer} />
         {error && <Alert variant="danger">{error}</Alert>}
+        {error && remaining === 0 && !!slide.timeLimitSeconds && <button type="button" className="text-sm font-semibold text-primary underline" onClick={() => void check({ optionId: null })}>Retry recording time out</button>}
       </SlideBody>
 
       {verdict ? (
         <Feedback verdict={verdict} isLast={isLast} onAdvance={onAdvance} />
       ) : (
         <ActionBar>
-          <Button3D variant="reward" size="lg" fullWidth disabled={!answer || busy} onClick={check}>
+          <Button3D variant="reward" size="lg" fullWidth disabled={!answer || busy || remaining === 0 && !!slide.timeLimitSeconds} onClick={() => void check()}>
             {busy ? 'Checking…' : 'Check'}
           </Button3D>
         </ActionBar>
