@@ -78,6 +78,7 @@ export function ProverbsTriviaPage() {
               </div>
               <div className="flex items-center gap-3">
                 <Badge variant={lesson.is_published ? 'success' : 'neutral'}>{lesson.is_published ? 'Published' : 'Draft'}</Badge>
+                <Button size="sm" variant="secondary" onClick={() => window.open(`/courses/${lesson.course_id}/lessons/${lesson.id}/preview`, '_blank', 'noopener')}>Preview</Button>
                 <Button size="sm" variant="secondary" onClick={() => navigate(`/courses/${lesson.course_id}/lessons/${lesson.id}`)}>Edit lesson</Button>
               </div>
             </div>

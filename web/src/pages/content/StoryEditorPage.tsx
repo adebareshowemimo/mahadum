@@ -75,6 +75,7 @@ export function StoryEditorPage() {
       </div>
       <div className="flex items-center gap-3">
         <Badge variant={item.published_at ? 'success' : 'neutral'}>{item.published_at ? 'Published' : 'Draft'}</Badge>
+        <Button variant="secondary" onClick={() => window.open(`/courses/stories/${id}/preview`, '_blank', 'noopener')}>Preview</Button>
         {canManage && <Button variant={item.published_at ? 'secondary' : 'primary'} loading={busy} onClick={() => changePublished(!item.published_at)}>{item.published_at ? 'Unpublish' : 'Publish story'}</Button>}
       </div>
     </header>

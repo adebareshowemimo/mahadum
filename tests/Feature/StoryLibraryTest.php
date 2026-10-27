@@ -128,4 +128,31 @@ class StoryLibraryTest extends TestCase
             'provider' => 'paystack', 'status' => 'paid', 'amount_minor' => Story::PRICE_MINOR, 'reference' => 'story_video']);
         $this->get($url)->assertOk();
     }
+
+    public function test_creator_can_preview_full_draft_media_without_creating_a_purchase(): void
+    {
+        $this->seedRbac();
+        $author = $this->actingAsUser($this->userWithRole('content_owner'));
+        $story = $this->story();
+        $story->update(['published_at' => null]);
+        $story->course->update(['is_published' => false, 'status' => 'draft']);
+        $story->pages()->where('position', 13)->update(['image_path' => 'stories/draft-page.svg']);
+        Storage::fake('local');
+        Storage::disk('local')->put('stories/draft-page.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>');
+
+        $response = $this->getJson("/api/v1/content/stories/{$story->id}")
+            ->assertOk()->assertJsonCount(13, 'data.pages');
+        $imageUrl = $response->json('data.pages.12.image_url');
+        $this->assertIsString($imageUrl);
+        $this->get($imageUrl)->assertOk();
+        $this->assertSame(0, StoryPurchase::count());
+
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $this->getJson("/api/v1/content/stories/{$story->id}")->assertForbidden();
+        $parentLink = URL::temporarySignedRoute('stories.authorAsset', now()->addMinutes(5), [
+            'story' => $story->id, 'viewer' => $parent->id, 'slot' => 'page', 'page' => $story->pages()->first()->id,
+        ], absolute: false);
+        $this->get($parentLink)->assertForbidden();
+        $this->assertNotEquals($author->id, $parent->id);
+    }
 }

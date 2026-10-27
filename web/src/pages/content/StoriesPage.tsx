@@ -75,6 +75,7 @@ export function StoriesPage() {
         </div>
         <div className="flex items-center gap-3">
           <Badge variant={story.published_at ? 'success' : 'neutral'}>{story.published_at ? 'Published' : 'Draft'}</Badge>
+          <Button size="sm" variant="secondary" onClick={() => window.open(`/courses/stories/${story.id}/preview`, '_blank', 'noopener')}>Preview</Button>
           <Button size="sm" variant="secondary" onClick={() => navigate(`/courses/stories/${story.id}`)}>Edit</Button>
         </div>
       </div>)}

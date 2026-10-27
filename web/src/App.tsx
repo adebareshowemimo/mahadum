@@ -45,6 +45,7 @@ const StoryLibraryPage = lazy(() => import('@/pages/StoryLibraryPage').then((m) 
 const StoryReaderPage = lazy(() => import('@/pages/StoryReaderPage').then((m) => ({ default: m.StoryReaderPage })))
 const CourseBuilderPage = lazy(() => import('@/pages/content/CourseBuilderPage').then((m) => ({ default: m.CourseBuilderPage })))
 const CoursePreviewPage = lazy(() => import('@/pages/content/CoursePreviewPage').then((m) => ({ default: m.CoursePreviewPage })))
+const StoryPreviewPage = lazy(() => import('@/pages/content/StoryPreviewPage').then((m) => ({ default: m.StoryPreviewPage })))
 const LessonBuilderPage = lazy(() => import('@/pages/content/LessonBuilderPage').then((m) => ({ default: m.LessonBuilderPage })))
 const MediaPage = lazy(() => import('@/pages/content/MediaPage').then((m) => ({ default: m.MediaPage })))
 const EarningsPage = lazy(() => import('@/pages/EarningsPage').then((m) => ({ default: m.EarningsPage })))
@@ -374,6 +375,8 @@ export function App() {
         <Route path="/course-practice/:token" element={<CoursePracticeInvitationPage />} />
         <Route path="/courses/:courseId/preview" element={<CoursePreviewPage />} />
         <Route path="/courses/:courseId/levels/:levelId/preview" element={<CoursePreviewPage />} />
+        <Route path="/courses/:courseId/lessons/:lessonId/preview" element={<CoursePreviewPage />} />
+        <Route path="/courses/stories/:storyId/preview" element={<StoryPreviewPage />} />
 
         <Route element={<AppLayout />}>
           <Route element={<ShellSuspense />}>

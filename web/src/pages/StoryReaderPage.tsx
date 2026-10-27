@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Badge, Button, Skeleton } from '@/components/ui'
-import { ApiError, billingApi, learningApi, type StoryPage } from '@/lib/api'
+import { ApiError, billingApi, learningApi } from '@/lib/api'
 import { useActiveProfile } from '@/lib/profile/ActiveProfile'
+import { StoryContent } from '@/components/story/StoryContent'
 
 type Gateway = 'monnify' | 'paystack' | 'flutterwave'
 
@@ -75,14 +76,7 @@ export function StoryReaderPage() {
       {item.summary && <p className="mt-3">{item.summary}</p>}
     </header>
     {error && <Alert variant="danger">{error}</Alert>}{notice && <Alert variant="info">{notice}</Alert>}
-    {item.preview_video_url && <section><h2 className="mb-2 font-display text-lg font-bold">Preview</h2><video controls preload="metadata" src={item.preview_video_url} className="w-full rounded-2xl bg-black" /></section>}
-    {item.full_video_url && <section><h2 className="mb-2 font-display text-lg font-bold">Full story</h2><video controls preload="metadata" src={item.full_video_url} className="w-full rounded-2xl bg-black" /></section>}
-    {item.pages.length > 0 && <div className="flex flex-col gap-5">{item.pages.map((page: StoryPage) => <article key={page.id} className="rounded-2xl border border-border bg-surface p-5">
-      <p className="text-xs font-semibold uppercase text-primary">{item.format === 'reading' ? 'Chapter' : 'Page'} {page.position}</p>
-      {page.title && <h2 className="mt-2 font-display text-xl font-bold">{page.title}</h2>}
-      {page.image_url && <img src={page.image_url} alt={page.title ?? `Page ${page.position}`} className="mt-4 max-h-[32rem] w-full rounded-xl object-contain" />}
-      {page.body && <p className="mt-4 whitespace-pre-wrap leading-relaxed">{page.body}</p>}
-    </article>)}</div>}
+    <StoryContent format={item.format} pages={item.pages} previewVideoUrl={item.preview_video_url} fullVideoUrl={item.full_video_url} />
     {!item.purchased && <section className="rounded-2xl border border-primary/30 bg-primary-soft p-5">
       <h2 className="font-display text-xl font-bold">Unlock the full story for ₦500</h2>
       <p className="mt-1 text-sm text-muted">One purchase covers this story item for your family. It stays available after your subscription ends and restores when you sign in again. A refunded or charged-back purchase returns to the free preview.</p>

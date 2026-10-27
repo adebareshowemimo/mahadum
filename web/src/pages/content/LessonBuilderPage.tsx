@@ -141,8 +141,11 @@ function LessonEditor() {
             <Badge variant={lesson.data.is_published ? 'success' : 'neutral'}>
               {lesson.data.is_published ? 'Published' : 'Draft'}
             </Badge>
+            <Button variant="secondary" onClick={() => window.open(`/courses/${courseId}/lessons/${id}/preview`, '_blank', 'noopener')}>
+              Play preview
+            </Button>
             <Button variant="secondary" onClick={() => setPreviewOpen(true)}>
-              Preview
+              Review steps
             </Button>
             {canManage && (
               <Button variant="secondary" onClick={() => setInsightsOpen(true)}>

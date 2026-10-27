@@ -157,6 +157,8 @@ Route::prefix('v1')->group(function () {
     Route::post('webhooks/monnify', [PaymentWebhookController::class, 'monnify']);
     Route::get('stories/{story}/asset', [StoryCatalogController::class, 'asset'])
         ->middleware('throttle:120,1')->name('stories.asset');
+    Route::get('stories/{story}/author-asset', [StoryController::class, 'asset'])
+        ->middleware('throttle:120,1')->name('stories.authorAsset');
     Route::post('webhooks/telco/dlr', [TelcoWebhookController::class, 'dlr']);
     // SendGrid Event Webhook (token in the URL) — bounces/complaints → suppression.
     Route::post('webhooks/sendgrid/{token}', [SendgridWebhookController::class, 'handle']);

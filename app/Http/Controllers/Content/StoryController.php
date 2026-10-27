@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\Story;
 use App\Models\StoryPage;
+use App\Models\User;
 use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 
 class StoryController extends Controller
@@ -52,6 +54,24 @@ class StoryController extends Controller
         Gate::authorize('view', $story->course);
 
         return response()->json(['data' => $this->detail($story->load('course.language', 'pages'))]);
+    }
+
+    /** Signed media links let an author preview private pages and video in a browser tab. */
+    public function asset(Request $request, Story $story)
+    {
+        abort_unless($request->hasValidSignature(false), 403);
+        $viewer = User::findOrFail($request->integer('viewer'));
+        abort_unless($viewer->can('content.courses.view'), 403);
+        Gate::forUser($viewer)->authorize('view', $story->course);
+        $path = match ($request->query('slot')) {
+            'preview' => $story->preview_video_path,
+            'full' => $story->full_video_path,
+            'page' => $story->pages()->find($request->integer('page'))?->image_path,
+            default => null,
+        };
+        abort_unless($path && Storage::disk('local')->exists($path), 404);
+
+        return response()->file(Storage::disk('local')->path($path), ['Cache-Control' => 'private, no-store']);
     }
 
     public function update(Request $request, Story $story, AuditLogger $audit): JsonResponse
@@ -228,10 +248,20 @@ class StoryController extends Controller
 
     private function detail(Story $story): array
     {
+        $viewerId = auth()->id();
+        $media = fn (string $slot, ?StoryPage $page = null) => URL::temporarySignedRoute('stories.authorAsset', now()->addMinutes(30), [
+            'story' => $story->id, 'viewer' => $viewerId, 'slot' => $slot,
+            ...($page ? ['page' => $page->id] : []),
+        ], absolute: false);
+
         return $this->summary($story) + [
-            'pages' => $story->pages->map(fn (StoryPage $page) => $this->page($page))->values(),
+            'pages' => $story->pages->map(fn (StoryPage $page) => $this->page($page) + [
+                'image_url' => $page->image_path ? $media('page', $page) : null,
+            ])->values(),
             'has_preview_video' => (bool) $story->preview_video_path,
             'has_full_video' => (bool) $story->full_video_path,
+            'preview_video_url' => $story->preview_video_path ? $media('preview') : null,
+            'full_video_url' => $story->full_video_path ? $media('full') : null,
         ];
     }
 
