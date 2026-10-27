@@ -31,6 +31,10 @@ class QuizRulesTest extends TestCase
         ])->assertCreated()->assertJsonPath('data.detail.time_limit_seconds', 15)
             ->assertJsonPath('data.detail.xp_per_correct', 3)->json('data');
 
+        $this->getJson('/api/v1/library-lessons?kind=trivia')->assertOk()
+            ->assertJsonPath('data.0.question_count', 1)
+            ->assertJsonPath('data.0.time_limit_seconds', 15);
+
         $parent = $this->actingAsUser($this->userWithRole('parent'));
         $learner = $this->parentWithChild($parent);
         $play = $this->getJson("/api/v1/lessons/{$lesson->id}/play?learner_id={$learner->id}")

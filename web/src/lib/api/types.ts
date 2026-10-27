@@ -525,6 +525,12 @@ export interface LibraryLesson {
   est_minutes: number | null
   is_published: boolean
   access_reason: string | null
+  proverb_count: number
+  question_count: number
+  time_limit_seconds: number | null
+  has_audio: boolean
+  sample_proverb: string | null
+  sample_meaning: string | null
 }
 
 export type StoryAgeBand = '0_5' | '6_12' | '13_17' | '18_plus' | 'folklore'

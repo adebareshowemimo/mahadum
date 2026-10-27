@@ -64,26 +64,25 @@ export function StoryReaderPage() {
     finally { setBusy(false) }
   }
 
-  if (!activeLearner) return <Alert variant="info">Choose a learner profile to open this story.</Alert>
-  if (story.isLoading) return <Skeleton className="h-64" />
-  if (story.isError || !story.data) return <Alert variant="danger">Could not load this story for this learner.</Alert>
+  if (!activeLearner) return <div className="mx-auto max-w-4xl p-6"><Alert variant="info">Choose a learner profile to open this story.</Alert></div>
+  if (story.isLoading) return <div className="mx-auto max-w-4xl p-6"><Skeleton className="h-64" /></div>
+  if (story.isError || !story.data) return <div className="mx-auto max-w-4xl p-6"><Alert variant="danger">Could not load this story for this learner.</Alert></div>
   const item = story.data
-  return <div className="mx-auto flex max-w-4xl flex-col gap-6">
-    <header>
-      <button className="text-sm font-semibold text-primary hover:underline" onClick={() => navigate('/learn/stories')}>← Stories & Folklore</button>
-      <div className="mt-3 flex flex-wrap items-center gap-3"><h1 className="font-display text-3xl font-bold">{item.title}</h1><Badge variant={item.purchased ? 'success' : 'neutral'}>{item.purchased ? 'Owned' : 'Free preview'}</Badge></div>
-      <p className="mt-1 text-muted">{item.course_title} · {item.language.toUpperCase()} · {item.format}</p>
-      {item.summary && <p className="mt-3">{item.summary}</p>}
-    </header>
+  return <div className="min-h-dvh bg-[#f3eee3] text-[#372d24]">
+    <header className="sticky top-0 z-20 border-b border-amber-900/15 bg-[#fffaf0]/95 backdrop-blur"><div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-3"><div className="min-w-0"><p className="text-[11px] font-bold uppercase tracking-widest text-amber-800">{item.purchased ? 'Your story' : 'Free preview'}</p><p className="truncate font-display font-bold">{item.title}</p></div><Button size="sm" variant="secondary" onClick={() => navigate('/learn/stories')}>Close</Button></div></header>
+    <main className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-8">
+    <div className="text-center"><p className="text-xs font-bold uppercase tracking-[.2em] text-amber-800">{item.course_title} · {item.language.toUpperCase()}</p><div className="mt-3 flex flex-wrap items-center justify-center gap-3"><h1 className="font-serif text-3xl font-bold sm:text-4xl">{item.title}</h1><Badge variant={item.purchased ? 'success' : 'neutral'}>{item.purchased ? 'Owned' : 'Preview'}</Badge></div>{item.summary && <p className="mx-auto mt-3 max-w-2xl text-[#6b5b4a]">{item.summary}</p>}</div>
     {error && <Alert variant="danger">{error}</Alert>}{notice && <Alert variant="info">{notice}</Alert>}
     <StoryContent format={item.format} pages={item.pages} previewVideoUrl={item.preview_video_url} fullVideoUrl={item.full_video_url} />
-    {!item.purchased && <section className="rounded-2xl border border-primary/30 bg-primary-soft p-5">
+    {!item.purchased && <section className="rounded-2xl border border-amber-700/30 bg-[#fffaf0] p-6 text-center shadow-[0_12px_40px_rgba(48,32,11,.08)]">
+      <span className="text-2xl" aria-hidden="true">✦</span>
       <h2 className="font-display text-xl font-bold">Unlock the full story for ₦500</h2>
-      <p className="mt-1 text-sm text-muted">One purchase covers this story item for your family. It stays available after your subscription ends and restores when you sign in again. A refunded or charged-back purchase returns to the free preview.</p>
+      <p className="mx-auto mt-2 max-w-2xl text-sm text-[#6b5b4a]">One purchase covers this story item for your family. It stays available after your subscription ends and restores when you sign in again. A refunded or charged-back purchase returns to the free preview.</p>
       {gateways.data && gateways.data.available.length > 1 && <label className="mt-4 block text-sm font-semibold">Payment provider<select className="mt-1 block min-h-11 rounded-xl border border-border bg-surface px-3" value={selectedGateway ?? ''} onChange={(event) => setGateway(event.target.value as Gateway)}>{gateways.data.available.map((value) => <option key={value} value={value}>{value === 'flutterwave' ? 'Flutterwave' : value === 'paystack' ? 'Paystack' : 'Monnify'}</option>)}</select></label>}
       {gateways.data && gateways.data.available.length === 0 && <Alert variant="warning">Payments are unavailable right now.</Alert>}
       <Button className="mt-4" loading={busy} disabled={!selectedGateway} onClick={purchase}>Buy this story · ₦500</Button>
       {pendingPurchaseId && <Button className="mt-4 ml-2" variant="secondary" loading={busy} onClick={checkPending}>Check payment</Button>}
     </section>}
+    </main>
   </div>
 }

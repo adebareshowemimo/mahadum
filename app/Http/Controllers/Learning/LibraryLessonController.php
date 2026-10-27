@@ -28,7 +28,7 @@ class LibraryLessonController extends Controller
             Gate::authorize('view', $learner);
         }
 
-        $query = Lesson::query()->with(['courseLevel.course.language'])
+        $query = Lesson::query()->with(['courseLevel.course.language', 'components.exercise.flashcards', 'components.quiz.questions'])
             ->where('kind', $validated['kind'])
             ->whereHas('courseLevel.course', fn ($q) => $author ? $q : $q->where('is_published', true));
         if (! $author) {
@@ -47,6 +47,25 @@ class LibraryLessonController extends Controller
         return response()->json([
             'data' => collect($page->items())->map(function (Lesson $lesson) use ($learner, $access, $tier) {
                 $permission = $learner ? $access->content($learner, $lesson, $tier) : null;
+                $proverbCount = 0;
+                $questionCount = 0;
+                $timeLimitSeconds = null;
+                $hasAudio = false;
+                $sampleProverb = null;
+                $sampleMeaning = null;
+                foreach ($lesson->components as $component) {
+                    if ($component->exercise) {
+                        $cards = $component->exercise->flashcards;
+                        $proverbCount += $cards->count();
+                        $hasAudio = $hasAudio || $cards->contains(fn ($card) => $card->audio_asset_id !== null);
+                        $sampleProverb ??= $cards->first()?->front_text;
+                        $sampleMeaning ??= $cards->first()?->back_text;
+                    }
+                    if ($component->quiz) {
+                        $questionCount += $component->quiz->questions->count();
+                        $timeLimitSeconds ??= $component->quiz->time_limit_seconds;
+                    }
+                }
 
                 return [
                     'id' => $lesson->id,
@@ -59,6 +78,12 @@ class LibraryLessonController extends Controller
                     'est_minutes' => $lesson->est_minutes,
                     'is_published' => $lesson->published_at !== null,
                     'access_reason' => $permission['reason'] ?? null,
+                    'proverb_count' => $proverbCount,
+                    'question_count' => $questionCount,
+                    'time_limit_seconds' => $timeLimitSeconds,
+                    'has_audio' => $hasAudio,
+                    'sample_proverb' => $sampleProverb,
+                    'sample_meaning' => $sampleMeaning,
                 ];
             })->values(),
             'meta' => [

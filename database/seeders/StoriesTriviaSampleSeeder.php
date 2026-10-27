@@ -243,9 +243,37 @@ class StoriesTriviaSampleSeeder extends Seeder
 
     private function svg(string $label, string $format, string $colour, bool $page): string
     {
+        if (! $page) {
+            $plain = (string) preg_replace('/^\[Sample(?: [^\]]+)?\]\s*/', '', $label);
+            $lines = explode("\n", wordwrap($plain, 19, "\n"));
+            $lines = array_slice($lines, 0, 3);
+            $titleLines = '';
+            foreach ($lines as $index => $line) {
+                $text = htmlspecialchars($line, ENT_QUOTES | ENT_XML1, 'UTF-8');
+                $y = 505 + $index * 52;
+                $titleLines .= "<text x=\"300\" y=\"{$y}\" text-anchor=\"middle\" font-family=\"Georgia,serif\" font-size=\"39\" font-weight=\"700\" fill=\"#fffaf0\">{$text}</text>";
+            }
+            $motif = $format === 'colouring' || $format === 'tracing'
+                ? '<path d="M125 305 C125 190 475 190 475 305 C475 415 125 415 125 305 Z" fill="#fff8e8" stroke="#744b31" stroke-width="9"/><path d="M190 300 C255 245 345 245 410 300 M190 335 C255 390 345 390 410 335" fill="none" stroke="#744b31" stroke-width="8"/><circle cx="195" cy="303" r="12" fill="#744b31"/><circle cx="405" cy="303" r="12" fill="#744b31"/>'
+                : '<path d="M0 415 C120 355 205 390 315 345 C410 305 500 330 600 275 V800 H0 Z" fill="#1e3152" opacity=".7"/><path d="M0 470 C140 410 285 465 400 405 C500 360 560 380 600 355 V800 H0 Z" fill="#17263e"/><circle cx="390" cy="235" r="108" fill="#ffe5a0" opacity=".94"/><path d="M205 410 Q300 300 400 410 Q300 450 205 410 Z" fill="#b98465"/><circle cx="260" cy="394" r="7" fill="#1d2338"/><path d="M160 415 Q140 420 135 445" fill="none" stroke="#b98465" stroke-width="18" stroke-linecap="round"/>';
+
+            return <<<SVG
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800">
+  <defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#302354"/><stop offset=".58" stop-color="{$colour}"/><stop offset="1" stop-color="#d78b5e"/></linearGradient></defs>
+  <rect width="600" height="800" fill="url(#sky)"/>
+  <circle cx="90" cy="135" r="3" fill="#fff5cb"/><circle cx="495" cy="100" r="4" fill="#fff5cb"/><circle cx="510" cy="320" r="3" fill="#fff5cb"/>
+  {$motif}
+  <rect y="450" width="600" height="350" fill="#19213d" opacity=".7"/>
+  <text x="300" y="475" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="700" letter-spacing="4" fill="#ffe5a0">MAHADUM360 STORIES</text>
+  {$titleLines}
+  <text x="300" y="740" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" fill="#f7e8ca">SAMPLE · YORUBA</text>
+</svg>
+SVG;
+        }
+
         $safe = htmlspecialchars($label, ENT_QUOTES | ENT_XML1, 'UTF-8');
-        $subtitle = $page ? ($format === 'tracing' ? 'TRACE AND SAY' : 'COLOUR THIS PAGE') : 'SAMPLE STORY';
-        $title = $page ? $safe : htmlspecialchars((string) preg_replace('/^\[Sample(?: [^\]]+)?\]\s*/', '', $label), ENT_QUOTES | ENT_XML1, 'UTF-8');
+        $subtitle = $format === 'tracing' ? 'TRACE AND SAY' : 'COLOUR THIS PAGE';
+        $title = $safe;
         $shape = $format === 'tracing'
             ? '<path d="M160 420 H640" stroke="#cbd5e1" stroke-width="3" stroke-dasharray="14 10"/>'
             : '<circle cx="400" cy="390" r="110" fill="none" stroke="#1e293b" stroke-width="10"/><path d="M400 250 V210 M400 570 V530 M260 390 H220 M580 390 H540" stroke="#1e293b" stroke-width="8" stroke-linecap="round"/>';
