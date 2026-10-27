@@ -33,9 +33,8 @@ export function StoryPreviewPage() {
         </div>
         <Alert variant="info">Creator preview · {mode === 'free' ? 'This is the content readers can see before purchase.' : 'This is the content readers see after purchase.'} Nothing here changes purchases or learner progress.</Alert>
         {item.format === 'animated'
-          ? video ? <StoryContent format={item.format} pages={[]} previewVideoUrl={mode === 'free' ? video : null} fullVideoUrl={mode === 'full' ? video : null} /> : <Alert variant="info">Upload the {mode === 'free' ? 'preview clip' : 'full video'} to see it here.</Alert>
-          : pages.length > 0 ? <StoryContent format={item.format} pages={pages} /> : <Alert variant="info">Add {item.format === 'reading' ? 'chapters' : 'pages'} to see this story here.</Alert>}
-        {mode === 'free' && item.format !== 'animated' && item.pages.length > previewCount && <p className="rounded-xl border border-primary/30 bg-primary-soft p-4 text-center text-sm font-semibold">The reader stops here and can unlock the remaining {item.format === 'reading' ? 'chapters' : 'pages'} for ₦500.</p>}
+          ? video ? <StoryContent key={`${storyId}-${mode}`} format={item.format} pages={[]} previewVideoUrl={mode === 'free' ? video : null} fullVideoUrl={mode === 'full' ? video : null} endContent={mode === 'free' && item.full_video_url ? <p className="rounded-2xl border border-primary/30 bg-primary-soft p-8 text-center font-semibold">The preview ends here. Readers can unlock the full video for ₦500.</p> : undefined} /> : <Alert variant="info">Upload the {mode === 'free' ? 'preview clip' : 'full video'} to see it here.</Alert>
+          : pages.length > 0 ? <StoryContent key={`${storyId}-${mode}`} format={item.format} pages={pages} endContent={mode === 'free' && item.pages.length > previewCount ? <p className="rounded-2xl border border-primary/30 bg-primary-soft p-8 text-center font-semibold">The reader stops here and can unlock the remaining {item.format === 'reading' ? 'chapters' : 'pages'} for ₦500.</p> : undefined} /> : <Alert variant="info">Add {item.format === 'reading' ? 'chapters' : 'pages'} to see this story here.</Alert>}
       </>}
     </main>
   </div>
