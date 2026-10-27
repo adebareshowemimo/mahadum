@@ -16,3 +16,7 @@ These decisions resolve the open items in `Mahadum360_Stories_Trivia_Spec_2.docx
 - Proverbs and Trivia are ordinary lessons, tagged by kind. Authors create them within an existing course level using the standard lesson editor. Parents and learners have a separate browse page that opens the standard lesson player.
 - Their free or paid access follows the containing level and the learner's existing plan rules. There is no separate item charge for a Proverb or Trivia lesson.
 - The author configures the quiz pass percentage, maximum attempts (or unlimited), hearts, question shuffle, seconds per question (or untimed), and XP per correct answer. Correct-answer percentage determines the pass result. The existing lesson system records answers, progress, retries, XP, and hearts. A timed-out question records an unanswered, incorrect response.
+
+## Local sample content
+
+Run `php artisan db:seed --class=StoriesTriviaSampleSeeder` in a local environment to add one published Proverb lesson, one timed Trivia lesson, and six published stories in a dedicated `[Sample] Yoruba Stories & Wisdom` course. The stories cover colouring, tracing, animation, teen reading, adult reading, and all-ages Folklore. Generated covers and book pages are included, plus short silent MP4 clips for the animated preview and full-video flow. Re-running the seeder does not duplicate records. No sample payment or entitlement is created; use the free preview and normal checkout to test purchases.
