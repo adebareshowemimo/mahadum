@@ -550,6 +550,7 @@ export interface StorySummary {
   pages_count: number
   published_at?: string | null
   purchased?: boolean
+  can_purchase?: boolean
 }
 
 export interface StoryPage {

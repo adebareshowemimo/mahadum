@@ -11,6 +11,7 @@ use App\Models\Story;
 use App\Models\StoryPurchase;
 use App\Services\Billing\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Tests\Concerns\MakesContent;
@@ -63,6 +64,112 @@ class StoryLibraryTest extends TestCase
             'refund', Story::PRICE_MINOR, ['data' => ['currency' => 'NGN']]));
         $this->getJson("/api/v1/learning/stories/{$story->id}?learner_id={$child->id}")
             ->assertOk()->assertJsonPath('data.purchased', false)->assertJsonCount(12, 'data.pages');
+    }
+
+    public function test_parent_can_buy_but_a_minor_learner_cannot_start_checkout(): void
+    {
+        $this->seedRbac();
+        $parent = $this->userWithRole('parent');
+        $child = $this->parentWithChild($parent);
+        $story = $this->story();
+
+        $this->actingAsUser($parent);
+        $this->getJson("/api/v1/learning/stories/{$story->id}?learner_id={$child->id}")
+            ->assertOk()->assertJsonPath('data.can_purchase', true);
+
+        $student = $this->userWithRole('student');
+        $studentProfile = LearnerProfile::create([
+            'user_id' => $student->id, 'display_name' => 'Minor learner',
+            'date_of_birth' => now()->subYears(13),
+        ]);
+        $this->actingAsUser($student);
+        $this->getJson("/api/v1/learning/stories/{$story->id}?learner_id={$studentProfile->id}")
+            ->assertOk()->assertJsonPath('data.can_purchase', false);
+        $this->postJson("/api/v1/learning/stories/{$story->id}/purchase", [
+            'learner_id' => $studentProfile->id, 'provider' => 'paystack',
+        ], ['Idempotency-Key' => 'minor-story-purchase'])->assertForbidden();
+        $this->assertDatabaseCount('story_purchases', 0);
+    }
+
+    public function test_parent_checkout_return_verifies_payment_and_unlocks_story_for_the_family(): void
+    {
+        $this->seedRbac();
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $child = $this->parentWithChild($parent);
+        $story = $this->story();
+        config([
+            'services.payments.live' => true,
+            'services.paystack.secret' => 'sk_test',
+            'services.paystack.base_url' => 'https://api.paystack.co',
+            'app.frontend_url' => 'https://learn.example.test',
+        ]);
+        Http::fake([
+            'api.paystack.co/transaction/initialize' => Http::response([
+                'status' => true, 'data' => ['authorization_url' => 'https://checkout.paystack.test/story'],
+            ]),
+            'api.paystack.co/transaction/verify/*' => Http::response([
+                'status' => true, 'data' => ['status' => 'success', 'amount' => Story::PRICE_MINOR, 'currency' => 'NGN'],
+            ]),
+        ]);
+
+        $purchaseId = $this->postJson("/api/v1/learning/stories/{$story->id}/purchase", [
+            'learner_id' => $child->id, 'provider' => 'paystack',
+        ], ['Idempotency-Key' => 'parent-story-purchase'])->assertCreated()->assertJsonPath('data.checkout_url', 'https://checkout.paystack.test/story')
+            ->json('data.id');
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/transaction/initialize')
+            && $request['amount'] === Story::PRICE_MINOR
+            && $request['callback_url'] === "https://learn.example.test/learn/stories/{$story->id}?purchase_id={$purchaseId}");
+
+        $this->postJson("/api/v1/learning/story-purchases/{$purchaseId}/confirm")
+            ->assertOk()->assertJsonPath('data.status', 'paid');
+        $this->getJson("/api/v1/learning/stories/{$story->id}?learner_id={$child->id}")
+            ->assertOk()->assertJsonPath('data.purchased', true)->assertJsonCount(13, 'data.pages');
+        $this->postJson("/api/v1/learning/stories/{$story->id}/purchase", [
+            'learner_id' => $child->id, 'provider' => 'paystack',
+        ], ['Idempotency-Key' => 'parent-story-purchase-retry'])->assertOk()->assertJsonPath('data.id', $purchaseId)->assertJsonPath('data.status', 'paid');
+        $this->assertDatabaseCount('story_purchases', 1);
+    }
+
+    public function test_teacher_can_read_a_paid_school_learners_story_but_cannot_buy_it(): void
+    {
+        $this->seedRbac();
+        $parent = $this->userWithRole('parent');
+        $child = $this->parentWithChild($parent);
+        $school = Organization::create(['name' => 'School', 'slug' => 'story-teacher-school', 'type' => 'school', 'status' => 'active']);
+        $child->update(['organization_id' => $school->id]);
+        $teacher = $this->userWithRole('teacher');
+        $school->members()->attach($teacher->id, ['role' => 'teacher', 'status' => 'active']);
+        $story = $this->story();
+        StoryPurchase::create([
+            'story_id' => $story->id, 'user_id' => $parent->id,
+            'provider' => 'paystack', 'status' => 'paid',
+            'amount_minor' => Story::PRICE_MINOR, 'reference' => 'story_teacher_view',
+        ]);
+
+        $this->actingAsUser($teacher);
+        $this->getJson("/api/v1/learning/stories/{$story->id}?learner_id={$child->id}")
+            ->assertOk()->assertJsonPath('data.purchased', true)
+            ->assertJsonPath('data.can_purchase', false)->assertJsonCount(13, 'data.pages');
+        $this->postJson("/api/v1/learning/stories/{$story->id}/purchase", [
+            'learner_id' => $child->id, 'provider' => 'paystack',
+        ], ['Idempotency-Key' => 'teacher-story-purchase'])->assertForbidden();
+    }
+
+    public function test_adult_learner_can_purchase_for_self_at_eighteen(): void
+    {
+        $this->seedRbac();
+        $story = $this->story();
+        $adult = $this->actingAsUser($this->userWithRole('student'));
+        $profile = LearnerProfile::create([
+            'user_id' => $adult->id, 'display_name' => 'Adult learner',
+            'date_of_birth' => now()->subYears(18),
+        ]);
+
+        $this->getJson("/api/v1/learning/stories/{$story->id}?learner_id={$profile->id}")
+            ->assertOk()->assertJsonPath('data.can_purchase', true);
+        $profile->update(['date_of_birth' => now()->subYears(18)->addDay()]);
+        $this->getJson("/api/v1/learning/stories/{$story->id}?learner_id={$profile->id}")
+            ->assertOk()->assertJsonPath('data.can_purchase', false);
     }
 
     public function test_adult_stories_start_at_eighteen_and_are_hidden_from_school_profiles(): void

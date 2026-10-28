@@ -35,7 +35,7 @@ class StoryCatalogController extends Controller
         $stories = $query->latest()->paginate(24);
 
         return response()->json([
-            'data' => collect($stories->items())->map(fn (Story $story) => $this->summary($story, $learner))->values(),
+            'data' => collect($stories->items())->map(fn (Story $story) => $this->summary($story, $learner, $request->user()))->values(),
             'meta' => [
                 'current_page' => $stories->currentPage(), 'last_page' => $stories->lastPage(),
                 'per_page' => $stories->perPage(), 'total' => $stories->total(),
@@ -55,7 +55,7 @@ class StoryCatalogController extends Controller
             'slot' => $slot, ...($page ? ['page' => $page->id] : []),
         ], absolute: false);
 
-        return response()->json(['data' => $this->summary($story->load('course.language'), $learner) + [
+        return response()->json(['data' => $this->summary($story->load('course.language'), $learner, $request->user()) + [
             'pages' => $pages->map(fn (StoryPage $page) => [
                 'id' => $page->id, 'position' => $page->position, 'title' => $page->title,
                 'body' => $page->body, 'image_url' => $page->image_path ? $media('page', $page) : null,
@@ -114,7 +114,7 @@ class StoryCatalogController extends Controller
         return $page->image_path;
     }
 
-    private function summary(Story $story, LearnerProfile $learner): array
+    private function summary(Story $story, LearnerProfile $learner, User $viewer): array
     {
         return [
             'id' => $story->id, 'title' => $story->title, 'summary' => $story->summary,
@@ -124,6 +124,7 @@ class StoryCatalogController extends Controller
             'cover_url' => $story->cover_path ? Storage::disk('public')->url($story->cover_path) : null,
             'pages_count' => $story->pages_count ?? $story->pages()->count(),
             'purchased' => $this->access->isPurchased($story, $learner),
+            'can_purchase' => $this->access->canPurchase($learner, $viewer),
         ];
     }
 }

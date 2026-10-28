@@ -12,7 +12,6 @@ use App\Services\Learning\StoryAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
 class StoryPurchaseController extends Controller
@@ -30,11 +29,7 @@ class StoryPurchaseController extends Controller
             'provider' => ['required', 'in:monnify,paystack,flutterwave'],
         ]);
         $learner = LearnerProfile::findOrFail($data['learner_id']);
-        Gate::authorize('redeemReward', $learner);
-        $adultSelf = $learner->user_id === $request->user()->id
-            && $learner->date_of_birth?->age >= 18
-            && $learner->organization_id === null;
-        abort_unless($request->user()->hasRole('parent') || $adultSelf, 403,
+        abort_unless($this->access->canPurchase($learner, $request->user()), 403,
             'A parent or adult learner must purchase stories.');
         abort_unless($story->published_at && $this->access->isVisible($story, $learner, $request->user()), 404);
         abort_unless(in_array($data['provider'], $this->gateways->available(), true), 503,

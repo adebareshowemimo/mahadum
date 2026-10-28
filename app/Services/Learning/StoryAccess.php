@@ -6,9 +6,22 @@ use App\Models\LearnerProfile;
 use App\Models\Story;
 use App\Models\StoryPurchase;
 use App\Models\User;
+use Illuminate\Support\Facades\Gate;
 
 class StoryAccess
 {
+    public function canPurchase(LearnerProfile $learner, User $viewer): bool
+    {
+        if (! Gate::forUser($viewer)->allows('redeemReward', $learner)) {
+            return false;
+        }
+
+        return $viewer->hasRole('parent')
+            || ($learner->user_id === $viewer->id
+                && $learner->date_of_birth?->age >= 18
+                && $learner->organization_id === null);
+    }
+
     public function isVisible(Story $story, LearnerProfile $learner, User $viewer): bool
     {
         if ($story->age_band !== '18_plus') {
