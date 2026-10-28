@@ -14,7 +14,8 @@ use Illuminate\Support\Facades\Storage;
 
 /**
  * Published, clearly labelled examples for the separate creator and learner libraries.
- * Run on a local development database with: php artisan db:seed --class=StoriesTriviaSampleSeeder
+ * Run locally with: php artisan db:seed --class=StoriesTriviaSampleSeeder
+ * Production requires SEED_STORIES_TRIVIA_SAMPLES=1 and Artisan's --force flag.
  */
 class StoriesTriviaSampleSeeder extends Seeder
 {
@@ -22,8 +23,8 @@ class StoriesTriviaSampleSeeder extends Seeder
 
     public function run(): void
     {
-        if (app()->environment('production')) {
-            throw new \RuntimeException('Sample content cannot be seeded in production.');
+        if (app()->environment('production') && getenv('SEED_STORIES_TRIVIA_SAMPLES') !== '1') {
+            throw new \RuntimeException('Set SEED_STORIES_TRIVIA_SAMPLES=1 to explicitly seed sample content in production.');
         }
 
         $owner = User::role('content_owner')->first() ?? User::role('super_admin')->first();

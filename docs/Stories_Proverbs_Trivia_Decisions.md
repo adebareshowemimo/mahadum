@@ -22,6 +22,14 @@ These decisions resolve the open items in `Mahadum360_Stories_Trivia_Spec_2.docx
 - Proverbs and Trivia use the same interactive lesson preview as course lessons. It includes draft content, grades answers locally, and does not save learner progress, hearts, XP, or attempts. The lesson editor also retains its read-only step review with answer keys.
 - Stories open in a separate creator preview with **Free preview** and **Full story** views. The free view applies the same page/chapter cutoff or preview clip as the parent reader. The full view shows all draft or published content and the full video without requiring a purchase. Private media links are generated for authorized creators and expire after 30 minutes.
 
-## Local sample content
+## Sample content
 
 Run `php artisan db:seed --class=StoriesTriviaSampleSeeder` in a local environment to add one published Proverb lesson, one timed Trivia lesson, and six published stories in a dedicated `[Sample] Yoruba Stories & Wisdom` course. The stories cover colouring, tracing, animation, teen reading, adult reading, and all-ages Folklore. Generated covers and book pages are included, plus short silent MP4 clips for the animated preview and full-video flow. Re-running the seeder does not duplicate records. No sample payment or entitlement is created; use the free preview and normal checkout to test purchases.
+
+To add these samples during a production deployment, run the normal deployment script with `SEED_STORIES_TRIVIA_SAMPLES=1` and the intended release branch, for example:
+
+```bash
+BRANCH=codex/subscriptions-report-table-20261023 SEED_STORIES_TRIVIA_SAMPLES=1 ./deploy/deploy.sh
+```
+
+The flag runs only this sample seeder after migrations and role setup. Ordinary deployments do not recreate samples that an editor removes. Running the seeder directly in production also requires the flag and Artisan's `--force` option.
