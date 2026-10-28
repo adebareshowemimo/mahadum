@@ -44,6 +44,8 @@ class StoreLessonComponentRequest extends FormRequest
             'quiz.shuffle_questions' => ['boolean'],
             'quiz.max_attempts' => ['nullable', 'integer', 'min:1'],
             'quiz.hearts_enabled' => ['boolean'],
+            'quiz.time_limit_seconds' => ['nullable', 'integer', 'between:5,300'],
+            'quiz.xp_per_correct' => ['nullable', 'integer', 'between:0,100'],
             'quiz.questions' => ['nullable', 'array'],
             'quiz.questions.*.type' => ['required_with:quiz.questions', 'string', 'max:50'],
             'quiz.questions.*.prompt' => ['required_with:quiz.questions', 'string'],

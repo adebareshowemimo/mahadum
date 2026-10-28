@@ -25,6 +25,11 @@ class PaystackGateway implements PaymentGateway
                 'email' => $email,
                 'currency' => 'NGN',
                 'metadata' => $metadata,
+                ...(($metadata['purpose'] ?? null) === 'subscription'
+                    ? ['callback_url' => rtrim((string) config('app.url'), '/').'/billing?subscription_id='.rawurlencode((string) $metadata['subscription_id'])]
+                    : (($metadata['purpose'] ?? null) === 'story'
+                        ? ['callback_url' => rtrim((string) config('app.frontend_url'), '/').'/learn/stories/'.$metadata['story_id'].'?purchase_id='.$metadata['purchase_id']]
+                        : [])),
             ])
             ->throw()
             ->json();

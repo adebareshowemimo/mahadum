@@ -32,6 +32,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'My learning', to: '/learn', icon: 'book', roles: ['student', 'parent', 'supervisor'] },
       { label: 'My tasks', to: '/tasks', icon: 'clipboard', roles: ['student', 'parent'] },
       { label: 'Courses', to: '/learn/courses', icon: 'layers', roles: ['student', 'parent', 'supervisor'] },
+      { label: 'Proverbs & Trivia', to: '/learn/proverbs-trivia', icon: 'book', roles: ['student', 'parent', 'supervisor'] },
+      { label: 'Stories', to: '/learn/stories', icon: 'book', roles: ['student', 'parent', 'supervisor'] },
       { label: 'Achievements', to: '/achievements', icon: 'sparkles', roles: ['student', 'parent', 'supervisor'] },
       { label: 'Leaderboard', to: '/leaderboard', icon: 'trophy', roles: ['student', 'parent', 'supervisor'] },
       { label: 'Competition', to: '/competitions', icon: 'trophy', roles: ['student', 'parent', 'supervisor', 'teacher', 'school_admin'] },
@@ -77,6 +79,8 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Website content', to: '/content/website', icon: 'book', roles: ['super_admin', 'content_owner'] },
       { label: 'Courses', to: '/courses', icon: 'layers', roles: ['super_admin', 'content_owner', 'school_admin'] },
+      { label: 'Proverbs & Trivia', to: '/courses/proverbs-trivia', icon: 'book', roles: ['super_admin', 'content_owner', 'school_admin'] },
+      { label: 'Stories', to: '/courses/stories', icon: 'book', roles: ['super_admin', 'content_owner', 'school_admin'] },
       { label: 'Media', to: '/media', icon: 'book', roles: ['super_admin', 'content_owner'] },
       { label: 'Performance', to: '/content/performance', icon: 'sparkles', roles: ['super_admin', 'content_owner'] },
       { label: 'Competitions', to: '/competitions/manage', icon: 'trophy', roles: ['super_admin', 'content_owner'] },

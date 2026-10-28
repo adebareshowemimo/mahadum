@@ -15,6 +15,7 @@ class StoreLessonRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'max:255'],
+            'kind' => ['sometimes', 'in:lesson,proverb,trivia'],
             'position' => ['nullable', 'integer', 'min:1'],
             'est_minutes' => ['nullable', 'integer', 'min:1'],
             'is_free_preview' => ['prohibited'],

@@ -1,5 +1,5 @@
 import { PurchasePolicyNotice } from '@/components/billing/PurchasePolicyNotice'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
@@ -76,6 +76,35 @@ export function BillingPage() {
   const [promo, setPromo] = useState<{ code: string; byPlan: Record<number, PromoPreview> } | null>(null)
   const [promoError, setPromoError] = useState<string | null>(null)
   const [promoBusy, setPromoBusy] = useState(false)
+  const checkedPayments = useRef(new Set<number>())
+
+  useEffect(() => {
+    const returnedId = Number(new URLSearchParams(window.location.search).get('subscription_id'))
+    const pendingIds = history.data?.filter((item) => item.status === 'pending' && item.method === 'card').map((item) => item.id) ?? []
+    const ids = [...new Set([...pendingIds, returnedId])].filter((id) => Number.isSafeInteger(id) && id > 0)
+    for (const id of ids) {
+      if (checkedPayments.current.has(id)) continue
+      checkedPayments.current.add(id)
+      void billingApi.confirmSubscription(id).then((result) => {
+        if (result.status === 'active') {
+          setNotice('Payment confirmed — your plan is now active.')
+          void queryClient.invalidateQueries({ queryKey: ['me'] })
+          void queryClient.invalidateQueries({ queryKey: ['learner-path'] })
+          void queryClient.invalidateQueries({ queryKey: ['hearts'] })
+          void queryClient.invalidateQueries({ queryKey: ['subscriptions'] })
+        } else if (id === returnedId) {
+          setNotice('Payment confirmation is still pending. Please check again shortly.')
+        }
+      }).catch((err: unknown) => {
+        if (id === returnedId) setError(friendlyBillingError(err, 'Could not verify your payment.'))
+      })
+    }
+    if (returnedId > 0) {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('subscription_id')
+      window.history.replaceState(null, '', url.pathname + url.search + url.hash)
+    }
+  }, [history.data, queryClient])
 
   const sub = user?.subscription ?? null
   const telcoState = telco.data?.state

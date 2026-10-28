@@ -472,6 +472,7 @@ export interface AuthorLesson {
   /** Read-only compatibility alias for the level access setting. */
   is_free_preview?: boolean
   id: number
+  kind: 'lesson' | 'proverb' | 'trivia'
   title: string
   position: number
   est_minutes: number | null
@@ -507,9 +508,76 @@ export interface CreateLevelInput {
 
 export interface CreateLessonInput {
   title: string
+  kind?: 'lesson' | 'proverb' | 'trivia'
   est_minutes?: number
   position?: number
   is_locked_by_default?: boolean
+}
+
+export interface LibraryLesson {
+  id: number
+  title: string
+  kind: 'proverb' | 'trivia'
+  course_id: number
+  course_title: string
+  level_title: string
+  language: string
+  est_minutes: number | null
+  is_published: boolean
+  access_reason: string | null
+  proverb_count: number
+  question_count: number
+  time_limit_seconds: number | null
+  has_audio: boolean
+  sample_proverb: string | null
+  sample_meaning: string | null
+}
+
+export type StoryAgeBand = '0_5' | '6_12' | '13_17' | '18_plus' | 'folklore'
+export type StoryFormat = 'colouring' | 'tracing' | 'animated' | 'reading'
+
+export interface StorySummary {
+  id: number
+  title: string
+  summary: string | null
+  course_id?: number
+  course_title: string
+  language: string
+  age_band: StoryAgeBand
+  format: StoryFormat
+  price_minor: number
+  cover_url: string | null
+  pages_count: number
+  published_at?: string | null
+  purchased?: boolean
+  can_purchase?: boolean
+}
+
+export interface StoryPage {
+  id: number
+  position: number
+  title: string | null
+  body: string | null
+  has_image?: boolean
+  image_url?: string | null
+}
+
+export interface StoryDetail extends StorySummary {
+  pages: StoryPage[]
+  has_preview_video?: boolean
+  has_full_video?: boolean
+  preview_video_url?: string | null
+  full_video_url?: string | null
+  preview_ends_at?: number | null
+}
+
+export interface StoryPurchase {
+  id: number
+  story_id: number
+  status: string
+  provider: string
+  amount_minor: number
+  checkout_url: string | null
 }
 
 /** Question types the grader supports (option-based, ordered, pairs + free-text). */
@@ -563,6 +631,10 @@ export interface AddComponentInput {
     title?: string
     pass_threshold?: number
     hearts_enabled?: boolean
+    shuffle_questions?: boolean
+    max_attempts?: number | null
+    time_limit_seconds?: number | null
+    xp_per_correct?: number
     questions?: AuthorQuestionInput[]
   }
   speaking?: { prompt_text: string; target_text?: string }
@@ -622,6 +694,8 @@ export interface QuizPayload {
   pass_threshold: number
   hearts_enabled: boolean
   max_attempts?: number | null
+  time_limit_seconds?: number | null
+  xp_per_correct?: number
   questions: QuizQuestion[]
 }
 
@@ -1715,6 +1789,26 @@ export interface SubscriptionsReport {
   by_status: Record<string, number>
   active: number
   total: number
+}
+
+export interface SubscriptionRecord {
+  id: number
+  user_id: number
+  name: string
+  email: string
+  phone: string | null
+  account_status: string
+  subscription_plan: string | null
+  subscription_status: string
+  subscription_start: string | null
+  subscription_expiry: string | null
+  payment_status: string
+}
+
+export interface SubscriptionRecordsQuery {
+  q?: string
+  status?: string
+  page?: number
 }
 
 export interface ReferralsReport {

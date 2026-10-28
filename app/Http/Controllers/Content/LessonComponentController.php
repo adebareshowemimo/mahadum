@@ -148,6 +148,8 @@ class LessonComponentController extends Controller
             'shuffle_questions' => (bool) ($q['shuffle_questions'] ?? false),
             'max_attempts' => $q['max_attempts'] ?? null,
             'hearts_enabled' => (bool) ($q['hearts_enabled'] ?? true),
+            'time_limit_seconds' => $q['time_limit_seconds'] ?? null,
+            'xp_per_correct' => $q['xp_per_correct'] ?? 1,
         ]);
 
         $this->writeQuestions($quiz, $q['questions'] ?? []);
@@ -200,6 +202,8 @@ class LessonComponentController extends Controller
             'shuffle_questions' => (bool) ($q['shuffle_questions'] ?? false),
             'max_attempts' => $q['max_attempts'] ?? null,
             'hearts_enabled' => (bool) ($q['hearts_enabled'] ?? true),
+            'time_limit_seconds' => $q['time_limit_seconds'] ?? null,
+            'xp_per_correct' => $q['xp_per_correct'] ?? 1,
         ]);
 
         // Replace questions wholesale (options cascade on delete).

@@ -141,8 +141,11 @@ function LessonEditor() {
             <Badge variant={lesson.data.is_published ? 'success' : 'neutral'}>
               {lesson.data.is_published ? 'Published' : 'Draft'}
             </Badge>
+            <Button variant="secondary" onClick={() => window.open(`/courses/${courseId}/lessons/${id}/preview`, '_blank', 'noopener')}>
+              Play preview
+            </Button>
             <Button variant="secondary" onClick={() => setPreviewOpen(true)}>
-              Preview
+              Review steps
             </Button>
             {canManage && (
               <Button variant="secondary" onClick={() => setInsightsOpen(true)}>
@@ -1352,6 +1355,13 @@ function isValidDraft(q: QDraft): boolean {
 
 function QuizBuilderModal({ lessonId, editing, onClose }: { lessonId: number; editing?: AuthorComponent; onClose: () => void }) {
   const { submit, error, pending, isEdit } = useComponentForm(lessonId, editing, onClose)
+  const detail = editing?.detail
+  const [passPercent, setPassPercent] = useState(Number(detail?.pass_threshold ?? 0.6) * 100)
+  const [maxAttempts, setMaxAttempts] = useState(Number(detail?.max_attempts ?? 0))
+  const [timeLimit, setTimeLimit] = useState(Number(detail?.time_limit_seconds ?? 0))
+  const [xpPerCorrect, setXpPerCorrect] = useState(Number(detail?.xp_per_correct ?? 1))
+  const [heartsEnabled, setHeartsEnabled] = useState(Boolean(detail?.hearts_enabled ?? true))
+  const [shuffleQuestions, setShuffleQuestions] = useState(Boolean(detail?.shuffle_questions ?? false))
   const audio = useMediaAssets({ type: 'audio', per_page: 100 })
   const audioAssets = (audio.data ?? []) as AudioAsset[]
   const [questions, setQuestions] = useState<QDraft[]>(() => draftsFromComponent(editing))
@@ -1493,7 +1503,12 @@ function QuizBuilderModal({ lessonId, editing, onClose }: { lessonId: number; ed
       }
       return item
     })
-    const ok = await submit({ type: 'quiz', quiz: { pass_threshold: 0.6, hearts_enabled: true, questions: out } })
+    const ok = await submit({ type: 'quiz', quiz: {
+      pass_threshold: passPercent / 100, max_attempts: maxAttempts || null,
+      time_limit_seconds: timeLimit || null, hearts_enabled: heartsEnabled,
+      xp_per_correct: xpPerCorrect,
+      shuffle_questions: shuffleQuestions, questions: out,
+    } })
     if (ok && !isEdit) {
       const fresh = newQuestion()
       setQuestions([fresh])
@@ -1508,6 +1523,21 @@ function QuizBuilderModal({ lessonId, editing, onClose }: { lessonId: number; ed
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         {error && <Alert variant="danger">{error}</Alert>}
         {localError && <Alert variant="danger">{localError}</Alert>}
+
+        <details className="rounded-xl border border-border bg-surface-muted p-3" open>
+          <summary className="cursor-pointer text-sm font-semibold">Quiz rules</summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Input label="Pass score (%)" type="number" min={0} max={100} value={passPercent} onChange={(e) => setPassPercent(Number(e.target.value))} />
+            <Input label="Maximum attempts (0 = unlimited)" type="number" min={0} value={maxAttempts} onChange={(e) => setMaxAttempts(Number(e.target.value))} />
+            <Input label="Seconds per question (0 = untimed)" type="number" min={0} max={300} value={timeLimit} onChange={(e) => setTimeLimit(Number(e.target.value))} />
+            <Input label="XP per correct answer" type="number" min={0} max={100} value={xpPerCorrect} onChange={(e) => setXpPerCorrect(Number(e.target.value))} />
+          </div>
+          <div className="mt-3 flex flex-wrap gap-5 text-sm">
+            <label className="flex items-center gap-2"><input type="checkbox" checked={heartsEnabled} onChange={(e) => setHeartsEnabled(e.target.checked)} /> Lose hearts for wrong answers</label>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={shuffleQuestions} onChange={(e) => setShuffleQuestions(e.target.checked)} /> Shuffle questions</label>
+          </div>
+          <p className="mt-2 text-xs text-muted">The pass score uses the percentage of correct answers. Progress and retries use the normal lesson rules.</p>
+        </details>
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-muted">

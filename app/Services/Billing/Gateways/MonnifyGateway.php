@@ -42,7 +42,11 @@ class MonnifyGateway implements PaymentGateway
                 'contractCode' => $this->contractCode,
                 'redirectUrl' => ($metadata['purpose'] ?? null) === 'data_bundle'
                     ? rtrim((string) config('app.url'), '/').'/billing/data/status'
-                    : (string) config('app.url'),
+                    : (($metadata['purpose'] ?? null) === 'story'
+                        ? rtrim((string) config('app.frontend_url'), '/').'/learn/stories/'.$metadata['story_id'].'?purchase_id='.$metadata['purchase_id']
+                        : (($metadata['purpose'] ?? null) === 'subscription'
+                        ? rtrim((string) config('app.url'), '/').'/billing?subscription_id='.rawurlencode((string) $metadata['subscription_id'])
+                        : (string) config('app.url'))),
                 'metadata' => $metadata,
             ])
             ->throw()

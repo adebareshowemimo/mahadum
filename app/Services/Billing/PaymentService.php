@@ -7,6 +7,7 @@ use App\Models\DataBundlePurchase;
 use App\Models\Family;
 use App\Models\Invoice;
 use App\Models\Plan;
+use App\Models\StoryPurchase;
 use App\Models\Subscription;
 use App\Models\SubscriptionPaymentReceipt;
 use App\Models\User;
@@ -33,7 +34,7 @@ use Illuminate\Support\Facades\Notification;
  */
 class PaymentService
 {
-    public function __construct(private WalletService $wallets, private ReferralService $referrals, private AuditLogger $audit) {}
+    public function __construct(private WalletService $wallets, private ReferralService $referrals, private AuditLogger $audit, private StoryPaymentService $stories) {}
 
     /**
      * @return string outcome: duplicate|ignored|funded|subscription_active|unmatched
@@ -92,6 +93,11 @@ class PaymentService
             return 'data_payment_received';
         }
 
+        if ($storyPurchase = $this->findStoryPurchase($reference)) {
+            return $this->stories->settle($storyPurchase, $source, $amountMinor, $raw, $sourceEvent)
+                ? 'story_purchased' : 'ignored';
+        }
+
         if ($funding = $this->findFunding($reference)) {
             $currency = $source === 'monnify' ? ($raw['eventData']['currencyCode'] ?? null) : ($raw['data']['currency'] ?? null);
 
@@ -144,6 +150,10 @@ class PaymentService
             });
 
             return 'reversed';
+        }
+
+        if ($storyPurchase = $this->findStoryPurchase($reference)) {
+            return $this->stories->refund($storyPurchase, $source, $amountMinor) ? 'reversed' : 'ignored';
         }
 
         if ($funding = $this->findFunding($reference)) {
@@ -226,6 +236,11 @@ class PaymentService
         return WalletFundingTransaction::where('gateway_ref', $reference)
             ->orWhere('gateway_txn_ref', $reference)
             ->first();
+    }
+
+    private function findStoryPurchase(string $reference): ?StoryPurchase
+    {
+        return StoryPurchase::where('reference', $reference)->orWhere('gateway_txn_ref', $reference)->first();
     }
 
     /**

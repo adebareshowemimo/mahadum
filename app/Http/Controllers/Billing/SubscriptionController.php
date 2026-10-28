@@ -241,6 +241,42 @@ class SubscriptionController extends Controller
         ]]);
     }
 
+    /** Verify a returning checkout without opening a second payment. */
+    public function confirm(Subscription $subscription, Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless(
+            $subscription->subscriber_type === User::class && (int) $subscription->subscriber_id === (int) $user->id,
+            403,
+            'Not your subscription.',
+        );
+
+        if ($subscription->status !== 'pending' || $subscription->method !== 'card') {
+            return response()->json(['data' => ['status' => $subscription->status]]);
+        }
+
+        $provider = $subscription->payment_gateway ?? (string) config('services.payments.default', 'monnify');
+        $reference = 'sub_'.$subscription->id;
+        $verified = $this->gateways->driver($provider)->verify($reference);
+        if ($verified->status === 'success') {
+            $transactionId = match ($provider) {
+                'flutterwave', 'paystack' => $verified->raw['data']['id'] ?? null,
+                'monnify' => $verified->raw['responseBody']['transactionReference'] ?? null,
+                default => null,
+            };
+            $this->payments->process(
+                $provider,
+                (string) ($transactionId ?? 'manual_verify_'.$subscription->id),
+                $reference,
+                'success',
+                $verified->amountMinor,
+                $verified->raw,
+            );
+        }
+
+        return response()->json(['data' => ['status' => $subscription->fresh()->status]]);
+    }
+
     /**
      * Shared subscription-creation logic used by both a brand-new subscribe and
      * a plan change. Returns the response payload; throws PromoException on an

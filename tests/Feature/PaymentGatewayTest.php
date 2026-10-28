@@ -75,6 +75,7 @@ class PaymentGatewayTest extends TestCase
             ->json('data.payment_reference');
 
         Http::assertSent(fn ($request) => $request['amount'] === $plan->price_minor && $request['reference'] === $ref);
+        Http::assertSent(fn ($request) => $request['callback_url'] === config('app.url').'/billing?subscription_id='.substr($ref, 4));
     }
 
     public function test_subscription_saves_chosen_gateway_and_rejects_an_unavailable_one(): void
@@ -124,6 +125,74 @@ class PaymentGatewayTest extends TestCase
         Http::assertSent(fn ($request) => str_contains($request->url(), '/payments')
             && $request['amount'] === 500.0           // major units
             && is_string($request['tx_ref']));
+    }
+
+    public function test_returning_flutterwave_payment_confirms_subscription_and_unlocks_paid_lessons(): void
+    {
+        $this->goLive('flutterwave');
+        $this->seedRbac();
+        $this->seed(PlanSeeder::class);
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $learner = $this->parentWithChild($parent);
+        $lesson = $this->publishedLesson();
+        $lesson->courseLevel->update(['is_free' => false, 'position' => 2]);
+        $plan = Plan::where('code', 'premium_individual')->firstOrFail();
+
+        Http::fake([
+            'api.flutterwave.com/v3/payments' => Http::response(['data' => ['link' => 'https://checkout.flutterwave.com/sub']]),
+            'api.flutterwave.com/v3/transactions/verify_by_reference*' => Http::response([
+                'data' => ['id' => 987, 'status' => 'successful', 'amount' => $plan->price_minor / 100],
+            ]),
+        ]);
+
+        $this->getJson("/api/v1/lessons/{$lesson->id}/play?learner_id={$learner->id}")->assertForbidden();
+        $id = $this->postJson('/api/v1/subscriptions', ['plan_id' => $plan->id, 'method' => 'card', 'gateway' => 'flutterwave'], [
+            'Idempotency-Key' => 'flutterwave-return',
+        ])->assertCreated()->json('data.subscription_id');
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/payments')
+            && $request['redirect_url'] === config('app.url').'/billing?subscription_id='.$id);
+
+        $this->postJson("/api/v1/subscriptions/$id/confirm")->assertOk()->assertJsonPath('data.status', 'active');
+        $this->getJson("/api/v1/lessons/{$lesson->id}/play?learner_id={$learner->id}")->assertOk();
+        $this->postJson("/api/v1/subscriptions/$id/confirm")->assertOk()->assertJsonPath('data.status', 'active');
+        $this->assertDatabaseCount('subscription_payment_receipts', 1);
+    }
+
+    public function test_returning_paystack_and_monnify_payments_can_be_confirmed(): void
+    {
+        $this->seedRbac();
+        $this->seed(PlanSeeder::class);
+        $this->actingAsUser($this->userWithRole('parent'));
+        $plan = Plan::where('code', 'premium_individual')->firstOrFail();
+
+        foreach (['paystack', 'monnify'] as $provider) {
+            $this->goLive($provider);
+            if ($provider === 'paystack') {
+                Http::fake([
+                    'api.paystack.co/transaction/initialize' => Http::response(['data' => ['authorization_url' => 'https://checkout.paystack.com/sub']]),
+                    'api.paystack.co/transaction/verify/*' => Http::response([
+                        'data' => ['id' => 876, 'status' => 'success', 'amount' => $plan->price_minor],
+                    ]),
+                ]);
+            } else {
+                Http::fake([
+                    'sandbox.monnify.com/api/v1/auth/login' => Http::response(['responseBody' => ['accessToken' => 'test-token']]),
+                    'sandbox.monnify.com/api/v1/merchant/transactions/init-transaction' => Http::response([
+                        'responseBody' => ['checkoutUrl' => 'https://sandbox.sdk.monnify.com/checkout/sub'],
+                    ]),
+                    'sandbox.monnify.com/api/v2/merchant/transactions/query*' => Http::response([
+                        'responseBody' => ['transactionReference' => 'MNFY|verified', 'paymentStatus' => 'PAID', 'amountPaid' => $plan->price_minor / 100],
+                    ]),
+                ]);
+            }
+
+            $id = $this->postJson('/api/v1/subscriptions', ['plan_id' => $plan->id, 'method' => 'card', 'gateway' => $provider], [
+                'Idempotency-Key' => 'return-'.$provider,
+            ])->assertCreated()->json('data.subscription_id');
+            $this->postJson("/api/v1/subscriptions/$id/confirm")->assertOk()->assertJsonPath('data.status', 'active');
+        }
+
+        $this->assertDatabaseCount('subscription_payment_receipts', 2);
     }
 
     public function test_monnify_checkout_authenticates_then_initialises_when_live(): void
@@ -184,7 +253,8 @@ class PaymentGatewayTest extends TestCase
 
         Http::assertSent(fn ($request) => str_contains($request->url(), '/init-transaction')
             && $request['paymentReference'] === $ref
-            && $request['amount'] === round($plan->price_minor / 100, 2));
+            && $request['amount'] === round($plan->price_minor / 100, 2)
+            && $request['redirectUrl'] === config('app.url').'/billing?subscription_id='.substr($ref, 4));
     }
 
     public function test_no_live_gateway_blocks_wallet_checkout_without_http_or_pending_transaction(): void

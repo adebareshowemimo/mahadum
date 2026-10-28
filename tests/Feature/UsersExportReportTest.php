@@ -51,4 +51,58 @@ class UsersExportReportTest extends TestCase
 
         $this->get('/api/v1/admin/reports/users/export')->assertStatus(403);
     }
+
+    public function test_subscription_records_show_the_latest_subscription_per_user_and_support_filters(): void
+    {
+        $this->seedRbac();
+
+        $plan = Plan::create(['code' => 'individual', 'name' => 'Premium (Individual)', 'price_minor' => 250000, 'interval' => 'month']);
+        $ada = User::factory()->create(['first_name' => 'Ada', 'last_name' => 'Obi', 'email' => 'ada@test.local', 'phone' => '+2348030000001', 'status' => 'active']);
+        $lucy = User::factory()->create(['first_name' => 'Lucy', 'last_name' => 'Okafor', 'email' => 'lucy@test.local', 'status' => 'active']);
+        User::factory()->create(['email' => 'free@test.local']);
+
+        foreach ([
+            [$ada, 'expired', now()->subMonths(2), now()->subMonth()],
+            [$ada, 'active', now()->subDay(), now()->addMonth()],
+            [$lucy, 'pending', null, null],
+        ] as [$user, $status, $start, $expiry]) {
+            $subscription = new Subscription([
+                'plan_id' => $plan->id, 'status' => $status, 'method' => 'card',
+                'started_at' => $start, 'renews_at' => $expiry,
+            ]);
+            $subscription->subscriber()->associate($user);
+            $subscription->save();
+        }
+
+        $this->actingAsUser($this->userWithRole('super_admin'));
+
+        $this->getJson('/api/v1/admin/reports/subscriptions/records')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 2)
+            ->assertJsonPath('data.0.name', 'Lucy Okafor')
+            ->assertJsonPath('data.0.subscription_status', 'pending')
+            ->assertJsonPath('data.0.subscription_start', null)
+            ->assertJsonPath('data.0.subscription_expiry', null)
+            ->assertJsonPath('data.0.payment_status', 'pending')
+            ->assertJsonPath('data.1.name', 'Ada Obi')
+            ->assertJsonPath('data.1.phone', '+2348030000001')
+            ->assertJsonPath('data.1.subscription_plan', 'Premium (Individual)')
+            ->assertJsonPath('data.1.subscription_status', 'active')
+            ->assertJsonPath('data.1.payment_status', 'paid');
+
+        $this->getJson('/api/v1/admin/reports/subscriptions/records?q=ada@test.local&status=active')
+            ->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.name', 'Ada Obi');
+        $this->getJson('/api/v1/admin/reports/subscriptions/records?q=Ada%20Obi')
+            ->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.name', 'Ada Obi');
+        $this->getJson('/api/v1/admin/reports/subscriptions/records?status=pending')
+            ->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.name', 'Lucy Okafor');
+    }
+
+    public function test_subscription_records_require_analytics_permission(): void
+    {
+        $this->seedRbac();
+        $this->actingAsUser($this->userWithRole('parent'));
+
+        $this->getJson('/api/v1/admin/reports/subscriptions/records')->assertForbidden();
+    }
 }

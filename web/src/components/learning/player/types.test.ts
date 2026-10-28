@@ -44,6 +44,7 @@ describe('authorToSlides — preview has no resume context', () => {
   const lesson: AuthorLesson = {
     id: 1,
     title: 'L',
+    kind: 'lesson',
     position: 1,
     est_minutes: 5,
     is_locked_by_default: false,
@@ -154,6 +155,7 @@ describe('createPreviewService — local grading by type', () => {
   const lesson: AuthorLesson = {
     id: 1,
     title: 'L',
+    kind: 'lesson',
     position: 1,
     est_minutes: 5,
     is_locked_by_default: false,

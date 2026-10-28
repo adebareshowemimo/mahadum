@@ -37,8 +37,15 @@ const ClassInvitationPage = lazy(() => import('@/pages/ClassInvitationPage').the
 const TeacherProfilePage = lazy(() => import('@/pages/TeacherProfilePage').then((m) => ({ default: m.TeacherProfilePage })))
 const ComponentsPage = lazy(() => import('@/pages/ComponentsPage').then((m) => ({ default: m.ComponentsPage })))
 const CoursesPage = lazy(() => import('@/pages/content/CoursesPage').then((m) => ({ default: m.CoursesPage })))
+const ProverbsTriviaPage = lazy(() => import('@/pages/content/ProverbsTriviaPage').then((m) => ({ default: m.ProverbsTriviaPage })))
+const StoriesPage = lazy(() => import('@/pages/content/StoriesPage').then((m) => ({ default: m.StoriesPage })))
+const StoryEditorPage = lazy(() => import('@/pages/content/StoryEditorPage').then((m) => ({ default: m.StoryEditorPage })))
+const ProverbsTriviaLibraryPage = lazy(() => import('@/pages/ProverbsTriviaLibraryPage').then((m) => ({ default: m.ProverbsTriviaLibraryPage })))
+const StoryLibraryPage = lazy(() => import('@/pages/StoryLibraryPage').then((m) => ({ default: m.StoryLibraryPage })))
+const StoryReaderPage = lazy(() => import('@/pages/StoryReaderPage').then((m) => ({ default: m.StoryReaderPage })))
 const CourseBuilderPage = lazy(() => import('@/pages/content/CourseBuilderPage').then((m) => ({ default: m.CourseBuilderPage })))
 const CoursePreviewPage = lazy(() => import('@/pages/content/CoursePreviewPage').then((m) => ({ default: m.CoursePreviewPage })))
+const StoryPreviewPage = lazy(() => import('@/pages/content/StoryPreviewPage').then((m) => ({ default: m.StoryPreviewPage })))
 const LessonBuilderPage = lazy(() => import('@/pages/content/LessonBuilderPage').then((m) => ({ default: m.LessonBuilderPage })))
 const MediaPage = lazy(() => import('@/pages/content/MediaPage').then((m) => ({ default: m.MediaPage })))
 const EarningsPage = lazy(() => import('@/pages/EarningsPage').then((m) => ({ default: m.EarningsPage })))
@@ -130,6 +137,10 @@ const PAGE_TITLES: Record<string, string> = {
   '/home': 'Dashboard',
   '/learn': 'My Learning',
   '/learn/courses': 'Courses',
+  '/learn/proverbs-trivia': 'Proverbs & Trivia',
+  '/learn/stories': 'Stories & Folklore',
+  '/courses/proverbs-trivia': 'Proverbs & Trivia',
+  '/courses/stories': 'Stories & Folklore',
   '/family': 'Family',
   '/family/goals': 'Family goals',
   '/school/students': 'Students',
@@ -246,6 +257,8 @@ const REAL_PAGES = new Set([
   '/tasks',
   '/learn',
   '/learn/courses',
+  '/learn/proverbs-trivia',
+  '/learn/stories',
   '/achievements',
   '/leaderboard',
   '/referrals',
@@ -300,6 +313,8 @@ const REAL_PAGES = new Set([
   '/earnings',
   '/teacher/profile',
   '/courses',
+  '/courses/proverbs-trivia',
+  '/courses/stories',
   '/media',
 ])
 
@@ -356,16 +371,21 @@ export function App() {
       <Route element={<ProtectedRoute />}>
         {/* Chrome-free, immersive screens — rendered outside the authoring shell. */}
         <Route path="/learn/lessons/:lessonId" element={<LessonPlayerPage />} />
+        <Route path="/learn/stories/:storyId" element={<StoryReaderPage />} />
         <Route path="/tone-practice/:token" element={<TonePracticeInvitationPage />} />
         <Route path="/course-practice/:token" element={<CoursePracticeInvitationPage />} />
         <Route path="/courses/:courseId/preview" element={<CoursePreviewPage />} />
         <Route path="/courses/:courseId/levels/:levelId/preview" element={<CoursePreviewPage />} />
+        <Route path="/courses/:courseId/lessons/:lessonId/preview" element={<CoursePreviewPage />} />
+        <Route path="/courses/stories/:storyId/preview" element={<StoryPreviewPage />} />
 
         <Route element={<AppLayout />}>
           <Route element={<ShellSuspense />}>
           <Route path="/home" element={<DashboardPage />} />
           <Route path="/learn" element={<LearnPage />} />
           <Route path="/learn/courses" element={<CourseCatalogPage />} />
+          <Route path="/learn/proverbs-trivia" element={<ProverbsTriviaLibraryPage />} />
+          <Route path="/learn/stories" element={<StoryLibraryPage />} />
           <Route path="/achievements" element={<AchievementsPage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route element={<RoleRoute roles={['parent', 'supervisor', 'super_admin']} />}>
@@ -396,6 +416,9 @@ export function App() {
             <Route path="/teacher/profile" element={<TeacherProfilePage />} />
           </Route>
           <Route path="/courses" element={<CoursesPage />} />
+          <Route path="/courses/proverbs-trivia" element={<ProverbsTriviaPage />} />
+          <Route path="/courses/stories" element={<StoriesPage />} />
+          <Route path="/courses/stories/:storyId" element={<StoryEditorPage />} />
           <Route path="/courses/:courseId" element={<CourseBuilderPage />} />
           <Route path="/courses/:courseId/lessons/:lessonId" element={<LessonBuilderPage />} />
           <Route path="/media" element={<MediaPage />} />

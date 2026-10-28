@@ -31,6 +31,13 @@ import type {
   LeaderboardRow,
   LeagueStanding,
   LearnerPath,
+  LibraryLesson,
+  StoryAgeBand,
+  StoryDetail,
+  StoryFormat,
+  StoryPage,
+  StoryPurchase,
+  StorySummary,
   LearnerProfile,
   LessonAnalytics,
   LessonPlay,
@@ -61,6 +68,8 @@ import type {
   RenewalsReport,
   ReferralsReport,
   SubscriptionsReport,
+  SubscriptionRecord,
+  SubscriptionRecordsQuery,
   AdminOrgDetail,
   AdminOrgList,
   AdminOrgQuery,
@@ -420,6 +429,33 @@ export const learningApi = {
     return data
   },
 
+  async libraryLessons(query: { kind: 'proverb' | 'trivia'; learner_id?: number; language?: string; page?: number }): Promise<Paginated<LibraryLesson>> {
+    const { data } = await api.get('/library-lessons', { params: query })
+    return data
+  },
+
+  async stories(query: { learner_id: number; band?: StoryAgeBand; language?: string; page?: number }): Promise<Paginated<StorySummary>> {
+    const { data } = await api.get('/learning/stories', { params: query })
+    return data
+  },
+
+  async story(id: number, learnerId: number): Promise<StoryDetail> {
+    const { data } = await api.get(`/learning/stories/${id}`, { params: { learner_id: learnerId } })
+    return data.data
+  },
+
+  async purchaseStory(id: number, learnerId: number, provider: 'monnify' | 'paystack' | 'flutterwave'): Promise<StoryPurchase> {
+    const { data } = await api.post(`/learning/stories/${id}/purchase`, { learner_id: learnerId, provider }, {
+      headers: { 'Idempotency-Key': idempotencyKey() },
+    })
+    return data.data
+  },
+
+  async confirmStoryPurchase(id: number): Promise<StoryPurchase> {
+    const { data } = await api.post(`/learning/story-purchases/${id}/confirm`)
+    return data.data
+  },
+
   async enroll(learnerId: number, courseId: number): Promise<{ enrollment_id: number }> {
     const { data } = await api.post('/enrollments', { learner_id: learnerId, course_id: courseId })
     return data.data
@@ -561,8 +597,63 @@ export const learningApi = {
 }
 
 export const contentApi = {
+  async libraryLessons(kind: 'proverb' | 'trivia', page = 1): Promise<Paginated<LibraryLesson>> {
+    const { data } = await api.get('/library-lessons', { params: { kind, page } })
+    return data
+  },
+
+  async stories(page = 1): Promise<Paginated<StorySummary>> {
+    const { data } = await api.get('/content/stories', { params: { page } })
+    return data
+  },
+
+  async story(id: number): Promise<StoryDetail> {
+    const { data } = await api.get(`/content/stories/${id}`)
+    return data.data
+  },
+
+  async createStory(input: { course_id: number; title: string; summary?: string; age_band: StoryAgeBand; format: StoryFormat }): Promise<StoryDetail> {
+    const { data } = await api.post('/content/stories', input)
+    return data.data
+  },
+
+  async updateStory(id: number, input: Partial<{ title: string; summary: string; age_band: StoryAgeBand; format: StoryFormat }>): Promise<StoryDetail> {
+    const { data } = await api.patch(`/content/stories/${id}`, input)
+    return data.data
+  },
+
+  async setStoryPublished(id: number, publish: boolean): Promise<StoryDetail> {
+    const { data } = await api.post(`/content/stories/${id}/${publish ? 'publish' : 'unpublish'}`)
+    return data.data
+  },
+
+  async addStoryPage(id: number, input: { title?: string; body?: string }): Promise<StoryPage> {
+    const { data } = await api.post(`/content/stories/${id}/pages`, input)
+    return data.data
+  },
+
+  async updateStoryPage(id: number, pageId: number, input: { title?: string; body?: string }): Promise<StoryPage> {
+    const { data } = await api.patch(`/content/stories/${id}/pages/${pageId}`, input)
+    return data.data
+  },
+
+  async deleteStoryPage(id: number, pageId: number): Promise<void> {
+    await api.delete(`/content/stories/${id}/pages/${pageId}`)
+  },
+
+  async uploadStoryMedia(id: number, slot: 'cover' | 'preview_video' | 'full_video' | 'page_image', file: File, pageId?: number): Promise<void> {
+    const body = new FormData()
+    body.append('slot', slot)
+    if (pageId) body.append('page_id', String(pageId))
+    body.append('file', file)
+    await api.post(`/content/stories/${id}/upload`, body)
+  },
+
+  async deleteStory(id: number): Promise<void> {
+    await api.delete(`/content/stories/${id}`)
+  },
   async courses(): Promise<CourseSummary[]> {
-    const { data } = await api.get('/courses')
+    const { data } = await api.get('/courses', { params: { per_page: 100 } })
     return data.data
   },
 
@@ -829,6 +920,11 @@ export const billingApi = {
     return data.data
   },
 
+  async confirmSubscription(id: number): Promise<{ status: string }> {
+    const { data } = await api.post(`/subscriptions/${id}/confirm`)
+    return data.data
+  },
+
   // --- Telco (airtime VAS) ---
   async telcoStatus(): Promise<TelcoStatus> {
     const { data } = await api.get('/telco/status')
@@ -1079,6 +1175,11 @@ export const adminApi = {
   async subscriptionsReport(params: IncomeReportQuery = {}): Promise<SubscriptionsReport> {
     const { data } = await api.get('/admin/reports/subscriptions', { params })
     return data.data
+  },
+
+  async subscriptionRecords(params: SubscriptionRecordsQuery = {}): Promise<Paginated<SubscriptionRecord>> {
+    const { data } = await api.get('/admin/reports/subscriptions/records', { params })
+    return data
   },
 
   async referralsReport(params: IncomeReportQuery = {}): Promise<ReferralsReport> {

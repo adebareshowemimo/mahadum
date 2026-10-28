@@ -72,12 +72,12 @@ class PaymentWebhookController extends Controller
 
             return response()->json(['status' => $purchase ? 'data_bill_received' : 'unmatched']);
         }
-        $reference = $data['tx_ref'] ?? null;
+        $reference = $data['tx_ref'] ?? $data['flw_ref'] ?? null;
 
         // Anything not explicitly recognised is recorded but moves no money.
         $kind = match (true) {
+            $event === 'charge.refund' || $event === 'chargeback.lost' || ($data['status'] ?? null) === 'REFUNDED' => 'refund',
             ($data['status'] ?? null) === 'successful' => 'success',
-            $event === 'charge.refund' || ($data['status'] ?? null) === 'REFUNDED' => 'refund',
             ($data['status'] ?? null) === 'failed' => 'failed',
             default => 'ignored',
         };
