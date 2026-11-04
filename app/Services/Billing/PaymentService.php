@@ -99,7 +99,9 @@ class PaymentService
         }
 
         if ($funding = $this->findFunding($reference)) {
-            $currency = $source === 'monnify' ? ($raw['eventData']['currencyCode'] ?? null) : ($raw['data']['currency'] ?? null);
+            $currency = $source === 'monnify'
+                ? ($raw['eventData']['currencyCode'] ?? $raw['eventData']['currency'] ?? $raw['responseBody']['currencyCode'] ?? $raw['responseBody']['currency'] ?? null)
+                : ($raw['data']['currency'] ?? null);
 
             return $this->settleFunding($funding, $amountMinor, $sourceEvent, $source, $currency) ? 'funded' : 'ignored';
         }

@@ -34,7 +34,7 @@ class WalletFundingReconciler
             ? ($data['paymentReference'] ?? null)
             : ($data[$funding->gateway === 'flutterwave' ? 'tx_ref' : 'reference'] ?? null);
         $currency = $funding->gateway === 'monnify'
-            ? ($data['currencyCode'] ?? null)
+            ? ($data['currencyCode'] ?? $data['currency'] ?? null)
             : ($data['currency'] ?? null);
 
         if ($reference !== $funding->gateway_ref || $currency !== $funding->currency) {

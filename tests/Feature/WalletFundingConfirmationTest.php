@@ -104,13 +104,26 @@ class WalletFundingConfirmationTest extends TestCase
         Http::assertSent(fn ($request) => str_ends_with($request->url(), '/init-transaction')
             && $request['redirectUrl'] === "https://learn.example.test/wallet?funding_id={$id}");
         $funding = WalletFundingTransaction::findOrFail($id);
-        Http::fake(['*/api/v2/merchant/transactions/query*' => Http::response(['responseBody' => [
-            'paymentReference' => $funding->gateway_ref, 'transactionReference' => 'MNFY-100',
-            'paymentStatus' => 'PAID', 'amountPaid' => '500.00', 'currencyCode' => 'NGN',
-        ]])]);
+        Http::fake(['*/api/v2/merchant/transactions/query*' => function ($request) use ($funding) {
+            $expired = str_contains($request->url(), 'expired-monnify');
+
+            return Http::response(['responseBody' => [
+                'paymentReference' => $expired ? 'expired-monnify' : $funding->gateway_ref,
+                'transactionReference' => $expired ? null : 'MNFY-100',
+                'paymentStatus' => $expired ? 'EXPIRED' : 'PAID',
+                'amountPaid' => $expired ? '0.00' : '500.00', 'currency' => 'NGN',
+            ]]);
+        }]);
 
         $this->postJson("/api/v1/wallet/fundings/{$id}/confirm")
             ->assertOk()->assertJsonPath('data.status', 'success')->assertJsonPath('data.currency_minor', 50000);
+
+        $expired = WalletFundingTransaction::create([
+            'wallet_id' => $funding->wallet_id, 'gateway' => 'monnify', 'amount_minor' => 50000,
+            'currency' => 'NGN', 'status' => 'pending', 'gateway_ref' => 'expired-monnify',
+        ]);
+        $this->postJson("/api/v1/wallet/fundings/{$expired->id}/confirm")
+            ->assertOk()->assertJsonPath('data.status', 'failed')->assertJsonPath('data.currency_minor', 50000);
     }
 
     public function test_another_parent_cannot_confirm_someone_elses_funding(): void
