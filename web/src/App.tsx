@@ -378,6 +378,7 @@ export function App() {
         {/* Chrome-free, immersive screens — rendered outside the authoring shell. */}
         <Route path="/learn/lessons/:lessonId" element={<LessonPlayerPage />} />
         <Route path="/learn/stories/:storyId" element={<StoryReaderPage />} />
+        <Route path="/learning-goal" element={<LearningGoalPage />} />
         <Route path="/tone-practice/:token" element={<TonePracticeInvitationPage />} />
         <Route path="/course-practice/:token" element={<CoursePracticeInvitationPage />} />
         <Route path="/courses/:courseId/preview" element={<CoursePreviewPage />} />
@@ -389,7 +390,6 @@ export function App() {
           <Route element={<ShellSuspense />}>
           <Route path="/home" element={<DashboardPage />} />
           <Route path="/learn" element={<LearnPage />} />
-          <Route path="/learning-goal" element={<LearningGoalPage />} />
           <Route path="/learn/courses" element={<CourseCatalogPage />} />
           <Route path="/learn/proverbs-trivia" element={<ProverbsTriviaLibraryPage />} />
           <Route path="/learn/stories" element={<StoryLibraryPage />} />

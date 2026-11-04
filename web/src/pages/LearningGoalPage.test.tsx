@@ -32,8 +32,10 @@ describe('learning goal onboarding', () => {
       <Route path="/learn" element={<p>Learning page</p>} />
     </Routes></MemoryRouter></QueryClientProvider>)
     expect(screen.getByRole('heading', { name: 'Why are you learning?' })).toBeInTheDocument()
-    fireEvent.click(screen.getByLabelText('Travel'))
-    fireEvent.click(screen.getByRole('button', { name: 'Save goal' }))
+    expect(screen.getByRole('link', { name: 'Back to learning' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Home' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('radio', { name: /Travel/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with my goal' }))
     await waitFor(() => expect(save).toHaveBeenCalledWith(7, 'travel'))
     expect(await screen.findByText('Learning page')).toBeInTheDocument()
   })
