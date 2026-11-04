@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\MediaAsset;
+use App\Services\Content\LessonPublishService;
 use App\Services\Content\StoryPreviewInspector;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -14,6 +15,44 @@ use Tests\TestCase;
 class VideoMediaTest extends TestCase
 {
     use MakesContent, RefreshDatabase;
+
+    public function test_author_can_set_and_edit_cultural_video_rules(): void
+    {
+        $this->seedRbac();
+        $lesson = $this->publishedLesson();
+        $component = $lesson->components->firstWhere('type', 'video');
+        $this->actingAsUser($this->userWithRole('content_owner'));
+
+        $this->putJson("/api/v1/components/{$component->id}", [
+            'type' => 'video', 'settings' => ['require_watch' => true],
+            'video' => ['title' => 'Festival', 'is_cultural' => true, 'duration_seconds' => 120],
+        ])->assertOk()->assertJsonPath('data.detail.is_cultural', true)
+            ->assertJsonPath('data.detail.duration_seconds', 120);
+
+        $this->assertDatabaseHas('videos', [
+            'lesson_component_id' => $component->id, 'is_cultural' => 1, 'duration_seconds' => 120,
+        ]);
+    }
+
+    public function test_cultural_video_publish_requires_length_dual_captions_qualities_and_full_watch(): void
+    {
+        $lesson = $this->publishedLesson();
+        $component = $lesson->components->firstWhere('type', 'video');
+        $video = $component->video;
+        $video->update(['is_cultural' => true, 'duration_seconds' => 120, 'source_type' => 'upload']);
+        $failures = app(LessonPublishService::class)->failures($lesson->fresh());
+        $this->assertCount(3, $failures);
+
+        $component->update(['settings' => ['require_watch' => true]]);
+        foreach (['en', 'yo'] as $language) {
+            $video->captions()->create(['language_code' => $language, 'format' => 'vtt', 'url' => "/{$language}.vtt"]);
+        }
+        foreach (['240p', '360p', '720p'] as $quality) {
+            $video->renditions()->create(['quality' => $quality, 'protocol' => 'mp4',
+                'manifest_url' => "/{$quality}.mp4", 'ready' => true]);
+        }
+        $this->assertSame([], app(LessonPublishService::class)->failures($lesson->fresh()));
+    }
 
     public function test_caption_upload_is_visible_to_the_learner_and_rejects_non_vtt(): void
     {
@@ -63,6 +102,7 @@ class VideoMediaTest extends TestCase
 
         $this->postJson("/api/v1/content/videos/{$video->id}/transcode")
             ->assertOk()->assertJsonPath('data.status', 'ready')->assertJsonCount(3, 'data.renditions');
+        $this->assertSame(1, $video->fresh()->duration_seconds);
         foreach ([240, 360, 720] as $height) {
             $this->assertTrue(Storage::disk('public')->exists("media/renditions/{$video->id}/{$height}p.mp4"));
         }

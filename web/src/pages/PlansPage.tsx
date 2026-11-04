@@ -6,7 +6,6 @@ import { useAdminPlans, useCreatePlan, useUpdatePlan } from '@/lib/admin/queries
 
 const FLAG_LABELS: Record<string, string> = {
   ads: 'Show ads',
-  offline_download: 'Offline download',
   unlimited_hearts: 'Unlimited hearts',
   family_dashboard: 'Family dashboard',
   teacher_analytics: 'Teacher analytics',
@@ -20,7 +19,7 @@ const INTERVAL_LABELS: Record<string, string> = {
   week: 'Weekly',
 }
 
-const FLAGS = ['ads', 'offline_download', 'unlimited_hearts', 'family_dashboard', 'teacher_analytics']
+const FLAGS = ['ads', 'unlimited_hearts', 'family_dashboard', 'teacher_analytics']
 
 function Select({ label, value, options, onChange, labels }: { label: string; value: string; options: string[]; onChange: (v: string) => void; labels?: Record<string, string> }) {
   return (

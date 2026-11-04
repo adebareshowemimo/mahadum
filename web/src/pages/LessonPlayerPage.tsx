@@ -90,6 +90,7 @@ export function LessonPlayerPage() {
     <>
     {studyReward && <div className="fixed bottom-3 left-3 z-30 rounded-xl border border-border bg-surface px-3 py-2 text-xs text-foreground shadow-lg" aria-live="polite">{studyReward.status === 'paid' ? '10 study coins earned today' : studyReward.status === 'pending' ? '10 study coins waiting — ask a grown-up to add coins' : `Study reward: ${Math.floor(studyReward.progress_seconds / 60)} of 5 minutes`}</div>}
     <SlideDeck
+      isChild={activeLearner.is_child}
       title={play.lesson.title}
       subtitle={play.lesson.est_minutes ? `About ${play.lesson.est_minutes} min` : undefined}
       startIcon="📚"

@@ -8,6 +8,7 @@ import { InviteToPractice } from './InviteToPractice'
 import { mergeWatchedRanges, hasFullCoverage, type WatchedRange } from './videoCoverage'
 
 export interface SlideProps {
+  isChild?: boolean
   slide: Slide
   service: PlayerService
   isLast: boolean
@@ -763,7 +764,7 @@ function VideoSlideView({ slide, service, onAdvance }: SlideProps & { slide: Vid
 
 // ---- Speaking ----
 
-function SpeakingSlideView({ slide, service, onAdvance }: SlideProps & { slide: SpeakingSlide }) {
+function SpeakingSlideView({ slide, service, onAdvance, isChild }: SlideProps & { slide: SpeakingSlide }) {
   const [recording, setRecording] = useState(false)
   const [blob, setBlob] = useState<Blob | null>(null)
   const [busy, setBusy] = useState(false)
@@ -818,7 +819,7 @@ function SpeakingSlideView({ slide, service, onAdvance }: SlideProps & { slide: 
 
         {error && <Alert variant="info">{error}</Alert>}
 
-        {canRecord && (
+        {canRecord && !isChild && (
           <Button3D
             variant={recording ? 'danger' : 'neutral'}
             fullWidth

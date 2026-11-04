@@ -29,6 +29,7 @@ class ConfigController extends Controller
             'digital_age' => $this->settings->get('compliance.minor_age', config('compliance.minor_age')),
             'language_vote_options' => config('language-votes.languages'),
             'learning_goal_question' => $this->settings->get('learning_goal.question'),
+            'streak_shield_price_coins' => (int) $this->settings->get('streak.shield_price_coins'),
             'learning_goals' => array_map(fn ($goal) => [
                 'key' => $goal['key'], 'label' => $goal['label'], 'message' => $goal['message'],
             ], $this->learningGoals->options()),

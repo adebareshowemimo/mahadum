@@ -460,6 +460,14 @@ export const familyApi = {
 }
 
 export const learningApi = {
+  async placementQuestions(learnerId: number, languageId: number): Promise<{ available: boolean; result_level: string | null; questions: { id: number; prompt: string; prompt_audio: string | null; options: { id: number; label: string }[] }[] }> {
+    const { data } = await api.get('/assessments/questions', { params: { learner_id: learnerId, language_id: languageId } })
+    return data.data
+  },
+  async submitPlacement(learnerId: number, languageId: number, answers: { question_id: number; option_id: number }[]): Promise<{ result_level: string; score: number; starting_level_position: number }> {
+    const { data } = await api.post('/assessments', { learner_id: learnerId, language_id: languageId, answers })
+    return data.data
+  },
   async setLearningGoal(learnerId: number, learningGoal: string): Promise<{ learner_id: number; learning_goal: string }> {
     const { data } = await api.put(`/learners/${learnerId}/learning-goal`, { learning_goal: learningGoal })
     return data.data

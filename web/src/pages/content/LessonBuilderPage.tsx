@@ -499,6 +499,8 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
   const [source, setSource] = useState<'upload' | 'library' | 'youtube'>(d.source_type === 'youtube' ? 'youtube' : 'upload')
   const [title, setTitle] = useState((d.title as string) ?? '')
   const [presenter, setPresenter] = useState((d.presenter_name as string) ?? '')
+  const [isCultural, setIsCultural] = useState(Boolean(d.is_cultural))
+  const [durationSeconds, setDurationSeconds] = useState(d.duration_seconds == null ? '' : String(d.duration_seconds))
   const [quality, setQuality] = useState<'240p' | '360p' | '720p'>(((d.default_quality as string) ?? '360p') as '240p' | '360p' | '720p')
   // Default new videos to "must watch"; respect the saved value when editing.
   const [requireWatch, setRequireWatch] = useState<boolean>(
@@ -585,6 +587,8 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
       video: {
         title,
         presenter_name: presenter || undefined,
+        is_cultural: isCultural,
+        duration_seconds: durationSeconds ? Number(durationSeconds) : undefined,
         default_quality: quality,
         status: 'ready',
         source_asset_id: sourceAssetId,
@@ -748,6 +752,12 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
           </div>
         </div>}
         <Input label="Presenter (optional)" value={presenter} onChange={(e) => setPresenter(e.target.value)} />
+        <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <input type="checkbox" checked={isCultural} onChange={(event) => { setIsCultural(event.target.checked); if (event.target.checked) setRequireWatch(true) }} />
+          Cultural video (60–180 seconds, two caption languages, three processed qualities)
+        </label>
+        {isCultural && <Input label="Duration in seconds" type="number" min={60} max={180} value={durationSeconds} onChange={(event) => setDurationSeconds(event.target.value)} required />}
+        {isCultural && source === 'youtube' && <Alert variant="warning">Upload a cultural video file so full playback and video quality can be verified.</Alert>}
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-semibold text-foreground">Default quality</span>
           <select value={quality} onChange={(e) => setQuality(e.target.value as typeof quality)} className="h-11 rounded-xl border border-border-strong bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
@@ -760,6 +770,7 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
           <span className="text-sm font-semibold text-foreground">Completion rule</span>
           <select
             value={requireWatch ? 'required' : 'optional'}
+            disabled={isCultural}
             onChange={(e) => setRequireWatch(e.target.value === 'required')}
             className="h-11 rounded-xl border border-border-strong bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           >
@@ -776,7 +787,7 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
             type="submit"
             fullWidth
             loading={busy}
-            disabled={(source === 'library' && pickedAssetId == null) || (source === 'youtube' && !youtubeUrlValid)}
+            disabled={(source === 'library' && pickedAssetId == null) || (source === 'youtube' && (!youtubeUrlValid || isCultural))}
           >
             {uploading
               ? uploadPercent >= 100 ? 'Processing video…' : `Uploading ${uploadPercent}%`

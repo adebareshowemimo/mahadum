@@ -114,6 +114,7 @@ const UserDetailPage = lazy(() => import('@/pages/UserDetailPage').then((m) => (
 const LeaderboardPage = lazy(() => import('@/pages/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })))
 const LearnPage = lazy(() => import('@/pages/LearnPage').then((m) => ({ default: m.LearnPage })))
 const CourseCatalogPage = lazy(() => import('@/pages/CourseCatalogPage').then((m) => ({ default: m.CourseCatalogPage })))
+const PlacementPage = lazy(() => import('@/pages/PlacementPage').then((m) => ({ default: m.PlacementPage })))
 const LessonPlayerPage = lazy(() => import('@/pages/LessonPlayerPage').then((m) => ({ default: m.LessonPlayerPage })))
 const TonePracticeInvitationPage = lazy(() => import('@/pages/TonePracticeInvitationPage').then((m) => ({ default: m.TonePracticeInvitationPage })))
 const CoursePracticeInvitationPage = lazy(() => import('@/pages/CoursePracticeInvitationPage').then((m) => ({ default: m.CoursePracticeInvitationPage })))
@@ -264,6 +265,7 @@ const REAL_PAGES = new Set([
   '/tasks',
   '/learn',
   '/learn/courses',
+  '/learn/placement',
   '/learn/proverbs-trivia',
   '/learn/stories',
   '/achievements',
@@ -393,6 +395,7 @@ export function App() {
           <Route path="/home" element={<DashboardPage />} />
           <Route path="/learn" element={<LearnPage />} />
           <Route path="/learn/courses" element={<CourseCatalogPage />} />
+          <Route path="/learn/placement" element={<PlacementPage />} />
           <Route path="/learn/proverbs-trivia" element={<ProverbsTriviaLibraryPage />} />
           <Route path="/learn/proverbs-trivia/:setId" element={<LibrarySetDetailPage />} />
           <Route path="/learn/stories" element={<StoryLibraryPage />} />

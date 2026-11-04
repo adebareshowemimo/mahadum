@@ -26,6 +26,7 @@ class EnrollmentController extends Controller
                 'error' => ['code' => 'course_not_published', 'message' => 'This course is not available yet.', 'status' => 422],
             ], 422);
         }
+        $learner->update(['target_language_id' => $course->language_id]);
 
         $wasNew = ! Enrollment::where('learner_profile_id', $learner->id)->where('course_id', $course->id)->exists();
 

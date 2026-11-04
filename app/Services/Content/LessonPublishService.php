@@ -23,7 +23,7 @@ class LessonPublishService
      */
     public function failures(Lesson $lesson): array
     {
-        $lesson->loadMissing(['components.video', 'components.quiz.questions.options']);
+        $lesson->loadMissing(['components.video.captions', 'components.video.renditions', 'components.quiz.questions.options']);
         $components = $lesson->components;
         $failures = [];
 
@@ -44,6 +44,25 @@ class LessonPublishService
                 $failures[] = "Video component #{$component->id} has no video record.";
             } elseif ($component->video->status !== 'ready') {
                 $failures[] = "Video component #{$component->id} is not ready (status: {$component->video->status}).";
+            } elseif (data_get($component->settings, 'require_watch', false)
+                && $component->video->source_type === 'youtube') {
+                $failures[] = "Video component #{$component->id} must be uploaded to verify full playback before continuing.";
+            }
+            if ($component->video?->is_cultural) {
+                $video = $component->video;
+                if (! data_get($component->settings, 'require_watch', false)) {
+                    $failures[] = "Cultural video #{$component->id} must require full playback.";
+                }
+                if ($video->duration_seconds < 60 || $video->duration_seconds > 180) {
+                    $failures[] = "Cultural video #{$component->id} must be 60–180 seconds long.";
+                }
+                if ($video->captions->pluck('language_code')->unique()->count() < 2) {
+                    $failures[] = "Cultural video #{$component->id} needs captions in two languages.";
+                }
+                if ($video->source_type !== 'upload'
+                    || $video->renditions->where('ready', true)->pluck('quality')->intersect(['240p', '360p', '720p'])->count() < 3) {
+                    $failures[] = "Cultural video #{$component->id} needs ready 240p, 360p and 720p versions.";
+                }
             }
         }
 

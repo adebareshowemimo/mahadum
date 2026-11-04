@@ -12,6 +12,7 @@ export interface DeckStats {
 }
 
 interface SlideDeckProps {
+  isChild?: boolean
   /** Shown on the start screen (e.g. unit or lesson title). */
   title: string
   subtitle?: string
@@ -47,6 +48,7 @@ interface QuizRun {
  * look regardless of the surrounding app theme.
  */
 export function SlideDeck({
+  isChild = false,
   title,
   subtitle,
   startIcon = '🚀',
@@ -195,6 +197,7 @@ export function SlideDeck({
 
       {phase === 'play' && !practiceMode && slides[index] && (
         <SlideView
+          isChild={isChild}
           key={slides[index].id}
           slide={slides[index]}
           service={service}

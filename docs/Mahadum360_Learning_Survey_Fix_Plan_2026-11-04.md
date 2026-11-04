@@ -30,3 +30,20 @@ Scope: local code and automated tests. A code implementation is not a production
 5. **Offline and ads:** deliver B16 before re-advertising it; configure and retest N9/B47. Verify N4 on the finished player.
 
 Each item closes only after its automated test and the stated local browser/API acceptance check pass. Deployment and production acceptance follow separately.
+
+## Local implementation update
+
+The fixes below were made and tested locally after the initial review. Production has not been changed.
+
+| IDs | Local result | Remaining acceptance work |
+| --- | --- | --- |
+| B4 | Learning-goal save, persistence, suggestions, and progress copy were confirmed with a local learner profile in the browser. | Retest with a fresh registration and child profile before production acceptance. |
+| B5 | Server grades four authored questions (two audio, two text) and places Beginner or Intermediate. Course selection opens the placement page, including when a parent starts learning as themselves. If no suitable authored questions exist, the learner starts at Beginner. | The user asked to skip sourcing approved audio for now. Author and test the audio questions before claiming the assessment is available for each language. |
+| B9 | Player orders video, quiz, speaking, exercise, game, assignment. Child recording is blocked server-side; Invite someone remains available. | Full minor recording workflow awaits the data-handling decision. |
+| B10 | Creator can mark a cultural video, enter its duration, upload two caption languages, and process three qualities. Transcoding measures actual duration. Publishing requires 60–180 seconds, two caption languages, three ready qualities, and full-watch; required-watch YouTube is rejected. | Author and play an approved 60–180 second video with dual captions. |
+| B11, B21, N4, N8, F13 | Existing code and focused tests supported the prior implementation findings. | Complete the browser checks in the table above with suitable test content/accounts. |
+| B16 | Offline downloads and public plan promises stay off for launch, as requested. | No offline playback or progress sync is claimed. |
+| B18 | A 30-day badge and weekly/monthly display were added. Eligible telco grace preserves the streak. Streak Shield costs 10 coins by default, is configurable by Admin, and debits the family coin wallet atomically. | Test the Shield purchase with an adult family wallet and a telco grace case on a local account. |
+| B19, F13 | Retained the recorded four-answered-questions rule and matching Achievements copy. | A product decision is required before changing it to four wrong answers. |
+| N9, B47 | A completed rewarded ad grants one heart, with replay protection and an unavailable message. | The user asked to skip sourcing an approved ad video; inventory remains unavailable until one is provided. |
+| P14, Q4 | Added a dry-run-first, idempotent `learning:reconcile-progress` command to repair completed lessons, path progress, First Steps, missing streaks, and 30-day badges. Local dry run, apply, and second dry run were completed. | Run a dry run and review counts before any production repair. |

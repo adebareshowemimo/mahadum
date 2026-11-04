@@ -34,7 +34,11 @@ class VideoTranscoder
                     'bitrate_kbps' => null, 'ready' => true,
                 ]);
             }
-            $video->update(['status' => 'ready']);
+            $measured = app(StoryPreviewInspector::class)->durationSeconds($disk->path($source));
+            $video->update([
+                'status' => 'ready',
+                'duration_seconds' => $measured === null ? null : (int) ceil($measured),
+            ]);
         } catch (\Throwable $error) {
             $video->update(['status' => 'failed']);
             throw $error;

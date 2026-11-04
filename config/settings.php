@@ -44,6 +44,11 @@ return [
                     'help' => 'Set a positive price to let parents buy coins from their verified naira wallet balance. Zero keeps coin purchases off.',
                     'type' => 'int', 'min' => 0, 'max' => 100000, 'default' => 0,
                 ],
+                'streak.shield_price_coins' => [
+                    'label' => 'Streak Shield price (coins)',
+                    'help' => 'The price of one Streak Shield. Zero turns purchases off.',
+                    'type' => 'int', 'min' => 0, 'max' => 100000, 'default' => 10,
+                ],
             ],
         ],
         'learning_goals' => [
@@ -61,7 +66,7 @@ return [
             'settings' => [
                 'ads.managed_video_enabled' => [
                     'label' => 'Enable rewarded video',
-                    'help' => 'Eligible free learners can watch the configured video to refill all five hearts. Consent-age and staff restrictions still apply.',
+                    'help' => 'Eligible free learners can watch the configured video to earn one heart. Consent-age and staff restrictions still apply.',
                     'type' => 'bool', 'default' => false,
                 ],
                 'ads.managed_video_asset_id' => [

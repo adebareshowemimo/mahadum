@@ -38,6 +38,7 @@ class LessonComponentResource extends JsonResource
                 'title' => $this->video->title,
                 'presenter_name' => $this->video->presenter_name,
                 'duration_seconds' => $this->video->duration_seconds,
+                'is_cultural' => (bool) $this->video->is_cultural,
                 'default_quality' => $this->video->default_quality,
                 'status' => $this->video->status,
                 'source_type' => $this->video->source_type,

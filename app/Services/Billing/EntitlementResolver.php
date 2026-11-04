@@ -82,7 +82,7 @@ class EntitlementResolver
             'tier' => $plan->code,
             'tier_name' => $plan->name,
             'ads' => (bool) ($features['ads'] ?? false),
-            'offline_download' => (bool) ($features['offline_download'] ?? false),
+            'offline_download' => false,
             'unlimited_hearts' => $plan->price_minor > 0 || $plan->audience === 'school' || (bool) ($features['unlimited_hearts'] ?? false),
             'family_dashboard' => (bool) ($features['family_dashboard'] ?? false),
             'teacher_analytics' => (bool) ($features['teacher_analytics'] ?? false),

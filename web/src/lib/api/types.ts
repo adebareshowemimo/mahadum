@@ -736,6 +736,7 @@ export interface AddComponentInput {
     title: string
     presenter_name?: string
     duration_seconds?: number
+    is_cultural?: boolean
     default_quality?: '240p' | '360p' | '720p'
     status?: 'uploading' | 'processing' | 'ready' | 'failed'
     language_id?: number
@@ -2287,6 +2288,7 @@ export interface PromoCode {
 
 /** Response from GET /config — launch-time bootstrap (public). */
 export interface AppConfig {
+  streak_shield_price_coins?: number
   language_vote_options?: string[]
   learning_goals?: LearningGoal[]
   learning_goal_question?: string

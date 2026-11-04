@@ -300,6 +300,7 @@ Route::prefix('v1')->group(function () {
             ->middleware('can:content.media.upload');
 
         /* ---- Learning loop (learner / parent) ---- */
+        Route::get('assessments/questions', [AssessmentController::class, 'questions']);
         Route::post('assessments', [AssessmentController::class, 'store']);
         // Record-level policy permits a learner to enroll themselves and a
         // parent to enroll only their own child. It deliberately excludes

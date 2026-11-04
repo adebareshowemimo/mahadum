@@ -219,11 +219,11 @@ export function LandingV4Page() {
           <div className="mx-auto grid max-w-7xl gap-0 overflow-hidden px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
             <Reveal className="bg-[#0f63bc] p-8 sm:p-12">
               <p className="font-display text-3xl font-extrabold">Weak connection? The lesson keeps moving.</p>
-              <p className="mt-4 text-lg font-semibold leading-relaxed text-white/78">Lightweight activities, downloadable lessons and offline convenience respect families whose data and signal are not unlimited.</p>
+              <p className="mt-4 text-lg font-semibold leading-relaxed text-white/78">Lightweight activities and adjustable video quality respect families whose data and signal are not unlimited.</p>
             </Reveal>
             <Reveal delay={80} className="bg-white p-8 text-navy-950 sm:p-12">
               <p className="font-display text-3xl font-extrabold">Free means the whole language.</p>
-              <p className="mt-4 text-lg font-semibold leading-relaxed text-navy-700">Every learning lesson stays available on Free. Paid plans remove ads and add offline and family conveniences—not access to knowledge.</p>
+              <p className="mt-4 text-lg font-semibold leading-relaxed text-navy-700">Free learning includes published preview levels. Paid plans add ad-free learning and family features.</p>
             </Reveal>
           </div>
         </section>

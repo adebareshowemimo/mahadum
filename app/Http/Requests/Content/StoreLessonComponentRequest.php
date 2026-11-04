@@ -28,6 +28,7 @@ class StoreLessonComponentRequest extends FormRequest
             'video.title' => ['required_if:type,video', 'string', 'max:255'],
             'video.presenter_name' => ['nullable', 'string', 'max:255'],
             'video.duration_seconds' => ['nullable', 'integer', 'min:1'],
+            'video.is_cultural' => ['nullable', 'boolean'],
             'video.default_quality' => ['nullable', 'in:240p,360p,720p'],
             'video.status' => ['nullable', 'in:uploading,processing,ready,failed'],
             'video.language_id' => ['nullable', 'integer', 'exists:languages,id'],

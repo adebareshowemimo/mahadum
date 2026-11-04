@@ -126,6 +126,7 @@ class LessonComponentController extends Controller
             'title' => $v['title'],
             'presenter_name' => $v['presenter_name'] ?? null,
             'duration_seconds' => $v['duration_seconds'] ?? null,
+            'is_cultural' => (bool) ($v['is_cultural'] ?? false),
             'default_quality' => $v['default_quality'] ?? '360p',
             // Local-disk source file (uploaded via /media/upload) or a YouTube
             // link. A managed vendor would set HLS renditions instead for the
@@ -172,6 +173,7 @@ class LessonComponentController extends Controller
             'title' => $v['title'],
             'presenter_name' => $v['presenter_name'] ?? null,
             'duration_seconds' => $v['duration_seconds'] ?? null,
+            'is_cultural' => (bool) ($v['is_cultural'] ?? false),
             'default_quality' => $v['default_quality'] ?? '360p',
             'status' => $v['status'] ?? 'ready',
             'language_id' => $v['language_id'] ?? null,

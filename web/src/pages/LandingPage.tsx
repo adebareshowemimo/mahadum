@@ -615,7 +615,7 @@ const PLANS = [
     price: '₦3,000',
     cadence: 'per month',
     blurb: 'About ₦100/day on airtime.',
-    features: ['Ad-free learning', 'Offline lessons', 'Unlimited hearts', '1 learner profile'],
+    features: ['Ad-free learning', 'Unlimited hearts', 'All course levels', '1 learner profile'],
     cta: 'Choose Individual',
     variant: 'outline' as const,
   },
@@ -762,11 +762,11 @@ const FAQS = [
   },
   {
     q: 'My child was born abroad and only speaks English. Is this too late?',
-    a: 'No. The courses start from absolute zero, with a placement check so a learner begins where they actually are. Most diaspora children start at the beginning, and hearing the language at home alongside the lessons is what makes it stick.',
+    a: 'No. The courses start from absolute zero, so beginners can build confidence step by step. Hearing the language at home alongside lessons helps too.',
   },
   {
     q: 'Do I need a fast connection?',
-    a: 'No. Video starts at 360p by default and can drop to 240p on a weak link. Lesson screens are designed around a sub-three-second 3G performance budget, and Premium adds offline downloads for journeys with no signal at all.',
+    a: 'No. Uploaded videos offer lower-quality playback options for weaker connections. Choose 240p when you need to save data.',
   },
   {
     q: 'Can I pay with airtime instead of a card?',
