@@ -177,13 +177,13 @@ function AddChildModal({ open, onClose }: { open: boolean; onClose: () => void }
   const { data: config } = useConfig()
   const languages = config?.languages ?? []
 
-  const [values, setValues] = useState({ display_name: '', date_of_birth: '', target_language_id: '' })
+  const [values, setValues] = useState({ display_name: '', date_of_birth: '', target_language_id: '', learning_goal: '' })
   const [consent, setConsent] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
 
   function reset() {
-    setValues({ display_name: '', date_of_birth: '', target_language_id: '' })
+    setValues({ display_name: '', date_of_birth: '', target_language_id: '', learning_goal: '' })
     setConsent(false)
     setFieldErrors({})
     setFormError(null)
@@ -198,6 +198,7 @@ function AddChildModal({ open, onClose }: { open: boolean; onClose: () => void }
         display_name: values.display_name,
         date_of_birth: values.date_of_birth || undefined,
         target_language_id: values.target_language_id ? Number(values.target_language_id) : undefined,
+        learning_goal: values.learning_goal || undefined,
         consent,
       })
       reset()
@@ -247,6 +248,14 @@ function AddChildModal({ open, onClose }: { open: boolean; onClose: () => void }
               </option>
             ))}
           </select>
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-semibold text-foreground">Why is this child learning?</span>
+          <select value={values.learning_goal} onChange={e => setValues(v => ({ ...v, learning_goal: e.target.value }))} className="h-11 rounded-xl border border-border-strong bg-surface px-3 text-sm text-foreground">
+            <option value="">Choose later</option>
+            {(config?.learning_goals ?? []).map(goal => <option key={goal.key} value={goal.key}>{goal.label}</option>)}
+          </select>
+          {fieldErrors.learning_goal && <span className="text-xs text-danger">{fieldErrors.learning_goal}</span>}
         </label>
         <label className="flex items-start gap-2.5 text-sm text-foreground">
           <input

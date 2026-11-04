@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\SwitchProfileRequest;
 use App\Models\LearnerProfile;
+use App\Services\Learning\LearningGoals;
 use App\Support\ActiveChildProfile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,6 +12,16 @@ use Illuminate\Support\Facades\Hash;
 
 class ProfileController extends Controller
 {
+    public function learningGoal(Request $request, LearnerProfile $learner, LearningGoals $goals): JsonResponse
+    {
+        abort_if(ActiveChildProfile::id($request) !== null, 403, 'Ask a grown-up to change this learning goal.');
+        $validated = $request->validate(['learning_goal' => ['required', 'string', 'max:32']]);
+        abort_unless($goals->find($validated['learning_goal']) !== null, 422, 'Choose an available learning goal.');
+        $learner->update(['learning_goal' => $validated['learning_goal']]);
+
+        return response()->json(['data' => ['learner_id' => $learner->id, 'learning_goal' => $learner->learning_goal]]);
+    }
+
     /**
      * Switch the active child profile. The route's `can:view,learner` guard has
      * already confirmed the caller may access this learner (parent/owner/self/

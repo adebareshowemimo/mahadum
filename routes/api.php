@@ -291,6 +291,7 @@ Route::prefix('v1')->group(function () {
         Route::post('learning/story-purchases/{purchase}/confirm', [StoryPurchaseController::class, 'confirm']);
         Route::get('learners/{learner}/path', [PathController::class, 'show'])->can('view', 'learner');
         Route::get('learners/{learner}/progress', [ProgressController::class, 'show'])->can('view', 'learner');
+        Route::put('learners/{learner}/learning-goal', [ProfileController::class, 'learningGoal'])->can('update', 'learner');
         Route::get('learners/{learner}/practice-contacts', [PracticeContactController::class, 'index'])->can('view', 'learner');
         Route::post('learners/{learner}/avatar', [LearnerAvatarController::class, 'update'])->can('update', 'learner');
         Route::get('lessons/{lesson}/play', [LessonPlayController::class, 'show']);

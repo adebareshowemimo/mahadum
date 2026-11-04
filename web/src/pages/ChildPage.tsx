@@ -42,6 +42,7 @@ export function ChildPage() {
               <p className="mt-1 text-sm text-muted">
                 {learner.target_language ? `Learning ${learner.target_language.toUpperCase()}` : 'Learning language not selected'}
               </p>
+              <LinkButton to={`/learning-goal?learner=${learner.id}`} variant="ghost" size="sm">{learner.learning_goal ? 'Change learning goal' : 'Choose learning goal'}</LinkButton>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">

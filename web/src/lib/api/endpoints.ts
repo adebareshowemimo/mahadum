@@ -438,6 +438,10 @@ export const familyApi = {
 }
 
 export const learningApi = {
+  async setLearningGoal(learnerId: number, learningGoal: string): Promise<{ learner_id: number; learning_goal: string }> {
+    const { data } = await api.put(`/learners/${learnerId}/learning-goal`, { learning_goal: learningGoal })
+    return data.data
+  },
   async path(learnerId: number): Promise<LearnerPath> {
     const { data } = await api.get(`/learners/${learnerId}/path`)
     return data.data

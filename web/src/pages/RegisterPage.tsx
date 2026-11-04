@@ -52,7 +52,7 @@ function isOrganizationAccount(type: SignupAccountType | null): boolean {
 }
 
 function postSignupPath(type: SignupAccountType | null): string {
-  if (type === 'individual') return '/learn'
+  if (type === 'individual') return '/learning-goal'
   if (type === 'family' || type === 'teacher') return '/home'
   return '/school'
 }

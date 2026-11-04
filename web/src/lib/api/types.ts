@@ -50,6 +50,7 @@ export interface LearnerProfile {
   current_level: number | null
   learning_level?: LearningLevel
   target_language?: string | null
+  learning_goal?: string | null
   /** True for child profiles (no own user account). */
   is_child: boolean
   school_name?: string | null
@@ -295,6 +296,7 @@ export interface ChildCoinTransaction {
 export interface ChildDetail {
   id: number
   display_name: string
+  learning_goal?: string | null
   avatar_id: number | null
   avatar_url: string | null
   age_band: string | null
@@ -358,6 +360,7 @@ export interface AddChildInput {
   date_of_birth?: string
   age_band?: string
   target_language_id?: number
+  learning_goal?: string
   /** Verifiable parental consent — required by the API for every child. */
   consent: boolean
 }
@@ -392,6 +395,15 @@ export interface PathUnit {
 
 export interface LearnerPath {
   units: PathUnit[]
+  learning_goal?: LearningGoal | null
+  completed_lessons?: number
+  suggested_lessons?: { lesson_id: number; title: string }[]
+}
+
+export interface LearningGoal {
+  key: string
+  label: string
+  message: string
 }
 
 export interface CourseSummary {
@@ -2232,6 +2244,8 @@ export interface PromoCode {
 /** Response from GET /config — launch-time bootstrap (public). */
 export interface AppConfig {
   language_vote_options?: string[]
+  learning_goals?: LearningGoal[]
+  learning_goal_question?: string
   min_supported_version: { ios: string | null; android: string | null }
   /** Age below which a learner needs verifiable parental consent (admin-set). */
   digital_age: number

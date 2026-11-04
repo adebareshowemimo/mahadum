@@ -8,8 +8,44 @@
  *
  * Keys are grouped only for display; the key string is global and unique.
  */
+$goalDefaults = [
+    'grandparents' => ['Grandparents', 'family,greeting,elder,grandparent,conversation', 'Every lesson brings you closer to sharing a conversation with your grandparents.'],
+    'travel' => ['Travel', 'travel,journey,direction,market,transport,food', 'Every lesson helps you feel more at home on your travels.'],
+    'school' => ['School', 'school,class,study,reading,writing,number', 'Every lesson builds confidence for school.'],
+    'business' => ['Business', 'business,work,market,customer,money,meeting', 'Every lesson helps you communicate with more confidence at work.'],
+];
+$goalSettings = [];
+foreach ($goalDefaults as $key => [$label, $keywords, $message]) {
+    $goalSettings["learning_goal.$key.enabled"] = [
+        'label' => "$label: available for learners", 'help' => 'Show this goal in onboarding and profile settings.',
+        'type' => 'bool', 'default' => true,
+    ];
+    $goalSettings["learning_goal.$key.label"] = [
+        'label' => "$label: option label", 'help' => 'The wording learners see when choosing a goal.',
+        'type' => 'string', 'default' => $label,
+    ];
+    $goalSettings["learning_goal.$key.keywords"] = [
+        'label' => "$label: lesson keywords", 'help' => 'Comma-separated words used to suggest matching lessons from the learner’s path.',
+        'type' => 'string', 'default' => $keywords,
+    ];
+    $goalSettings["learning_goal.$key.message"] = [
+        'label' => "$label: progress message", 'help' => 'Shown beside the learner’s completed lesson count.',
+        'type' => 'string', 'default' => $message,
+    ];
+}
+
 return [
     'groups' => [
+        'learning_goals' => [
+            'label' => 'Learning goals',
+            'settings' => [
+                'learning_goal.question' => [
+                    'label' => 'Onboarding question', 'help' => 'Question shown after sign-up and when a learner changes their goal.',
+                    'type' => 'string', 'default' => 'Why are you learning?',
+                ],
+                ...$goalSettings,
+            ],
+        ],
         'rewarded_video' => [
             'label' => 'Rewarded video',
             'settings' => [

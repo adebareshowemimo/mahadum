@@ -52,6 +52,7 @@ const MediaPage = lazy(() => import('@/pages/content/MediaPage').then((m) => ({ 
 const EarningsPage = lazy(() => import('@/pages/EarningsPage').then((m) => ({ default: m.EarningsPage })))
 const DashboardPage = lazy(() => import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
 const FamilyPage = lazy(() => import('@/pages/FamilyPage').then((m) => ({ default: m.FamilyPage })))
+const LearningGoalPage = lazy(() => import('@/pages/LearningGoalPage').then((m) => ({ default: m.LearningGoalPage })))
 const FamilyGoalsPage = lazy(() => import('@/pages/FamilyGoalsPage').then((m) => ({ default: m.FamilyGoalsPage })))
 const SchoolStudentsPage = lazy(() => import('@/pages/SchoolDirectoriesPage').then((m) => ({ default: m.SchoolStudentsPage })))
 const SchoolTeachersPage = lazy(() => import('@/pages/SchoolDirectoriesPage').then((m) => ({ default: m.SchoolTeachersPage })))
@@ -138,6 +139,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/': 'Learn Nigerian Languages',
   '/home': 'Dashboard',
   '/learn': 'My Learning',
+  '/learning-goal': 'Learning goal',
   '/learn/courses': 'Courses',
   '/learn/proverbs-trivia': 'Proverbs & Trivia',
   '/learn/stories': 'Stories & Folklore',
@@ -387,6 +389,7 @@ export function App() {
           <Route element={<ShellSuspense />}>
           <Route path="/home" element={<DashboardPage />} />
           <Route path="/learn" element={<LearnPage />} />
+          <Route path="/learning-goal" element={<LearningGoalPage />} />
           <Route path="/learn/courses" element={<CourseCatalogPage />} />
           <Route path="/learn/proverbs-trivia" element={<ProverbsTriviaLibraryPage />} />
           <Route path="/learn/stories" element={<StoryLibraryPage />} />

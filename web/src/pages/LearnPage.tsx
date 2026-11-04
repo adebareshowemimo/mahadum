@@ -66,6 +66,15 @@ export function LearnPage() {
         <StatsBar learnerId={activeLearner.id} coinBalance={activeLearner.coin_balance} />
       </div>
 
+      {path.learning_goal ? <section className="rounded-2xl border border-border bg-surface p-5" aria-label="Learning goal progress">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div><p className="text-sm font-semibold text-primary">Learning for {path.learning_goal.label}</p><h2 className="mt-1 font-display text-xl font-bold">{path.completed_lessons ?? 0} lessons completed</h2><p className="mt-1 text-sm text-muted">{path.learning_goal.message}</p></div>
+          {!activeLearner.is_child && <LinkButton to={`/learning-goal?learner=${activeLearner.id}`} variant="ghost" size="sm">Change goal</LinkButton>}
+        </div>
+        {!!path.suggested_lessons?.length && <div className="mt-4"><p className="text-sm font-semibold">Suggested for your goal</p><ul className="mt-2 space-y-2">{path.suggested_lessons.map(lesson => <li key={lesson.lesson_id}><LinkButton to={`/learn/lessons/${lesson.lesson_id}`} variant="outline" size="sm">{lesson.title}</LinkButton></li>)}</ul></div>}
+        {!path.suggested_lessons?.length && <p className="mt-3 text-sm text-muted">We’ll suggest matching lessons as they become available in your learning path.</p>}
+      </section> : <div className="rounded-2xl border border-border bg-surface p-5"><p className="font-semibold">Make this journey yours</p><p className="mt-1 text-sm text-muted">Choose why you are learning to see relevant lessons and progress messages.</p>{activeLearner.is_child ? <p className="mt-2 text-sm">Ask a grown-up to choose your learning goal.</p> : <LinkButton to={`/learning-goal?learner=${activeLearner.id}`} variant="secondary" size="sm" className="mt-3">Choose learning goal</LinkButton>}</div>}
+
       {hasPath && (
         <div className="flex flex-col gap-10">
           {path.units.map((unit, ui) => (

@@ -36,6 +36,7 @@ class LearnerProfileResource extends JsonResource
             'current_level' => $this->current_level,
             'learning_level' => $learningLevel,
             'target_language' => $this->whenLoaded('targetLanguage', fn () => $this->targetLanguage?->code),
+            'learning_goal' => $this->learning_goal,
             'is_child' => $this->user_id === null,
             'school_name' => $schoolName,
             'pin_protected' => $this->parental_pin !== null,

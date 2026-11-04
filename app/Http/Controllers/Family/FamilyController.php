@@ -13,6 +13,7 @@ use App\Models\LearnerProfile;
 use App\Models\ParentalConsent;
 use App\Services\AuditLogger;
 use App\Services\Family\WalletService;
+use App\Services\Learning\LearningGoals;
 use App\Services\Learning\PathBuilder;
 use App\Services\Settings;
 use Illuminate\Http\JsonResponse;
@@ -67,6 +68,9 @@ class FamilyController extends Controller
 
     private function createChild(AddChildRequest $request): JsonResponse
     {
+        if ($request->filled('learning_goal')) {
+            abort_unless(app(LearningGoals::class)->find($request->input('learning_goal')) !== null, 422, 'Choose an available learning goal.');
+        }
         $family = $this->family($request->user());
         $family->newQuery()->whereKey($family->id)->lockForUpdate()->firstOrFail();
 
@@ -82,6 +86,7 @@ class FamilyController extends Controller
             'date_of_birth' => $request->input('date_of_birth'),
             'age_band' => $request->input('age_band'),
             'target_language_id' => $request->input('target_language_id'),
+            'learning_goal' => $request->input('learning_goal'),
         ]);
 
         FamilyMember::create([
@@ -128,6 +133,7 @@ class FamilyController extends Controller
         return response()->json(['data' => [
             'id' => $learner->id,
             'display_name' => $learner->display_name,
+            'learning_goal' => $learner->learning_goal,
             'avatar_id' => $learner->avatar_id,
             'avatar_url' => $this->avatarUrl($learner),
             'age_band' => $learner->age_band,
