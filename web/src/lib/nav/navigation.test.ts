@@ -37,6 +37,15 @@ describe('visibleSections', () => {
     expect(titles(['super_admin'])).toContain('Admin')
   })
 
+  it('keeps global content builders out of the school admin menu', () => {
+    const paths = visibleSections(['school_admin']).flatMap((section) => section.items.map((item) => item.to))
+    expect(paths).toContain('/school')
+    expect(paths).not.toContain('/courses')
+    expect(paths).not.toContain('/courses/stories')
+    expect(paths).not.toContain('/courses/proverbs-trivia')
+    expect(paths).not.toContain('/media')
+  })
+
   it('always includes the unlabeled Home group and System', () => {
     const t = titles(['student'])
     expect(t).toContain('(home)')

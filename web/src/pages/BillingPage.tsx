@@ -93,6 +93,10 @@ export function BillingPage() {
   async function applyPromo() {
     const code = promoInput.trim()
     if (!code) return
+    if (promo) {
+      setPromoError(`Code “${promo.code}” is already applied. Only one promo code can be used at a time.`)
+      return
+    }
     setPromoBusy(true)
     setPromoError(null)
     const paid = (personalPlans ?? []).filter((p) => p.price_minor > 0)
@@ -225,11 +229,15 @@ export function BillingPage() {
           <Input
             label="Have a promo code?"
             value={promoInput}
-            onChange={(e) => { setPromoInput(e.target.value); setPromoError(null) }}
+            onChange={(e) => {
+              setPromoInput(e.target.value)
+              setPromoError(promo && e.target.value.trim() !== promo.code
+                ? `Code “${promo.code}” is already applied. Only one promo code can be used at a time.` : null)
+            }}
             placeholder="e.g. WELCOME20"
           />
         </div>
-        <Button variant="secondary" loading={promoBusy} disabled={!promoInput.trim()} onClick={applyPromo}>
+        <Button variant="secondary" loading={promoBusy} disabled={!promoInput.trim() || !!promo} onClick={applyPromo}>
           Apply
         </Button>
         {promo && (

@@ -316,7 +316,9 @@ export interface ChildDetail {
   coin_balance: number
   currency_minor: number
   coin_transactions: ChildCoinTransaction[]
+  teachers?: { name: string; years_experience: number | null; native_language: string | null; state: string | null; dialects: string[] }[]
 }
+export interface TeacherProfileFields { years_experience: number | null; native_language: string | null; state: string | null; dialects: string[] }
 
 export type ChoreStatus = 'active' | 'pending_review' | 'approved' | 'rejected'
 
@@ -353,7 +355,7 @@ export interface ReviewQueue {
 
 export interface LearnerTasks {
   chores: { id: number; title: string; description: string | null; coin_reward: number; status: ChoreStatus; due_at: string | null; review_decision: ChoreDecision | null }[]
-  assignments: { id: number; title: string; instructions: string | null; class_name: string; coin_reward: number; status: 'submitted' | 'graded' | null; due_at: string | null; feedback: string | null; parent_review_status: string | null }[]
+  assignments: { id: number; title: string; instructions: string | null; class_name: string; coin_reward: number; status: 'submitted' | 'graded' | null; due_at: string | null; feedback: string | null; parent_review_status: string | null; linked_lesson_id?: number | null; score?: number | null }[]
 }
 
 export interface StudentAnalytics {
@@ -1182,6 +1184,10 @@ export interface SeatInfo {
   bands: SeatPricingBand[]
   allocations: SeatAllocation[]
 }
+export interface InactiveSeatReview {
+  inactive_days: number
+  learners: { learner_id: number; name: string; last_activity_at: string | null; added_at: string; classes: string[] }[]
+}
 
 export interface SchoolClassRow {
   id: number
@@ -1211,6 +1217,10 @@ export interface ClassCourseRow {
   assigned: boolean
   is_published: boolean
 }
+export interface ClassCourseOutline {
+  id: number; title: string
+  levels: { id: number; title: string; lessons: { id: number; title: string; quizzes: { id: number; title: string }[] }[] }[]
+}
 
 export interface AddClassLearnerInput {
   learner_id: number
@@ -1229,6 +1239,14 @@ export interface InviteClassLearnerResult extends InviteClassLearnerInput {
   expires_at: string
   delivery_status: 'queued' | 'not_configured'
 }
+export interface ClassLearnerInvitationRow {
+  id: number
+  name: string
+  email: string
+  sent_at: string
+  expires_at: string
+  status: 'pending' | 'expired'
+}
 export interface ClassLearnerInvitationInfo {
   name: string
   email: string
@@ -1237,6 +1255,7 @@ export interface ClassLearnerInvitationInfo {
   expires_at: string
   status: 'pending' | 'accepted' | 'expired'
   existing_user: boolean
+  existing_account_name: string | null
 }
 export interface AcceptClassLearnerInvitationResult {
   class_id: number
@@ -1345,6 +1364,16 @@ export interface ClassAssignmentRow {
   total_students: number
   submitted_count: number
   graded_count: number
+  linked_lesson_id?: number | null
+}
+export interface ClassAssignmentLessonOption { id: number; title: string; course_title: string }
+export interface ClassQuizReportRow {
+  quiz_id: number; title: string; lesson_id: number; attempts: number; average_score: number | null
+  most_missed: { question_id: number; prompt: string; wrong_count: number }[]
+}
+export interface ClassQuizAttemptDetail {
+  id: number; learner: string; quiz_title: string; score: number | null; completed_at: string | null
+  questions: { id: number; prompt: string; given_answer: string | null; is_correct: boolean | null; correct_options: string[] }[]
 }
 
 export interface ClassCompletionRow {
@@ -1378,6 +1407,7 @@ export interface ClassAssignmentDetail {
   instructions: string | null
   due_at: string | null
   coin_reward: number
+  linked_lesson_id?: number | null
   roster: ClassAssignmentRosterEntry[]
 }
 
@@ -1386,6 +1416,7 @@ export interface CreateClassAssignmentInput {
   instructions?: string
   due_at?: string
   coin_reward?: number
+  linked_lesson_id?: number
 }
 
 export interface GradeSubmissionInput {

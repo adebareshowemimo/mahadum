@@ -145,6 +145,15 @@ class FamilyController extends Controller
 
         $learner->load(['targetLanguage', 'profilePhoto']);
         $wallet = $this->wallets->walletFor($learner);
+        $teachers = $learner->organization_id === null ? collect() : $learner->classEnrollments()
+            ->currentLearners()->with('schoolClass.teacherUser.teacherProfile')->get()
+            ->pluck('schoolClass.teacherUser')->filter()->unique('id')->map(fn ($teacher) => [
+                'name' => $teacher->name,
+                'years_experience' => $teacher->teacherProfile?->years_experience,
+                'native_language' => $teacher->teacherProfile?->native_language,
+                'state' => $teacher->teacherProfile?->state,
+                'dialects' => $teacher->teacherProfile?->dialects ?: [],
+            ])->values();
 
         return response()->json(['data' => [
             'id' => $learner->id,
@@ -157,6 +166,7 @@ class FamilyController extends Controller
             'starting_level_position' => $learner->starting_level_position,
             'starting_level_options' => $this->startingLevelOptions($learner),
             'target_language' => $learner->targetLanguage?->code,
+            'teachers' => $teachers,
             'pin_protected' => $learner->parental_pin !== null,
             // This is the learner-owned wallet balance maintained atomically
             // alongside the append-only transactions returned below.

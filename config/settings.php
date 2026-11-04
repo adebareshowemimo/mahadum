@@ -190,6 +190,16 @@ return [
                 ],
             ],
         ],
+        'school_seats' => [
+            'label' => 'School seats',
+            'settings' => [
+                'school.seat_inactive_days' => [
+                    'label' => 'Seat inactivity review (days)',
+                    'help' => 'School learners with no learning activity for this many days can be reviewed for seat release.',
+                    'type' => 'int', 'min' => 7, 'max' => 365, 'default' => 30,
+                ],
+            ],
+        ],
 
         'learning_rewards' => [
             'label' => 'Learning rewards',

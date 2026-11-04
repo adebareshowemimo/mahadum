@@ -59,6 +59,7 @@ const FamilyGoalsPage = lazy(() => import('@/pages/FamilyGoalsPage').then((m) =>
 const SchoolStudentsPage = lazy(() => import('@/pages/SchoolDirectoriesPage').then((m) => ({ default: m.SchoolStudentsPage })))
 const SchoolTeachersPage = lazy(() => import('@/pages/SchoolDirectoriesPage').then((m) => ({ default: m.SchoolTeachersPage })))
 const TeacherInvitationPage = lazy(() => import('@/pages/TeacherInvitationPage').then((m) => ({ default: m.TeacherInvitationPage })))
+const SchoolJoinPage = lazy(() => import('@/pages/SchoolJoinPage').then((m) => ({ default: m.SchoolJoinPage })))
 const NotificationsPage = lazy(() => import('@/pages/NotificationsPage').then((m) => ({ default: m.NotificationsPage })))
 const ChildPage = lazy(() => import('@/pages/ChildPage').then((m) => ({ default: m.ChildPage })))
 const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })))
@@ -362,6 +363,7 @@ export function App() {
       <Route path="/accessibility" element={<AccessibilityPage />} />
       <Route path="/class-invitations/:token" element={<ClassInvitationPage />} />
       <Route path="/teacher-invitations/:token" element={<TeacherInvitationPage />} />
+      <Route path="/school-join/:token" element={<SchoolJoinPage />} />
       {/* Referral share links (mahadum360.com/r/CODE) → sign-up with the code applied. */}
       <Route path="/r/:code" element={<ReferralLanding />} />
 
@@ -430,6 +432,7 @@ export function App() {
             <Route path="/earnings" element={<EarningsPage />} />
             <Route path="/teacher/profile" element={<TeacherProfilePage />} />
           </Route>
+          <Route element={<RoleRoute roles={['super_admin', 'content_owner']} />}>
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/proverbs-trivia" element={<ProverbsTriviaPage />} />
           <Route path="/courses/proverbs-trivia/:setId" element={<LibrarySetBuilderPage />} />
@@ -440,12 +443,15 @@ export function App() {
           <Route path="/courses/:courseId" element={<CourseBuilderPage />} />
           <Route path="/courses/:courseId/lessons/:lessonId" element={<LessonBuilderPage />} />
           <Route path="/media" element={<MediaPage />} />
+          </Route>
           <Route path="/referrals" element={<ReferralsPage />} />
-          <Route path="/school" element={<SchoolDashboardPage />} />
-          <Route path="/roster" element={<RosterPage />} />
-          <Route path="/seats" element={<SeatsPage />} />
-          <Route path="/invoices" element={<InvoicesPage />} />
-          <Route path="/school/referrals" element={<SchoolReferralsPage />} />
+          <Route element={<RoleRoute roles={['school_admin', 'super_admin']} />}>
+            <Route path="/school" element={<SchoolDashboardPage />} />
+            <Route path="/roster" element={<RosterPage />} />
+            <Route path="/seats" element={<SeatsPage />} />
+            <Route path="/invoices" element={<InvoicesPage />} />
+            <Route path="/school/referrals" element={<SchoolReferralsPage />} />
+          </Route>
           {/* Language & Culture competition — browse + vote open to all; organiser
               console gated to super_admin + content_owner. */}
           <Route path="/competitions" element={<CompetitionsPage />} />

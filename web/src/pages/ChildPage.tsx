@@ -67,6 +67,8 @@ export function ChildPage() {
 
       <StartingLevelControl learnerId={learner.id} current={learner.starting_level_position ?? 0} options={learner.starting_level_options ?? []} started={completed > 0} />
 
+      {!!learner.teachers?.length && <Card><CardHeader><CardTitle>School teachers</CardTitle></CardHeader><CardBody className="space-y-2 text-sm">{learner.teachers.map((teacher) => <p key={teacher.name}><strong>{teacher.name}</strong> · {[teacher.years_experience != null ? `${teacher.years_experience} years teaching` : null, teacher.native_language, teacher.state, ...teacher.dialects].filter(Boolean).join(' · ')}</p>)}</CardBody></Card>}
+
       <Card>
         <CardHeader>
           <CardTitle>Coin activity</CardTitle>

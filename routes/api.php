@@ -108,13 +108,16 @@ use App\Http\Controllers\School\ClassAssignmentController;
 use App\Http\Controllers\School\ClassBadgeController;
 use App\Http\Controllers\School\ClassCourseController;
 use App\Http\Controllers\School\ClassLearnerInvitationController;
+use App\Http\Controllers\School\ClassQuizReportController;
 use App\Http\Controllers\School\RosterController;
 use App\Http\Controllers\School\SchoolClassController;
 use App\Http\Controllers\School\SchoolDashboardController;
 use App\Http\Controllers\School\SchoolDirectoryController;
+use App\Http\Controllers\School\SchoolJoinLinkController;
 use App\Http\Controllers\School\SchoolReferralController;
 use App\Http\Controllers\School\SeatController;
 use App\Http\Controllers\School\TeacherCompensationController;
+use App\Http\Controllers\School\TeacherProfileController;
 use App\Http\Controllers\SchoolLeadController;
 use App\Http\Controllers\Support\TicketController;
 use App\Http\Controllers\Webhooks\PaymentWebhookController;
@@ -150,6 +153,7 @@ Route::prefix('v1')->group(function () {
     Route::get('class-invitations/{token}', [ClassLearnerInvitationController::class, 'show'])
         ->middleware('throttle:60,1');
     Route::get('teacher-invitations/{token}', [SchoolDirectoryController::class, 'showInvitation'])->middleware('throttle:60,1');
+    Route::get('school-join/{token}', [SchoolJoinLinkController::class, 'preview'])->middleware('throttle:60,1');
 
     // Email verification link (clicked from the inbox; proven by the signature
     // + hash, so no bearer token is required).
@@ -454,6 +458,8 @@ Route::prefix('v1')->group(function () {
         });
 
         /* ---- School operations (org-scoped) ---- */
+        Route::get('teacher/profile', [TeacherProfileController::class, 'show']);
+        Route::put('teacher/profile', [TeacherProfileController::class, 'update']);
         Route::prefix('schools/{organization}')->group(function () {
             Route::get('dashboard', [SchoolDashboardController::class, 'show'])->middleware('can:schools.dashboard.view');
             Route::get('teachers', [SchoolClassController::class, 'teachers'])->middleware('can:schools.classes.manage');
@@ -463,7 +469,12 @@ Route::prefix('v1')->group(function () {
             Route::post('teachers/import', [SchoolDirectoryController::class, 'importTeachers'])->middleware('can:schools.classes.manage');
             Route::post('teacher-invitations/{invitation}/revoke', [SchoolDirectoryController::class, 'revoke'])->middleware('can:schools.classes.manage');
             Route::post('students/import', [RosterController::class, 'import'])->middleware('can:schools.roster.import');
+            Route::get('join-link', [SchoolJoinLinkController::class, 'show'])->middleware('can:schools.roster.import');
+            Route::post('join-link', [SchoolJoinLinkController::class, 'rotate'])->middleware('can:schools.roster.import');
+            Route::delete('join-link', [SchoolJoinLinkController::class, 'revoke'])->middleware('can:schools.roster.import');
             Route::get('seats', [SeatController::class, 'index'])->middleware('can:schools.seats.view');
+            Route::get('seats/inactive', [SeatController::class, 'inactive'])->middleware('can:schools.seats.view');
+            Route::post('seats/inactive/{learner}/release', [SeatController::class, 'release'])->middleware('can:schools.seats.purchase');
             Route::post('seats/purchase', [SeatController::class, 'purchase'])->middleware('can:schools.seats.purchase');
             Route::get('invoices', [InvoiceController::class, 'index'])->middleware('can:billing.invoices.view');
             Route::get('invoices/gateways', [InvoiceController::class, 'gateways'])->middleware('can:billing.invoices.manage');
@@ -479,6 +490,7 @@ Route::prefix('v1')->group(function () {
             });
         });
         Route::get('classes', [SchoolClassController::class, 'index'])->can('viewAny', SchoolClass::class);
+        Route::post('school-join/{token}', [SchoolJoinLinkController::class, 'join'])->middleware('throttle:20,1');
         Route::get('classes/{class}', [SchoolClassController::class, 'show'])->can('view', 'class');
         Route::get('classes/{class}/analytics', [SchoolClassController::class, 'analytics'])
             ->can('view', 'class')
@@ -490,14 +502,21 @@ Route::prefix('v1')->group(function () {
         Route::get('classes/{class}/available-learners', [SchoolClassController::class, 'availableLearners'])->can('update', 'class');
         Route::post('classes/{class}/learners', [SchoolClassController::class, 'addLearner'])->can('update', 'class');
         Route::post('classes/{class}/invitations', [ClassLearnerInvitationController::class, 'store'])->can('update', 'class');
+        Route::get('classes/{class}/invitations', [ClassLearnerInvitationController::class, 'index'])->can('view', 'class');
+        Route::post('classes/{class}/invitations/{invitation}/resend', [ClassLearnerInvitationController::class, 'resend'])->can('update', 'class');
+        Route::post('classes/{class}/invitations/{invitation}/cancel', [ClassLearnerInvitationController::class, 'cancel'])->can('update', 'class');
 
         /* ---- Teacher course assignment (own class; current + future learners) ---- */
         Route::get('classes/{class}/courses', [ClassCourseController::class, 'index'])->can('view', 'class');
+        Route::get('classes/{class}/courses/{course}/outline', [ClassCourseController::class, 'outline'])->can('view', 'class');
         Route::post('classes/{class}/courses/{course}', [ClassCourseController::class, 'store'])->can('update', 'class');
         Route::delete('classes/{class}/courses/{course}', [ClassCourseController::class, 'destroy'])->can('update', 'class');
 
         /* ---- Class assignments (teacher → own class; schools.assignments.{create,review}) ---- */
         Route::get('classes/{class}/assignments', [ClassAssignmentController::class, 'index'])->can('view', 'class');
+        Route::get('classes/{class}/quizzes', [ClassQuizReportController::class, 'index'])->can('view', 'class');
+        Route::get('classes/{class}/quiz-attempts/{attempt}', [ClassQuizReportController::class, 'show'])->can('view', 'class');
+        Route::get('classes/{class}/assignment-lessons', [ClassAssignmentController::class, 'lessons'])->can('view', 'class');
         Route::get('classes/{class}/assignments/completion', [ClassAssignmentController::class, 'completion'])->can('view', 'class');
         Route::post('classes/{class}/assignments', [ClassAssignmentController::class, 'store'])
             ->middleware('can:schools.assignments.create');

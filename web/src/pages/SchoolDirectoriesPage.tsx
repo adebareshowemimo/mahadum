@@ -6,6 +6,7 @@ import { SchoolGate } from '@/components/school/SchoolGate'
 import { TeacherCsvImport } from '@/components/school/TeacherCsvImport'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { batch4Api } from '@/lib/batch4/api'
+import { schoolApi } from '@/lib/api'
 
 export function SchoolStudentsPage() {
   return <SchoolGate>{(org) => <Students org={org} />}</SchoolGate>
@@ -32,6 +33,7 @@ function Students({ org }: { org: number }) {
       <p className="text-muted">
         Learners and their classes in your active school.
       </p>
+      <SchoolJoinLinkCard org={org} />
       <Input
         label="Search students or classes"
         value={search}
@@ -82,6 +84,23 @@ function Students({ org }: { org: number }) {
       )}
     </div>
   )
+}
+
+function SchoolJoinLinkCard({ org }: { org: number }) {
+  const cache = useQueryClient()
+  const key = ['school-join-link', org]
+  const link = useQuery({ queryKey: key, queryFn: () => schoolApi.joinLink(org) })
+  const [message, setMessage] = useState('')
+  const create = useMutation({ mutationFn: () => schoolApi.rotateJoinLink(org), onSuccess: () => { cache.invalidateQueries({ queryKey: key }); setMessage('New school join link ready. The old link no longer works.') }, onError: () => setMessage('Could not create the join link.') })
+  const revoke = useMutation({ mutationFn: () => schoolApi.revokeJoinLink(org), onSuccess: () => { cache.invalidateQueries({ queryKey: key }); setMessage('School join link disabled.') }, onError: () => setMessage('Could not disable the join link.') })
+  return <Card><CardBody className="space-y-3">
+    <h2 className="font-display text-lg font-bold">School sign-up link</h2>
+    <p className="text-sm text-muted">Share this link with learners and parents. Parents choose which child joins. A learner seat is required.</p>
+    {link.isError && <Alert variant="danger">Could not load the school join link.</Alert>}
+    {message && <Alert variant={message.startsWith('Could') ? 'danger' : 'success'}>{message}</Alert>}
+    {link.data?.active && link.data.url && <><p className="break-all text-sm font-medium">{link.data.url}</p><p className="text-xs text-muted">Expires {new Date(link.data.expires_at).toLocaleDateString()}</p><Button variant="outline" onClick={async () => { try { await navigator.clipboard.writeText(link.data!.url!); setMessage('Link copied.') } catch { setMessage('Could not copy the link. Select and copy the address above.') } }}>Copy link</Button></>}
+    <div className="flex gap-2"><Button onClick={() => create.mutate()} loading={create.isPending}>{link.data?.active ? 'Replace link' : 'Create link'}</Button>{link.data?.active && <Button variant="outline" onClick={() => revoke.mutate()} loading={revoke.isPending}>Disable link</Button>}</div>
+  </CardBody></Card>
 }
 function Teachers({ org }: { org: number }) {
   const { user } = useAuth()
@@ -183,6 +202,7 @@ function Teachers({ org }: { org: number }) {
                     <div>
                       <p className="font-semibold">{t.name}</p>
                       <p className="break-all text-sm text-muted">{t.email}</p>
+                      {t.profile && <p className="text-sm text-muted">{[t.profile.years_experience != null ? `${t.profile.years_experience} years teaching` : null, t.profile.native_language, t.profile.state, ...(t.profile.dialects ?? [])].filter(Boolean).join(' · ')}</p>}
                     </div>
                     <span className="capitalize text-muted">
                       {t.status} · account {t.account_status}

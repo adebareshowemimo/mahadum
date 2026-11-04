@@ -81,6 +81,7 @@ import type {
   AcceptClassLearnerInvitationResult,
   AvailableClassLearner,
   ClassLearnerInvitationInfo,
+  ClassLearnerInvitationRow,
   InviteClassLearnerInput,
   InviteClassLearnerResult,
   AdminAdvertPlacementList,
@@ -133,8 +134,12 @@ import type {
   BillingHealth,
   ClassAssignmentDetail,
   ClassAssignmentRow,
+  ClassAssignmentLessonOption,
+  ClassQuizReportRow,
+  ClassQuizAttemptDetail,
   ClassCompletionRow,
   ClassCourseRow,
+  ClassCourseOutline,
   CreateClassAssignmentInput,
   CreateClassInput,
   GradeSubmissionInput,
@@ -143,6 +148,7 @@ import type {
   SchoolReferralSummary,
   SchoolTeacher,
   TeacherCompensationSummary,
+  TeacherProfileFields,
   CreateCourseInput,
   CreateLessonInput,
   CreateLevelInput,
@@ -176,6 +182,7 @@ import type {
   SchoolInvoice,
   SchoolLead,
   SeatInfo,
+  InactiveSeatReview,
   Settlements,
   StreakInfo,
   SubscriptionHistoryRow,
@@ -1644,6 +1651,33 @@ export const competitionApi = {
 }
 
 export const schoolApi = {
+  async joinLink(orgId: number): Promise<{ active: boolean; expires_at: string; url: string | null } | null> {
+    const { data } = await api.get(`/schools/${orgId}/join-link`)
+    return data.data
+  },
+  async rotateJoinLink(orgId: number): Promise<{ active: boolean; expires_at: string; url: string | null }> {
+    const { data } = await api.post(`/schools/${orgId}/join-link`)
+    return data.data
+  },
+  async revokeJoinLink(orgId: number): Promise<void> {
+    await api.delete(`/schools/${orgId}/join-link`)
+  },
+  async schoolJoinPreview(token: string): Promise<{ school: string; expires_at: string }> {
+    const { data } = await api.get(`/school-join/${token}`)
+    return data.data
+  },
+  async joinSchool(token: string, learnerId?: number): Promise<{ learner_id: number; school: string }> {
+    const { data } = await api.post(`/school-join/${token}`, learnerId ? { learner_id: learnerId } : {})
+    return data.data
+  },
+  async teacherProfile(): Promise<TeacherProfileFields> {
+    const { data } = await api.get('/teacher/profile')
+    return data.data
+  },
+  async updateTeacherProfile(input: TeacherProfileFields): Promise<TeacherProfileFields> {
+    const { data } = await api.put('/teacher/profile', input)
+    return data.data
+  },
   async dashboard(orgId: number): Promise<SchoolDashboard> {
     const { data } = await api.get(`/schools/${orgId}/dashboard`)
     return data.data
@@ -1684,8 +1718,27 @@ export const schoolApi = {
     return data.data
   },
 
+  async classInvitations(classId: number): Promise<ClassLearnerInvitationRow[]> {
+    const { data } = await api.get(`/classes/${classId}/invitations`)
+    return data.data
+  },
+
+  async resendClassInvitation(classId: number, invitationId: number): Promise<ClassLearnerInvitationRow> {
+    const { data } = await api.post(`/classes/${classId}/invitations/${invitationId}/resend`)
+    return data.data
+  },
+
+  async cancelClassInvitation(classId: number, invitationId: number): Promise<void> {
+    await api.post(`/classes/${classId}/invitations/${invitationId}/cancel`)
+  },
+
   async classCourses(classId: number): Promise<ClassCourseRow[]> {
     const { data } = await api.get(`/classes/${classId}/courses`)
+    return data.data
+  },
+
+  async classCourseOutline(classId: number, courseId: number): Promise<ClassCourseOutline> {
+    const { data } = await api.get(`/classes/${classId}/courses/${courseId}/outline`)
     return data.data
   },
 
@@ -1716,6 +1769,21 @@ export const schoolApi = {
 
   async classAssignments(classId: number): Promise<ClassAssignmentRow[]> {
     const { data } = await api.get(`/classes/${classId}/assignments`)
+    return data.data
+  },
+
+  async classAssignmentLessons(classId: number): Promise<ClassAssignmentLessonOption[]> {
+    const { data } = await api.get(`/classes/${classId}/assignment-lessons`)
+    return data.data
+  },
+
+  async classQuizReport(classId: number): Promise<ClassQuizReportRow[]> {
+    const { data } = await api.get(`/classes/${classId}/quizzes`)
+    return data.data
+  },
+
+  async classQuizAttempt(classId: number, attemptId: number): Promise<ClassQuizAttemptDetail> {
+    const { data } = await api.get(`/classes/${classId}/quiz-attempts/${attemptId}`)
     return data.data
   },
 
@@ -1772,6 +1840,15 @@ export const schoolApi = {
   async seats(orgId: number): Promise<SeatInfo> {
     const { data } = await api.get(`/schools/${orgId}/seats`)
     return data.data
+  },
+
+  async inactiveSeats(orgId: number): Promise<InactiveSeatReview> {
+    const { data } = await api.get(`/schools/${orgId}/seats/inactive`)
+    return data.data
+  },
+
+  async releaseInactiveSeat(orgId: number, learnerId: number): Promise<void> {
+    await api.post(`/schools/${orgId}/seats/inactive/${learnerId}/release`)
   },
 
   async purchaseSeats(orgId: number, input: PurchaseSeatsInput, idempotencyKey: string = crypto.randomUUID()): Promise<PurchaseSeatsResult> {

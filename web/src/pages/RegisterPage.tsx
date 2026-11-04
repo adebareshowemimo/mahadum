@@ -74,6 +74,7 @@ export function RegisterPage() {
   const [searchParams] = useSearchParams()
   const invitationToken = searchParams.get('class_invitation') ?? ''
   const teacherToken = searchParams.get('teacher_invitation') ?? ''
+  const schoolJoinToken = searchParams.get('school_join') ?? ''
   const referralCode = (searchParams.get('ref') ?? '').trim().toUpperCase()
   const [preferredLanguage, setPreferredLanguage] = useState(() => {
     const language = searchParams.get('lang') ?? ''
@@ -216,7 +217,7 @@ export function RegisterPage() {
         ...(!isGuardianFlow && dob ? { date_of_birth: dob } : {}),
       }
       await register(payload)
-      navigate(teacherToken ? `/teacher-invitations/${teacherToken}` : invitationToken ? '/learn' : postSignupPath(accountType), { replace: true })
+      navigate(schoolJoinToken ? `/school-join/${schoolJoinToken}` : teacherToken ? `/teacher-invitations/${teacherToken}` : invitationToken ? '/learn' : postSignupPath(accountType), { replace: true })
     } catch (err) {
       if (err instanceof ApiError) {
         setFieldErrors(err.fieldErrors)
@@ -296,7 +297,7 @@ export function RegisterPage() {
                 This sets up the right workspace. You can invite other people after signup.
               </p>
               <div className="mt-4 flex flex-col gap-3">
-                {ACCOUNT_TYPES.map((option) => {
+                {ACCOUNT_TYPES.filter((option) => !schoolJoinToken || option.value === 'individual' || option.value === 'family').map((option) => {
                   const selected = accountType === option.value
                   return (
                     <label
@@ -612,7 +613,7 @@ export function RegisterPage() {
                   ...(isOrganizationAccount(accountType) ? { organization_name: values.organization_name.trim() } : {}),
                   ...(referralCode ? { referral_code: referralCode } : {}),
                 }}
-                onSuccess={() => navigate(teacherToken ? `/teacher-invitations/${teacherToken}` : postSignupPath(accountType), { replace: true })}
+                onSuccess={() => navigate(schoolJoinToken ? `/school-join/${schoolJoinToken}` : teacherToken ? `/teacher-invitations/${teacherToken}` : postSignupPath(accountType), { replace: true })}
                 onError={(msg) => setFormError(msg)}
               />
             )}

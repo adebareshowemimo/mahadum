@@ -18,6 +18,7 @@ class StoreClassAssignmentRequest extends FormRequest
             'instructions' => ['nullable', 'string', 'max:5000'],
             'due_at' => ['nullable', 'date'],
             'coin_reward' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'linked_lesson_id' => ['nullable', 'integer', 'exists:lessons,id'],
         ];
     }
 }

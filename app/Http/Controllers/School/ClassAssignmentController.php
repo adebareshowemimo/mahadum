@@ -9,7 +9,9 @@ use App\Http\Requests\School\StoreClassAssignmentRequest;
 use App\Http\Requests\School\StoreClassAssignmentSubmissionRequest;
 use App\Models\ClassAssignment;
 use App\Models\ClassAssignmentSubmission;
+use App\Models\CourseLevel;
 use App\Models\LearnerProfile;
+use App\Models\Lesson;
 use App\Models\MediaAsset;
 use App\Models\Organization;
 use App\Models\SchoolClass;
@@ -53,6 +55,7 @@ class ClassAssignmentController extends Controller
             ->map(fn (ClassAssignment $a) => [
                 'id' => $a->id,
                 'title' => $a->title,
+                'linked_lesson_id' => $a->linked_lesson_id,
                 'due_at' => $a->due_at,
                 'coin_reward' => $a->coin_reward,
                 'total_students' => $total,
@@ -61,6 +64,18 @@ class ClassAssignmentController extends Controller
             ]);
 
         return response()->json(['data' => $assignments->values()]);
+    }
+
+    public function lessons(SchoolClass $class): JsonResponse
+    {
+        $courseIds = $class->courseAssignments()->pluck('course_id');
+        $lessons = Lesson::whereIn('course_level_id', CourseLevel::whereIn('course_id', $courseIds)->select('id'))
+            ->whereNotNull('published_at')->whereHas('components.quiz')
+            ->with('courseLevel.course:id,title')->orderBy('id')->get()
+            ->map(fn (Lesson $lesson) => ['id' => $lesson->id, 'title' => $lesson->title,
+                'course_title' => $lesson->courseLevel?->course?->title]);
+
+        return response()->json(['data' => $lessons]);
     }
 
     /** Per-student completion across every assignment in the class (submitted / total). */
@@ -95,6 +110,13 @@ class ClassAssignmentController extends Controller
     public function store(StoreClassAssignmentRequest $request, SchoolClass $class): JsonResponse
     {
         Gate::authorize('createAssignment', $class);
+        if ($request->filled('linked_lesson_id')) {
+            $lesson = Lesson::whereKey($request->integer('linked_lesson_id'))
+                ->whereNotNull('published_at')->whereHas('components.quiz')->firstOrFail();
+            abort_unless($lesson->course_level_id && $class->courseAssignments()
+                ->where('course_id', $lesson->courseLevel->course_id)->exists(), 422,
+                'Choose a quiz lesson from a course assigned to this class.');
+        }
 
         $assignment = ClassAssignment::create([
             ...$request->validated(),
@@ -138,6 +160,7 @@ class ClassAssignmentController extends Controller
             'id' => $assignment->id,
             'title' => $assignment->title,
             'instructions' => $assignment->instructions,
+            'linked_lesson_id' => $assignment->linked_lesson_id,
             'due_at' => $assignment->due_at,
             'coin_reward' => $assignment->coin_reward,
             'can_grade' => $class->teacher_user_id === $request->user()->id && Gate::allows('gradeAssignment', $class),
@@ -152,6 +175,7 @@ class ClassAssignmentController extends Controller
      */
     public function submit(StoreClassAssignmentSubmissionRequest $request, ClassAssignment $assignment): JsonResponse
     {
+        abort_if($assignment->linked_lesson_id !== null, 422, 'Complete the linked lesson quiz instead. Your result will be recorded automatically.');
         $learner = $this->learner($request->integer('learner_id'));
         Gate::authorize('redeemReward', $learner);
         $enrolled = $assignment->schoolClass->currentEnrollments()->where('learner_profile_id', $learner->id)->exists();
