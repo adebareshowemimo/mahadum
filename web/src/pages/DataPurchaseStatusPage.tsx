@@ -53,10 +53,10 @@ export function DataPurchaseStatusPage() {
       {order?.bill_tx_ref && <p className="break-all text-xs text-muted">Data delivery reference: {order.bill_tx_ref}</p>}
       <div className="flex flex-wrap gap-3">
         {validReference && <Button variant="outline" loading={purchase.isFetching} onClick={() => void purchase.refetch()}>Check status</Button>}
-        <LinkButton to="/billing/data" onClick={startAnother}>Buy another bundle</LinkButton>
+        <LinkButton to="/billing/data" onClick={startAnother}>View data purchases</LinkButton>
         <LinkButton to="/support" variant="ghost">Get help</LinkButton>
       </div>
-      <p className="text-xs leading-5 text-muted">A new bundle is a separate purchase. Your existing order remains in Recent purchases.</p>
+      <p className="text-xs leading-5 text-muted">Your existing order remains in Recent purchases. If delivery is not confirmed, contact support with this reference.</p>
     </section>
   </div>
 }

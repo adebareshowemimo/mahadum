@@ -14,10 +14,14 @@ class LessonResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'is_free' => (bool) $this->courseLevel->is_free,
-            'is_free_preview' => (bool) $this->courseLevel->is_free,
+            'is_free' => $this->course_level_id === null || (bool) $this->courseLevel->is_free,
+            'is_free_preview' => $this->course_level_id === null || (bool) $this->courseLevel->is_free,
+            'language_id' => $this->language_id,
+            'standalone_level' => $this->standalone_level,
             'id' => $this->id,
+            'course_level_id' => $this->course_level_id,
             'title' => $this->title,
+            'summary' => $this->summary,
             'kind' => $this->kind,
             'position' => $this->position,
             'est_minutes' => $this->est_minutes,

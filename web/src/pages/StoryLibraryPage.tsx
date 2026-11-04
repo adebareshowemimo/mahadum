@@ -47,7 +47,7 @@ export function StoryLibraryPage() {
         <p className="text-xs font-bold uppercase tracking-[.2em] text-primary">Featured story · {featured.language.toUpperCase()}</p>
         <h2 className="mt-3 font-display text-2xl font-bold sm:text-3xl">{featured.title}</h2>
         {featured.summary && <p className="mt-3 max-w-xl text-muted">{featured.summary}</p>}
-        <p className="mt-4 text-sm text-muted">{storyLength(featured)} · {featured.course_title}</p>
+        <p className="mt-4 text-sm text-muted">{storyLength(featured)} · Level {featured.level}</p>
         <div className="mt-6"><Button onClick={() => openStory(featured)}>{featured.purchased ? 'Read or watch story' : 'Try free preview'} →</Button></div>
       </div>
     </section>}
@@ -59,7 +59,7 @@ export function StoryLibraryPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {groupStories.map((story) => <article key={story.id} className="flex flex-col rounded-2xl border border-border bg-surface p-3">
             <StoryCover story={story} className="aspect-[3/4] w-full" />
-            <div className="flex flex-1 flex-col px-1 pb-1"><p className="mt-3 text-xs font-bold uppercase tracking-wide text-primary">{story.language.toUpperCase()} · {story.format}</p>
+            <div className="flex flex-1 flex-col px-1 pb-1"><p className="mt-3 text-xs font-bold uppercase tracking-wide text-primary">{story.language.toUpperCase()} · Level {story.level} · {story.format}</p>
               <h3 className="mt-1 line-clamp-2 font-display text-lg font-bold">{story.title}</h3>
               <p className="mt-1 text-sm text-muted">{storyLength(story)}</p>
               <Button className="mt-4 w-full" size="sm" variant="secondary" onClick={() => openStory(story)}>{story.purchased ? 'Read or watch' : 'Free preview'}</Button>

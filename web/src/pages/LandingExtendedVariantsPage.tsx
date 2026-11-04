@@ -247,7 +247,7 @@ const ECOSYSTEM_VIEWS = [
     label: 'Learner',
     heading: 'A playful path from free Level 0 to deeper learning.',
     body: 'Five-minute listening, speaking, quiz and culture activities build toward confident use.',
-    features: ['Start free with Level 0', 'XP, badges and leagues', 'Out of data? Buy data on Mahadum360.'],
+    features: ['Start free with Level 0', 'XP, badges and leagues', 'Short lessons that fit your day.'],
   },
   {
     id: 'family',
@@ -430,7 +430,7 @@ export function LandingV5Page() {
               {[
                 ['Free learning', 'Level 0 is available without payment; paid plans unlock further learning.'],
                 ['Child-safe identity', 'Under-18 learners use profiles while adults manage consent and sensitive actions.'],
-                ['Reliable connection', 'Low data won’t keep you from learning, buy data directly from the website and continue learning.'],
+                ['Learn at your pace', 'Short lessons make it easier to keep your language practice going when you have time to connect.'],
                 ['Real school operations', 'Seats, rosters, classes, invoices, assignments and reporting are part of the platform.'],
               ].map(([title, body], index) => (
                 <Reveal key={title} className="grid gap-3 py-6 sm:grid-cols-[3rem_0.35fr_0.65fr] sm:items-start" delay={index * 55}>

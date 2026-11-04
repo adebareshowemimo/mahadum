@@ -34,7 +34,7 @@ use Illuminate\Support\Facades\Notification;
  */
 class PaymentService
 {
-    public function __construct(private WalletService $wallets, private ReferralService $referrals, private AuditLogger $audit, private StoryPaymentService $stories) {}
+    public function __construct(private WalletService $wallets, private ReferralService $referrals, private AuditLogger $audit, private StoryPaymentService $stories, private SubscriptionEligibility $eligibility) {}
 
     /**
      * @return string outcome: duplicate|ignored|funded|subscription_active|unmatched
@@ -115,14 +115,17 @@ class PaymentService
                 && $amountMinor !== $subscription->initial_charge_minor) {
                 return 'ignored';
             }
-            $this->activateSubscription($subscription, $amountMinor, $sourceEvent);
+            if ($subscription->status === 'active' && $amountMinor !== (int) $subscription->plan->price_minor) {
+                return 'ignored';
+            }
 
-            return 'subscription_active';
+            return $this->activateSubscription($subscription, $amountMinor, $sourceEvent) ? 'subscription_active' : 'subscription_needs_review';
         }
 
         if ($invoice = $this->findInvoice($reference)) {
             if (($invoice->payment_gateway && $invoice->payment_gateway !== $source)
-                || $amountMinor !== (int) $invoice->amount_minor) {
+                || $amountMinor !== (int) $invoice->amount_minor
+                || ! in_array($invoice->status, ['unpaid', 'paid'], true)) {
                 return 'ignored';
             }
             $this->settleInvoice($invoice);
@@ -344,12 +347,24 @@ class PaymentService
         $this->audit->record('subscription.promo_activated', $subscription, ['status' => 'pending'], ['status' => 'active', 'charged_minor' => 0]);
     }
 
-    private function activateSubscription(Subscription $subscription, ?int $amountMinor = null, string $sourceEvent = ''): void
+    private function activateSubscription(Subscription $subscription, ?int $amountMinor = null, string $sourceEvent = ''): bool
     {
         $this->recordSubscriptionReceipt($subscription, $sourceEvent, 'payment', $amountMinor);
+        $subscriber = $subscription->subscriber;
+        if ($subscriber instanceof User && ($problem = $this->eligibility->problem($subscriber, $subscription->plan))) {
+            $subscription->update(['status' => 'needs_review']);
+            $this->audit->record('subscription.payment_needs_review', $subscription, [], ['reason' => $problem, 'amount_minor' => $amountMinor]);
+
+            return false;
+        }
         $firstActivation = $subscription->status !== 'active';
 
         if ($firstActivation) {
+            Subscription::query()->where('subscriber_type', $subscription->subscriber_type)
+                ->where('subscriber_id', $subscription->subscriber_id)
+                ->where('id', '!=', $subscription->id)
+                ->whereIn('status', ['active', 'grace'])
+                ->update(['status' => 'cancelled', 'cancelled_at' => now()]);
             $subscription->update([
                 'status' => 'active',
                 'started_at' => now(),
@@ -357,9 +372,8 @@ class PaymentService
             ]);
         }
 
-        $subscriber = $subscription->subscriber;
         if (! $subscriber instanceof User) {
-            return;
+            return true;
         }
 
         // Verified-payment gate (FR-7.2): re-check activation for any pending
@@ -380,6 +394,8 @@ class PaymentService
         if ($firstActivation) {
             $subscriber->notify(new SubscriptionActivated($subscription)); // receipt
         }
+
+        return true;
     }
 
     private function reverseInvoice(Invoice $invoice): void
@@ -403,6 +419,9 @@ class PaymentService
     private function settleInvoice(Invoice $invoice): void
     {
         if ($invoice->status === 'paid') {
+            return;
+        }
+        if ($invoice->status !== 'unpaid') {
             return;
         }
 

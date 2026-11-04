@@ -161,6 +161,14 @@ export function useFundWallet() {
   })
 }
 
+export function useConfirmWalletFunding() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: familyApi.confirmWalletFunding,
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: familyKeys.wallet }) },
+  })
+}
+
 export function useCreateChore() {
   const qc = useQueryClient()
   return useMutation({

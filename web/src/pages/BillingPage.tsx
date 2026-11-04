@@ -26,7 +26,6 @@ import {
   useChangeSubscription,
   useCreateSubscription,
   usePlans,
-  useRetrySubscription,
   useSubscriptionGateways,
   useSubscriptions,
   useTelcoStatus,
@@ -64,13 +63,11 @@ export function BillingPage() {
   const createSub = useCreateSubscription()
   const cancelSub = useCancelSubscription()
   const changeSub = useChangeSubscription()
-  const retrySub = useRetrySubscription()
 
   const telco = useTelcoStatus(hasRole('parent', 'super_admin'))
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busyPlan, setBusyPlan] = useState<number | null>(null)
-  const [retryingId, setRetryingId] = useState<number | null>(null)
   const [telcoPlan, setTelcoPlan] = useState<Plan | null>(null)
   const [promoInput, setPromoInput] = useState(() => new URLSearchParams(window.location.search).get('promo') ?? '')
   const [promo, setPromo] = useState<{ code: string; byPlan: Record<number, PromoPreview> } | null>(null)
@@ -80,8 +77,7 @@ export function BillingPage() {
 
   useEffect(() => {
     const returnedId = Number(new URLSearchParams(window.location.search).get('subscription_id'))
-    const pendingIds = history.data?.filter((item) => item.status === 'pending' && item.method === 'card').map((item) => item.id) ?? []
-    const ids = [...new Set([...pendingIds, returnedId])].filter((id) => Number.isSafeInteger(id) && id > 0)
+    const ids = [returnedId].filter((id) => Number.isSafeInteger(id) && id > 0)
     for (const id of ids) {
       if (checkedPayments.current.has(id)) continue
       checkedPayments.current.add(id)
@@ -104,7 +100,7 @@ export function BillingPage() {
       url.searchParams.delete('subscription_id')
       window.history.replaceState(null, '', url.pathname + url.search + url.hash)
     }
-  }, [history.data, queryClient])
+  }, [queryClient])
 
   const sub = user?.subscription ?? null
   const telcoState = telco.data?.state
@@ -200,36 +196,13 @@ export function BillingPage() {
     }
   }
 
-  /**
-   * Resume a still-pending card subscription. The server checks the gateway
-   * directly first — covers a completed payment whose webhook hasn't arrived
-   * (e.g. it can't reach this environment) — and activates right away, or
-   * opens a fresh checkout so the subscriber can pay again.
-   */
-  async function retryPayment(subscriptionId: number) {
-    setRetryingId(subscriptionId)
-    setError(null)
-    setNotice(null)
-    try {
-      const res = await retrySub.mutateAsync(subscriptionId)
-      if (res.checkout_url) {
-        window.location.href = res.checkout_url
-      } else if (res.status === 'active') {
-        setNotice('Payment confirmed — your plan is now active.')
-      } else {
-        setNotice('Still waiting on payment confirmation. Please try again shortly.')
-      }
-    } catch (err) {
-      setError(friendlyBillingError(err, 'Could not retry the payment.'))
-      if (err instanceof ApiError && err.status === 404) void queryClient.invalidateQueries({ queryKey: ['me'] })
-    } finally {
-      setRetryingId(null)
-    }
-  }
-
   // Personal plans only (school tiers are sold per-seat in the school console).
+  const learnerCount = (user?.learner_profiles.length ?? 0)
+    + (user?.families.reduce((count, family) => count + (family.learners?.length ?? 0), 0) ?? 0)
   const personalPlans = (plans.data ?? []).filter(
-    (p) => p.audience !== 'school' && p.audience !== 'teacher' && !p.code.startsWith('school'),
+    (p) => p.audience !== 'school' && p.audience !== 'teacher' && !p.code.startsWith('school')
+      && (p.audience !== 'family' || user?.user.account_type === 'family')
+      && (p.max_profiles == null || learnerCount <= p.max_profiles || p.code === entitlements.tier),
   )
 
   /** Months saved vs. the equivalent monthly plan, for an annual plan's "N months free" badge. */
@@ -385,7 +358,7 @@ export function BillingPage() {
         </div>
       )}
 
-      <Card>
+      {config.data?.feature_flags.data_bundle_purchases === true && <Card>
         <CardBody className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="font-display text-lg font-bold text-foreground">Mobile data</p>
@@ -395,7 +368,7 @@ export function BillingPage() {
             Buy data
           </LinkButton>
         </CardBody>
-      </Card>
+      </Card>}
 
       {isPremiumPlan && hasRole('parent') && family.data && (
         <Card>
@@ -447,16 +420,6 @@ export function BillingPage() {
                     <Badge variant={s.status === 'active' ? 'success' : s.status === 'cancelled' ? 'neutral' : 'gold'}>
                       {s.status}
                     </Badge>
-                    {s.status === 'pending' && s.method === 'card' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        loading={retryingId === s.id}
-                        onClick={() => retryPayment(s.id)}
-                      >
-                        Retry payment
-                      </Button>
-                    )}
                   </div>
                 </CardBody>
               </Card>

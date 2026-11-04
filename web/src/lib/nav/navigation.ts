@@ -48,7 +48,6 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Reviews', to: '/reviews', icon: 'clipboard', roles: ['parent', 'supervisor'] },
       { label: 'Referrals', to: '/referrals', icon: 'gift', roles: ['parent', 'teacher'] },
       { label: 'Billing', to: '/billing', icon: 'card', roles: ['parent'], end: true },
-      { label: 'Buy data', to: '/billing/data', icon: 'signal', roles: ['parent', 'super_admin'] },
     ],
   },
   {
@@ -139,7 +138,15 @@ function itemVisible(item: NavItem, roles: Role[], capabilities: string[]): bool
 }
 
 /** Sections (with their items pre-filtered) the given roles are allowed to see. */
-export function visibleSections(roles: Role[], capabilities: string[] = []): NavSection[] {
+export function visibleSections(roles: Role[], capabilities: string[] = [], child = false): NavSection[] {
+  if (child) return [{ title: 'Learn', items: [
+    { label: 'Learn', to: '/learn', icon: 'book' },
+    { label: 'My tasks', to: '/tasks', icon: 'clipboard' },
+    { label: 'Courses', to: '/learn/courses', icon: 'layers' },
+    { label: 'Achievements', to: '/achievements', icon: 'sparkles' },
+    { label: 'Leaderboard', to: '/leaderboard', icon: 'trophy' },
+    { label: 'Competition', to: '/competitions', icon: 'trophy' },
+  ] }]
   return NAV_SECTIONS.map((section) => ({
     ...section,
     items: section.items.filter((item) => itemVisible(item, roles, capabilities)),

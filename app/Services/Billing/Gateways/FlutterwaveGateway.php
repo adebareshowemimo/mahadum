@@ -22,16 +22,19 @@ class FlutterwaveGateway implements PaymentGateway
             'currency' => 'NGN',
             'redirect_url' => ($metadata['purpose'] ?? null) === 'data_bundle'
                 ? rtrim((string) config('app.url'), '/').'/billing/data/status'
+                : (($metadata['purpose'] ?? null) === 'wallet_funding'
+                    ? rtrim((string) config('app.frontend_url'), '/').'/wallet?funding_id='.rawurlencode((string) $metadata['funding_id'])
                 : (($metadata['purpose'] ?? null) === 'story'
                     ? rtrim((string) config('app.frontend_url'), '/').'/learn/stories/'.$metadata['story_id'].'?purchase_id='.$metadata['purchase_id']
                     : (($metadata['purpose'] ?? null) === 'subscription'
                     ? rtrim((string) config('app.url'), '/').'/billing?subscription_id='.rawurlencode((string) $metadata['subscription_id'])
-                    : (string) config('app.url'))),
+                    : (string) config('app.url')))),
             'customer' => ['email' => $email],
             'meta' => $metadata,
         ];
         $response = Http::withToken($this->secret)
             ->acceptJson()
+            ->connectTimeout(5)->timeout(15)
             ->post(rtrim($this->baseUrl, '/').'/payments', $payload)
             ->throw()
             ->json();
@@ -47,6 +50,7 @@ class FlutterwaveGateway implements PaymentGateway
     {
         $response = Http::withToken($this->secret)
             ->acceptJson()
+            ->connectTimeout(5)->timeout(15)
             ->get(rtrim($this->baseUrl, '/').'/transactions/verify_by_reference', ['tx_ref' => $reference]);
 
         // A reference the gateway has never seen a checkout for (e.g. one only

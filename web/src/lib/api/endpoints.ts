@@ -355,6 +355,17 @@ export const familyApi = {
     return data.data
   },
 
+  async confirmWalletFunding(fundingId: number): Promise<{
+    funding_id: number
+    gateway_ref: string
+    status: string
+    message: string
+    currency_minor: number
+  }> {
+    const { data } = await api.post(`/wallet/fundings/${fundingId}/confirm`)
+    return data.data
+  },
+
   async transfer(input: { to_learner_id: number; coins: number }): Promise<{
     family_balance: number
     learner_balance: number
@@ -441,6 +452,11 @@ export const learningApi = {
 
   async story(id: number, learnerId: number): Promise<StoryDetail> {
     const { data } = await api.get(`/learning/stories/${id}`, { params: { learner_id: learnerId } })
+    return data.data
+  },
+
+  async answerStoryQuestion(id: number, learnerId: number, questionId: number, optionIndex: number): Promise<{ correct: boolean; correct_index: number; explanation: string | null }> {
+    const { data } = await api.post(`/learning/stories/${id}/answer`, { learner_id: learnerId, question_id: questionId, option_index: optionIndex })
     return data.data
   },
 
@@ -597,6 +613,10 @@ export const learningApi = {
 }
 
 export const contentApi = {
+  async createLibrarySet(input: { title: string; kind: 'proverb' | 'trivia'; language_id: number; standalone_level: number; summary?: string }): Promise<AuthorLesson> {
+    const { data } = await api.post('/library-lessons', input)
+    return data.data
+  },
   async libraryLessons(kind: 'proverb' | 'trivia', page = 1): Promise<Paginated<LibraryLesson>> {
     const { data } = await api.get('/library-lessons', { params: { kind, page } })
     return data
@@ -612,12 +632,12 @@ export const contentApi = {
     return data.data
   },
 
-  async createStory(input: { course_id: number; title: string; summary?: string; age_band: StoryAgeBand; format: StoryFormat }): Promise<StoryDetail> {
+  async createStory(input: { language_id: number; standalone_level: number; title: string; summary?: string; age_band: StoryAgeBand; format: StoryFormat }): Promise<StoryDetail> {
     const { data } = await api.post('/content/stories', input)
     return data.data
   },
 
-  async updateStory(id: number, input: Partial<{ title: string; summary: string; age_band: StoryAgeBand; format: StoryFormat }>): Promise<StoryDetail> {
+  async updateStory(id: number, input: Partial<{ title: string; summary: string; language_id: number; standalone_level: number; age_band: StoryAgeBand; format: StoryFormat }>): Promise<StoryDetail> {
     const { data } = await api.patch(`/content/stories/${id}`, input)
     return data.data
   },
@@ -639,6 +659,14 @@ export const contentApi = {
 
   async deleteStoryPage(id: number, pageId: number): Promise<void> {
     await api.delete(`/content/stories/${id}/pages/${pageId}`)
+  },
+
+  async addStoryQuestion(id: number, input: { prompt: string; options: string[]; correct_index: number; explanation?: string }): Promise<void> {
+    await api.post(`/content/stories/${id}/questions`, input)
+  },
+
+  async deleteStoryQuestion(id: number, questionId: number): Promise<void> {
+    await api.delete(`/content/stories/${id}/questions/${questionId}`)
   },
 
   async uploadStoryMedia(id: number, slot: 'cover' | 'preview_video' | 'full_video' | 'page_image', file: File, pageId?: number): Promise<void> {
@@ -1807,6 +1835,9 @@ export const gamificationApi = {
 }
 
 export const profileApi = {
+  async exit(pin: string): Promise<void> {
+    await api.post('/profiles/exit', { pin })
+  },
   /** Create or return the signed-in parent's/student's own adult learner identity. */
   async ensureSelfLearner(): Promise<LearnerProfile> {
     const { data } = await api.post('/me/learner-profile')

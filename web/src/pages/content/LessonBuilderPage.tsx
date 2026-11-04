@@ -1,5 +1,5 @@
 import { useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   DndContext,
   KeyboardSensor,
@@ -79,20 +79,25 @@ export function LessonBuilderPage() {
 
 function LessonEditor() {
   const { courseId, lessonId } = useParams()
+  const [searchParams] = useSearchParams()
+  const standalone = !courseId
   const id = Number(lessonId)
   const lesson = useLessonDetail(id)
+  const config = useConfig()
   const publish = usePublishLesson(id)
   const reorderComponents = useReorderComponents(id)
   const canManage = useCanManageContent()
   const [modal, setModal] = useState<{ type: 'video' | 'quiz' | 'exercise' | 'game'; component?: AuthorComponent } | null>(null)
   const [deleting, setDeleting] = useState<AuthorComponent | null>(null)
-  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(searchParams.has('preview'))
   const [insightsOpen, setInsightsOpen] = useState(false)
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
   const [publishErrors, setPublishErrors] = useState<string[] | null>(null)
+  const [metadataError, setMetadataError] = useState<string | null>(null)
+  const [savingMetadata, setSavingMetadata] = useState(false)
 
   async function onPublish() {
     setPublishErrors(null)
@@ -129,11 +134,20 @@ function LessonEditor() {
 
   const components = lesson.data.components ?? []
 
+  if (standalone && !canManage) return <div className="flex flex-col gap-5">
+    <Link to="/courses/proverbs-trivia" className="text-sm font-semibold text-primary">← Proverbs & Trivia</Link>
+    <h1 className="font-display text-2xl font-bold">{lesson.data.title}</h1>
+    {lesson.data.summary && <p className="whitespace-pre-wrap rounded-xl border border-border p-5">{lesson.data.summary}</p>}
+    <Alert variant="info">This is a read-only catalogue view. Content owners edit and publish sets.</Alert>
+    <Button variant="secondary" onClick={() => setPreviewOpen(true)}>Play preview</Button>
+    <LessonPreviewModal lesson={lesson.data} open={previewOpen} onClose={() => setPreviewOpen(false)} />
+  </div>
+
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Link to={`/courses/${courseId}`} className="text-sm font-medium text-primary hover:underline">
-          ← Course
+        <Link to={standalone ? '/courses/proverbs-trivia' : `/courses/${courseId}`} className="text-sm font-medium text-primary hover:underline">
+          ← {standalone ? 'Proverbs & Trivia' : 'Course'}
         </Link>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <h1 className="font-display text-2xl font-bold text-foreground">{lesson.data.title}</h1>
@@ -141,7 +155,7 @@ function LessonEditor() {
             <Badge variant={lesson.data.is_published ? 'success' : 'neutral'}>
               {lesson.data.is_published ? 'Published' : 'Draft'}
             </Badge>
-            <Button variant="secondary" onClick={() => window.open(`/courses/${courseId}/lessons/${id}/preview`, '_blank', 'noopener')}>
+            <Button variant="secondary" onClick={() => standalone ? setPreviewOpen(true) : window.open(`/courses/${courseId}/lessons/${id}/preview`, '_blank', 'noopener')}>
               Play preview
             </Button>
             <Button variant="secondary" onClick={() => setPreviewOpen(true)}>
@@ -161,12 +175,33 @@ function LessonEditor() {
         </div>
       </div>
 
-      <CourseContents courseId={Number(courseId)} currentLessonId={id} />
+      {!standalone && <CourseContents courseId={Number(courseId)} currentLessonId={id} />}
 
-      <div className="rounded-xl border border-border p-4 text-sm">
+      {!standalone && <div className="rounded-xl border border-border p-4 text-sm">
         <Badge variant={lesson.data.is_free ? 'success' : 'neutral'}>{lesson.data.is_free ? 'Free access' : 'Paid access'}</Badge>
         <p className="mt-2 text-muted">Access is set for the whole level. <Link to={`/courses/${courseId}#course-structure`} className="font-semibold text-primary underline">Edit the level’s access</Link></p>
-      </div>
+      </div>}
+      {standalone && <form className="flex flex-wrap items-end gap-3 rounded-xl border border-border p-4 text-sm" onSubmit={async (event) => {
+        event.preventDefault()
+
+        const values = new FormData(event.currentTarget)
+        setSavingMetadata(true); setMetadataError(null)
+        try {
+          await contentApi.updateLesson(id, {
+            language_id: Number(values.get('language_id')),
+            standalone_level: Number(values.get('standalone_level')),
+            summary: String(values.get('summary') ?? '').trim(),
+          })
+          await lesson.refetch()
+        } catch (err) { setMetadataError(err instanceof ApiError ? err.message : 'Could not save language and level.') }
+        finally { setSavingMetadata(false) }
+      }}>
+        <label className="flex flex-col gap-1 font-semibold">Language<select name="language_id" defaultValue={lesson.data.language_id ?? ''} className="h-10 rounded-xl border border-border bg-surface px-3" required>{config.data?.languages.map((language) => <option key={language.id} value={language.id}>{language.name}</option>)}</select></label>
+        <label className="flex flex-col gap-1 font-semibold">Level<select name="standalone_level" defaultValue={lesson.data.standalone_level ?? 1} className="h-10 rounded-xl border border-border bg-surface px-3" required>{Array.from({ length: 10 }, (_, index) => <option key={index + 1} value={index + 1}>Level {index + 1}</option>)}</select></label>
+        <label className="flex w-full flex-col gap-1 font-semibold">Text content (optional)<textarea name="summary" defaultValue={lesson.data.summary ?? ''} maxLength={1000} className="min-h-24 rounded-xl border border-border bg-surface p-3 font-normal" placeholder="Write what learners will read before the video or quiz." /></label>
+        <Button type="submit" size="sm" loading={savingMetadata}>Save details</Button>
+        {metadataError && <Alert variant="danger">{metadataError}</Alert>}
+      </form>}
 
       {publishErrors && (
         <Alert variant="warning" title="Can’t publish yet">
@@ -194,7 +229,7 @@ function LessonEditor() {
         {components.length === 0 ? (
           <Card>
             <CardBody className="py-8 text-center text-sm text-muted">
-              No steps yet. A publishable lesson needs at least one video and one quiz.
+              No steps yet. {standalone ? 'Add video or quiz, or save text content above.' : 'A publishable lesson needs at least one video and one quiz.'}
             </CardBody>
           </Card>
         ) : (

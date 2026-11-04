@@ -33,7 +33,7 @@ class InvoiceController extends Controller
     {
         $this->authorizeOrg($request->user(), $organization);
 
-        $invoices = $organization->invoices()->latest()->get()->map(fn ($i) => [
+        $invoices = $organization->invoices()->where('status', '!=', 'cancelled')->latest()->get()->map(fn ($i) => [
             'id' => $i->id,
             'type' => $i->type,
             'amount_minor' => $i->amount_minor,

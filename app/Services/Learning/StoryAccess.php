@@ -6,12 +6,16 @@ use App\Models\LearnerProfile;
 use App\Models\Story;
 use App\Models\StoryPurchase;
 use App\Models\User;
+use App\Support\ActiveChildProfile;
 use Illuminate\Support\Facades\Gate;
 
 class StoryAccess
 {
     public function canPurchase(LearnerProfile $learner, User $viewer): bool
     {
+        if (ActiveChildProfile::id(request()) !== null) {
+            return false;
+        }
         if (! Gate::forUser($viewer)->allows('redeemReward', $learner)) {
             return false;
         }

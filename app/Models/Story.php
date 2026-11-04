@@ -10,7 +10,10 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
- * @property int $course_id
+ * @property int|null $course_id
+ * @property int $language_id
+ * @property int $standalone_level
+ * @property int|null $owner_user_id
  * @property string $title
  * @property string|null $summary
  * @property string $age_band
@@ -20,7 +23,6 @@ use Illuminate\Support\Carbon;
  * @property string|null $preview_video_path
  * @property string|null $full_video_path
  * @property Carbon|null $published_at
- * @property-read Course $course
  * @property-read Collection<int, StoryPage> $pages
  * @property-read int|null $pages_count
  */
@@ -32,16 +34,22 @@ class Story extends Model
 
     protected $casts = ['published_at' => 'datetime'];
 
-    /** @return BelongsTo<Course, $this> */
-    public function course(): BelongsTo
+    /** @return BelongsTo<Language, $this> */
+    public function language(): BelongsTo
     {
-        return $this->belongsTo(Course::class);
+        return $this->belongsTo(Language::class);
     }
 
     /** @return HasMany<StoryPage, $this> */
     public function pages(): HasMany
     {
         return $this->hasMany(StoryPage::class)->orderBy('position');
+    }
+
+    /** @return HasMany<StoryQuestion, $this> */
+    public function questions(): HasMany
+    {
+        return $this->hasMany(StoryQuestion::class)->orderBy('position');
     }
 
     /** @return HasMany<StoryPurchase, $this> */

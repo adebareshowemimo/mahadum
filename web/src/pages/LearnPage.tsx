@@ -58,6 +58,9 @@ export function LearnPage() {
             {activeLearner.target_language && (
               <p className="text-muted">Learning {activeLearner.target_language.toUpperCase()}</p>
             )}
+            {activeLearner.is_child && activeLearner.school_name && (
+              <p className="text-muted">School: {activeLearner.school_name}</p>
+            )}
           </div>
         </div>
         <StatsBar learnerId={activeLearner.id} coinBalance={activeLearner.coin_balance} />
@@ -114,8 +117,9 @@ const NODE_STYLES: Record<NodeState, { ring: string; icon: 'cap' | 'book' | 'shi
 
 function NodeRow({ node, learnerId: _learnerId }: { node: PathNode; learnerId: number }) {
   const navigate = useNavigate()
+  const { activeLearner } = useActiveProfile()
   const style = NODE_STYLES[node.state]
-  const interactive = node.state !== 'locked' || !!node.access_reason
+  const interactive = (node.state !== 'locked' || !!node.access_reason) && !(activeLearner?.is_child && !!node.access_reason)
 
   return (
     <li className="relative z-10">
@@ -132,7 +136,7 @@ function NodeRow({ node, learnerId: _learnerId }: { node: PathNode; learnerId: n
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate font-semibold text-foreground">{node.title}</span>
-          <span className="text-xs capitalize text-muted">{node.access_reason ? 'Upgrade to unlock' : node.state}</span>
+          <span className="text-xs capitalize text-muted">{node.access_reason ? activeLearner?.is_child ? 'Ask a grown-up' : 'Upgrade to unlock' : node.state}</span>
         </span>
         {node.state === 'active' && <span className="text-sm font-semibold text-primary">Start →</span>}
         {node.state === 'completed' && <span className="text-sm text-muted">Replay</span>}

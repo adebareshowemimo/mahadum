@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Course;
 use App\Models\Family;
 use App\Models\Language;
 use App\Models\LearnerProfile;
@@ -11,6 +10,7 @@ use App\Models\Story;
 use App\Models\StoryPurchase;
 use App\Services\Billing\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
@@ -21,11 +21,120 @@ class StoryLibraryTest extends TestCase
 {
     use MakesContent, RefreshDatabase;
 
+    public function test_story_authoring_uses_its_own_language_and_level(): void
+    {
+        $this->seedRbac();
+        $this->actingAsUser($this->userWithRole('content_owner'));
+        $igbo = Language::create(['code' => 'ig', 'name' => 'Igbo', 'script' => 'latin', 'is_active' => true]);
+        $yoruba = Language::create(['code' => 'yo', 'name' => 'Yoruba', 'script' => 'latin', 'is_active' => true]);
+
+        $id = $this->postJson('/api/v1/content/stories', [
+            'title' => 'The Moon', 'language_id' => $igbo->id, 'standalone_level' => 2,
+            'age_band' => '13_17', 'format' => 'reading',
+        ])->assertCreated()->assertJsonPath('data.language', 'ig')->assertJsonPath('data.level', 2)->json('data.id');
+        $this->assertNull(Story::findOrFail($id)->course_id);
+
+        $this->patchJson("/api/v1/content/stories/{$id}", [
+            'language_id' => $yoruba->id, 'standalone_level' => 3,
+        ])->assertOk()->assertJsonPath('data.language', 'yo')->assertJsonPath('data.level', 3);
+        $this->getJson('/api/v1/content/stories')->assertOk()->assertJsonPath('data.0.level', 3);
+    }
+
+    public function test_each_story_band_supports_video_text_and_server_graded_quiz(): void
+    {
+        $this->seedRbac();
+        $this->actingAsUser($this->userWithRole('content_owner'));
+        $language = Language::create(['code' => 'ig', 'name' => 'Igbo', 'script' => 'latin', 'is_active' => true]);
+
+        foreach (['0_5', '6_12', '13_17', '18_plus', 'folklore'] as $band) {
+            foreach (['video', 'text', 'quiz'] as $format) {
+                $id = $this->postJson('/api/v1/content/stories', [
+                    'title' => "{$band} {$format}", 'language_id' => $language->id,
+                    'standalone_level' => 1, 'age_band' => $band, 'format' => $format,
+                ])->assertCreated()->json('data.id');
+                $story = Story::findOrFail($id);
+                if ($format === 'video') {
+                    $story->update(['preview_video_path' => 'preview.mp4', 'full_video_path' => 'full.mp4']);
+                } elseif ($format === 'text') {
+                    foreach ([1, 2] as $position) {
+                        $story->pages()->create(['position' => $position, 'body' => "Chapter {$position}"]);
+                    }
+                } else {
+                    foreach ([1, 2] as $position) {
+                        $this->postJson("/api/v1/content/stories/{$id}/questions", [
+                            'prompt' => "Question {$position}?", 'options' => ['Yes', 'No'], 'correct_index' => 0,
+                        ])->assertCreated();
+                    }
+                }
+                $this->postJson("/api/v1/content/stories/{$id}/publish")->assertOk();
+            }
+        }
+        $this->assertSame(15, Story::whereNotNull('published_at')->count());
+
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $child = $this->parentWithChild($parent);
+        $quiz = Story::where('title', '0_5 quiz')->firstOrFail();
+        $payload = $this->getJson("/api/v1/learning/stories/{$quiz->id}?learner_id={$child->id}")
+            ->assertOk()->assertJsonCount(1, 'data.questions')->json('data.questions.0');
+        $this->assertArrayNotHasKey('correct_index', $payload);
+        $this->postJson("/api/v1/learning/stories/{$quiz->id}/answer", [
+            'learner_id' => $child->id, 'question_id' => $payload['id'], 'option_index' => 0,
+        ])->assertOk()->assertJsonPath('data.correct', true);
+        $second = $quiz->questions()->skip(1)->firstOrFail();
+        $this->postJson("/api/v1/learning/stories/{$quiz->id}/answer", [
+            'learner_id' => $child->id, 'question_id' => $second->id, 'option_index' => 0,
+        ])->assertForbidden();
+    }
+
+    public function test_school_admin_can_open_story_and_set_builders_read_only(): void
+    {
+        $this->seedRbac();
+        $language = Language::create(['code' => 'ig', 'name' => 'Igbo', 'script' => 'latin', 'is_active' => true]);
+        $this->actingAsUser($this->userWithRole('content_owner'));
+        $storyId = $this->postJson('/api/v1/content/stories', [
+            'title' => 'School catalogue', 'language_id' => $language->id,
+            'standalone_level' => 1, 'age_band' => 'folklore', 'format' => 'text',
+        ])->assertCreated()->json('data.id');
+        $setId = $this->postJson('/api/v1/library-lessons', [
+            'title' => 'School proverb', 'kind' => 'proverb', 'language_id' => $language->id,
+            'standalone_level' => 1, 'summary' => 'A saying to read.',
+        ])->assertCreated()->json('data.id');
+
+        $this->actingAsUser($this->userWithRole('school_admin'));
+        $this->getJson('/api/v1/content/stories')->assertOk();
+        $this->getJson("/api/v1/content/stories/{$storyId}")->assertOk();
+        $this->getJson('/api/v1/library-lessons?kind=proverb')->assertOk();
+        $this->getJson("/api/v1/lessons/{$setId}")->assertOk();
+        $this->postJson('/api/v1/content/stories', [
+            'title' => 'Not allowed', 'language_id' => $language->id,
+            'standalone_level' => 1, 'age_band' => 'folklore', 'format' => 'quiz',
+        ])->assertForbidden();
+    }
+
+    public function test_story_video_uploads_can_be_previewed_and_published(): void
+    {
+        $this->seedRbac();
+        Storage::fake('local');
+        $this->actingAsUser($this->userWithRole('content_owner'));
+        $language = Language::create(['code' => 'ig', 'name' => 'Igbo', 'script' => 'latin', 'is_active' => true]);
+        $id = $this->postJson('/api/v1/content/stories', [
+            'title' => 'Video tale', 'language_id' => $language->id,
+            'standalone_level' => 1, 'age_band' => '0_5', 'format' => 'video',
+        ])->assertCreated()->json('data.id');
+        foreach (['preview_video', 'full_video'] as $slot) {
+            $this->postJson("/api/v1/content/stories/{$id}/upload", [
+                'slot' => $slot, 'file' => UploadedFile::fake()->create("{$slot}.mp4", 100, 'video/mp4'),
+            ])->assertOk();
+        }
+        $this->postJson("/api/v1/content/stories/{$id}/publish")->assertOk();
+        $this->getJson("/api/v1/content/stories/{$id}")
+            ->assertOk()->assertJsonPath('data.has_preview_video', true)->assertJsonPath('data.has_full_video', true);
+    }
+
     private function story(string $band = '0_5'): Story
     {
         $language = Language::create(['code' => 'ig', 'name' => 'Igbo', 'script' => 'latin', 'is_active' => true]);
-        $course = Course::create(['language_id' => $language->id, 'title' => 'Stories', 'status' => 'published', 'is_published' => true]);
-        $story = Story::create(['course_id' => $course->id, 'title' => 'The Moon', 'age_band' => $band,
+        $story = Story::create(['course_id' => null, 'language_id' => $language->id, 'standalone_level' => 2, 'title' => 'The Moon', 'age_band' => $band,
             'format' => $band === '0_5' ? 'colouring' : 'reading', 'price_minor' => Story::PRICE_MINOR, 'published_at' => now()]);
         foreach (range(1, 13) as $number) {
             $story->pages()->create(['position' => $number, 'title' => "Page {$number}", 'body' => "Text {$number}"]);
@@ -42,6 +151,11 @@ class StoryLibraryTest extends TestCase
         $sibling = LearnerProfile::create(['family_id' => $child->family_id, 'display_name' => 'Sibling']);
         $story = $this->story();
 
+        $this->getJson("/api/v1/learning/stories?learner_id={$child->id}&language=ig")
+            ->assertOk()->assertJsonPath('data.0.level', 2);
+        $this->getJson("/api/v1/learning/stories?learner_id={$child->id}&language=yo")
+            ->assertOk()->assertJsonCount(0, 'data');
+
         $this->getJson("/api/v1/learning/stories/{$story->id}?learner_id={$child->id}")
             ->assertOk()->assertJsonPath('data.purchased', false)->assertJsonCount(12, 'data.pages');
 
@@ -57,7 +171,6 @@ class StoryLibraryTest extends TestCase
             $this->getJson("/api/v1/learning/stories/{$story->id}?learner_id={$learner->id}")
                 ->assertOk()->assertJsonPath('data.purchased', true)->assertJsonCount(13, 'data.pages');
         }
-        $story->course->update(['is_published' => false, 'status' => 'draft']);
         $this->getJson("/api/v1/learning/stories/{$story->id}?learner_id={$child->id}")
             ->assertOk()->assertJsonPath('data.purchased', true);
         $this->assertSame('reversed', $payment->process('paystack', 'refunded-story', $purchase->reference,
@@ -242,7 +355,6 @@ class StoryLibraryTest extends TestCase
         $author = $this->actingAsUser($this->userWithRole('content_owner'));
         $story = $this->story();
         $story->update(['published_at' => null]);
-        $story->course->update(['is_published' => false, 'status' => 'draft']);
         $story->pages()->where('position', 13)->update(['image_path' => 'stories/draft-page.svg']);
         Storage::fake('local');
         Storage::disk('local')->put('stories/draft-page.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>');

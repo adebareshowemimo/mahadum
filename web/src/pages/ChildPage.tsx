@@ -1,9 +1,8 @@
 import { useState, type ReactNode } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { Alert, Avatar, Badge, Button, Card, CardBody, CardHeader, CardTitle, Icon, learnerAvatarPresetId, LinkButton, Skeleton } from '@/components/ui'
 import { useChild } from '@/lib/family/queries'
 import { usePath } from '@/lib/learning/queries'
-import { useActiveProfile } from '@/lib/profile/ActiveProfile'
 import { ProfilePictureModal } from '@/components/learner/ProfilePictureModal'
 
 export function ChildPage() {
@@ -12,8 +11,6 @@ export function ChildPage() {
   const validId = Number.isInteger(id) && id > 0 ? id : null
   const child = useChild(validId)
   const path = usePath(validId)
-  const { setActiveLearner } = useActiveProfile()
-  const navigate = useNavigate()
   const [pictureOpen, setPictureOpen] = useState(false)
 
   if (validId === null) {
@@ -28,11 +25,6 @@ export function ChildPage() {
   const learner = child.data
   const nodes = path.data?.units.flatMap((unit) => unit.nodes) ?? []
   const completed = nodes.filter((node) => node.state === 'completed').length
-
-  function openLearning() {
-    setActiveLearner(learner.id)
-    navigate('/learn')
-  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -53,7 +45,7 @@ export function ChildPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => setPictureOpen(true)}>Change picture</Button>
-            <Button onClick={openLearning}>View learning</Button>
+            <span className="text-sm text-muted">Use Profiles in the top bar and enter the parent PIN to open learning as {learner.display_name}.</span>
           </div>
         </div>
       </div>

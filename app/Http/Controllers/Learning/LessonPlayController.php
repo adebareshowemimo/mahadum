@@ -73,7 +73,7 @@ class LessonPlayController extends Controller
         })->values();
 
         return response()->json(['data' => [
-            'lesson' => ['id' => $lesson->id, 'title' => $lesson->title, 'est_minutes' => $lesson->est_minutes],
+            'lesson' => ['id' => $lesson->id, 'title' => $lesson->title, 'summary' => $lesson->summary, 'est_minutes' => $lesson->est_minutes],
             'components' => $components,
             'hearts_remaining' => $learner && ! app(EntitlementResolver::class)->forLearner($learner)['unlimited_hearts']
                 ? app(PracticeModeService::class)->state($learner)['current'] : null,

@@ -1,5 +1,5 @@
 import { PurchasePolicyNotice } from '@/components/billing/PurchasePolicyNotice'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import {
   Alert,
   Button,
@@ -13,7 +13,7 @@ import {
 } from '@/components/ui'
 import { ApiError } from '@/lib/api'
 import { formatMoney } from '@/lib/format'
-import { useFamily, useFundWallet, useTransfer, useWallet } from '@/lib/family/queries'
+import { useConfirmWalletFunding, useFamily, useFundWallet, useTransfer, useWallet } from '@/lib/family/queries'
 
 export function WalletPage() {
   const { data: wallet, isLoading, isError } = useWallet()
@@ -25,6 +25,7 @@ export function WalletPage() {
   }
 
   const learners = family?.learners ?? []
+  const returnedFundingId = Number(new URLSearchParams(window.location.search).get('funding_id'))
 
   return (
     <div className="flex flex-col gap-8">
@@ -51,12 +52,43 @@ export function WalletPage() {
         </CardBody>
       </Card>
 
+      {Number.isSafeInteger(returnedFundingId) && returnedFundingId > 0 && <FundingResult fundingId={returnedFundingId} />}
+
       <div className="grid gap-4 lg:grid-cols-2">
         <TransferCard learners={learners} maxCoins={wallet.coin_balance} />
-        <FundCard currency={wallet.currency} gateways={wallet.funding_gateways ?? []} />
+        {wallet.funding_gateways?.length
+          ? <FundCard currency={wallet.currency} gateways={wallet.funding_gateways} />
+          : <Alert variant="info">Wallet funding is currently unavailable. Please try again later.</Alert>}
       </div>
+      {!!wallet.funding_transactions?.length && <Card><CardHeader><CardTitle>Recent wallet payments</CardTitle></CardHeader><CardBody className="space-y-3">{wallet.funding_transactions.map((payment) => <div key={payment.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3 text-sm last:border-0 last:pb-0"><span>{formatMoney(payment.amount_minor, payment.currency)} · {payment.gateway} · {new Date(payment.created_at).toLocaleDateString()}</span><span className="font-medium capitalize">{payment.status}</span>{payment.status === 'pending' && <a className="font-semibold text-primary underline" href={`/wallet?funding_id=${payment.id}`}>Check status</a>}</div>)}</CardBody></Card>}
     </div>
   )
+}
+
+function FundingResult({ fundingId }: { fundingId: number }) {
+  const confirm = useConfirmWalletFunding()
+  const started = useRef(false)
+  const [result, setResult] = useState<{ status: string; message: string; gateway_ref: string } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function check() {
+    setError(null)
+    try { setResult(await confirm.mutateAsync(fundingId)) }
+    catch (err) { setError(err instanceof ApiError ? err.message : 'We could not verify this payment. Please do not pay again; check later or contact support.') }
+  }
+
+  useEffect(() => {
+    if (started.current) return
+    started.current = true
+    void check()
+  }, [fundingId])
+
+  return <div className="space-y-3" aria-live="polite">
+    {confirm.isPending && <Alert variant="info">Checking your payment with the provider…</Alert>}
+    {error && <Alert variant="warning">{error}</Alert>}
+    {result && <Alert variant={result.status === 'success' ? 'success' : result.status === 'failed' ? 'danger' : 'info'} title="Wallet payment result">{result.message} {result.status !== 'success' && <span>Reference: {result.gateway_ref}</span>}</Alert>}
+    {!confirm.isPending && <Button variant="secondary" onClick={() => { void check() }}>Check payment status</Button>}
+  </div>
 }
 
 function TransferCard({
@@ -149,8 +181,12 @@ function FundCard({ currency, gateways }: { currency: string; gateways: FundingG
     if (!gateway) return
     try {
       const result = await fund.mutateAsync({ amount: Math.round(Number(amount) * 100), gateway })
-      setPending({ ref: result.gateway_ref, url: result.checkout_url })
-      setAmount('')
+      if (result.checkout_url?.startsWith('https://')) {
+        window.location.assign(result.checkout_url)
+        return
+      }
+      setPending({ ref: result.gateway_ref, url: null })
+      setError('Secure checkout is unavailable. No money was added. Please contact support with this reference.')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not start funding.')
     }
@@ -172,7 +208,7 @@ function FundCard({ currency, gateways }: { currency: string; gateways: FundingG
                   Open secure checkout
                 </a>
               ) : (
-                <>Your wallet will be credited once payment is confirmed (ref {pending.ref.slice(0, 8)}).</>
+                <>Checkout could not open. No money was added (ref {pending.ref.slice(0, 8)}).</>
               )}
             </Alert>
           )}

@@ -20,6 +20,7 @@ const InstitutionsPage = lazy(() => import('@/pages/PublicAudiencePages').then((
 const ContactPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.ContactPage })))
 const PrivacyPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.PrivacyPage })))
 const RefundPolicyPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.RefundPolicyPage })))
+const DataTopUpTermsPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.DataTopUpTermsPage })))
 const ChildrenPrivacyPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.ChildrenPrivacyPage })))
 const TermsPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.TermsPage })))
 const ChildSafetyPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.ChildSafetyPage })))
@@ -347,6 +348,7 @@ export function App() {
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/refunds" element={<RefundPolicyPage />} />
+      <Route path="/data-top-up-terms" element={<DataTopUpTermsPage />} />
       <Route path="/children-privacy" element={<ChildrenPrivacyPage />} />
       <Route path="/child-safety" element={<ChildSafetyPage />} />
       <Route path="/accessibility" element={<AccessibilityPage />} />
@@ -417,6 +419,7 @@ export function App() {
           </Route>
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/proverbs-trivia" element={<ProverbsTriviaPage />} />
+          <Route path="/courses/proverbs-trivia/lessons/:lessonId" element={<LessonBuilderPage />} />
           <Route path="/courses/stories" element={<StoriesPage />} />
           <Route path="/courses/stories/:storyId" element={<StoryEditorPage />} />
           <Route path="/courses/:courseId" element={<CourseBuilderPage />} />

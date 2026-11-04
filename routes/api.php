@@ -61,6 +61,7 @@ use App\Http\Controllers\Content\CoursePerformanceController;
 use App\Http\Controllers\Content\LessonAnalyticsController;
 use App\Http\Controllers\Content\LessonComponentController;
 use App\Http\Controllers\Content\LessonController;
+use App\Http\Controllers\Content\LibrarySetController;
 use App\Http\Controllers\Content\MediaController;
 use App\Http\Controllers\Content\QuizImportController;
 use App\Http\Controllers\Content\StoryController;
@@ -117,6 +118,7 @@ use App\Http\Controllers\Webhooks\SendgridWebhookController;
 use App\Http\Controllers\Webhooks\TelcoWebhookController;
 use App\Http\Controllers\WebsiteEditorController;
 use App\Http\Middleware\RequireVerifiedEmail;
+use App\Http\Middleware\RestrictChildProfile;
 use App\Models\Course;
 use App\Models\Payout;
 use App\Models\SchoolClass;
@@ -173,12 +175,13 @@ Route::prefix('v1')->group(function () {
     });
 
     /* ------------------------------------------------------------- protected */
-    Route::middleware(['auth:sanctum', RequireVerifiedEmail::class, 'identify.tenant', 'min.app.version'])->group(function () {
+    Route::middleware(['auth:sanctum', RequireVerifiedEmail::class, 'identify.tenant', 'min.app.version', RestrictChildProfile::class])->group(function () {
         Route::post('language-votes', [LanguageVoteController::class, 'store'])->middleware('throttle:10,1');
         Route::post('me/learner-profile', [MeController::class, 'ensureLearnerProfile']);
         Route::post('me/devices', [DeviceController::class, 'store']);
         Route::post('profiles/{learner}/switch', [ProfileController::class, 'switch'])
             ->can('view', 'learner');
+        Route::post('profiles/exit', [ProfileController::class, 'exit']);
         Route::post('class-invitations/{token}/accept', [ClassLearnerInvitationController::class, 'accept'])
             ->middleware('throttle:20,1');
 
@@ -207,6 +210,8 @@ Route::prefix('v1')->group(function () {
         Route::post('content/stories/{story}/publish', [StoryController::class, 'publish'])->middleware('can:content.courses.publish');
         Route::post('content/stories/{story}/unpublish', [StoryController::class, 'unpublish'])->middleware('can:content.courses.publish');
         Route::post('content/stories/{story}/pages', [StoryController::class, 'addPage'])->middleware('can:content.lessons.manage');
+        Route::post('content/stories/{story}/questions', [StoryController::class, 'addQuestion'])->middleware('can:content.quizzes.manage');
+        Route::delete('content/stories/{story}/questions/{question}', [StoryController::class, 'deleteQuestion'])->middleware('can:content.quizzes.manage');
         Route::patch('content/stories/{story}/pages/{page}', [StoryController::class, 'updatePage'])->middleware('can:content.lessons.manage');
         Route::delete('content/stories/{story}/pages/{page}', [StoryController::class, 'deletePage'])->middleware('can:content.lessons.manage');
         Route::post('content/stories/{story}/upload', [StoryController::class, 'upload'])->middleware('can:content.media.upload');
@@ -231,6 +236,8 @@ Route::prefix('v1')->group(function () {
             ->middleware('can:content.lessons.manage');
         Route::get('levels/{level}/lessons', [LessonController::class, 'index']);
         Route::post('levels/{level}/lessons', [LessonController::class, 'store'])
+            ->middleware('can:content.lessons.manage');
+        Route::post('library-lessons', [LibrarySetController::class, 'store'])
             ->middleware('can:content.lessons.manage');
         Route::post('levels/{level}/lessons/reorder', [LessonController::class, 'reorder'])
             ->middleware('can:content.lessons.manage');
@@ -279,6 +286,7 @@ Route::prefix('v1')->group(function () {
         Route::post('enrollments', [EnrollmentController::class, 'store']);
         Route::get('learning/stories', [StoryCatalogController::class, 'index']);
         Route::get('learning/stories/{story}', [StoryCatalogController::class, 'show']);
+        Route::post('learning/stories/{story}/answer', [StoryCatalogController::class, 'answer']);
         Route::post('learning/stories/{story}/purchase', [StoryPurchaseController::class, 'store'])->middleware('idempotency');
         Route::post('learning/story-purchases/{purchase}/confirm', [StoryPurchaseController::class, 'confirm']);
         Route::get('learners/{learner}/path', [PathController::class, 'show'])->can('view', 'learner');
@@ -331,6 +339,8 @@ Route::prefix('v1')->group(function () {
         Route::put('family/children/{learner}/pin', [FamilyController::class, 'setChildPin'])
             ->middleware('can:family.manage');
         Route::get('wallet', [WalletController::class, 'show'])->middleware('can:family.wallet.view');
+        Route::post('wallet/fundings/{funding}/confirm', [WalletController::class, 'confirm'])
+            ->middleware(['can:family.wallet.view', 'throttle:20,1']);
         Route::get('chores', [ChoreController::class, 'index'])->middleware('can:family.chores.manage');
         Route::get('learners/{learner}/tasks', [LearnerTasksController::class, 'index']);
         Route::post('chores/{chore}/submissions', [LearnerTasksController::class, 'submitChore']);

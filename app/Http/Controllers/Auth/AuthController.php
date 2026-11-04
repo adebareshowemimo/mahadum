@@ -19,6 +19,7 @@ use App\Services\AuditLogger;
 use App\Services\Referral\ReferralService;
 use App\Services\School\ClassLearnerInvitationService;
 use App\Services\SignupDiscovery;
+use App\Support\ActiveChildProfile;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -215,6 +216,8 @@ class AuthController extends Controller
         $abilities = $current->abilities ?: $user->getRoleNames()->all();
 
         $token = $user->createToken($name, $abilities, now()->addDays(self::TOKEN_TTL_DAYS));
+        $token->accessToken->setAttribute('active_child_profile_id', ActiveChildProfile::id($request));
+        $token->accessToken->save();
         WebPushSubscription::where('user_id', $user->id)->where('personal_access_token_id', $current->id)
             ->update(['personal_access_token_id' => $token->accessToken->id]);
         $current->delete(); // revoke the old token, preserving this browser's opt-in

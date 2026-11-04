@@ -5,7 +5,7 @@ import { Alert, Badge, Button, Input, Modal, Skeleton } from '@/components/ui'
 import { StoryCover } from '@/components/story/StoryCover'
 import { ApiError, contentApi, type StoryAgeBand, type StoryFormat, type StorySummary } from '@/lib/api'
 import { formatsForStoryBand, STORY_BANDS, storyLength } from '@/lib/story/presentation'
-import { useAuthorCourses } from '@/lib/content/queries'
+import { useConfig } from '@/lib/config/useConfig'
 import { useCanManageContent } from '@/lib/content/permissions'
 
 export function StoriesPage() {
@@ -15,14 +15,15 @@ export function StoriesPage() {
   const [page, setPage] = useState(1)
   const [open, setOpen] = useState(false)
   const [deleting, setDeleting] = useState<StorySummary | null>(null)
-  const [courseId, setCourseId] = useState(0)
+  const [languageId, setLanguageId] = useState(0)
+  const [level, setLevel] = useState(1)
   const [title, setTitle] = useState('')
   const [summary, setSummary] = useState('')
   const [band, setBand] = useState<StoryAgeBand>('0_5')
   const [format, setFormat] = useState<StoryFormat>('colouring')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const courses = useAuthorCourses()
+  const config = useConfig()
   const stories = useQuery({ queryKey: ['content', 'stories', page], queryFn: () => contentApi.stories(page) })
   const items = stories.data?.data ?? []
 
@@ -38,7 +39,7 @@ export function StoriesPage() {
     setBusy(true)
     setError(null)
     try {
-      const story = await contentApi.createStory({ course_id: courseId, title: title.trim(), summary, age_band: band, format })
+      const story = await contentApi.createStory({ language_id: languageId, standalone_level: level, title: title.trim(), summary, age_band: band, format })
       await qc.invalidateQueries({ queryKey: ['content', 'stories'] })
       navigate(`/courses/stories/${story.id}`)
     } catch (err) {
@@ -62,9 +63,8 @@ export function StoriesPage() {
   return <div className="flex flex-col gap-7">
     <header className="flex flex-wrap items-end justify-between gap-4">
       <div>
-        <button className="text-sm font-semibold text-primary hover:underline" onClick={() => navigate('/courses')}>← Courses</button>
         <h1 className="mt-2 font-display text-3xl font-bold">Stories & Folklore</h1>
-        <p className="mt-1 text-muted">Build illustrated stories, animated books and reading collections for every age.</p>
+        <p className="mt-1 text-muted">Build independent stories by language and level for every age.</p>
       </div>
       {canManage && <Button onClick={() => openCreate()}>+ New story</Button>}
     </header>
@@ -98,9 +98,9 @@ export function StoriesPage() {
               <StoryCover story={story} className="aspect-[3/4] w-full" />
               <h3 className="mt-3 line-clamp-2 min-h-12 font-display font-bold leading-snug">{story.title}</h3>
               <p className="mt-1 text-xs uppercase tracking-wide text-muted">{story.format} · {storyLength(story)} · {story.language.toUpperCase()}</p>
-              <p className="mt-1 truncate text-xs text-muted" title={story.course_title}>{story.course_title}</p>
+              <p className="mt-1 text-xs text-muted">Level {story.level}</p>
               <div className="mt-3 flex flex-wrap items-center gap-2"><Badge variant={story.published_at ? 'success' : 'neutral'}>{story.published_at ? 'Published' : 'Draft'}</Badge></div>
-              <div className="mt-auto flex gap-2 border-t border-border pt-3"><Button size="sm" variant="secondary" className="flex-1" onClick={() => window.open(`/courses/stories/${story.id}/preview`, '_blank', 'noopener')}>Preview</Button><Button size="sm" variant="secondary" className="flex-1" onClick={() => navigate(`/courses/stories/${story.id}`)}>Edit</Button>{canManage && <Button size="sm" variant="ghost" className="text-danger" aria-label={`Delete ${story.title}`} onClick={() => setDeleting(story)}>Delete</Button>}</div>
+              <div className="mt-auto flex gap-2 border-t border-border pt-3"><Button size="sm" variant="secondary" className="flex-1" onClick={() => window.open(`/courses/stories/${story.id}/preview`, '_blank', 'noopener')}>Preview</Button><Button size="sm" variant="secondary" className="flex-1" onClick={() => navigate(`/courses/stories/${story.id}`)}>{canManage ? 'Edit' : 'View'}</Button>{canManage && <Button size="sm" variant="ghost" className="text-danger" aria-label={`Delete ${story.title}`} onClick={() => setDeleting(story)}>Delete</Button>}</div>
             </article>)}
             {canManage && <button type="button" onClick={() => openCreate(group.value)} className="flex min-h-64 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border p-6 text-center text-sm font-bold text-primary transition-colors hover:border-primary hover:bg-primary-soft"><span className="text-3xl" aria-hidden="true">＋</span>Add {group.value === 'folklore' ? 'folktale' : group.value === '0_5' ? 'colouring or tracing book' : 'story'}</button>}
             {groupStories.length === 0 && !canManage && <p className="text-sm text-muted">No stories in this band yet.</p>}
@@ -110,15 +110,16 @@ export function StoriesPage() {
       {stories.data.meta.last_page > 1 && <div className="flex items-center justify-between gap-3"><Button variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button><span className="text-sm text-muted">Page {page} of {stories.data.meta.last_page}</span><Button variant="secondary" disabled={page >= stories.data.meta.last_page} onClick={() => setPage(page + 1)}>Next</Button></div>}
     </>}
 
-    <Modal open={open} onClose={() => setOpen(false)} title="New story" description="Choose a course, then add its cover and pages or video.">
+    <Modal open={open} onClose={() => setOpen(false)} title="New story" description="Choose a language and level, then add its cover and pages or video.">
       <form onSubmit={create} className="flex flex-col gap-4">
         {error && <Alert variant="danger">{error}</Alert>}
-        <label className="flex flex-col gap-1 text-sm font-semibold">Course<select className="h-11 rounded-xl border border-border bg-surface px-3" value={courseId} onChange={(event) => setCourseId(Number(event.target.value))} required><option value={0}>Choose a language course</option>{courses.data?.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}</select></label>
+        <label className="flex flex-col gap-1 text-sm font-semibold">Language<select className="h-11 rounded-xl border border-border bg-surface px-3" value={languageId} onChange={(event) => setLanguageId(Number(event.target.value))} required><option value={0}>Choose a language</option>{config.data?.languages.map((language) => <option key={language.id} value={language.id}>{language.name}</option>)}</select></label>
+        <label className="flex flex-col gap-1 text-sm font-semibold">Level<select className="h-11 rounded-xl border border-border bg-surface px-3" value={level} onChange={(event) => setLevel(Number(event.target.value))} required>{Array.from({ length: 10 }, (_, index) => <option key={index + 1} value={index + 1}>Level {index + 1}</option>)}</select></label>
         <Input label="Title" value={title} onChange={(event) => setTitle(event.target.value)} required />
         <Input label="Summary" value={summary} onChange={(event) => setSummary(event.target.value)} />
         <label className="flex flex-col gap-1 text-sm font-semibold">Age band<select className="h-11 rounded-xl border border-border bg-surface px-3" value={band} onChange={(event) => { const next = event.target.value as StoryAgeBand; setBand(next); setFormat(formatsForStoryBand(next)[0]) }}>{STORY_BANDS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
         <label className="flex flex-col gap-1 text-sm font-semibold">Format<select className="h-11 rounded-xl border border-border bg-surface px-3" value={format} onChange={(event) => setFormat(event.target.value as StoryFormat)}>{formatsForStoryBand(band).map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-        <Button type="submit" loading={busy} disabled={!courseId || !title.trim()}>Create story</Button>
+        <Button type="submit" loading={busy} disabled={!languageId || !title.trim()}>Create story</Button>
       </form>
     </Modal>
     <Modal open={!!deleting} onClose={() => { setDeleting(null); setError(null) }} title="Delete story" description="This removes the story and its media. Stories with payment attempts cannot be deleted.">

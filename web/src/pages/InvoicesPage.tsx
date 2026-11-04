@@ -191,7 +191,7 @@ function InvoiceBreakdown({ invoice }: { invoice: SchoolInvoice }) {
         ))}
         <div className="border-t border-border pt-3">
           <div className="flex items-baseline justify-between gap-6">
-            <dt className="font-semibold text-foreground">Total {invoice.status === 'paid' ? 'paid' : 'due'}</dt>
+            <dt className="font-semibold text-foreground">Total {invoice.status === 'paid' ? 'paid' : invoice.status === 'cancelled' ? 'cancelled' : 'due'}</dt>
             <dd className="text-base font-bold tabular-nums text-foreground">{formatMoney(invoice.amount_minor, 'NGN')}</dd>
           </div>
         </div>

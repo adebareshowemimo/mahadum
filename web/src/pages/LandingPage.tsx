@@ -294,7 +294,7 @@ const HERITAGE_POINTS: { icon: IconName; title: string; body: string }[] = [
   {
     icon: 'book',
     title: 'Culture is part of the course',
-    body: 'Every course carries proverbs, folktales and festivals as required components — not a blog bolted on the side.',
+    body: 'Explore proverbs and trivia in their own language and level libraries, alongside courses and cultural stories.',
   },
   {
     icon: 'users',

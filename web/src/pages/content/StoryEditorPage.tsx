@@ -2,8 +2,10 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Badge, Button, Input, Skeleton } from '@/components/ui'
-import { ApiError, contentApi, type StoryPage } from '@/lib/api'
+import { ApiError, contentApi, type StoryDetail, type StoryPage } from '@/lib/api'
+import { useConfig } from '@/lib/config/useConfig'
 import { useCanManageContent } from '@/lib/content/permissions'
+import { formatsForStoryBand, STORY_BANDS } from '@/lib/story/presentation'
 
 export function StoryEditorPage() {
   const id = Number(useParams().storyId)
@@ -16,6 +18,10 @@ export function StoryEditorPage() {
   const [busy, setBusy] = useState(false)
   const [pageTitle, setPageTitle] = useState('')
   const [pageBody, setPageBody] = useState('')
+  const [questionPrompt, setQuestionPrompt] = useState('')
+  const [questionOptions, setQuestionOptions] = useState(['', ''])
+  const [correctIndex, setCorrectIndex] = useState(0)
+  const [questionExplanation, setQuestionExplanation] = useState('')
 
   async function refresh() {
     await qc.invalidateQueries({ queryKey: ['content', 'story', id] })
@@ -61,17 +67,43 @@ export function StoryEditorPage() {
     } finally { setBusy(false) }
   }
 
+  async function addQuestion(event: FormEvent) {
+    event.preventDefault()
+    setBusy(true); setError(null)
+    try {
+      await contentApi.addStoryQuestion(id, { prompt: questionPrompt.trim(), options: questionOptions.map((option) => option.trim()), correct_index: correctIndex, explanation: questionExplanation.trim() })
+      setQuestionPrompt(''); setQuestionOptions(['', '']); setCorrectIndex(0); setQuestionExplanation('')
+      await refresh()
+    } catch (err) { setError(err instanceof ApiError ? err.message : 'Could not add the question.') }
+    finally { setBusy(false) }
+  }
+
+  async function deleteQuestion(questionId: number) {
+    setBusy(true); setError(null)
+    try { await contentApi.deleteStoryQuestion(id, questionId); await refresh() }
+    catch (err) { setError(err instanceof ApiError ? err.message : 'Could not remove the question.') }
+    finally { setBusy(false) }
+  }
+
   if (story.isLoading) return <Skeleton className="h-64" />
   if (story.isError || !story.data) return <Alert variant="danger">Could not load this story.</Alert>
   const item = story.data
-  const book = item.format !== 'animated'
+  const book = !['animated', 'video', 'quiz'].includes(item.format)
+
+  if (!canManage) return <div className="space-y-5">
+    <button className="text-sm font-semibold text-primary hover:underline" onClick={() => navigate('/courses/stories')}>← Stories & Folklore</button>
+    <h1 className="font-display text-2xl font-bold">{item.title}</h1>
+    <p className="text-muted">{item.language.toUpperCase()} · Level {item.level} · {item.format}</p>
+    <Alert variant="info">This is a read-only catalogue view. Content owners edit and publish stories.</Alert>
+    <Button variant="secondary" onClick={() => window.open(`/courses/stories/${id}/preview`, '_blank', 'noopener')}>Preview story</Button>
+  </div>
 
   return <div className="flex flex-col gap-6">
     <header className="flex flex-wrap items-end justify-between gap-3">
       <div>
         <button className="text-sm font-semibold text-primary hover:underline" onClick={() => navigate('/courses/stories')}>← Stories & Folklore</button>
         <h1 className="mt-2 font-display text-2xl font-bold">{item.title}</h1>
-        <p className="mt-1 text-muted">{item.course_title} · {item.language.toUpperCase()} · {item.format} · ₦500 per item</p>
+        <p className="mt-1 text-muted">{item.language.toUpperCase()} · Level {item.level} · {item.format} · ₦500 per item</p>
       </div>
       <div className="flex items-center gap-3">
         <Badge variant={item.published_at ? 'success' : 'neutral'}>{item.published_at ? 'Published' : 'Draft'}</Badge>
@@ -93,9 +125,21 @@ export function StoryEditorPage() {
       </div>
     </section>
 
-    {book ? <section className="rounded-2xl border border-border bg-surface p-5">
-      <h2 className="font-display text-lg font-bold">{item.format === 'reading' ? 'Chapters' : 'Pages'}</h2>
-      <p className="mt-1 text-sm text-muted">{item.format === 'reading' ? 'Chapter 1 is the free preview. Add text to at least two chapters.' : 'The first 12 pages are the free preview. Add images to at least 13 pages.'} Unpublish before changing the page count.</p>
+    {item.format === 'quiz' ? <section className="rounded-2xl border border-border bg-surface p-5">
+      <h2 className="font-display text-lg font-bold">Quiz questions</h2>
+      <p className="mt-1 text-sm text-muted">Question one is the free preview. Add at least two questions. Answers stay on the server for learners.</p>
+      <div className="mt-4 space-y-3">{item.questions.map((question) => <div key={question.id} className="rounded-xl border border-border p-4"><p className="font-semibold">{question.position}. {question.prompt}</p><ol className="mt-2 list-inside list-decimal text-sm">{question.options.map((option, index) => <li key={index}>{option}{index === question.correct_index ? ' ✓' : ''}</li>)}</ol>{canManage && <Button size="sm" variant="danger" disabled={busy || !!item.published_at} onClick={() => void deleteQuestion(question.id)}>Delete question</Button>}</div>)}</div>
+      {canManage && !item.published_at && <form onSubmit={addQuestion} className="mt-5 space-y-3 rounded-xl border border-dashed border-border p-4">
+        <Input label="Question" value={questionPrompt} onChange={(event) => setQuestionPrompt(event.target.value)} required />
+        {questionOptions.map((option, index) => <Input key={index} label={`Answer ${index + 1}`} value={option} onChange={(event) => setQuestionOptions((items) => items.map((value, i) => i === index ? event.target.value : value))} required />)}
+        <Button type="button" size="sm" variant="secondary" disabled={questionOptions.length >= 6} onClick={() => setQuestionOptions((items) => [...items, ''])}>Add answer</Button>
+        <label className="block text-sm font-semibold">Correct answer<select className="mt-1 block h-11 w-full rounded-xl border border-border bg-surface px-3" value={correctIndex} onChange={(event) => setCorrectIndex(Number(event.target.value))}>{questionOptions.map((_, index) => <option key={index} value={index}>Answer {index + 1}</option>)}</select></label>
+        <Input label="Explanation (optional)" value={questionExplanation} onChange={(event) => setQuestionExplanation(event.target.value)} />
+        <Button type="submit" loading={busy} disabled={!questionPrompt.trim() || questionOptions.some((option) => !option.trim())}>Add question</Button>
+      </form>}
+    </section> : book ? <section className="rounded-2xl border border-border bg-surface p-5">
+      <h2 className="font-display text-lg font-bold">{item.format === 'reading' || item.format === 'text' ? 'Chapters' : 'Pages'}</h2>
+      <p className="mt-1 text-sm text-muted">{item.format === 'reading' || item.format === 'text' ? 'Chapter 1 is the free preview. Add text to at least two chapters.' : 'The first 12 pages are the free preview. Add images to at least 13 pages.'} Unpublish before changing the page count.</p>
       <div className="mt-4 flex flex-col gap-4">
         {item.pages.map((page) => <StoryPageEditor key={page.id} storyId={id} page={page} refresh={refresh} upload={upload} />)}
       </div>
@@ -120,9 +164,14 @@ export function StoryEditorPage() {
   </div>
 }
 
-function StoryDetails({ story, onSaved }: { story: { id: number; title: string; summary: string | null }; onSaved: () => Promise<void> }) {
+function StoryDetails({ story, onSaved }: { story: StoryDetail; onSaved: () => Promise<void> }) {
+  const config = useConfig()
   const [title, setTitle] = useState(story.title)
   const [summary, setSummary] = useState(story.summary ?? '')
+  const [languageId, setLanguageId] = useState(story.language_id)
+  const [level, setLevel] = useState(story.level)
+  const [band, setBand] = useState(story.age_band)
+  const [format, setFormat] = useState(story.format)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   async function save(event: FormEvent) {
@@ -130,7 +179,7 @@ function StoryDetails({ story, onSaved }: { story: { id: number; title: string; 
     setBusy(true)
     setError(null)
     try {
-      await contentApi.updateStory(story.id, { title: title.trim(), summary })
+      await contentApi.updateStory(story.id, { title: title.trim(), summary, language_id: languageId, standalone_level: level, age_band: band, format })
       await onSaved()
     } catch (err) { setError(err instanceof ApiError ? err.message : 'Could not save story details.') }
     finally { setBusy(false) }
@@ -139,6 +188,10 @@ function StoryDetails({ story, onSaved }: { story: { id: number; title: string; 
     <h2 className="font-display text-lg font-bold">Details</h2>
     {error && <Alert variant="danger">{error}</Alert>}
     <Input label="Title" value={title} onChange={(event) => setTitle(event.target.value)} required />
+    <label className="text-sm font-semibold">Language<select className="mt-1 h-11 w-full rounded-xl border border-border bg-surface px-3" value={languageId} onChange={(event) => setLanguageId(Number(event.target.value))} required>{config.data?.languages.map((language) => <option key={language.id} value={language.id}>{language.name}</option>)}</select></label>
+    <label className="text-sm font-semibold">Level<select className="mt-1 h-11 w-full rounded-xl border border-border bg-surface px-3" value={level} onChange={(event) => setLevel(Number(event.target.value))} required>{Array.from({ length: 10 }, (_, index) => <option key={index + 1} value={index + 1}>Level {index + 1}</option>)}</select></label>
+    <label className="text-sm font-semibold">Age band<select className="mt-1 h-11 w-full rounded-xl border border-border bg-surface px-3" value={band} disabled={!!story.published_at} onChange={(event) => { const next = event.target.value as StoryDetail['age_band']; setBand(next); setFormat(formatsForStoryBand(next)[0]) }}>{STORY_BANDS.map((group) => <option key={group.value} value={group.value}>{group.label}</option>)}</select></label>
+    <label className="text-sm font-semibold">Format<select className="mt-1 h-11 w-full rounded-xl border border-border bg-surface px-3" value={format} disabled={!!story.published_at} onChange={(event) => setFormat(event.target.value as StoryDetail['format'])}>{formatsForStoryBand(band).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
     <label className="text-sm font-semibold">Summary
       <textarea className="mt-1 min-h-20 w-full rounded-xl border border-border bg-surface p-3" value={summary} onChange={(event) => setSummary(event.target.value)} />
     </label>

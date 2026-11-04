@@ -5,6 +5,7 @@ import { Alert, Badge, Button, Skeleton } from '@/components/ui'
 import { ApiError, billingApi, learningApi } from '@/lib/api'
 import { useActiveProfile } from '@/lib/profile/ActiveProfile'
 import { StoryContent } from '@/components/story/StoryContent'
+import { StoryQuiz } from '@/components/story/StoryQuiz'
 
 type Gateway = 'monnify' | 'paystack' | 'flutterwave'
 
@@ -70,23 +71,26 @@ export function StoryReaderPage() {
   if (story.isLoading) return <div className="mx-auto max-w-4xl p-6"><Skeleton className="h-64" /></div>
   if (story.isError || !story.data) return <div className="mx-auto max-w-4xl p-6"><Alert variant="danger">Could not load this story for this learner.</Alert></div>
   const item = story.data
-  return <div className="min-h-dvh bg-[#f3eee3] text-[#372d24]">
-    <header className="sticky top-0 z-20 border-b border-amber-900/15 bg-[#fffaf0]/95 backdrop-blur"><div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-3"><div className="min-w-0"><p className="text-[11px] font-bold uppercase tracking-widest text-amber-800">{item.purchased ? 'Your story' : 'Free preview'}</p><p className="truncate font-display font-bold">{item.title}</p></div><Button size="sm" variant="secondary" onClick={() => navigate('/learn/stories')}>Close</Button></div></header>
-    <main className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-8">
-    <div className="text-center"><p className="text-xs font-bold uppercase tracking-[.2em] text-amber-800">{item.course_title} · {item.language.toUpperCase()}</p><div className="mt-3 flex flex-wrap items-center justify-center gap-3"><h1 className="font-serif text-3xl font-bold sm:text-4xl">{item.title}</h1><Badge variant={item.purchased ? 'success' : 'neutral'}>{item.purchased ? 'Owned' : 'Preview'}</Badge></div>{item.summary && <p className="mx-auto mt-3 max-w-2xl text-[#6b5b4a]">{item.summary}</p>}</div>
-    {error && <Alert variant="danger">{error}</Alert>}{notice && <Alert variant="info">{notice}</Alert>}
-    <StoryContent key={`${item.id}-${item.purchased}`} format={item.format} pages={item.pages} previewVideoUrl={item.preview_video_url} fullVideoUrl={item.full_video_url} endLabel={item.can_purchase ? 'Unlock story' : 'Story access'} tone="light" endContent={!item.purchased ? <section className="rounded-2xl border border-amber-700/30 bg-[#fffaf0] p-6 text-center shadow-[0_12px_40px_rgba(48,32,11,.08)]">
+  const paywall = !item.purchased ? <section className="rounded-2xl border border-amber-700/30 bg-[#fffaf0] p-6 text-center shadow-[0_12px_40px_rgba(48,32,11,.08)]">
       <span className="text-2xl" aria-hidden="true">✦</span>
       <h2 className="font-display text-xl font-bold">Unlock the full story for ₦500</h2>
       <p className="mx-auto mt-2 max-w-2xl text-sm text-[#6b5b4a]">A parent’s purchase covers this story item for their family. An adult learner can buy it for their own account. It remains available after a subscription ends. A full refund or chargeback returns it to the free preview.</p>
-      {!item.can_purchase && <p className="mx-auto mt-4 max-w-xl text-sm font-semibold text-amber-900">Ask the learner’s parent to purchase this story. It will appear here when their payment is confirmed.</p>}
+      {!item.can_purchase && <p className="mx-auto mt-4 max-w-xl text-sm font-semibold text-amber-900">{activeLearner.is_child ? 'Ask a grown-up to unlock this story.' : 'Ask the learner’s parent to purchase this story. It will appear here when their payment is confirmed.'}</p>}
       {item.can_purchase && <>
       {gateways.data && gateways.data.available.length > 1 && <label className="mt-4 block text-sm font-semibold">Payment provider<select className="mx-auto mt-1 block min-h-11 rounded-xl border border-amber-900/30 bg-[#fffaf0] px-3 text-[#372d24]" value={selectedGateway ?? ''} onChange={(event) => setGateway(event.target.value as Gateway)}>{gateways.data.available.map((value) => <option key={value} value={value}>{value === 'flutterwave' ? 'Flutterwave' : value === 'paystack' ? 'Paystack' : 'Monnify'}</option>)}</select></label>}
       {gateways.data && gateways.data.available.length === 0 && <Alert variant="warning">Payments are unavailable right now.</Alert>}
       <Button className="mt-4" loading={busy} disabled={!selectedGateway} onClick={purchase}>Buy this story · ₦500</Button>
       {pendingPurchaseId && <Button className="mt-4 ml-2" variant="secondary" loading={busy} onClick={checkPending}>Check payment</Button>}
       </>}
-    </section> : undefined} />
+    </section> : undefined
+  return <div className="min-h-dvh bg-[#f3eee3] text-[#372d24]">
+    <header className="sticky top-0 z-20 border-b border-amber-900/15 bg-[#fffaf0]/95 backdrop-blur"><div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-3"><div className="min-w-0"><p className="text-[11px] font-bold uppercase tracking-widest text-amber-800">{item.purchased ? 'Your story' : 'Free preview'}</p><p className="truncate font-display font-bold">{item.title}</p></div><Button size="sm" variant="secondary" onClick={() => navigate('/learn/stories')}>Close</Button></div></header>
+    <main className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-8">
+    <div className="text-center"><p className="text-xs font-bold uppercase tracking-[.2em] text-amber-800">{item.language.toUpperCase()} · Level {item.level}</p><div className="mt-3 flex flex-wrap items-center justify-center gap-3"><h1 className="font-serif text-3xl font-bold sm:text-4xl">{item.title}</h1><Badge variant={item.purchased ? 'success' : 'neutral'}>{item.purchased ? 'Owned' : 'Preview'}</Badge></div>{item.summary && <p className="mx-auto mt-3 max-w-2xl text-[#6b5b4a]">{item.summary}</p>}</div>
+    {error && <Alert variant="danger">{error}</Alert>}{notice && <Alert variant="info">{notice}</Alert>}
+    <p className="text-center text-sm font-bold uppercase tracking-widest text-amber-900">{item.format === 'quiz' ? 'Quiz' : item.format === 'video' || item.format === 'animated' ? 'Video' : 'Text'} format</p>
+    {item.format === 'quiz' ? <StoryQuiz key={`${item.id}-${item.purchased}`} title={item.title} questions={item.questions} onAnswer={(question, optionIndex) => learningApi.answerStoryQuestion(id, activeLearner.id, question.id, optionIndex)} endContent={paywall} onExit={() => navigate('/learn/stories')} />
+      : <StoryContent key={`${item.id}-${item.purchased}`} format={item.format} pages={item.pages} previewVideoUrl={item.preview_video_url} fullVideoUrl={item.full_video_url} endLabel={item.can_purchase ? 'Unlock story' : 'Story access'} tone="light" endContent={paywall} />}
     </main>
   </div>
 }

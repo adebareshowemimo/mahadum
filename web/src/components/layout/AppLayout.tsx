@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Avatar, Icon, IconButton } from '@/components/ui'
 import { Logo } from '@/components/Logo'
 import { cn } from '@/lib/cn'
@@ -7,27 +7,35 @@ import { useAuth } from '@/lib/auth/AuthProvider'
 import { useTheme } from '@/lib/theme'
 import { visibleSections } from '@/lib/nav/navigation'
 import { ProfileSwitcher } from '@/components/layout/ProfileSwitcher'
+import { useActiveProfile } from '@/lib/profile/ActiveProfile'
 import { ConsumerPageAdvert } from '@/components/adverts/ConsumerPageAdvert'
 
 /** Persistent authenticated frame: sidebar + topbar with a routed content area. */
 export function AppLayout() {
   const { user } = useAuth()
+  const { activeLearner } = useActiveProfile()
   const location = useLocation()
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   const roles = user?.user.roles ?? []
-  const sections = visibleSections(roles, user?.user.capabilities)
-
+  const child = user?.active_child_profile_id != null || !!activeLearner?.is_child
+  const sections = visibleSections(roles, user?.user.capabilities, child)
+  const childPaths = ['/learn', '/tasks', '/achievements', '/leaderboard', '/competitions']
   // Close the mobile drawer on navigation.
   useEffect(() => {
     setDrawerOpen(false)
   }, [location.pathname])
 
+  if (child && (location.pathname.startsWith('/competitions/manage')
+    || !childPaths.some((path) => location.pathname === path || location.pathname.startsWith(path + '/')))) {
+    return <Navigate to="/learn" replace />
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-border bg-surface lg:flex">
-        <SidebarContent sections={sections} />
+        <SidebarContent sections={sections} child={child} />
       </aside>
 
       {/* Mobile drawer */}
@@ -39,7 +47,7 @@ export function AppLayout() {
             aria-hidden="true"
           />
           <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[80%] flex-col border-r border-border bg-surface animate-step-in">
-            <SidebarContent sections={sections} onClose={() => setDrawerOpen(false)} />
+            <SidebarContent sections={sections} child={child} onClose={() => setDrawerOpen(false)} />
           </aside>
         </div>
       )}
@@ -58,15 +66,17 @@ export function AppLayout() {
 
 function SidebarContent({
   sections,
+  child,
   onClose,
 }: {
   sections: ReturnType<typeof visibleSections>
+  child: boolean
   onClose?: () => void
 }) {
   return (
     <>
       <div className="flex h-16 items-center justify-between border-b border-border px-5">
-        <NavLink to="/" aria-label="Go to the Mahadum.360 homepage" end>
+        <NavLink to={child ? '/learn' : '/'} aria-label={child ? 'Go to learning' : 'Go to the Mahadum.360 homepage'} end>
           <Logo className="h-8" />
         </NavLink>
         {onClose && (
@@ -114,6 +124,9 @@ function SidebarContent({
 
 function Topbar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
   const { theme, toggle } = useTheme()
+  const { user } = useAuth()
+  const { activeLearner } = useActiveProfile()
+  const child = user?.active_child_profile_id != null || !!activeLearner?.is_child
 
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-surface/80 backdrop-blur">
@@ -122,7 +135,7 @@ function Topbar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
           <Icon name="menu" />
         </IconButton>
 
-        <NavLink to="/" aria-label="Go to the Mahadum.360 homepage" end className="lg:hidden">
+        <NavLink to={child ? '/learn' : '/'} aria-label={child ? 'Go to learning' : 'Go to the Mahadum.360 homepage'} end className="lg:hidden">
           <Logo className="h-7" />
         </NavLink>
 
@@ -130,7 +143,7 @@ function Topbar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
 
         <ProfileSwitcher />
 
-        <OrgSwitcher />
+        {!child && <OrgSwitcher />}
 
         <IconButton
           onClick={toggle}
@@ -170,6 +183,7 @@ function OrgSwitcher() {
 
 function UserMenu() {
   const { user, logout } = useAuth()
+  const { activeLearner } = useActiveProfile()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -182,7 +196,8 @@ function UserMenu() {
     return () => document.removeEventListener('mousedown', onDown)
   }, [open])
 
-  const name = user?.user.name ?? 'Account'
+  const child = user?.active_child_profile_id != null || !!activeLearner?.is_child
+  const name = child ? activeLearner!.display_name : user?.user.name ?? 'Account'
 
   return (
     <div className="relative" ref={ref}>
@@ -192,9 +207,9 @@ function UserMenu() {
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <Avatar name={name} size="sm" />
+        <Avatar name={name} src={child ? activeLearner?.avatar_url ?? undefined : undefined} size="sm" />
         <span className="hidden max-w-[10rem] truncate text-sm font-medium text-foreground sm:inline">
-          {user?.user.first_name ?? name}
+          {child ? name : user?.user.first_name ?? name}
         </span>
         <Icon name="chevron" className="size-4 text-muted" />
       </button>
@@ -206,7 +221,7 @@ function UserMenu() {
         >
           <div className="border-b border-border px-4 py-3">
             <p className="truncate text-sm font-semibold text-foreground">{name}</p>
-            <p className="truncate text-xs text-muted">{user?.user.email}</p>
+            {!child && <p className="truncate text-xs text-muted">{user?.user.email}</p>}
           </div>
           <button
             role="menuitem"

@@ -9,6 +9,7 @@ use App\Http\Requests\Family\TransferRequest;
 use App\Models\LearnerProfile;
 use App\Models\WalletFundingTransaction;
 use App\Services\Billing\PaymentGatewayManager;
+use App\Services\Billing\WalletFundingReconciler;
 use App\Services\Family\FamilyAlertService;
 use App\Services\Family\WalletService;
 use Illuminate\Http\JsonResponse;
@@ -29,7 +30,43 @@ class WalletController extends Controller
             'coin_balance' => $wallet->coin_balance,
             'currency_minor' => $wallet->currency_balance_minor,
             'currency' => $wallet->currency,
-            'funding_gateways' => $this->gateways->available(),
+            'funding_gateways' => config('services.payments.wallet_funding_enabled') ? $this->gateways->available() : [],
+            'funding_transactions' => WalletFundingTransaction::where('wallet_id', $wallet->id)
+                ->latest()->limit(20)->get(['id', 'gateway', 'amount_minor', 'currency', 'status', 'created_at']),
+        ]]);
+    }
+
+    public function confirm(Request $request, WalletFundingTransaction $funding, WalletFundingReconciler $reconciler): JsonResponse
+    {
+        $wallet = $this->wallets->walletFor($this->family($request->user()));
+        abort_unless($funding->wallet_id === $wallet->id, 403, 'Not your wallet payment.');
+
+        try {
+            $status = $reconciler->reconcile($funding);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json(['error' => [
+                'code' => 'verification_unavailable',
+                'message' => 'We could not verify this payment yet. Please do not pay again. Check this wallet later or contact support with the payment reference.',
+                'status' => 503,
+            ]], 503);
+        }
+
+        $message = match ($status) {
+            'success' => 'Payment confirmed. Your wallet has been credited.',
+            'failed' => 'Payment was not completed. No money was added.',
+            'refunded' => 'This payment was refunded.',
+            'needs_review' => 'Payment needs review. Your wallet has not been credited. Contact support with the payment reference.',
+            default => 'Payment is still being confirmed. Please do not pay again. Check this wallet shortly.',
+        };
+
+        return response()->json(['data' => [
+            'funding_id' => $funding->id,
+            'gateway_ref' => $funding->gateway_ref,
+            'status' => $status,
+            'message' => $message,
+            'currency_minor' => $wallet->fresh()->currency_balance_minor,
         ]]);
     }
 
@@ -40,6 +77,7 @@ class WalletController extends Controller
      */
     public function fund(FundWalletRequest $request): JsonResponse
     {
+        abort_unless(config('services.payments.wallet_funding_enabled'), 503, 'Wallet funding is temporarily unavailable. Please try again later.');
         abort_unless(in_array($request->string('gateway')->value(), $this->gateways->available(), true), 422, 'This payment method is currently unavailable. Choose an available method or try again later.');
         $wallet = $this->wallets->walletFor($this->family($request->user()));
 
@@ -59,6 +97,10 @@ class WalletController extends Controller
             (string) $request->user()->email,
             ['purpose' => 'wallet_funding', 'funding_id' => $funding->id],
         );
+        if (config('services.payments.live') && (! is_string($checkout->checkoutUrl) || ! str_starts_with($checkout->checkoutUrl, 'https://'))) {
+            $funding->update(['status' => 'failed']);
+            abort(502, 'Secure checkout is unavailable. No money was added.');
+        }
 
         // Record the gateway's own transaction id when it returns one, so later
         // events that don't echo our reference (e.g. Monnify refunds) still correlate.

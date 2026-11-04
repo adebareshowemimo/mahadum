@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Course;
+use App\Models\Lesson;
 use App\Models\Story;
 use Database\Seeders\StoriesTriviaSampleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,12 +23,11 @@ class StoriesTriviaSampleSeederTest extends TestCase
         $this->seed(StoriesTriviaSampleSeeder::class);
         $this->seed(StoriesTriviaSampleSeeder::class);
 
-        $course = Course::where('title', '[Sample] Yoruba Stories & Wisdom')->firstOrFail();
-        $this->assertSame(2, $course->levels()->firstOrFail()->lessons()->count());
-        $this->assertSame(6, $course->stories()->count());
-        $this->assertSame(1, $course->stories()->where('format', 'animated')->count());
+        $this->assertSame(2, Lesson::whereIn('kind', ['proverb', 'trivia'])->whereNull('course_level_id')->count());
+        $this->assertSame(6, Story::whereNull('course_id')->count());
+        $this->assertSame(1, Story::whereNull('course_id')->where('format', 'animated')->count());
 
-        $animated = Story::where('course_id', $course->id)->where('format', 'animated')->firstOrFail();
+        $animated = Story::whereNull('course_id')->where('format', 'animated')->firstOrFail();
         $this->assertTrue(Storage::disk('public')->exists($animated->cover_path));
         $this->assertTrue(Storage::disk('local')->exists($animated->preview_video_path));
         $this->assertTrue(Storage::disk('local')->exists($animated->full_video_path));

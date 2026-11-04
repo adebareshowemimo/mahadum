@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Content;
 
 use App\Http\Controllers\Controller;
-use App\Models\Course;
 use App\Models\Story;
 use App\Models\StoryPage;
 use App\Models\User;
@@ -19,9 +18,9 @@ class StoryController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Story::with('course.language')->withCount('pages')->latest();
-        if ($request->filled('course_id')) {
-            $query->where('course_id', $request->integer('course_id'));
+        $query = Story::with('language')->withCount(['pages', 'questions'])->latest();
+        if ($request->filled('language')) {
+            $query->whereHas('language', fn ($q) => $q->where('code', $request->query('language')));
         }
         if ($request->filled('q')) {
             $query->where('title', 'like', '%'.trim((string) $request->query('q')).'%');
@@ -40,20 +39,19 @@ class StoryController extends Controller
 
     public function store(Request $request, AuditLogger $audit): JsonResponse
     {
+        Gate::authorize('create', Story::class);
         $data = $this->validated($request, true);
-        $course = Course::findOrFail($data['course_id']);
-        Gate::authorize('update', $course);
-        $story = Story::create($data + ['price_minor' => Story::PRICE_MINOR]);
-        $audit->record('story.created', $story, [], $story->only(['title', 'course_id', 'age_band', 'format']));
+        $story = Story::create($data + ['course_id' => null, 'owner_user_id' => $request->user()->id, 'price_minor' => Story::PRICE_MINOR]);
+        $audit->record('story.created', $story, [], $story->only(['title', 'language_id', 'standalone_level', 'age_band', 'format']));
 
-        return response()->json(['data' => $this->detail($story->load('course.language', 'pages'))], 201);
+        return response()->json(['data' => $this->detail($story->load('language', 'pages', 'questions'))], 201);
     }
 
     public function show(Story $story): JsonResponse
     {
-        Gate::authorize('view', $story->course);
+        Gate::authorize('view', $story);
 
-        return response()->json(['data' => $this->detail($story->load('course.language', 'pages'))]);
+        return response()->json(['data' => $this->detail($story->load('language', 'pages', 'questions'))]);
     }
 
     /** Signed media links let an author preview private pages and video in a browser tab. */
@@ -62,7 +60,7 @@ class StoryController extends Controller
         abort_unless($request->hasValidSignature(false), 403);
         $viewer = User::findOrFail($request->integer('viewer'));
         abort_unless($viewer->can('content.courses.view'), 403);
-        Gate::forUser($viewer)->authorize('view', $story->course);
+        Gate::forUser($viewer)->authorize('view', $story);
         $path = match ($request->query('slot')) {
             'preview' => $story->preview_video_path,
             'full' => $story->full_video_path,
@@ -76,8 +74,8 @@ class StoryController extends Controller
 
     public function update(Request $request, Story $story, AuditLogger $audit): JsonResponse
     {
-        Gate::authorize('update', $story->course);
-        $before = $story->only(['title', 'summary', 'age_band', 'format']);
+        Gate::authorize('update', $story);
+        $before = $story->only(['title', 'summary', 'age_band', 'format', 'language_id', 'standalone_level']);
         $data = $this->validated($request, false);
         if ($story->published_at !== null) {
             abort_if(($data['age_band'] ?? $story->age_band) !== $story->age_band
@@ -87,14 +85,15 @@ class StoryController extends Controller
         $story->update($data);
         $audit->record('story.updated', $story, $before, $story->only(array_keys($before)));
 
-        return response()->json(['data' => $this->detail($story->load('course.language', 'pages'))]);
+        return response()->json(['data' => $this->detail($story->load('language', 'pages', 'questions'))]);
     }
 
     public function publish(Story $story, AuditLogger $audit): JsonResponse
     {
-        Gate::authorize('update', $story->course);
+        Gate::authorize('update', $story);
         $ready = match ($story->format) {
-            'animated' => (bool) ($story->preview_video_path && $story->full_video_path),
+            'animated', 'video' => (bool) ($story->preview_video_path && $story->full_video_path),
+            'quiz' => $story->questions()->count() > 1,
             'colouring', 'tracing' => $story->pages()->count() > 12
                 && ! $story->pages()->whereNull('image_path')->exists(),
             default => $story->pages()->count() > 1
@@ -104,21 +103,48 @@ class StoryController extends Controller
         $story->update(['published_at' => now()]);
         $audit->record('story.published', $story);
 
-        return response()->json(['data' => $this->detail($story->load('course.language', 'pages'))]);
+        return response()->json(['data' => $this->detail($story->load('language', 'pages', 'questions'))]);
     }
 
     public function unpublish(Story $story, AuditLogger $audit): JsonResponse
     {
-        Gate::authorize('update', $story->course);
+        Gate::authorize('update', $story);
         $story->update(['published_at' => null]);
         $audit->record('story.unpublished', $story);
 
-        return response()->json(['data' => $this->detail($story->load('course.language', 'pages'))]);
+        return response()->json(['data' => $this->detail($story->load('language', 'pages', 'questions'))]);
+    }
+
+    public function addQuestion(Request $request, Story $story): JsonResponse
+    {
+        Gate::authorize('update', $story);
+        abort_unless($story->format === 'quiz', 422, 'Choose the quiz format first.');
+        abort_if($story->published_at !== null, 409, 'Unpublish before changing quiz questions.');
+        $data = $request->validate([
+            'prompt' => ['required', 'string', 'max:2000'],
+            'options' => ['required', 'array', 'min:2', 'max:6'],
+            'options.*' => ['required', 'string', 'max:500', 'distinct'],
+            'correct_index' => ['required', 'integer', 'min:0'],
+            'explanation' => ['nullable', 'string', 'max:2000'],
+        ]);
+        abort_unless($data['correct_index'] < count($data['options']), 422, 'Choose a valid correct answer.');
+        $question = $story->questions()->create($data + ['position' => ($story->questions()->max('position') ?? 0) + 1]);
+
+        return response()->json(['data' => $question], 201);
+    }
+
+    public function deleteQuestion(Story $story, int $question): JsonResponse
+    {
+        Gate::authorize('update', $story);
+        abort_if($story->published_at !== null, 409, 'Unpublish before changing quiz questions.');
+        $story->questions()->findOrFail($question)->delete();
+
+        return response()->json(null, 204);
     }
 
     public function addPage(Request $request, Story $story): JsonResponse
     {
-        Gate::authorize('update', $story->course);
+        Gate::authorize('update', $story);
         abort_if($story->published_at !== null, 409, 'Unpublish this story before adding pages.');
         $data = $request->validate(['title' => ['nullable', 'string', 'max:255'], 'body' => ['nullable', 'string']]);
         $page = $story->pages()->create($data + ['position' => ($story->pages()->max('position') ?? 0) + 1]);
@@ -128,7 +154,7 @@ class StoryController extends Controller
 
     public function updatePage(Request $request, Story $story, StoryPage $page): JsonResponse
     {
-        Gate::authorize('update', $story->course);
+        Gate::authorize('update', $story);
         abort_unless($page->story_id === $story->id, 404);
         $data = $request->validate(['title' => ['nullable', 'string', 'max:255'], 'body' => ['nullable', 'string']]);
         if ($story->published_at !== null && $story->format === 'reading' && array_key_exists('body', $data)) {
@@ -141,7 +167,7 @@ class StoryController extends Controller
 
     public function deletePage(Story $story, StoryPage $page): JsonResponse
     {
-        Gate::authorize('update', $story->course);
+        Gate::authorize('update', $story);
         abort_if($story->published_at !== null, 409, 'Unpublish this story before deleting pages.');
         abort_unless($page->story_id === $story->id, 404);
         if ($page->image_path) {
@@ -154,7 +180,7 @@ class StoryController extends Controller
 
     public function upload(Request $request, Story $story): JsonResponse
     {
-        Gate::authorize('update', $story->course);
+        Gate::authorize('update', $story);
         $data = $request->validate([
             'slot' => ['required', Rule::in(['cover', 'preview_video', 'full_video', 'page_image'])],
             'page_id' => ['required_if:slot,page_image', 'nullable', 'integer', 'exists:story_pages,id'],
@@ -189,7 +215,7 @@ class StoryController extends Controller
 
     public function destroy(Story $story): JsonResponse
     {
-        Gate::authorize('update', $story->course);
+        Gate::authorize('update', $story);
         abort_if($story->purchases()->exists(), 409, 'Unpublish stories with payment attempts instead of deleting them.');
         foreach ([$story->preview_video_path, $story->full_video_path] as $path) {
             if ($path) {
@@ -212,18 +238,23 @@ class StoryController extends Controller
     private function validated(Request $request, bool $creating): array
     {
         $rules = [
+            'course_id' => ['prohibited'],
             'title' => [$creating ? 'required' : 'sometimes', 'string', 'max:255'],
             'summary' => ['nullable', 'string', 'max:5000'],
             'age_band' => [$creating ? 'required' : 'sometimes', Rule::in(['0_5', '6_12', '13_17', '18_plus', 'folklore'])],
-            'format' => [$creating ? 'required' : 'sometimes', Rule::in(['colouring', 'tracing', 'animated', 'reading'])],
+            'format' => [$creating ? 'required' : 'sometimes', Rule::in(['colouring', 'tracing', 'animated', 'reading', 'video', 'text', 'quiz'])],
         ];
         if ($creating) {
-            $rules['course_id'] = ['required', 'integer', 'exists:courses,id'];
+            $rules['language_id'] = ['required', 'integer', 'exists:languages,id'];
+            $rules['standalone_level'] = ['required', 'integer', 'between:1,10'];
+        } else {
+            $rules['language_id'] = ['sometimes', 'integer', 'exists:languages,id'];
+            $rules['standalone_level'] = ['sometimes', 'integer', 'between:1,10'];
         }
         $data = $request->validate($rules);
         $band = $data['age_band'] ?? $request->route('story')->age_band;
         $format = $data['format'] ?? $request->route('story')->format;
-        abort_unless(match ($band) {
+        abort_unless(in_array($format, ['video', 'text', 'quiz'], true) || match ($band) {
             '0_5' => in_array($format, ['colouring', 'tracing'], true),
             '6_12' => $format === 'animated',
             '13_17', '18_plus' => $format === 'reading',
@@ -236,12 +267,13 @@ class StoryController extends Controller
     private function summary(Story $story): array
     {
         return [
-            'id' => $story->id, 'course_id' => $story->course_id,
-            'course_title' => $story->course->title, 'language' => $story->course->language->code,
+            'id' => $story->id, 'language_id' => $story->language_id,
+            'level' => $story->standalone_level, 'language' => $story->language->code,
             'title' => $story->title, 'summary' => $story->summary,
             'age_band' => $story->age_band, 'format' => $story->format,
             'price_minor' => $story->price_minor, 'published_at' => $story->published_at,
             'pages_count' => $story->pages_count ?? $story->pages()->count(),
+            'questions_count' => $story->questions_count ?? $story->questions()->count(),
             'cover_url' => $story->cover_path ? Storage::disk('public')->url($story->cover_path) : null,
         ];
     }
@@ -258,6 +290,7 @@ class StoryController extends Controller
             'pages' => $story->pages->map(fn (StoryPage $page) => $this->page($page) + [
                 'image_url' => $page->image_path ? $media('page', $page) : null,
             ])->values(),
+            'questions' => $story->questions->map(fn ($question) => $question->only(['id', 'position', 'prompt', 'options', 'correct_index', 'explanation']))->values(),
             'has_preview_video' => (bool) $story->preview_video_path,
             'has_full_video' => (bool) $story->full_video_path,
             'preview_video_url' => $story->preview_video_path ? $media('preview') : null,

@@ -19,6 +19,7 @@ export function LessonPlayerPage() {
   const { activeLearner } = useActiveProfile()
 
   const [play, setPlay] = useState<LessonPlay | null>(null)
+  const [introSeen, setIntroSeen] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export function LessonPlayerPage() {
     }
     let cancelled = false
     setPlay(null)
+    setIntroSeen(false)
     setLoadError(null)
     learningApi
       .play(id, activeLearner.id)
@@ -50,12 +52,19 @@ export function LessonPlayerPage() {
     return (
       <div className="mx-auto max-w-md p-6">
         <Alert variant="warning">{loadError}</Alert>
-        <a href="/billing" className="mt-4 block font-semibold text-primary underline">View plans and upgrade</a>
+        {activeLearner.is_child ? <p className="mt-4 font-semibold text-primary">Ask a grown-up to unlock this lesson.</p> : <a href="/billing" className="mt-4 block font-semibold text-primary underline">View plans and upgrade</a>}
         <Button3D variant="neutral" onClick={() => navigate('/learn')}>Back to journey</Button3D>
       </div>
     )
   }
   if (!play) return <Skeleton className="m-6 h-72" />
+
+  if (play.lesson.summary && !introSeen) return <main className="mx-auto flex min-h-dvh max-w-2xl flex-col justify-center gap-6 px-5 py-10">
+    <p className="text-xs font-bold uppercase tracking-widest text-primary">Text · {play.lesson.title}</p>
+    <h1 className="font-display text-3xl font-bold">{play.lesson.title}</h1>
+    <p className="whitespace-pre-wrap text-lg leading-8">{play.lesson.summary}</p>
+    <Button3D onClick={() => play.components.length ? setIntroSeen(true) : navigate('/learn/proverbs-trivia')}>{play.components.length ? 'Continue to video or quiz' : 'Finish reading'}</Button3D>
+  </main>
 
   return (
     <SlideDeck

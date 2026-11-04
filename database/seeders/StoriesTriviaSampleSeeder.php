@@ -2,8 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Course;
-use App\Models\CourseLevel;
 use App\Models\Language;
 use App\Models\Lesson;
 use App\Models\LessonComponent;
@@ -19,7 +17,7 @@ use Illuminate\Support\Facades\Storage;
  */
 class StoriesTriviaSampleSeeder extends Seeder
 {
-    private const COURSE_TITLE = '[Sample] Yoruba Stories & Wisdom';
+    private int $ownerUserId;
 
     public function run(): void
     {
@@ -33,31 +31,20 @@ class StoriesTriviaSampleSeeder extends Seeder
         }
 
         $language = Language::firstOrCreate(['code' => 'yo'], ['name' => 'Yoruba', 'is_active' => true]);
-        $course = Course::firstOrCreate(['title' => self::COURSE_TITLE], [
-            'language_id' => $language->id,
-            'owner_user_id' => $owner->id,
-            'description' => 'Published sample lessons and stories for testing the creator and family libraries.',
-            'level_band' => 'A1',
-            'status' => 'published',
-            'is_published' => true,
-        ]);
-        $level = CourseLevel::firstOrCreate(['course_id' => $course->id, 'position' => 1], [
-            'title' => 'Wisdom and folklore', 'is_free' => true, 'has_assessment' => false,
-        ]);
+        $this->ownerUserId = $owner->id;
+        $this->proverbLesson($language);
+        $this->triviaLesson($language);
+        $this->colouringStory($language);
+        $this->tracingStory($language);
+        $this->animatedStory($language);
+        $this->readingStories($language);
 
-        $this->proverbLesson($level);
-        $this->triviaLesson($level);
-        $this->colouringStory($course);
-        $this->tracingStory($course);
-        $this->animatedStory($course);
-        $this->readingStories($course);
-
-        $this->command->info('Seeded 2 lessons and 6 published stories in "'.self::COURSE_TITLE.'". Re-running adds no duplicates.');
+        $this->command->info('Seeded 2 standalone sets and 6 published stories. Re-running adds no duplicates.');
     }
 
-    private function proverbLesson(CourseLevel $level): void
+    private function proverbLesson(Language $language): void
     {
-        $lesson = $this->lesson($level, '[Sample Proverb] Wisdom in everyday words', 'proverb', 1);
+        $lesson = $this->lesson($language, '[Sample Proverb] Wisdom in everyday words', 'proverb');
         $cards = $this->component($lesson, 'exercise', 1, 'Three Yoruba proverbs', 10);
         $deck = $cards->exercise()->firstOrCreate([], ['mode' => 'flashcards']);
         foreach ([
@@ -79,9 +66,9 @@ class StoriesTriviaSampleSeeder extends Seeder
         ], 'Sùúrù means patience.');
     }
 
-    private function triviaLesson(CourseLevel $level): void
+    private function triviaLesson(Language $language): void
     {
-        $lesson = $this->lesson($level, '[Sample Trivia] Yoruba language and culture', 'trivia', 2);
+        $lesson = $this->lesson($language, '[Sample Trivia] Yoruba language and culture', 'trivia');
         $quiz = $this->quiz($lesson, 1, 'Quick culture challenge', 15, 3, true, 7);
         foreach ([
             ['What does “ẹ ṣé” mean?', [['Thank you', true], ['Good night', false], ['Water', false]], 'Ẹ ṣé is a way to say thank you.'],
@@ -94,11 +81,12 @@ class StoriesTriviaSampleSeeder extends Seeder
         }
     }
 
-    private function lesson(CourseLevel $level, string $title, string $kind, int $position): Lesson
+    private function lesson(Language $language, string $title, string $kind): Lesson
     {
-        return $level->lessons()->firstOrCreate(['title' => $title], [
-            'kind' => $kind, 'position' => $position, 'est_minutes' => 5,
-            'is_free_preview' => true, 'is_locked_by_default' => false,
+        return Lesson::firstOrCreate(['title' => $title, 'kind' => $kind], [
+            'language_id' => $language->id, 'standalone_level' => 1,
+            'course_level_id' => null, 'position' => 1, 'est_minutes' => 5,
+            'is_locked_by_default' => false,
             'version' => 1, 'published_at' => now(),
         ]);
     }
@@ -133,9 +121,9 @@ class StoriesTriviaSampleSeeder extends Seeder
         }
     }
 
-    private function colouringStory(Course $course): void
+    private function colouringStory(Language $language): void
     {
-        $story = $this->story($course, '[Sample Colouring] Colours at the market', '0_5', 'colouring',
+        $story = $this->story($language, '[Sample Colouring] Colours at the market', '0_5', 'colouring',
             'Follow a child through a Yoruba market. Colour one friendly object on each page.', '#f59e0b');
         $objects = ['Sun', 'Tomato', 'Basket', 'Orange', 'Leaf', 'Drum', 'Pot', 'Fish', 'Bird', 'Flower', 'Moon', 'Star', 'Home'];
         foreach ($objects as $index => $object) {
@@ -148,9 +136,9 @@ class StoriesTriviaSampleSeeder extends Seeder
         $this->publish($story);
     }
 
-    private function tracingStory(Course $course): void
+    private function tracingStory(Language $language): void
     {
-        $story = $this->story($course, '[Sample Tracing] First Yoruba words', '0_5', 'tracing',
+        $story = $this->story($language, '[Sample Tracing] First Yoruba words', '0_5', 'tracing',
             'Trace simple words, then say them aloud with a parent.', '#34d399');
         $words = [
             ['omi', 'water'], ['ilé', 'home'], ['ọ̀rẹ́', 'friend'], ['ẹ ṣé', 'thank you'], ['bàbá', 'father'],
@@ -167,9 +155,9 @@ class StoriesTriviaSampleSeeder extends Seeder
         $this->publish($story);
     }
 
-    private function animatedStory(Course $course): void
+    private function animatedStory(Language $language): void
     {
-        $story = $this->story($course, '[Sample Animated] Tortoise and the talking drum', '6_12', 'animated',
+        $story = $this->story($language, '[Sample Animated] Tortoise and the talking drum', '6_12', 'animated',
             'A short silent sample clip about sharing music. The preview and full video exercise the paid video flow.', '#818cf8');
         foreach (['preview' => 'sample_story_preview.mp4', 'full' => 'sample_story_full.mp4'] as $slot => $file) {
             $path = "stories/{$story->id}/sample_{$slot}.mp4";
@@ -184,7 +172,7 @@ class StoriesTriviaSampleSeeder extends Seeder
         $this->publish($story);
     }
 
-    private function readingStories(Course $course): void
+    private function readingStories(Language $language): void
     {
         $stories = [
             ['[Sample Reading] The promise of the talking drum', '13_17', '#f472b6', [
@@ -201,7 +189,7 @@ class StoriesTriviaSampleSeeder extends Seeder
             ]],
         ];
         foreach ($stories as [$title, $band, $colour, $chapters]) {
-            $story = $this->story($course, $title, $band, 'reading',
+            $story = $this->story($language, $title, $band, 'reading',
                 'A two-chapter sample for testing the free first chapter, ₦500 unlock, and age access.', $colour);
             foreach ($chapters as $index => [$chapterTitle, $body]) {
                 $story->pages()->firstOrCreate(['position' => $index + 1], [
@@ -212,9 +200,11 @@ class StoriesTriviaSampleSeeder extends Seeder
         }
     }
 
-    private function story(Course $course, string $title, string $band, string $format, string $summary, string $colour): Story
+    private function story(Language $language, string $title, string $band, string $format, string $summary, string $colour): Story
     {
-        $story = $course->stories()->firstOrCreate(['title' => $title], [
+        $story = Story::firstOrCreate(['title' => $title], [
+            'course_id' => null, 'language_id' => $language->id, 'standalone_level' => 1,
+            'owner_user_id' => $this->ownerUserId,
             'summary' => $summary, 'age_band' => $band, 'format' => $format,
             'price_minor' => Story::PRICE_MINOR,
         ]);

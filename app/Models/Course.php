@@ -83,14 +83,6 @@ class Course extends Model
     }
 
     /**
-     * @return HasMany<Story, $this>
-     */
-    public function stories(): HasMany
-    {
-        return $this->hasMany(Story::class);
-    }
-
-    /**
      * @return HasMany<Enrollment, $this>
      */
     public function enrollments(): HasMany

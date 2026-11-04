@@ -5,20 +5,22 @@ import { Alert, Button, Skeleton } from '@/components/ui'
 import { learningApi, type LibraryLesson } from '@/lib/api'
 import { useActiveProfile } from '@/lib/profile/ActiveProfile'
 
-function LessonCard({ lesson, onOpen }: { lesson: LibraryLesson; onOpen: () => void }) {
+function LessonCard({ lesson, onOpen, child }: { lesson: LibraryLesson; onOpen: () => void; child: boolean }) {
   const proverb = lesson.kind === 'proverb'
   return <article className={`flex flex-col overflow-hidden rounded-2xl border border-border bg-surface ${proverb ? 'border-l-4 border-l-amber-400' : 'border-l-4 border-l-violet-500'}`}>
     <div className="flex-1 p-5">
-      <p className="text-xs font-bold uppercase tracking-widest text-primary">{lesson.language.toUpperCase()} · {lesson.course_title}</p>
+      <p className="text-xs font-bold uppercase tracking-widest text-primary">{lesson.language?.toUpperCase() ?? 'Language'}</p>
       <h3 className="mt-2 font-display text-lg font-bold">{lesson.title}</h3>
+      {lesson.summary && <p className="mt-1 text-sm text-muted">{lesson.summary}</p>}
       <p className="mt-1 text-sm text-muted">{lesson.level_title}</p>
+      <p className="mt-2 text-xs font-bold uppercase tracking-wide text-primary">{lesson.formats?.join(' · ') || (proverb ? 'Flashcards' : 'Quiz')}</p>
       <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
         <span className="rounded-full bg-surface-muted px-3 py-1.5">{proverb ? `${lesson.proverb_count} ${lesson.proverb_count === 1 ? 'proverb' : 'proverbs'}` : `${lesson.question_count} ${lesson.question_count === 1 ? 'question' : 'questions'}`}</span>
         {!proverb && lesson.time_limit_seconds && <span className="rounded-full bg-surface-muted px-3 py-1.5">{lesson.time_limit_seconds}s per question</span>}
         {lesson.has_audio && <span className="rounded-full bg-surface-muted px-3 py-1.5">Audio</span>}
       </div>
     </div>
-    <div className="border-t border-border px-5 py-4"><Button size="sm" onClick={onOpen}>{lesson.access_reason ? 'See plans' : proverb ? 'Explore set' : 'Play trivia'} →</Button></div>
+    <div className="border-t border-border px-5 py-4"><Button size="sm" onClick={onOpen} disabled={child && !!lesson.access_reason}>{lesson.access_reason ? child ? 'Ask a grown-up' : 'See plans' : proverb ? 'Explore set' : 'Play trivia'} →</Button></div>
   </article>
 }
 
@@ -39,13 +41,13 @@ export function ProverbsTriviaLibraryPage() {
       <p className="text-xs font-bold uppercase tracking-[.2em]">Proverb of the day</p>
       <blockquote className="mt-4 max-w-3xl font-display text-2xl font-bold leading-snug sm:text-3xl">“{sample.sample_proverb}”</blockquote>
       {sample.sample_meaning && <p className="mt-3 text-amber-900">{sample.sample_meaning}</p>}
-      <Button className="mt-5" size="sm" onClick={() => navigate(sample.access_reason ? '/billing' : `/learn/lessons/${sample.id}`)}>Explore this set →</Button>
+      <Button className="mt-5" size="sm" disabled={activeLearner?.is_child && !!sample.access_reason} onClick={() => navigate(sample.access_reason ? '/billing' : `/learn/lessons/${sample.id}`)}>{activeLearner?.is_child && sample.access_reason ? 'Ask a grown-up' : 'Explore this set'} →</Button>
     </section>}
     {sections.map(({ title, description, query, page, setPage }) => <section key={title} className="flex flex-col gap-4">
       <div><h2 className="font-display text-xl font-bold">{title}</h2><p className="text-sm text-muted">{description}</p></div>
       {query.isError && <Alert variant="danger">Could not load {title.toLowerCase()}.</Alert>}
       {query.isLoading && <Skeleton className="h-40" />}
-      {query.data && <><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{query.data.data.length === 0 && <p className="rounded-2xl border border-border bg-surface p-6 text-muted">No published {title.toLowerCase()} yet.</p>}{query.data.data.map((lesson) => <LessonCard key={lesson.id} lesson={lesson} onOpen={() => navigate(lesson.access_reason ? '/billing' : `/learn/lessons/${lesson.id}`)} />)}</div>
+      {query.data && <><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{query.data.data.length === 0 && <p className="rounded-2xl border border-border bg-surface p-6 text-muted">No published {title.toLowerCase()} yet.</p>}{query.data.data.map((lesson) => <LessonCard key={lesson.id} lesson={lesson} child={!!activeLearner?.is_child} onOpen={() => navigate(lesson.access_reason ? '/billing' : `/learn/lessons/${lesson.id}`)} />)}</div>
         {query.data.meta.last_page > 1 && <div className="flex items-center justify-between"><Button size="sm" variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button><span className="text-sm text-muted">Page {page} of {query.data.meta.last_page}</span><Button size="sm" variant="secondary" disabled={page >= query.data.meta.last_page} onClick={() => setPage(page + 1)}>Next</Button></div>}
       </>}
     </section>)}

@@ -52,6 +52,7 @@ export interface LearnerProfile {
   target_language?: string | null
   /** True for child profiles (no own user account). */
   is_child: boolean
+  school_name?: string | null
   /** Requires a parental PIN to switch into. */
   pin_protected: boolean
   coin_balance: number
@@ -122,6 +123,7 @@ export interface Me {
   learner_profiles: LearnerProfile[]
   organizations: OrganizationMembership[]
   active_organization_id: number | null
+  active_child_profile_id?: number | null
   subscription: SubscriptionInfo | null
   entitlements: Entitlements
 }
@@ -230,6 +232,16 @@ export interface WalletBalance {
   currency_minor: number
   currency: string
   funding_gateways?: ('monnify' | 'paystack' | 'flutterwave')[]
+  funding_transactions?: WalletFundingTransaction[]
+}
+
+export interface WalletFundingTransaction {
+  id: number
+  gateway: 'monnify' | 'paystack' | 'flutterwave'
+  amount_minor: number
+  currency: string
+  status: string
+  created_at: string
 }
 
 export interface FamilyOverview {
@@ -472,8 +484,11 @@ export interface AuthorLesson {
   /** Read-only compatibility alias for the level access setting. */
   is_free_preview?: boolean
   id: number
+  language_id?: number | null
+  standalone_level?: number | null
   kind: 'lesson' | 'proverb' | 'trivia'
   title: string
+  summary?: string | null
   position: number
   est_minutes: number | null
   is_locked_by_default: boolean
@@ -508,18 +523,21 @@ export interface CreateLevelInput {
 
 export interface CreateLessonInput {
   title: string
+  summary?: string | null
   kind?: 'lesson' | 'proverb' | 'trivia'
   est_minutes?: number
   position?: number
   is_locked_by_default?: boolean
+  language_id?: number
+  standalone_level?: number
 }
 
 export interface LibraryLesson {
   id: number
   title: string
+  summary: string | null
   kind: 'proverb' | 'trivia'
-  course_id: number
-  course_title: string
+  level: number
   level_title: string
   language: string
   est_minutes: number | null
@@ -527,6 +545,7 @@ export interface LibraryLesson {
   access_reason: string | null
   proverb_count: number
   question_count: number
+  formats?: Array<'video' | 'text' | 'quiz'>
   time_limit_seconds: number | null
   has_audio: boolean
   sample_proverb: string | null
@@ -534,20 +553,21 @@ export interface LibraryLesson {
 }
 
 export type StoryAgeBand = '0_5' | '6_12' | '13_17' | '18_plus' | 'folklore'
-export type StoryFormat = 'colouring' | 'tracing' | 'animated' | 'reading'
+export type StoryFormat = 'colouring' | 'tracing' | 'animated' | 'reading' | 'video' | 'text' | 'quiz'
 
 export interface StorySummary {
   id: number
   title: string
   summary: string | null
-  course_id?: number
-  course_title: string
+  language_id: number
+  level: number
   language: string
   age_band: StoryAgeBand
   format: StoryFormat
   price_minor: number
   cover_url: string | null
   pages_count: number
+  questions_count: number
   published_at?: string | null
   purchased?: boolean
   can_purchase?: boolean
@@ -564,6 +584,7 @@ export interface StoryPage {
 
 export interface StoryDetail extends StorySummary {
   pages: StoryPage[]
+  questions: Array<{ id: number; position: number; prompt: string; options: string[]; correct_index?: number; explanation?: string | null }>
   has_preview_video?: boolean
   has_full_video?: boolean
   preview_video_url?: string | null
@@ -743,7 +764,7 @@ export interface PlayComponent {
 
 export interface LessonPlay {
   hearts_remaining?: number | null
-  lesson: { id: number; title: string; est_minutes: number | null }
+  lesson: { id: number; title: string; summary?: string | null; est_minutes: number | null }
   components: PlayComponent[]
 }
 

@@ -7,7 +7,8 @@ use Illuminate\Support\Str;
 
 /**
  * Enforces the lesson publish rule (Content Model §6 / Business Rule 1):
- * a lesson cannot publish without ≥1 video + ≥1 quiz, every video must be
+ * course lessons need a video and quiz; standalone proverbs need flashcards
+ * and standalone trivia need a quiz. Every video must be
  * `ready`, and every quiz must have ≥1 question with a valid correct-answer
  * configuration.
  *
@@ -26,7 +27,13 @@ class LessonPublishService
         $components = $lesson->components;
         $failures = [];
 
-        foreach (['video', 'quiz'] as $required) {
+        $requiredTypes = in_array($lesson->kind, ['proverb', 'trivia'], true) ? [] : ['video', 'quiz'];
+        if (in_array($lesson->kind, ['proverb', 'trivia'], true)
+            && blank($lesson->summary)
+            && $components->whereIn('type', ['video', 'quiz', 'exercise'])->isEmpty()) {
+            $failures[] = 'Add text, video, quiz, or flashcards before publishing this set.';
+        }
+        foreach ($requiredTypes as $required) {
             if ($components->where('type', $required)->isEmpty()) {
                 $failures[] = "Lesson needs at least one {$required} component.";
             }

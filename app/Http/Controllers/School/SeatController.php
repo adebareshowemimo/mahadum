@@ -5,6 +5,7 @@ namespace App\Http\Controllers\School;
 use App\Http\Controllers\Concerns\ResolvesOrganization;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\School\PurchaseSeatsRequest;
+use App\Models\Invoice;
 use App\Models\Organization;
 use App\Services\AuditLogger;
 use App\Services\Billing\InvoiceLineBuilder;
@@ -62,6 +63,22 @@ class SeatController extends Controller
                 abort_unless(hash_equals($previous->fingerprint, $fingerprint), 409, 'This purchase reference was already used for different seat details. Start a new purchase.');
 
                 return response()->json(['data' => json_decode($previous->response, true, flags: JSON_THROW_ON_ERROR)], 201)->header('Idempotency-Replayed', 'true');
+            }
+            // A new browser session has a new transport key. Reuse an equivalent
+            // unpaid school obligation rather than allocating and billing twice.
+            $matching = DB::table('school_seat_purchase_requests')
+                ->where('organization_id', $organization->id)->where('fingerprint', $fingerprint)
+                ->latest('id')->get();
+            foreach ($matching as $candidate) {
+                $existing = json_decode($candidate->response, true, flags: JSON_THROW_ON_ERROR);
+                if (isset($existing['invoice_id']) && Invoice::withoutTenancy()->whereKey($existing['invoice_id'])
+                    ->where('organization_id', $organization->id)->where('status', 'unpaid')->exists()) {
+                    DB::table('school_seat_purchase_requests')->insert(['organization_id' => $organization->id,
+                        'user_id' => $request->user()->id, 'request_key' => $key, 'fingerprint' => $fingerprint,
+                        'response' => $candidate->response, 'created_at' => now(), 'updated_at' => now()]);
+
+                    return response()->json(['data' => $existing], 201)->header('Idempotency-Replayed', 'true');
+                }
             }
             $result = $this->createPurchase($request, $organization);
             DB::table('school_seat_purchase_requests')->insert(['organization_id' => $organization->id, 'user_id' => $request->user()->id,

@@ -8,12 +8,13 @@ use App\Models\Organization;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Services\Billing\EntitlementResolver;
+use App\Services\Billing\SubscriptionEligibility;
 use App\Services\Gamification\PracticeModeService;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
 class LessonAccess
 {
-    public function __construct(private EntitlementResolver $entitlements, private PracticeModeService $hearts) {}
+    public function __construct(private EntitlementResolver $entitlements, private PracticeModeService $hearts, private SubscriptionEligibility $eligibility) {}
 
     /** Resolve actual subscriptions so airtime cannot inherit card-plan content access. */
     public function tier(LearnerProfile $learner): string
@@ -28,8 +29,18 @@ class LessonAccess
                 if ($learner->organization_id !== null) {
                     $query->orWhere(fn ($q) => $q->where('subscriber_type', Organization::class)->where('subscriber_id', $learner->organization_id));
                 }
-            })->get()->filter(fn ($subscription) => $subscription->plan->price_minor > 0
-                || ($subscription->subscriber_type === Organization::class && $subscription->plan->audience === 'school'));
+            })->get()->filter(function ($subscription) use ($learner) {
+                if (! ($subscription->plan->price_minor > 0
+                    || ($subscription->subscriber_type === Organization::class && $subscription->plan->audience === 'school'))) {
+                    return false;
+                }
+                if ($subscription->subscriber_type !== User::class) {
+                    return true;
+                }
+
+                return $subscription->subscriber instanceof User
+                    && $this->eligibility->coversLearner($subscription->subscriber, $subscription->plan, $learner);
+            });
 
         if ($subscriptions->contains(fn ($subscription) => $subscription->method !== 'airtime')) {
             return 'paid';
@@ -42,6 +53,9 @@ class LessonAccess
     public function content(LearnerProfile $learner, Lesson $lesson, ?string $tier = null): array
     {
         $tier ??= $this->tier($learner);
+        if ($lesson->course_level_id === null) {
+            return ['allowed' => true, 'reason' => null];
+        }
         $allowed = match ($tier) {
             'paid' => true,
             'telco' => (bool) $lesson->courseLevel->is_free || (int) $lesson->courseLevel->position === 1,

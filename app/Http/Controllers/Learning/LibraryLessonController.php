@@ -28,14 +28,14 @@ class LibraryLessonController extends Controller
             Gate::authorize('view', $learner);
         }
 
-        $query = Lesson::query()->with(['courseLevel.course.language', 'components.exercise.flashcards', 'components.quiz.questions'])
+        $query = Lesson::query()->with(['language', 'components.exercise.flashcards', 'components.quiz.questions'])
             ->where('kind', $validated['kind'])
-            ->whereHas('courseLevel.course', fn ($q) => $author ? $q : $q->where('is_published', true));
+            ->whereNull('course_level_id');
         if (! $author) {
             $query->whereNotNull('published_at');
         }
         if ($request->filled('language')) {
-            $query->whereHas('courseLevel.course.language', fn ($q) => $q->where('code', $validated['language']));
+            $query->whereHas('language', fn ($q) => $q->where('code', $validated['language']));
         }
         if ($request->filled('q')) {
             $term = $validated['q'];
@@ -53,7 +53,14 @@ class LibraryLessonController extends Controller
                 $hasAudio = false;
                 $sampleProverb = null;
                 $sampleMeaning = null;
+                $formats = [];
+                if (filled($lesson->summary)) {
+                    $formats[] = 'text';
+                }
                 foreach ($lesson->components as $component) {
+                    if (in_array($component->type, ['video', 'quiz'], true)) {
+                        $formats[] = $component->type;
+                    }
                     if ($component->exercise) {
                         $cards = $component->exercise->flashcards;
                         $proverbCount += $cards->count();
@@ -70,16 +77,17 @@ class LibraryLessonController extends Controller
                 return [
                     'id' => $lesson->id,
                     'title' => $lesson->title,
+                    'summary' => $lesson->summary,
                     'kind' => $lesson->kind,
-                    'course_id' => $lesson->courseLevel->course_id,
-                    'course_title' => $lesson->courseLevel->course->title,
-                    'level_title' => $lesson->courseLevel->title,
-                    'language' => $lesson->courseLevel->course->language->code,
+                    'level' => $lesson->standalone_level,
+                    'level_title' => 'Level '.$lesson->standalone_level,
+                    'language' => $lesson->language?->code,
                     'est_minutes' => $lesson->est_minutes,
                     'is_published' => $lesson->published_at !== null,
                     'access_reason' => $permission['reason'] ?? null,
                     'proverb_count' => $proverbCount,
                     'question_count' => $questionCount,
+                    'formats' => array_values(array_unique($formats)),
                     'time_limit_seconds' => $timeLimitSeconds,
                     'has_audio' => $hasAudio,
                     'sample_proverb' => $sampleProverb,

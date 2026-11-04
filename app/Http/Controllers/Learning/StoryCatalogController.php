@@ -21,7 +21,7 @@ class StoryCatalogController extends Controller
     public function index(Request $request): JsonResponse
     {
         $learner = $this->learner($request);
-        $query = Story::with('course.language')->withCount('pages')
+        $query = Story::with('language')->withCount(['pages', 'questions'])
             ->whereNotNull('published_at');
         if (! $this->maySeeAdult($learner, $request->user())) {
             $query->where('age_band', '!=', '18_plus');
@@ -30,7 +30,7 @@ class StoryCatalogController extends Controller
             $query->where('age_band', $request->query('band'));
         }
         if ($request->filled('language')) {
-            $query->whereHas('course.language', fn ($q) => $q->where('code', $request->query('language')));
+            $query->whereHas('language', fn ($q) => $q->where('code', $request->query('language')));
         }
         $stories = $query->latest()->paginate(24);
 
@@ -50,19 +50,43 @@ class StoryCatalogController extends Controller
         $purchased = $this->access->isPurchased($story, $learner);
         $limit = $purchased ? null : $this->access->previewPageCount($story);
         $pages = $story->pages()->when($limit !== null, fn ($q) => $q->limit($limit))->get();
+        $questions = $story->format === 'quiz'
+            ? $story->questions()->when(! $purchased, fn ($q) => $q->limit(1))->get()
+            : collect();
         $media = fn (string $slot, ?StoryPage $page = null) => URL::temporarySignedRoute('stories.asset', now()->addMinutes(30), [
             'story' => $story->id, 'viewer' => $request->user()->id, 'learner' => $learner->id,
             'slot' => $slot, ...($page ? ['page' => $page->id] : []),
         ], absolute: false);
 
-        return response()->json(['data' => $this->summary($story->load('course.language'), $learner, $request->user()) + [
+        return response()->json(['data' => $this->summary($story->load('language'), $learner, $request->user()) + [
             'pages' => $pages->map(fn (StoryPage $page) => [
                 'id' => $page->id, 'position' => $page->position, 'title' => $page->title,
                 'body' => $page->body, 'image_url' => $page->image_path ? $media('page', $page) : null,
             ])->values(),
+            'questions' => $questions->map(fn ($question) => $question->only(['id', 'position', 'prompt', 'options']))->values(),
             'preview_video_url' => $story->preview_video_path ? $media('preview') : null,
             'full_video_url' => $purchased && $story->full_video_path ? $media('full') : null,
             'preview_ends_at' => $limit,
+        ]]);
+    }
+
+    public function answer(Request $request, Story $story): JsonResponse
+    {
+        $learner = $this->learner($request);
+        abort_unless($story->published_at && $story->format === 'quiz'
+            && $this->access->isVisible($story, $learner, $request->user()), 404);
+        $data = $request->validate([
+            'question_id' => ['required', 'integer'],
+            'option_index' => ['required', 'integer', 'min:0'],
+        ]);
+        $question = $story->questions()->findOrFail($data['question_id']);
+        abort_unless($question->id === $story->questions()->first()?->id || $this->access->isPurchased($story, $learner), 403);
+        abort_unless($data['option_index'] < count($question->options), 422);
+
+        return response()->json(['data' => [
+            'correct' => $data['option_index'] === $question->correct_index,
+            'correct_index' => $question->correct_index,
+            'explanation' => $question->explanation,
         ]]);
     }
 
@@ -118,11 +142,12 @@ class StoryCatalogController extends Controller
     {
         return [
             'id' => $story->id, 'title' => $story->title, 'summary' => $story->summary,
-            'course_title' => $story->course->title, 'language' => $story->course->language->code,
+            'level' => $story->standalone_level, 'language' => $story->language->code,
             'age_band' => $story->age_band, 'format' => $story->format,
             'price_minor' => $story->price_minor,
             'cover_url' => $story->cover_path ? Storage::disk('public')->url($story->cover_path) : null,
             'pages_count' => $story->pages_count ?? $story->pages()->count(),
+            'questions_count' => $story->questions_count ?? $story->questions()->count(),
             'purchased' => $this->access->isPurchased($story, $learner),
             'can_purchase' => $this->access->canPurchase($learner, $viewer),
         ];

@@ -28,6 +28,7 @@ class ConfigController extends Controller
             'digital_age' => $this->settings->get('compliance.minor_age', config('compliance.minor_age')),
             'language_vote_options' => config('language-votes.languages'),
             'feature_flags' => [
+                'data_bundle_purchases' => (bool) config('services.data_bundles.enabled'),
                 'show_google_login' => $this->settings->get('auth.show_google_login'),
                 'telco_billing' => $this->settings->get('feature.telco_billing'),
                 'ai_pronunciation' => $this->settings->get('feature.ai_pronunciation'),

@@ -10,6 +10,8 @@ use App\Models\User;
 
 class EntitlementResolver
 {
+    public function __construct(private SubscriptionEligibility $eligibility) {}
+
     /** @return array<string, bool|int|string> */
     public function forUser(User $user): array
     {
@@ -21,7 +23,8 @@ class EntitlementResolver
     {
         if ($learner->user_id !== null) {
             $plan = $this->activePlan(User::class, $learner->user_id);
-            if ($plan !== null && ($plan->price_minor > 0 || $plan->audience === 'school')) {
+            if ($plan !== null && ($plan->price_minor > 0 || $plan->audience === 'school')
+                && $this->eligibility->coversLearner($learner->user, $plan, $learner)) {
                 return $this->fromPlan($plan);
             }
         }
@@ -29,7 +32,8 @@ class EntitlementResolver
         $learner->loadMissing('family');
         if ($learner->family?->owner_user_id !== null) {
             $plan = $this->activePlan(User::class, $learner->family->owner_user_id);
-            if ($plan !== null && ($plan->price_minor > 0 || $plan->audience === 'school')) {
+            if ($plan !== null && ($plan->price_minor > 0 || $plan->audience === 'school')
+                && $this->eligibility->coversLearner($learner->family->ownerUser, $plan, $learner)) {
                 return $this->fromPlan($plan);
             }
         }

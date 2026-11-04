@@ -17,15 +17,17 @@ describe('creator story preview', () => {
 
   it('switches between the twelve free colouring pages and the complete story', () => {
     mocks.story = {
-      id: 7, title: 'Colours at the market', course_title: 'Sample course', language: 'yo',
+      id: 7, title: 'Colours at the market', level: 1, language: 'yo',
       format: 'colouring', published_at: null, summary: null,
       pages: Array.from({ length: 13 }, (_, index) => ({ id: index + 1, position: index + 1, title: `Page ${index + 1}`, body: null, image_url: null })),
     }
     renderPage()
     expect(screen.getByText('Draft')).toBeInTheDocument()
+    for (let page = 1; page < 12; page++) fireEvent.click(screen.getByRole('button', { name: 'Next →' }))
     expect(screen.getByRole('heading', { name: 'Page 12' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Page 13' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Full story' }))
+    for (let page = 1; page < 13; page++) fireEvent.click(screen.getByRole('button', { name: 'Next →' }))
     expect(screen.getByRole('heading', { name: 'Page 13' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Free preview' }))
     expect(screen.queryByRole('heading', { name: 'Page 13' })).not.toBeInTheDocument()
@@ -33,7 +35,7 @@ describe('creator story preview', () => {
 
   it('uses the separate preview and full clips for an animated story', () => {
     mocks.story = {
-      id: 7, title: 'The talking drum', course_title: 'Sample course', language: 'yo',
+      id: 7, title: 'The talking drum', level: 1, language: 'yo',
       format: 'animated', published_at: '2026-10-27', summary: null, pages: [],
       preview_video_url: '/preview.mp4', full_video_url: '/full.mp4',
     }
