@@ -52,7 +52,7 @@ class WalletService
     {
         return Wallet::firstOrCreate(
             ['owner_type' => $owner->getMorphClass(), 'owner_id' => $owner->getKey()],
-            ['coin_balance' => 0, 'currency' => 'NGN'],
+            ['coin_balance' => 0, 'currency_balance_minor' => 0, 'currency' => 'NGN'],
         );
     }
 

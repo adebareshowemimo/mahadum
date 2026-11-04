@@ -21,6 +21,7 @@ export function LessonPlayerPage() {
   const [play, setPlay] = useState<LessonPlay | null>(null)
   const [introSeen, setIntroSeen] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [studyReward, setStudyReward] = useState<{ status: 'studying' | 'pending' | 'paid'; progress_seconds: number } | null>(null)
 
   useEffect(() => {
     if (!activeLearner) {
@@ -39,6 +40,20 @@ export function LessonPlayerPage() {
       cancelled = true
     }
   }, [id, activeLearner, navigate])
+
+  useEffect(() => {
+    if (!play || !activeLearner?.is_child) return
+    let cancelled = false
+    const heartbeat = () => {
+      if (document.hidden) return
+      void learningApi.studyHeartbeat(id, activeLearner.id)
+        .then((result) => { if (!cancelled) setStudyReward(result) })
+        .catch(() => undefined)
+    }
+    heartbeat()
+    const interval = window.setInterval(heartbeat, 30_000)
+    return () => { cancelled = true; window.clearInterval(interval) }
+  }, [play, activeLearner, id])
 
   const slides = useMemo(() => (play ? playToSlides(play) : []), [play])
   const { startIndex, priorCorrect } = useMemo(() => resumePlan(slides), [slides])
@@ -67,6 +82,8 @@ export function LessonPlayerPage() {
   </main>
 
   return (
+    <>
+    {studyReward && <div className="fixed bottom-3 left-3 z-30 rounded-xl border border-border bg-surface px-3 py-2 text-xs text-foreground shadow-lg" aria-live="polite">{studyReward.status === 'paid' ? '10 study coins earned today' : studyReward.status === 'pending' ? '10 study coins waiting — ask a grown-up to add coins' : `Study reward: ${Math.floor(studyReward.progress_seconds / 60)} of 5 minutes`}</div>}
     <SlideDeck
       title={play.lesson.title}
       subtitle={play.lesson.est_minutes ? `About ${play.lesson.est_minutes} min` : undefined}
@@ -80,6 +97,7 @@ export function LessonPlayerPage() {
       onExit={() => navigate('/learn')}
       renderComplete={() => <LessonComplete lessonId={id} learnerId={activeLearner.id} onExit={() => navigate('/learn')} />}
     />
+    </>
   )
 }
 

@@ -22,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $date_of_birth
  * @property string|null $age_band
  * @property int|null $roster_level_position
+ * @property int|null $starting_level_position
  * @property int|null $target_language_id
  * @property string|null $learning_goal
  * @property int $current_level
@@ -86,6 +87,7 @@ class LearnerProfile extends Model
     protected $casts = [
         'date_of_birth' => 'date',
         'roster_level_position' => 'integer',
+        'starting_level_position' => 'integer',
     ];
 
     /**

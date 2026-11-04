@@ -1,10 +1,12 @@
 import { useState, type ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { Alert, Avatar, Badge, Button, Card, CardBody, CardHeader, CardTitle, Icon, learnerAvatarPresetId, LinkButton, Skeleton } from '@/components/ui'
 import { useChild } from '@/lib/family/queries'
 import { usePath } from '@/lib/learning/queries'
 import { formatMoney } from '@/lib/format'
 import { ProfilePictureModal } from '@/components/learner/ProfilePictureModal'
+import { ApiError, familyApi } from '@/lib/api'
 
 export function ChildPage() {
   const { learnerId } = useParams()
@@ -63,6 +65,8 @@ export function ChildPage() {
         <StatCard label="Profile PIN" value={learner.pin_protected ? 'Protected' : 'Not set'} detail="Managed from the family page" />
       </div>
 
+      <StartingLevelControl learnerId={learner.id} current={learner.starting_level_position ?? 0} options={learner.starting_level_options ?? []} started={completed > 0} />
+
       <Card>
         <CardHeader>
           <CardTitle>Coin activity</CardTitle>
@@ -96,6 +100,31 @@ export function ChildPage() {
       <ProfilePictureModal learner={learner} open={pictureOpen} onClose={() => setPictureOpen(false)} />
     </div>
   )
+}
+
+function StartingLevelControl({ learnerId, current, options, started }: { learnerId: number; current: number; options: number[]; started: boolean }) {
+  const queryClient = useQueryClient()
+  const [position, setPosition] = useState(current)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  if (options.length === 0) return null
+
+  async function save() {
+    setBusy(true); setError(null)
+    try {
+      await familyApi.setStartingLevel(learnerId, position)
+      await queryClient.invalidateQueries({ queryKey: ['family', 'child', learnerId] })
+      await queryClient.invalidateQueries({ queryKey: ['learner-path', learnerId] })
+    } catch (err) { setError(err instanceof ApiError ? err.message : 'Could not change the starting level.') }
+    finally { setBusy(false) }
+  }
+
+  return <Card><CardHeader><CardTitle>Starting level</CardTitle></CardHeader><CardBody className="space-y-3">
+    <p className="text-sm text-muted">Choose where this child begins in their enrolled courses. Earlier lessons stay available only if you return to an earlier starting level.</p>
+    {error && <Alert variant="danger">{error}</Alert>}
+    <div className="flex flex-wrap items-center gap-3"><select aria-label="Starting level" className="h-11 rounded-xl border border-border-strong bg-surface px-3" value={position} onChange={(event) => setPosition(Number(event.target.value))} disabled={started || busy}>{options.map((option) => <option key={option} value={option}>Level {option}</option>)}</select><Button variant="parent" onClick={() => void save()} disabled={started || busy || position === current}>{busy ? 'Saving…' : 'Save starting level'}</Button></div>
+    {started && <p className="text-sm text-muted">Starting level is locked after learning begins.</p>}
+  </CardBody></Card>
 }
 
 function StatCard({ label, value, detail }: { label: string; value: ReactNode; detail: string }) {

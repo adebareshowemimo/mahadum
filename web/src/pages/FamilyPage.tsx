@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import {
   Alert,
@@ -16,7 +17,7 @@ import {
   Modal,
   Skeleton,
 } from '@/components/ui'
-import { ApiError } from '@/lib/api'
+import { ApiError, familyApi } from '@/lib/api'
 import { SetPinModal } from '@/components/family/SetPinModal'
 import { formatMoney } from '@/lib/format'
 import { useConfig } from '@/lib/config/useConfig'
@@ -26,6 +27,7 @@ export function FamilyPage() {
   const { data: family, isLoading, isError } = useFamily()
   const [addOpen, setAddOpen] = useState(false)
   const [pinLearner, setPinLearner] = useState<{ id: number; display_name: string; pin_protected: boolean } | null>(null)
+  const [partnersLearner, setPartnersLearner] = useState<{ id: number; display_name: string } | null>(null)
 
   if (isLoading) return <PageSkeleton />
   if (isError || !family) {
@@ -49,6 +51,7 @@ export function FamilyPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
+        {!!family.pending_study_rewards && <Alert variant="warning">{family.pending_study_rewards} study reward{family.pending_study_rewards === 1 ? '' : 's'} waiting for family coins. <Link to="/wallet" className="font-semibold underline">Check wallet</Link></Alert>}
         <Card className="sm:col-span-2"><CardBody className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-muted">Set shared lesson goals, manage family coin pools and send encouragement.</p><LinkButton to="/family/goals" variant="outline">Family goals</LinkButton></CardBody></Card>
         <Card>
           <CardHeader>
@@ -123,18 +126,19 @@ export function FamilyPage() {
                       </span>
                       <span className="text-xs font-medium text-muted">Allowance {formatMoney(l.currency_minor, family.wallet.currency)}</span>
                     </div>
+                    <p className="mt-2 text-xs text-muted">{l.lessons_completed ?? 0} lessons · {l.streak_days ?? 0}-day streak · Speaking {l.speaking_score ?? '—'} · Rank {l.rank ? `#${l.rank}` : '—'}</p>
                   </div>
                   <Icon name="chevron" className="size-4 -rotate-90 text-subtle" />
                 </Link>
                 {l.is_child && (
-                  <Button
+                  <div className="flex flex-col gap-2"><Button type="button" size="sm" variant="secondary" onClick={() => setPartnersLearner(l)}>Practice partners</Button><Button
                     variant={l.pin_protected ? 'outline' : 'secondary'}
                     size="sm"
                     leftIcon={l.pin_protected ? <Icon name="shield" className="size-4" /> : undefined}
                     onClick={() => setPinLearner(l)}
                   >
                     {l.pin_protected ? 'Change PIN' : 'Set PIN'}
-                  </Button>
+                  </Button></div>
                 )}
               </CardBody>
             </Card>
@@ -159,6 +163,7 @@ export function FamilyPage() {
       </section>
 
       <AddChildModal open={addOpen} onClose={() => setAddOpen(false)} />
+      {partnersLearner && <PracticePartnersModal learner={partnersLearner} onClose={() => setPartnersLearner(null)} />}
       {pinLearner && (
         <SetPinModal
           open
@@ -170,6 +175,45 @@ export function FamilyPage() {
       )}
     </div>
   )
+}
+
+function PracticePartnersModal({ learner, onClose }: { learner: { id: number; display_name: string }; onClose: () => void }) {
+  const queryClient = useQueryClient()
+  const key = ['family', 'practice-partners', learner.id]
+  const partners = useQuery({ queryKey: key, queryFn: () => familyApi.practicePartners(learner.id) })
+  const [email, setEmail] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function add(event: FormEvent) {
+    event.preventDefault(); setBusy(true); setError(null)
+    try {
+      await familyApi.addPracticePartner(learner.id, email)
+      await queryClient.invalidateQueries({ queryKey: key })
+      await queryClient.invalidateQueries({ queryKey: ['practice-contacts', learner.id] })
+      setEmail('')
+    } catch (err) { setError(err instanceof ApiError ? err.message : 'Could not add this practice partner.') }
+    finally { setBusy(false) }
+  }
+
+  async function remove(id: number) {
+    setBusy(true); setError(null)
+    try {
+      await familyApi.removePracticePartner(learner.id, id)
+      await queryClient.invalidateQueries({ queryKey: key })
+      await queryClient.invalidateQueries({ queryKey: ['practice-contacts', learner.id] })
+    } catch (err) { setError(err instanceof ApiError ? err.message : 'Could not remove this practice partner.') }
+    finally { setBusy(false) }
+  }
+
+  return <Modal open onClose={onClose} title={`Practice partners for ${learner.display_name}`} description="Only adults you approve here can be invited to practise with this child.">
+    <form onSubmit={add} className="flex flex-col gap-3">
+      {error && <Alert variant="danger">{error}</Alert>}
+      <Input type="email" label="Registered parent, guardian or teacher email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+      <Button type="submit" variant="parent" loading={busy} disabled={!email.trim()}>Add practice partner</Button>
+    </form>
+    <div className="mt-4 space-y-2">{partners.isLoading && <Skeleton className="h-12" />}{partners.data?.length === 0 && <p className="text-sm text-muted">No approved partners yet.</p>}{partners.data?.map((partner) => <div key={partner.id} className="flex items-center justify-between gap-3 rounded-xl border border-border p-3"><span className="min-w-0 text-sm"><strong className="block truncate">{partner.name}</strong><span className="block truncate text-muted">{partner.email}</span></span><Button size="sm" variant="secondary" disabled={busy} onClick={() => void remove(partner.id)}>Remove</Button></div>)}</div>
+  </Modal>
 }
 
 function AddChildModal({ open, onClose }: { open: boolean; onClose: () => void }) {

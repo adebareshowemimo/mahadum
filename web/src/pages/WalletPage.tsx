@@ -14,7 +14,7 @@ import {
 } from '@/components/ui'
 import { ApiError, type FamilyWalletReport } from '@/lib/api'
 import { formatMoney } from '@/lib/format'
-import { useFamily, useFundWallet, useTransfer, useWallet } from '@/lib/family/queries'
+import { useBuyCoins, useFamily, useFundWallet, useTransfer, useWallet } from '@/lib/family/queries'
 
 export function WalletPage() {
   const { data: wallet, isLoading, isError } = useWallet()
@@ -57,6 +57,7 @@ export function WalletPage() {
 
 
       <div className="grid gap-4 lg:grid-cols-2">
+        {(wallet.coin_price_minor ?? 0) > 0 && <BuyCoinsCard priceMinor={wallet.coin_price_minor!} balanceMinor={wallet.currency_minor} currency={wallet.currency} />}
         <TransferCard learners={learners} maxCoins={wallet.coin_balance} />
         <AllowanceCard learners={learners} maxMinor={wallet.currency_minor} currency={wallet.currency} />
         {wallet.funding_gateways?.length
@@ -67,6 +68,29 @@ export function WalletPage() {
       {!!wallet.funding_transactions?.length && <Card><CardHeader><CardTitle>Recent wallet payments</CardTitle></CardHeader><CardBody className="space-y-3">{wallet.funding_transactions.map((payment) => <div key={payment.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3 text-sm last:border-0 last:pb-0"><span>{formatMoney(payment.amount_minor, payment.currency)} · {payment.gateway} · {new Date(payment.created_at).toLocaleDateString()}</span><span className="font-medium capitalize">{payment.status}</span><a className="font-semibold text-primary underline" href={`/payment/wallet/${payment.id}`}>View details</a></div>)}</CardBody></Card>}
     </div>
   )
+}
+
+function BuyCoinsCard({ priceMinor, balanceMinor, currency }: { priceMinor: number; balanceMinor: number; currency: string }) {
+  const buy = useBuyCoins()
+  const [coins, setCoins] = useState('10')
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const amount = Number(coins) * priceMinor
+  async function submit(event: FormEvent) {
+    event.preventDefault(); setError(null); setSuccess(null)
+    try {
+      const result = await buy.mutateAsync(Number(coins))
+      setSuccess(`${result.coins} coins added to your family wallet for ${formatMoney(result.amount_minor, currency)}.`)
+    } catch (err) { setError(err instanceof ApiError ? err.message : 'Could not buy coins.') }
+  }
+  return <Card><CardHeader><CardTitle>Buy family coins</CardTitle></CardHeader><CardBody><form className="space-y-3" onSubmit={submit}>
+    {error && <Alert variant="danger">{error}</Alert>}{success && <Alert variant="success">{success}</Alert>}
+    <p className="text-sm text-muted">One coin costs {formatMoney(priceMinor, currency)}. Paid from your available naira wallet balance.</p>
+    <Input label="Coins to buy" type="number" min={1} max={1000000} value={coins} onChange={(event) => setCoins(event.target.value)} required />
+    <p className="text-sm font-semibold">Total: {Number.isFinite(amount) && amount > 0 ? formatMoney(amount, currency) : '—'}</p>
+    <Button type="submit" loading={buy.isPending} disabled={!Number.isInteger(Number(coins)) || Number(coins) < 1 || amount > balanceMinor}>Buy coins</Button>
+    {amount > balanceMinor && <p className="text-sm text-muted">Add naira to your wallet first.</p>}
+  </form></CardBody></Card>
 }
 
 function TransferCard({

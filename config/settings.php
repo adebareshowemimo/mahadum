@@ -36,6 +36,16 @@ foreach ($goalDefaults as $key => [$label, $keywords, $message]) {
 
 return [
     'groups' => [
+        'family_coins' => [
+            'label' => 'Family coins',
+            'settings' => [
+                'wallet.coin_price_minor' => [
+                    'label' => 'Coin price (kobo per coin)',
+                    'help' => 'Set a positive price to let parents buy coins from their verified naira wallet balance. Zero keeps coin purchases off.',
+                    'type' => 'int', 'min' => 0, 'max' => 100000, 'default' => 0,
+                ],
+            ],
+        ],
         'learning_goals' => [
             'label' => 'Learning goals',
             'settings' => [

@@ -231,6 +231,7 @@ export interface AppLanguage {
 
 export interface WalletBalance {
   coin_balance: number
+  coin_price_minor?: number
   /** Cash balance in minor units (e.g. kobo). */
   currency_minor: number
   currency: string
@@ -248,6 +249,7 @@ export interface FamilyWalletReport {
   cash: {
     balance_minor: number
     confirmed_funding_minor: number
+    coin_purchases_minor: number
     unexplained_minor: number
     reconciled: boolean
     accounts: { name: string; balance_minor: number; expected_minor: number; reconciled: boolean }[]
@@ -270,6 +272,7 @@ export interface FamilyOverview {
   id: number
   name: string
   child_limit: number
+  pending_study_rewards?: number
   wallet: WalletBalance
   parent: { id: number; name: string; email: string }
   learners: {
@@ -281,6 +284,10 @@ export interface FamilyOverview {
     pin_protected: boolean
     coin_balance: number
     currency_minor: number
+    lessons_completed?: number
+    streak_days?: number
+    speaking_score?: number | null
+    rank?: number | null
   }[]
 }
 
@@ -301,6 +308,8 @@ export interface ChildDetail {
   avatar_url: string | null
   age_band: string | null
   current_level: number | null
+  starting_level_position?: number | null
+  starting_level_options?: number[]
   target_language: string | null
   pin_protected: boolean
   /** Balance of this child's learner-owned, ledger-backed wallet. */

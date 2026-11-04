@@ -45,6 +45,7 @@ class FamilyWalletReport
         $cashEntries = WalletCurrencyTransaction::whereIn('wallet_id', $walletIds)->orderBy('id')->get();
         $cashByWallet = $cashEntries->groupBy('wallet_id');
         $reclaimedAllowance = (int) $cashEntries->where('source', 'funding_refund')->sum('amount_minor');
+        $coinPurchases = (int) $cashEntries->where('source', 'coin_purchase')->where('type', 'debit')->sum('amount_minor');
         $cashAccounts = $wallets->map(function (Wallet $wallet) use ($names, $cashByWallet, $confirmedFunding, $reclaimedAllowance, $wallets) {
             $transfers = (int) $cashByWallet->get($wallet->id, collect())->sum(
                 fn (WalletCurrencyTransaction $entry) => $entry->type === 'credit' ? $entry->amount_minor : -$entry->amount_minor,
@@ -68,7 +69,8 @@ class FamilyWalletReport
             'cash' => [
                 'balance_minor' => $cashBalance,
                 'confirmed_funding_minor' => $confirmedFunding,
-                'unexplained_minor' => $cashBalance - $confirmedFunding,
+                'coin_purchases_minor' => $coinPurchases,
+                'unexplained_minor' => $cashBalance + $coinPurchases - $confirmedFunding,
                 'reconciled' => $cashAccounts->every(fn (array $account) => $account['reconciled']),
                 'accounts' => $cashAccounts->values(),
             ],

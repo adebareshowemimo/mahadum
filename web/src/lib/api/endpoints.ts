@@ -321,6 +321,23 @@ export const familyApi = {
     return data.data
   },
 
+  async setStartingLevel(learnerId: number, position: number): Promise<void> {
+    await api.put(`/family/children/${learnerId}/starting-level`, { position })
+  },
+
+  async practicePartners(learnerId: number): Promise<{ id: number; name: string; email: string }[]> {
+    const { data } = await api.get(`/family/children/${learnerId}/practice-partners`)
+    return data.data
+  },
+
+  async addPracticePartner(learnerId: number, email: string): Promise<void> {
+    await api.post(`/family/children/${learnerId}/practice-partners`, { email })
+  },
+
+  async removePracticePartner(learnerId: number, partnerId: number): Promise<void> {
+    await api.delete(`/family/children/${learnerId}/practice-partners/${partnerId}`)
+  },
+
   async updateLearnerAvatar(
     learnerId: number,
     input: { avatarId?: number; photo?: File },
@@ -340,6 +357,11 @@ export const familyApi = {
 
   async wallet(): Promise<WalletBalance> {
     const { data } = await api.get('/wallet')
+    return data.data
+  },
+
+  async buyCoins(coins: number, key = idempotencyKey()): Promise<{ coins: number; price_minor: number; amount_minor: number; coin_balance: number }> {
+    const { data } = await api.post('/wallet/coins', { coins }, { headers: { 'Idempotency-Key': key } })
     return data.data
   },
 
@@ -503,6 +525,11 @@ export const learningApi = {
     const { data } = await api.get(`/lessons/${lessonId}/play`, {
       params: learnerId ? { learner_id: learnerId } : undefined,
     })
+    return data.data
+  },
+
+  async studyHeartbeat(lessonId: number, learnerId: number): Promise<{ status: 'studying' | 'pending' | 'paid'; progress_seconds: number; remaining_seconds: number; reward_coins: number }> {
+    const { data } = await api.post('/learning/study/heartbeat', { lesson_id: lessonId, learner_id: learnerId })
     return data.data
   },
 

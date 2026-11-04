@@ -70,6 +70,17 @@ export function useWallet() {
   return useQuery({ queryKey: familyKeys.wallet, queryFn: familyApi.wallet })
 }
 
+export function useBuyCoins() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (coins: number) => familyApi.buyCoins(coins),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: familyKeys.wallet })
+      void qc.invalidateQueries({ queryKey: familyKeys.family })
+    },
+  })
+}
+
 export function useChores() {
   return useQuery({ queryKey: familyKeys.chores, queryFn: familyApi.chores })
 }

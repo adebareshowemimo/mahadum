@@ -70,6 +70,7 @@ use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\Family\ChoreController;
 use App\Http\Controllers\Family\FamilyController;
 use App\Http\Controllers\Family\FamilyGoalsController;
+use App\Http\Controllers\Family\PracticePartnerController;
 use App\Http\Controllers\Family\ReviewController;
 use App\Http\Controllers\Family\WalletController;
 use App\Http\Controllers\Gamification\AdController;
@@ -94,6 +95,7 @@ use App\Http\Controllers\Learning\PracticeContactController;
 use App\Http\Controllers\Learning\ProgressController;
 use App\Http\Controllers\Learning\SpeakingSubmissionController;
 use App\Http\Controllers\Learning\StoryCatalogController;
+use App\Http\Controllers\Learning\StudyRewardController;
 use App\Http\Controllers\Learning\TonePracticeInvitationController;
 use App\Http\Controllers\MeController;
 use App\Http\Controllers\NotificationController;
@@ -300,6 +302,7 @@ Route::prefix('v1')->group(function () {
         Route::get('learners/{learner}/progress', [ProgressController::class, 'show'])->can('view', 'learner');
         Route::put('learners/{learner}/learning-goal', [ProfileController::class, 'learningGoal'])->can('update', 'learner');
         Route::get('learners/{learner}/practice-contacts', [PracticeContactController::class, 'index'])->can('view', 'learner');
+        Route::post('learning/study/heartbeat', [StudyRewardController::class, 'heartbeat'])->middleware('throttle:120,1');
         Route::post('learners/{learner}/avatar', [LearnerAvatarController::class, 'update'])->can('update', 'learner');
         Route::get('lessons/{lesson}/play', [LessonPlayController::class, 'show']);
         Route::post('lessons/{lesson}/progress', [ProgressController::class, 'store']);
@@ -342,11 +345,17 @@ Route::prefix('v1')->group(function () {
         Route::post('family/learners/{learner}/cheers', [FamilyGoalsController::class, 'cheer'])->middleware('can:family.manage');
         Route::get('learners/{learner}/cheers', [FamilyGoalsController::class, 'cheers']);
         Route::post('family/children', [FamilyController::class, 'addChild'])->middleware('can:family.manage');
+        Route::get('family/children/{learner}/practice-partners', [PracticePartnerController::class, 'index'])->middleware('can:family.manage');
+        Route::post('family/children/{learner}/practice-partners', [PracticePartnerController::class, 'store'])->middleware('can:family.manage');
+        Route::delete('family/children/{learner}/practice-partners/{partner}', [PracticePartnerController::class, 'destroy'])->middleware('can:family.manage');
         Route::get('family/children/{learner}', [FamilyController::class, 'child'])
+            ->middleware('can:family.manage');
+        Route::put('family/children/{learner}/starting-level', [FamilyController::class, 'setStartingLevel'])
             ->middleware('can:family.manage');
         Route::put('family/children/{learner}/pin', [FamilyController::class, 'setChildPin'])
             ->middleware('can:family.manage');
         Route::get('wallet', [WalletController::class, 'show'])->middleware('can:family.wallet.view');
+        Route::post('wallet/coins', [WalletController::class, 'buyCoins'])->middleware('can:family.wallet.fund');
         Route::post('wallet/fundings/{funding}/confirm', [WalletController::class, 'confirm'])
             ->middleware(['can:family.wallet.view', 'throttle:20,1']);
         Route::get('chores', [ChoreController::class, 'index'])->middleware('can:family.chores.manage');

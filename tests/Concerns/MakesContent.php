@@ -8,9 +8,19 @@ use App\Models\Language;
 use App\Models\LearnerProfile;
 use App\Models\Lesson;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 trait MakesContent
 {
+    protected function approvePracticePartner(LearnerProfile $learner, User $recipient, User $parent): void
+    {
+        $recipient->update(['email_verified_at' => now()]);
+        DB::table('learner_practice_partners')->insert([
+            'learner_profile_id' => $learner->id, 'user_id' => $recipient->id,
+            'approved_by_user_id' => $parent->id, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+    }
+
     /**
      * Build a published lesson with the three required components
      * (video ready, quiz with one correct option, speaking).

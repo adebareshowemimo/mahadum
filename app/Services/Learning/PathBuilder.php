@@ -15,6 +15,8 @@ class PathBuilder
     public function build(Enrollment $enrollment): Collection
     {
         $lessons = $enrollment->course->levels()
+            ->when($enrollment->learnerProfile->family_id !== null && $enrollment->learnerProfile->starting_level_position !== null,
+                fn ($query) => $query->where('position', '>=', $enrollment->learnerProfile->starting_level_position))
             ->orderBy('position')
             ->with(['lessons' => fn ($q) => $q->whereNotNull('published_at')->orderBy('position')])
             ->get()

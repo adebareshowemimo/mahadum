@@ -9,10 +9,14 @@ use App\Http\Requests\Family\SetChildPinRequest;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\FamilyMember;
+use App\Models\LeagueMembership;
 use App\Models\LearnerProfile;
 use App\Models\ParentalConsent;
+use App\Models\StudyRewardDay;
 use App\Services\AuditLogger;
 use App\Services\Family\WalletService;
+use App\Services\Gamification\LeagueService;
+use App\Services\Learning\LearningAnalytics;
 use App\Services\Learning\LearningGoals;
 use App\Services\Learning\PathBuilder;
 use App\Services\Settings;
@@ -29,15 +33,22 @@ class FamilyController extends Controller
 
     public function __construct(private WalletService $wallets, private AuditLogger $audit, private Settings $settings) {}
 
-    public function show(Request $request): JsonResponse
+    public function show(Request $request, LearningAnalytics $analytics, LeagueService $leagues): JsonResponse
     {
-        $family = $this->family($request->user())->load(['learnerProfiles.targetLanguage', 'learnerProfiles.profilePhoto', 'owner']);
+        $family = $this->family($request->user())->load(['learnerProfiles.targetLanguage', 'learnerProfiles.profilePhoto', 'learnerProfiles.streak', 'owner']);
         $wallet = $this->wallets->walletFor($family);
+        $learnerIds = $family->learnerProfiles->pluck('id');
+        $learning = $analytics->byLearner($learnerIds);
+        $memberships = LeagueMembership::with('league')->whereIn('learner_profile_id', $learnerIds)
+            ->whereHas('league', fn ($query) => $query->whereDate('week_start', $leagues->currentWeekStart()))->get();
+        $ranks = $memberships->pluck('league')->unique('id')
+            ->flatMap(fn ($league) => $leagues->refreshAndRank($league))->keyBy('learner_profile_id');
 
         return response()->json(['data' => [
             'id' => $family->id,
             'name' => $family->name,
             'child_limit' => $family->child_limit,
+            'pending_study_rewards' => StudyRewardDay::where('family_id', $family->id)->where('status', 'pending')->count(),
             'wallet' => [
                 'coin_balance' => $wallet->coin_balance,
                 'currency_minor' => $wallet->currency_balance_minor,
@@ -57,6 +68,11 @@ class FamilyController extends Controller
                 'pin_protected' => $l->parental_pin !== null,
                 'coin_balance' => $this->wallets->walletFor($l)->coin_balance,
                 'currency_minor' => $this->wallets->walletFor($l)->currency_balance_minor,
+                'lessons_completed' => $learning[$l->id]['lessons_completed'] ?? 0,
+                'streak_days' => $l->streak->current_count ?? 0,
+                'speaking_score' => ($learning[$l->id]['speaking_scored'] ?? 0) > 0
+                    ? round($learning[$l->id]['speaking_score_sum'] / $learning[$l->id]['speaking_scored'], 2) : null,
+                'rank' => $ranks[$l->id]->rank ?? null,
             ])->values(),
         ]]);
     }
@@ -138,6 +154,8 @@ class FamilyController extends Controller
             'avatar_url' => $this->avatarUrl($learner),
             'age_band' => $learner->age_band,
             'current_level' => $learner->current_level,
+            'starting_level_position' => $learner->starting_level_position,
+            'starting_level_options' => $this->startingLevelOptions($learner),
             'target_language' => $learner->targetLanguage?->code,
             'pin_protected' => $learner->parental_pin !== null,
             // This is the learner-owned wallet balance maintained atomically
@@ -157,6 +175,46 @@ class FamilyController extends Controller
                     'created_at' => $transaction->created_at,
                 ])->values(),
         ]]);
+    }
+
+    public function setStartingLevel(LearnerProfile $learner, Request $request, PathBuilder $paths): JsonResponse
+    {
+        $family = $this->family($request->user());
+        abort_unless((int) $learner->family_id === (int) $family->id && $learner->user_id !== $request->user()->id, 403);
+        $values = $request->validate(['position' => ['required', 'integer', 'min:0']]);
+        abort_unless(in_array($values['position'], $this->startingLevelOptions($learner), true), 422,
+            'Choose a level offered by this child’s courses.');
+        abort_if($learner->lessonProgress()->exists() || $learner->enrollments()->whereHas('pathNodes', fn ($q) => $q->where('state', 'completed'))->exists(),
+            409, 'Starting level can only be changed before this child starts lessons.');
+
+        DB::transaction(function () use ($learner, $values, $paths) {
+            $learner->update(['starting_level_position' => $values['position']]);
+            foreach ($learner->enrollments()->with('course')->get() as $enrollment) {
+                $enrollment->pathNodes()->delete();
+                $enrollment->setRelation('learnerProfile', $learner);
+                $paths->build($enrollment);
+            }
+        });
+        $this->audit->record('family.starting_level_changed', $learner, [], ['position' => $values['position']]);
+
+        return response()->json(['data' => ['starting_level_position' => $values['position']]]);
+    }
+
+    /** @return array<int, int> */
+    private function startingLevelOptions(LearnerProfile $learner): array
+    {
+        $courses = $learner->enrollments()->with('course.levels')->get()->pluck('course')->filter();
+        if ($courses->isEmpty()) {
+            return [0];
+        }
+        $options = null;
+        foreach ($courses as $course) {
+            $positions = $course->levels->filter(fn ($level) => $level->lessons()->whereNotNull('published_at')->exists())
+                ->pluck('position')->map(fn ($position) => (int) $position)->all();
+            $options = $options === null ? $positions : array_values(array_intersect($options, $positions));
+        }
+
+        return array_values(array_unique($options ?? []));
     }
 
     /** Set, change, or clear one child's own PIN — each child has a distinct code. */
