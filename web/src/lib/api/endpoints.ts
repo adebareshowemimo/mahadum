@@ -366,9 +366,11 @@ export const familyApi = {
     return data.data
   },
 
-  async transfer(input: { to_learner_id: number; coins: number }): Promise<{
-    family_balance: number
-    learner_balance: number
+  async transfer(input: { to_learner_id: number } & ({ coins: number } | { amount_minor: number })): Promise<{
+    family_balance?: number
+    learner_balance?: number
+    family_balance_minor?: number
+    learner_balance_minor?: number
   }> {
     const { data } = await api.post('/wallet/transfer', input, {
       headers: { 'Idempotency-Key': idempotencyKey() },

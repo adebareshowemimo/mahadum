@@ -318,7 +318,7 @@ class PaymentService
 
             $reversed = $amountMinor ?? $funding->amount_minor;
             $funding->update(['status' => 'refunded']);
-            $this->wallets->debitCurrency($funding->wallet, $reversed);
+            $this->wallets->debitCurrency($funding->wallet, $reversed, $funding->id);
 
             $this->audit->record('funding.refunded', $funding, ['status' => 'success'], ['status' => 'refunded', 'amount_minor' => $reversed]);
 

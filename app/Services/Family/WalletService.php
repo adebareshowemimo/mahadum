@@ -3,10 +3,13 @@
 namespace App\Services\Family;
 
 use App\Models\CoinTransaction;
+use App\Models\Family;
 use App\Models\LearnerProfile;
 use App\Models\Wallet;
+use App\Models\WalletCurrencyTransaction;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
@@ -88,18 +91,69 @@ class WalletService
      * Clamps at zero so a reversal of already-spent funds never drives the cached
      * balance negative; the wallet_funding_transactions row carries the audit trail.
      */
-    public function debitCurrency(Wallet $wallet, int $amountMinor): Wallet
+    public function debitCurrency(Wallet $wallet, int $amountMinor, ?int $fundingId = null): Wallet
     {
         if ($amountMinor <= 0) {
             throw new RuntimeException('Amount must be positive.');
         }
 
-        return DB::transaction(function () use ($wallet, $amountMinor) {
+        return DB::transaction(function () use ($wallet, $amountMinor, $fundingId) {
             $wallet = Wallet::whereKey($wallet->getKey())->lockForUpdate()->first();
-            $wallet->currency_balance_minor = max(0, $wallet->currency_balance_minor - $amountMinor);
+            $remaining = $amountMinor;
+            $fromFamily = min($remaining, $wallet->currency_balance_minor);
+            $wallet->currency_balance_minor -= $fromFamily;
             $wallet->save();
 
+            $remaining -= $fromFamily;
+            // A child's cash is an unspent allowance. Reclaim it when the
+            // funding behind the household balance is refunded.
+            if ($remaining > 0 && $wallet->owner instanceof Family) {
+                foreach ($wallet->owner->learnerProfiles as $learner) {
+                    $child = Wallet::where('owner_type', $learner->getMorphClass())->where('owner_id', $learner->id)->lockForUpdate()->first();
+                    if (! $child) {
+                        continue;
+                    }
+                    $reclaimed = min($remaining, $child->currency_balance_minor);
+                    if ($reclaimed <= 0) {
+                        continue;
+                    }
+                    $child->currency_balance_minor -= $reclaimed;
+                    $child->save();
+                    WalletCurrencyTransaction::create([
+                        'wallet_id' => $child->id, 'learner_profile_id' => $learner->id,
+                        'wallet_funding_transaction_id' => $fundingId,
+                        'type' => 'debit', 'source' => 'funding_refund',
+                        'amount_minor' => $reclaimed, 'balance_after_minor' => $child->currency_balance_minor,
+                    ]);
+                    $remaining -= $reclaimed;
+                    if ($remaining === 0) {
+                        break;
+                    }
+                }
+            }
+
             return $wallet;
+        });
+    }
+
+    /** Allocate unspent family cash to a learner; this does not enable child payments. */
+    public function transferCurrency(Wallet $from, Wallet $to, int $amountMinor, int $learnerId): void
+    {
+        abort_unless($amountMinor > 0 && $from->id !== $to->id, 422, 'Choose a positive allowance and a child wallet.');
+        DB::transaction(function () use ($from, $to, $amountMinor, $learnerId) {
+            $locked = Wallet::whereIn('id', [$from->id, $to->id])->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+            abort_unless($locked[$from->id]->currency_balance_minor >= $amountMinor, 422, 'Not enough money in the family wallet.');
+            $reference = (string) Str::uuid();
+            foreach ([[$from->id, 'debit', -$amountMinor], [$to->id, 'credit', $amountMinor]] as [$walletId, $type, $delta]) {
+                $wallet = $locked[$walletId];
+                $wallet->currency_balance_minor += $delta;
+                $wallet->save();
+                WalletCurrencyTransaction::create([
+                    'wallet_id' => $walletId, 'learner_profile_id' => $learnerId,
+                    'type' => $type, 'source' => 'allowance', 'amount_minor' => $amountMinor,
+                    'balance_after_minor' => $wallet->currency_balance_minor, 'transfer_ref' => $reference,
+                ]);
+            }
         });
     }
 

@@ -121,6 +121,7 @@ export function FamilyPage() {
                         <Icon name="coin" className="size-3.5 text-gold-600" />
                         {l.coin_balance.toLocaleString()}
                       </span>
+                      <span className="text-xs font-medium text-muted">Allowance {formatMoney(l.currency_minor, family.wallet.currency)}</span>
                     </div>
                   </div>
                   <Icon name="chevron" className="size-4 -rotate-90 text-subtle" />

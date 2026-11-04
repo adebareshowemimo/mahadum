@@ -15,7 +15,8 @@ class TransferRequest extends FormRequest
     {
         return [
             'to_learner_id' => ['required', 'integer', 'exists:learner_profiles,id'],
-            'coins' => ['required', 'integer', 'min:1'],
+            'coins' => ['required_without:amount_minor', 'prohibits:amount_minor', 'integer', 'min:1'],
+            'amount_minor' => ['required_without:coins', 'prohibits:coins', 'integer', 'min:1'],
         ];
     }
 }

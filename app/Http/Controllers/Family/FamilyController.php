@@ -55,6 +55,7 @@ class FamilyController extends Controller
                 'is_child' => $l->user_id === null,
                 'pin_protected' => $l->parental_pin !== null,
                 'coin_balance' => $this->wallets->walletFor($l)->coin_balance,
+                'currency_minor' => $this->wallets->walletFor($l)->currency_balance_minor,
             ])->values(),
         ]]);
     }
@@ -136,6 +137,7 @@ class FamilyController extends Controller
             // This is the learner-owned wallet balance maintained atomically
             // alongside the append-only transactions returned below.
             'coin_balance' => $wallet->coin_balance,
+            'currency_minor' => $wallet->currency_balance_minor,
             'coin_transactions' => $wallet->transactions()
                 ->latest()
                 ->limit(10)

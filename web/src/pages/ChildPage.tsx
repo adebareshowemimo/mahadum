@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { Alert, Avatar, Badge, Button, Card, CardBody, CardHeader, CardTitle, Icon, learnerAvatarPresetId, LinkButton, Skeleton } from '@/components/ui'
 import { useChild } from '@/lib/family/queries'
 import { usePath } from '@/lib/learning/queries'
+import { formatMoney } from '@/lib/format'
 import { ProfilePictureModal } from '@/components/learner/ProfilePictureModal'
 
 export function ChildPage() {
@@ -50,12 +51,13 @@ export function ChildPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Child’s coins"
           value={<span className="inline-flex items-center gap-2"><Icon name="coin" className="size-6 text-gold-600" />{learner.coin_balance.toLocaleString()}</span>}
           detail="Learner wallet balance"
         />
+        <StatCard label="Allowance" value={formatMoney(learner.currency_minor, 'NGN')} detail="Not available for child payments" />
         <StatCard label="Lessons completed" value={completed.toLocaleString()} detail={`${nodes.length.toLocaleString()} lessons on the journey`} />
         <StatCard label="Profile PIN" value={learner.pin_protected ? 'Protected' : 'Not set'} detail="Managed from the family page" />
       </div>

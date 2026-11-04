@@ -233,6 +233,25 @@ export interface WalletBalance {
   currency: string
   funding_gateways?: ('monnify' | 'paystack' | 'flutterwave')[]
   funding_transactions?: WalletFundingTransaction[]
+  report?: FamilyWalletReport
+}
+
+export interface FamilyWalletReport {
+  total_coins: number
+  coins_added: number
+  coins_spent: number
+  accounts: { name: string; coin_balance: number; ledger_balance: number; reconciled: boolean }[]
+  coin_reconciled: boolean
+  cash: {
+    balance_minor: number
+    confirmed_funding_minor: number
+    unexplained_minor: number
+    reconciled: boolean
+    accounts: { name: string; balance_minor: number; expected_minor: number; reconciled: boolean }[]
+  }
+  coin_sources: { source: string; net_coins: number }[]
+  activity: { id: number; account: string; type: string; source: string; amount: number; balance_after: number; created_at: string }[]
+  cash_activity: { id: number; account: string; type: string; source: string; amount_minor: number; balance_after_minor: number; created_at: string }[]
 }
 
 export interface WalletFundingTransaction {
@@ -258,6 +277,7 @@ export interface FamilyOverview {
     is_child: boolean
     pin_protected: boolean
     coin_balance: number
+    currency_minor: number
   }[]
 }
 
@@ -281,6 +301,7 @@ export interface ChildDetail {
   pin_protected: boolean
   /** Balance of this child's learner-owned, ledger-backed wallet. */
   coin_balance: number
+  currency_minor: number
   coin_transactions: ChildCoinTransaction[]
 }
 

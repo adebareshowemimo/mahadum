@@ -11,6 +11,7 @@ use App\Models\WalletFundingTransaction;
 use App\Services\Billing\PaymentGatewayManager;
 use App\Services\Billing\WalletFundingReconciler;
 use App\Services\Family\FamilyAlertService;
+use App\Services\Family\FamilyWalletReport;
 use App\Services\Family\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,9 +23,10 @@ class WalletController extends Controller
 
     public function __construct(private WalletService $wallets, private PaymentGatewayManager $gateways) {}
 
-    public function show(Request $request): JsonResponse
+    public function show(Request $request, FamilyWalletReport $report): JsonResponse
     {
-        $wallet = $this->wallets->walletFor($this->family($request->user()));
+        $family = $this->family($request->user());
+        $wallet = $this->wallets->walletFor($family);
 
         return response()->json(['data' => [
             'coin_balance' => $wallet->coin_balance,
@@ -33,6 +35,7 @@ class WalletController extends Controller
             'funding_gateways' => config('services.payments.wallet_funding_enabled') ? $this->gateways->available() : [],
             'funding_transactions' => WalletFundingTransaction::where('wallet_id', $wallet->id)
                 ->latest()->limit(20)->get(['id', 'gateway', 'amount_minor', 'currency', 'status', 'created_at']),
+            'report' => $report->forFamily($family),
         ]]);
     }
 
@@ -118,7 +121,7 @@ class WalletController extends Controller
         ]], 201);
     }
 
-    /** Move coins from the family wallet to a child's wallet. */
+    /** Move coins or unspent cash from the family wallet to a child's wallet. */
     public function transfer(TransferRequest $request): JsonResponse
     {
         $family = $this->family($request->user());
@@ -127,6 +130,15 @@ class WalletController extends Controller
 
         $familyWallet = $this->wallets->walletFor($family);
         $learnerWallet = $this->wallets->walletFor($learner);
+
+        if ($request->filled('amount_minor')) {
+            $this->wallets->transferCurrency($familyWallet, $learnerWallet, $request->integer('amount_minor'), $learner->id);
+
+            return response()->json(['data' => [
+                'family_balance_minor' => $familyWallet->fresh()->currency_balance_minor,
+                'learner_balance_minor' => $learnerWallet->fresh()->currency_balance_minor,
+            ]]);
+        }
 
         if ($familyWallet->coin_balance < $request->integer('coins')) {
             return response()->json([

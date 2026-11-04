@@ -121,7 +121,7 @@ export function useUpdateLearnerAvatar() {
 export function useTransfer() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: { to_learner_id: number; coins: number }) => familyApi.transfer(input),
+    mutationFn: (input: { to_learner_id: number } & ({ coins: number } | { amount_minor: number })) => familyApi.transfer(input),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: familyKeys.wallet })
       void qc.invalidateQueries({ queryKey: familyKeys.family })
