@@ -55,7 +55,8 @@ class FlutterwaveGateway implements PaymentGateway
 
         // A reference the gateway has never seen a checkout for (e.g. one only
         // ever created locally, never initialized) 404s — not paid, not a fault.
-        if ($response->status() === 404) {
+        if ($response->status() === 404 || ($response->status() === 400
+            && str_contains(strtolower((string) $response->json('message')), 'no transaction was found'))) {
             return new GatewayTransactionStatus('pending');
         }
 

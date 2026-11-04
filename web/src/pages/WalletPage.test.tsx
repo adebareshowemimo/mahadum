@@ -31,4 +31,11 @@ describe('Wallet gateway availability', () => {
     expect(await screen.findByText('Payment confirmed. Your wallet has been credited.')).toBeInTheDocument()
     expect(mocks.confirm).toHaveBeenCalledWith(42)
   })
+  it('checks a Monnify return even when its query follows a second question mark', async () => {
+    window.history.replaceState({}, '', '/wallet?funding_id=42?paymentReference=wallet-42&paymentStatus=PAID')
+    mocks.confirm.mockResolvedValue({ status: 'success', message: 'Payment confirmed. Your wallet has been credited.', gateway_ref: 'ref-42' })
+    render(<WalletPage />)
+    expect(await screen.findByText('Payment confirmed. Your wallet has been credited.')).toBeInTheDocument()
+    expect(mocks.confirm).toHaveBeenCalledWith(42)
+  })
 })

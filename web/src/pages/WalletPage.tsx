@@ -25,7 +25,8 @@ export function WalletPage() {
   }
 
   const learners = family?.learners ?? []
-  const returnedFundingId = Number(new URLSearchParams(window.location.search).get('funding_id'))
+  // Monnify may append its callback parameters with a second '?' after ours.
+  const returnedFundingId = Number(new URLSearchParams(window.location.search).get('funding_id')?.match(/^([1-9]\d*)(?:\?.*)?$/)?.[1])
 
   return (
     <div className="flex flex-col gap-8">

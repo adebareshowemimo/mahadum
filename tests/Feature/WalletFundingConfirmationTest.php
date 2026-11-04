@@ -13,6 +13,18 @@ class WalletFundingConfirmationTest extends TestCase
 {
     use MakesContent, RefreshDatabase;
 
+    public function test_flutterwave_unknown_reference_stays_pending_without_crediting(): void
+    {
+        $funding = $this->startFlutterwaveFunding();
+        Http::fake(['*/transactions/verify_by_reference*' => Http::response([
+            'status' => 'error', 'message' => 'No transaction was found for this id',
+        ], 400)]);
+
+        $this->postJson("/api/v1/wallet/fundings/{$funding->id}/confirm")
+            ->assertOk()->assertJsonPath('data.status', 'pending');
+        $this->assertSame(0, $funding->wallet->fresh()->currency_balance_minor);
+    }
+
     private function startFlutterwaveFunding(): WalletFundingTransaction
     {
         Notification::fake();
