@@ -600,6 +600,7 @@ export interface StorySummary {
   age_band: StoryAgeBand
   format: StoryFormat
   price_minor: number
+  preview_count: number
   cover_url: string | null
   pages_count: number
   questions_count: number

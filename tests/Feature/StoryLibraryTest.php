@@ -86,6 +86,58 @@ class StoryLibraryTest extends TestCase
         ])->assertForbidden();
     }
 
+    public function test_creator_can_set_preview_length_and_paid_content_stays_locked(): void
+    {
+        $this->seedRbac();
+        $this->actingAsUser($this->userWithRole('content_owner'));
+        $language = Language::create(['code' => 'yo', 'name' => 'Yoruba', 'script' => 'latin', 'is_active' => true]);
+        $id = $this->postJson('/api/v1/content/stories', [
+            'title' => 'Three chapters', 'language_id' => $language->id,
+            'standalone_level' => 1, 'age_band' => 'folklore', 'format' => 'text',
+        ])->assertCreated()->json('data.id');
+        $story = Story::findOrFail($id);
+        foreach ([1, 2, 3] as $position) {
+            $story->pages()->create(['position' => $position, 'body' => "Chapter {$position}"]);
+        }
+        $this->patchJson("/api/v1/content/stories/{$id}", ['preview_count' => 2])
+            ->assertOk()->assertJsonPath('data.preview_count', 2);
+        $this->postJson("/api/v1/content/stories/{$id}/publish")->assertOk();
+        $this->patchJson("/api/v1/content/stories/{$id}", ['preview_count' => 3])->assertUnprocessable();
+
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $child = $this->parentWithChild($parent);
+        $this->getJson("/api/v1/learning/stories/{$id}?learner_id={$child->id}")
+            ->assertOk()->assertJsonPath('data.preview_count', 2)
+            ->assertJsonCount(2, 'data.pages');
+
+        $this->actingAsUser($this->userWithRole('content_owner'));
+        $quizId = $this->postJson('/api/v1/content/stories', [
+            'title' => 'Three questions', 'language_id' => $language->id,
+            'standalone_level' => 1, 'age_band' => 'folklore', 'format' => 'quiz',
+        ])->assertCreated()->json('data.id');
+        $quiz = Story::findOrFail($quizId);
+        foreach ([1, 2, 3] as $position) {
+            $quiz->questions()->create([
+                'position' => $position, 'prompt' => "Question {$position}?",
+                'options' => ['Yes', 'No'], 'correct_index' => 0,
+            ]);
+        }
+        $this->patchJson("/api/v1/content/stories/{$quizId}", ['preview_count' => 2])->assertOk();
+        $this->postJson("/api/v1/content/stories/{$quizId}/publish")->assertOk();
+
+        $this->actingAsUser($parent);
+        $this->getJson("/api/v1/learning/stories/{$quizId}?learner_id={$child->id}")
+            ->assertOk()->assertJsonCount(2, 'data.questions');
+        $second = $quiz->questions()->where('position', 2)->firstOrFail();
+        $third = $quiz->questions()->where('position', 3)->firstOrFail();
+        $this->postJson("/api/v1/learning/stories/{$quizId}/answer", [
+            'learner_id' => $child->id, 'question_id' => $second->id, 'option_index' => 0,
+        ])->assertOk();
+        $this->postJson("/api/v1/learning/stories/{$quizId}/answer", [
+            'learner_id' => $child->id, 'question_id' => $third->id, 'option_index' => 0,
+        ])->assertForbidden();
+    }
+
     public function test_school_admin_can_open_story_and_set_builders_read_only(): void
     {
         $this->seedRbac();

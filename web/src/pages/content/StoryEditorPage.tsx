@@ -127,7 +127,7 @@ export function StoryEditorPage() {
 
     {item.format === 'quiz' ? <section className="rounded-2xl border border-border bg-surface p-5">
       <h2 className="font-display text-lg font-bold">Quiz questions</h2>
-      <p className="mt-1 text-sm text-muted">Question one is the free preview. Add at least two questions. Answers stay on the server for learners.</p>
+      <p className="mt-1 text-sm text-muted">The first {item.preview_count} question(s) are free. Add at least one more question than the preview count. Answers stay on the server for learners.</p>
       <div className="mt-4 space-y-3">{item.questions.map((question) => <div key={question.id} className="rounded-xl border border-border p-4"><p className="font-semibold">{question.position}. {question.prompt}</p><ol className="mt-2 list-inside list-decimal text-sm">{question.options.map((option, index) => <li key={index}>{option}{index === question.correct_index ? ' ✓' : ''}</li>)}</ol>{canManage && <Button size="sm" variant="danger" disabled={busy || !!item.published_at} onClick={() => void deleteQuestion(question.id)}>Delete question</Button>}</div>)}</div>
       {canManage && !item.published_at && <form onSubmit={addQuestion} className="mt-5 space-y-3 rounded-xl border border-dashed border-border p-4">
         <Input label="Question" value={questionPrompt} onChange={(event) => setQuestionPrompt(event.target.value)} required />
@@ -139,7 +139,7 @@ export function StoryEditorPage() {
       </form>}
     </section> : book ? <section className="rounded-2xl border border-border bg-surface p-5">
       <h2 className="font-display text-lg font-bold">{item.format === 'reading' || item.format === 'text' ? 'Chapters' : 'Pages'}</h2>
-      <p className="mt-1 text-sm text-muted">{item.format === 'reading' || item.format === 'text' ? 'Chapter 1 is the free preview. Add text to at least two chapters.' : 'The first 12 pages are the free preview. Add images to at least 13 pages.'} Unpublish before changing the page count.</p>
+      <p className="mt-1 text-sm text-muted">The first {item.preview_count} {item.format === 'reading' || item.format === 'text' ? 'chapter(s)' : 'page(s)'} are free. Add at least one more than the preview count. Unpublish before changing the page count.</p>
       <div className="mt-4 flex flex-col gap-4">
         {item.pages.map((page) => <StoryPageEditor key={page.id} storyId={id} page={page} refresh={refresh} upload={upload} />)}
       </div>
@@ -172,6 +172,7 @@ function StoryDetails({ story, onSaved }: { story: StoryDetail; onSaved: () => P
   const [level, setLevel] = useState(story.level)
   const [band, setBand] = useState(story.age_band)
   const [format, setFormat] = useState(story.format)
+  const [previewCount, setPreviewCount] = useState(story.preview_count)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   async function save(event: FormEvent) {
@@ -179,7 +180,7 @@ function StoryDetails({ story, onSaved }: { story: StoryDetail; onSaved: () => P
     setBusy(true)
     setError(null)
     try {
-      await contentApi.updateStory(story.id, { title: title.trim(), summary, language_id: languageId, standalone_level: level, age_band: band, format })
+      await contentApi.updateStory(story.id, { title: title.trim(), summary, language_id: languageId, standalone_level: level, age_band: band, format, ...(!['video', 'animated'].includes(format) ? { preview_count: previewCount } : {}) })
       await onSaved()
     } catch (err) { setError(err instanceof ApiError ? err.message : 'Could not save story details.') }
     finally { setBusy(false) }
@@ -192,6 +193,10 @@ function StoryDetails({ story, onSaved }: { story: StoryDetail; onSaved: () => P
     <label className="text-sm font-semibold">Level<select className="mt-1 h-11 w-full rounded-xl border border-border bg-surface px-3" value={level} onChange={(event) => setLevel(Number(event.target.value))} required>{Array.from({ length: 10 }, (_, index) => <option key={index + 1} value={index + 1}>Level {index + 1}</option>)}</select></label>
     <label className="text-sm font-semibold">Age band<select className="mt-1 h-11 w-full rounded-xl border border-border bg-surface px-3" value={band} disabled={!!story.published_at} onChange={(event) => { const next = event.target.value as StoryDetail['age_band']; setBand(next); setFormat(formatsForStoryBand(next)[0]) }}>{STORY_BANDS.map((group) => <option key={group.value} value={group.value}>{group.label}</option>)}</select></label>
     <label className="text-sm font-semibold">Format<select className="mt-1 h-11 w-full rounded-xl border border-border bg-surface px-3" value={format} disabled={!!story.published_at} onChange={(event) => setFormat(event.target.value as StoryDetail['format'])}>{formatsForStoryBand(band).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+    {!['video', 'animated'].includes(format) && <div>
+      <Input label={`Free preview ${format === 'quiz' ? 'questions' : format === 'text' || format === 'reading' ? 'chapters' : 'pages'}`} type="number" min={1} max={99} value={previewCount} onChange={(event) => setPreviewCount(Number(event.target.value))} required />
+      <p className="mt-1 text-xs text-muted">Readers can open this many before buying. Keep at least one additional item for the paid story.</p>
+    </div>}
     <label className="text-sm font-semibold">Summary
       <textarea className="mt-1 min-h-20 w-full rounded-xl border border-border bg-surface p-3" value={summary} onChange={(event) => setSummary(event.target.value)} />
     </label>

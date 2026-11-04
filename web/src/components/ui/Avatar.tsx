@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { cn } from '@/lib/cn'
 
 const SIZES = { sm: 'size-8 text-xs', md: 'size-10 text-sm', lg: 'size-12 text-base' } as const
@@ -89,27 +90,32 @@ export interface AvatarProps {
 }
 
 export function Avatar({ name, src, avatarId, size = 'md', className }: AvatarProps) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
+  const [failedPreset, setFailedPreset] = useState<string | null>(null)
+  const visibleSrc = src && src !== failedSrc ? src : null
   const color = RING[name.length % RING.length]
   const preset = AVATAR_PRESETS.find((item) => item.id === avatarId)
+  const visiblePreset = preset && preset.src !== failedPreset ? preset : null
   return (
     <span
       className={cn(
         'inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full font-display font-semibold text-white',
         SIZES[size],
-        !src && !preset && color,
+        !visibleSrc && !visiblePreset && color,
         className,
       )}
       title={name}
     >
-      {src ? (
-        <img src={src} alt="" className="size-full object-cover" />
-      ) : preset ? (
+      {visibleSrc ? (
+        <img src={visibleSrc} alt="" className="size-full object-cover" onError={() => setFailedSrc(visibleSrc)} />
+      ) : visiblePreset ? (
         <img
-          src={presetUrl(preset.src)}
+          src={presetUrl(visiblePreset.src)}
           alt=""
           loading="lazy"
           decoding="async"
           className="size-full bg-white object-cover"
+          onError={() => setFailedPreset(visiblePreset.src)}
         />
       ) : initials(name)}
     </span>

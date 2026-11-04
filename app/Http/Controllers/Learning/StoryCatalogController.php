@@ -51,7 +51,7 @@ class StoryCatalogController extends Controller
         $limit = $purchased ? null : $this->access->previewPageCount($story);
         $pages = $story->pages()->when($limit !== null, fn ($q) => $q->limit($limit))->get();
         $questions = $story->format === 'quiz'
-            ? $story->questions()->when(! $purchased, fn ($q) => $q->limit(1))->get()
+            ? $story->questions()->when(! $purchased, fn ($q) => $q->limit($this->access->previewPageCount($story)))->get()
             : collect();
         $media = fn (string $slot, ?StoryPage $page = null) => URL::temporarySignedRoute('stories.asset', now()->addMinutes(30), [
             'story' => $story->id, 'viewer' => $request->user()->id, 'learner' => $learner->id,
@@ -80,7 +80,7 @@ class StoryCatalogController extends Controller
             'option_index' => ['required', 'integer', 'min:0'],
         ]);
         $question = $story->questions()->findOrFail($data['question_id']);
-        abort_unless($question->id === $story->questions()->first()?->id || $this->access->isPurchased($story, $learner), 403);
+        abort_unless($question->position <= $this->access->previewPageCount($story) || $this->access->isPurchased($story, $learner), 403);
         abort_unless($data['option_index'] < count($question->options), 422);
 
         return response()->json(['data' => [
@@ -144,6 +144,7 @@ class StoryCatalogController extends Controller
             'level' => $story->standalone_level, 'language' => $story->language->code,
             'age_band' => $story->age_band, 'format' => $story->format,
             'price_minor' => $story->price_minor,
+            'preview_count' => $this->access->previewPageCount($story),
             'cover_url' => $story->cover_path ? Storage::disk('public')->url($story->cover_path) : null,
             'pages_count' => $story->pages_count ?? $story->pages()->count(),
             'questions_count' => $story->questions_count ?? $story->questions()->count(),

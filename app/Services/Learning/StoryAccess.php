@@ -61,6 +61,6 @@ class StoryAccess
 
     public function previewPageCount(Story $story): int
     {
-        return in_array($story->format, ['colouring', 'tracing'], true) ? 12 : 1;
+        return $story->preview_count ?? (in_array($story->format, ['colouring', 'tracing'], true) ? 12 : 1);
     }
 }

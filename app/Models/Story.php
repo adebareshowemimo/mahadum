@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
  * @property string $age_band
  * @property string $format
  * @property int $price_minor
+ * @property int|null $preview_count
  * @property string|null $cover_path
  * @property string|null $preview_video_path
  * @property string|null $full_video_path

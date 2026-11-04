@@ -18,6 +18,7 @@ function proxyTargets() {
 
   return {
     '/api': proxy, '/sanctum': proxy, '/storage': proxy,
+    '/Mahadam%20avatar%20images': proxy,
     // These public pages are rendered by Laravel, outside the React router.
     '^/(languages|vote|guides)(/|[?]|$)': proxy,
     '^/learn-(igbo|yoruba|hausa)([?]|$)': proxy,

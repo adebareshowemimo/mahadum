@@ -650,7 +650,7 @@ export const contentApi = {
     return data.data
   },
 
-  async updateStory(id: number, input: Partial<{ title: string; summary: string; language_id: number; standalone_level: number; age_band: StoryAgeBand; format: StoryFormat }>): Promise<StoryDetail> {
+  async updateStory(id: number, input: Partial<{ title: string; summary: string; language_id: number; standalone_level: number; age_band: StoryAgeBand; format: StoryFormat; preview_count: number }>): Promise<StoryDetail> {
     const { data } = await api.patch(`/content/stories/${id}`, input)
     return data.data
   },

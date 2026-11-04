@@ -118,6 +118,10 @@ function SidebarContent({
           </div>
         ))}
       </nav>
+      <div className="border-t border-border p-3">
+        <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wide text-subtle">Current learner</p>
+        <ProfileSwitcher placement="sidebar" />
+      </div>
     </>
   )
 }
@@ -140,8 +144,6 @@ function Topbar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
         </NavLink>
 
         <div className="flex-1" />
-
-        <ProfileSwitcher />
 
         {!child && <OrgSwitcher />}
 

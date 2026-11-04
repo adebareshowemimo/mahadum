@@ -7,6 +7,7 @@ use App\Models\Story;
 use App\Models\StoryPage;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Learning\StoryAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -75,8 +76,15 @@ class StoryController extends Controller
     public function update(Request $request, Story $story, AuditLogger $audit): JsonResponse
     {
         Gate::authorize('update', $story);
-        $before = $story->only(['title', 'summary', 'age_band', 'format', 'language_id', 'standalone_level']);
+        $before = $story->only(['title', 'summary', 'age_band', 'format', 'language_id', 'standalone_level', 'preview_count']);
         $data = $this->validated($request, false);
+        if (array_key_exists('preview_count', $data) && in_array($data['format'] ?? $story->format, ['video', 'animated'], true)) {
+            abort(422, 'Video previews use a separate preview clip.');
+        }
+        if ($story->published_at !== null && array_key_exists('preview_count', $data)) {
+            $total = $story->format === 'quiz' ? $story->questions()->count() : $story->pages()->count();
+            abort_if($data['preview_count'] >= $total, 422, 'The free preview must leave at least one item to unlock.');
+        }
         if ($story->published_at !== null) {
             abort_if(($data['age_band'] ?? $story->age_band) !== $story->age_band
                 || ($data['format'] ?? $story->format) !== $story->format,
@@ -91,12 +99,13 @@ class StoryController extends Controller
     public function publish(Story $story, AuditLogger $audit): JsonResponse
     {
         Gate::authorize('update', $story);
+        $previewCount = app(StoryAccess::class)->previewPageCount($story);
         $ready = match ($story->format) {
             'animated', 'video' => (bool) ($story->preview_video_path && $story->full_video_path),
-            'quiz' => $story->questions()->count() > 1,
-            'colouring', 'tracing' => $story->pages()->count() > 12
+            'quiz' => $story->questions()->count() > $previewCount,
+            'colouring', 'tracing' => $story->pages()->count() > $previewCount
                 && ! $story->pages()->whereNull('image_path')->exists(),
-            default => $story->pages()->count() > 1
+            default => $story->pages()->count() > $previewCount
                 && ! $story->pages()->where(fn ($query) => $query->whereNull('body')->orWhere('body', ''))->exists(),
         };
         abort_unless($ready, 422, 'Add the complete story and its free preview before publishing.');
@@ -243,6 +252,7 @@ class StoryController extends Controller
             'summary' => ['nullable', 'string', 'max:5000'],
             'age_band' => [$creating ? 'required' : 'sometimes', Rule::in(['0_5', '6_12', '13_17', '18_plus', 'folklore'])],
             'format' => [$creating ? 'required' : 'sometimes', Rule::in(['colouring', 'tracing', 'animated', 'reading', 'video', 'text', 'quiz'])],
+            'preview_count' => ['sometimes', 'nullable', 'integer', 'between:1,99'],
         ];
         if ($creating) {
             $rules['language_id'] = ['required', 'integer', 'exists:languages,id'];
@@ -272,6 +282,7 @@ class StoryController extends Controller
             'title' => $story->title, 'summary' => $story->summary,
             'age_band' => $story->age_band, 'format' => $story->format,
             'price_minor' => $story->price_minor, 'published_at' => $story->published_at,
+            'preview_count' => app(StoryAccess::class)->previewPageCount($story),
             'pages_count' => $story->pages_count ?? $story->pages()->count(),
             'questions_count' => $story->questions_count ?? $story->questions()->count(),
             'cover_url' => $story->cover_path ? Storage::disk('public')->url($story->cover_path) : null,

@@ -9,8 +9,8 @@ import { useAuth } from '@/lib/auth/AuthProvider'
 
 const PIN_LENGTH = 4
 
-/** Topbar control to switch into a child learner profile (PIN-gated when set). */
-export function ProfileSwitcher() {
+/** Profile control; switching into or out of child mode remains PIN-gated. */
+export function ProfileSwitcher({ placement = 'topbar' }: { placement?: 'topbar' | 'sidebar' }) {
   const navigate = useNavigate()
   const { refresh } = useAuth()
   const { learners, activeLearner, setActiveLearner } = useActiveProfile()
@@ -62,10 +62,10 @@ export function ProfileSwitcher() {
   }
 
   return (
-    <div className="relative" ref={ref}>
+    <div className={cn('relative', placement === 'sidebar' && 'w-full')} ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="relative flex items-center gap-2 rounded-full p-1 pr-2 hover:bg-surface-muted after:absolute after:inset-x-0 after:-inset-y-0.5 after:content-['']"
+        className={cn('relative flex items-center gap-2 p-1 pr-2 hover:bg-surface-muted', placement === 'sidebar' ? 'w-full rounded-xl text-left' : 'rounded-full')}
         aria-haspopup="menu"
         aria-expanded={open}
         title="Switch profile"
@@ -77,7 +77,7 @@ export function ProfileSwitcher() {
             <Icon name="users" className="size-[18px]" />
           </span>
         )}
-        <span className="hidden max-w-[8rem] truncate text-sm font-medium text-foreground sm:inline">
+        <span className={cn('min-w-0 flex-1 truncate text-sm font-medium text-foreground', placement !== 'sidebar' && 'hidden max-w-[8rem] sm:inline')}>
           {activeLearner ? activeLearner.display_name : 'Profiles'}
         </span>
         <Icon name="chevron" className="size-4 text-muted" />
@@ -86,7 +86,7 @@ export function ProfileSwitcher() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-64 overflow-hidden rounded-xl border border-border bg-surface shadow-lg animate-step-in"
+          className={cn('absolute z-50 w-64 overflow-hidden rounded-xl border border-border bg-surface shadow-lg animate-step-in', placement === 'sidebar' ? 'bottom-full left-0 mb-2' : 'right-0 mt-2')}
         >
           <p className="px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-subtle">
             Learner profiles

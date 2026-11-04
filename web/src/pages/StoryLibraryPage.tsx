@@ -35,7 +35,7 @@ export function StoryLibraryPage() {
       {STORY_BANDS.map((group) => <Button key={group.value} size="sm" variant={band === group.value ? 'primary' : 'secondary'} onClick={() => { setBand(group.value); setPage(1) }}>{group.short}</Button>)}
     </nav>
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gold-400/40 bg-gold-400/10 px-5 py-4">
-      <div><p className="font-display text-lg font-bold">Preview free. Keep your favourites.</p><p className="text-sm text-muted">Each story is ₦500 per item, shared with your family and available after a subscription ends.</p></div>
+      <div><p className="font-display text-lg font-bold">Preview free. Keep your favourites.</p><p className="text-sm text-muted">Each story is ₦500. Your purchase stays with your account; a parent’s purchase covers their family.</p></div>
       <span className="rounded-full bg-gold-400 px-4 py-2 font-bold text-charcoal-900">₦500 per story</span>
     </div>
     {stories.isError && <Alert variant="danger">Could not load stories.</Alert>}
@@ -48,7 +48,7 @@ export function StoryLibraryPage() {
         <h2 className="mt-3 font-display text-2xl font-bold sm:text-3xl">{featured.title}</h2>
         {featured.summary && <p className="mt-3 max-w-xl text-muted">{featured.summary}</p>}
         <p className="mt-4 text-sm text-muted">{storyLength(featured)} · Level {featured.level}</p>
-        <div className="mt-6"><Button onClick={() => openStory(featured)}>{featured.purchased ? 'Read or watch story' : 'Try free preview'} →</Button></div>
+        <div className="mt-6"><Button onClick={() => openStory(featured)}>{featured.purchased ? 'Read or watch story' : activeLearner?.is_child ? 'Try free preview' : 'Preview or buy · ₦500'} →</Button></div>
       </div>
     </section>}
     {groups.map((group) => {
@@ -62,7 +62,7 @@ export function StoryLibraryPage() {
             <div className="flex flex-1 flex-col px-1 pb-1"><p className="mt-3 text-xs font-bold uppercase tracking-wide text-primary">{story.language.toUpperCase()} · Level {story.level} · {story.format}</p>
               <h3 className="mt-1 line-clamp-2 font-display text-lg font-bold">{story.title}</h3>
               <p className="mt-1 text-sm text-muted">{storyLength(story)}</p>
-              <Button className="mt-4 w-full" size="sm" variant="secondary" onClick={() => openStory(story)}>{story.purchased ? 'Read or watch' : 'Free preview'}</Button>
+              <Button className="mt-4 w-full" size="sm" variant="secondary" onClick={() => openStory(story)}>{story.purchased ? 'Read or watch' : activeLearner?.is_child ? 'Free preview' : 'Preview or buy · ₦500'}</Button>
             </div>
           </article>)}
         </div>
