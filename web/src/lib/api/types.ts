@@ -530,6 +530,7 @@ export interface AuthorLesson {
   id: number
   language_id?: number | null
   standalone_level?: number | null
+  library_set_level_id?: number | null
   kind: 'lesson' | 'proverb' | 'trivia'
   title: string
   summary?: string | null
@@ -540,6 +541,38 @@ export interface AuthorLesson {
   published_at: string | null
   is_published: boolean
   components?: AuthorComponent[]
+}
+
+export interface LibrarySetLesson {
+  id: number
+  title: string
+  summary: string | null
+  position: number
+  published_at: string | null
+  completed: boolean
+  access_reason: string | null
+}
+
+export interface LibrarySetLevel {
+  id: number
+  title: string
+  position: number
+  is_free: boolean
+  lessons: LibrarySetLesson[]
+}
+
+export interface LibrarySetSummary {
+  id: number
+  kind: 'proverb' | 'trivia'
+  title: string
+  description: string | null
+  language_id: number
+  language: string | null
+  status: 'draft' | 'published'
+  levels_count: number
+  lessons_count: number
+  completed_count: number
+  levels: LibrarySetLevel[] | null
 }
 
 export interface AuthorLevel {

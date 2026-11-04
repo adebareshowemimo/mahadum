@@ -53,8 +53,14 @@ class LessonAccess
     public function content(LearnerProfile $learner, Lesson $lesson, ?string $tier = null): array
     {
         $tier ??= $this->tier($learner);
-        if ($lesson->course_level_id === null) {
+        if ($lesson->course_level_id === null && $lesson->library_set_level_id === null) {
             return ['allowed' => true, 'reason' => null];
+        }
+        if ($lesson->library_set_level_id !== null) {
+            $level = $lesson->librarySetLevel;
+            $allowed = $level->is_free || $tier === 'paid' || ($tier === 'telco' && (int) $level->position === 1);
+
+            return ['allowed' => $allowed, 'reason' => $allowed ? null : 'This level requires a paid plan. Upgrade to unlock its lessons.'];
         }
         $allowed = match ($tier) {
             'paid' => true,
@@ -70,6 +76,9 @@ class LessonAccess
     public function authorize(LearnerProfile $learner, Lesson $lesson): void
     {
         abort_if($lesson->published_at === null, 404, 'This lesson is not published.');
+        if ($lesson->library_set_level_id !== null) {
+            abort_unless($lesson->librarySetLevel->set->status === 'published', 404, 'This set is not published.');
+        }
         $access = $this->content($learner, $lesson);
         if (! $access['allowed']) {
             $this->deny('lesson_subscription_required', $access['reason'], 403);

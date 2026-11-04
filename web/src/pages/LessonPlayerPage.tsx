@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { Alert, Button3D, Skeleton } from '@/components/ui'
 import { ApiError, learningApi, type CompleteResult, type LessonPlay } from '@/lib/api'
@@ -16,6 +16,9 @@ export function LessonPlayerPage() {
   const { lessonId } = useParams()
   const id = Number(lessonId)
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const requestedReturn = searchParams.get('return')
+  const returnTo = requestedReturn?.startsWith('/learn/proverbs-trivia/') ? requestedReturn : '/learn'
   const { activeLearner } = useActiveProfile()
 
   const [play, setPlay] = useState<LessonPlay | null>(null)
@@ -68,7 +71,7 @@ export function LessonPlayerPage() {
       <div className="mx-auto max-w-md p-6">
         <Alert variant="warning">{loadError}</Alert>
         {activeLearner.is_child ? <p className="mt-4 font-semibold text-primary">Ask a grown-up to unlock this lesson.</p> : <a href="/billing" className="mt-4 block font-semibold text-primary underline">View plans and upgrade</a>}
-        <Button3D variant="neutral" onClick={() => navigate('/learn')}>Back to journey</Button3D>
+        <Button3D variant="neutral" onClick={() => navigate(returnTo)}>Back to journey</Button3D>
       </div>
     )
   }
@@ -78,8 +81,10 @@ export function LessonPlayerPage() {
     <p className="text-xs font-bold uppercase tracking-widest text-primary">Text · {play.lesson.title}</p>
     <h1 className="font-display text-3xl font-bold">{play.lesson.title}</h1>
     <p className="whitespace-pre-wrap text-lg leading-8">{play.lesson.summary}</p>
-    <Button3D onClick={() => play.components.length ? setIntroSeen(true) : navigate('/learn/proverbs-trivia')}>{play.components.length ? 'Continue to video or quiz' : 'Finish reading'}</Button3D>
+    <Button3D onClick={() => setIntroSeen(true)}>{play.components.length ? 'Continue to video or quiz' : 'Finish reading'}</Button3D>
   </main>
+
+  if (play.components.length === 0) return <main className="mx-auto max-w-2xl p-6"><LessonComplete lessonId={id} learnerId={activeLearner.id} onExit={() => navigate(returnTo)} /></main>
 
   return (
     <>
@@ -94,8 +99,8 @@ export function LessonPlayerPage() {
       initialHearts={play.hearts_remaining ?? null}
       startIndex={startIndex}
       initialCorrect={priorCorrect}
-      onExit={() => navigate('/learn')}
-      renderComplete={() => <LessonComplete lessonId={id} learnerId={activeLearner.id} onExit={() => navigate('/learn')} />}
+      onExit={() => navigate(returnTo)}
+      renderComplete={() => <LessonComplete lessonId={id} learnerId={activeLearner.id} onExit={() => navigate(returnTo)} />}
     />
     </>
   )
@@ -118,6 +123,8 @@ function LessonComplete({ lessonId, learnerId, onExit }: { lessonId: number; lea
         if (cancelled) return
         setResult(r)
         void qc.invalidateQueries({ queryKey: learningKeys.path(learnerId) })
+        void qc.invalidateQueries({ queryKey: ['learning', 'library-set'] })
+        void qc.invalidateQueries({ queryKey: ['learning', 'library-sets'] })
         for (const key of [gamificationKeys.badges(learnerId), gamificationKeys.streak(learnerId), gamificationKeys.hearts(learnerId), gamificationKeys.league(learnerId)]) {
           void qc.invalidateQueries({ queryKey: key })
         }

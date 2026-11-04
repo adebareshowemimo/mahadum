@@ -7,8 +7,8 @@ use Illuminate\Support\Str;
 
 /**
  * Enforces the lesson publish rule (Content Model §6 / Business Rule 1):
- * course lessons need a video and quiz; standalone proverbs need flashcards
- * and standalone trivia need a quiz. Every video must be
+ * course lessons need a video and quiz; proverb and trivia lessons need at
+ * least one text, video, quiz or flashcard format. Every video must be
  * `ready`, and every quiz must have ≥1 question with a valid correct-answer
  * configuration.
  *

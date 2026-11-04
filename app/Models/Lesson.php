@@ -79,6 +79,12 @@ class Lesson extends Model
         return $this->belongsTo(Language::class);
     }
 
+    /** @return BelongsTo<LibrarySetLevel, $this> */
+    public function librarySetLevel(): BelongsTo
+    {
+        return $this->belongsTo(LibrarySetLevel::class);
+    }
+
     /**
      * @return BelongsTo<CourseLevel, $this>
      */

@@ -80,7 +80,7 @@ export function LessonBuilderPage() {
 }
 
 function LessonEditor() {
-  const { courseId, lessonId } = useParams()
+  const { courseId, setId, lessonId } = useParams()
   const [searchParams] = useSearchParams()
   const standalone = !courseId
   const id = Number(lessonId)
@@ -148,7 +148,7 @@ function LessonEditor() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Link to={standalone ? '/courses/proverbs-trivia' : `/courses/${courseId}`} className="text-sm font-medium text-primary hover:underline">
+        <Link to={standalone ? (setId ? `/courses/proverbs-trivia/${setId}` : '/courses/proverbs-trivia') : `/courses/${courseId}`} className="text-sm font-medium text-primary hover:underline">
           ← {standalone ? 'Proverbs & Trivia' : 'Course'}
         </Link>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
@@ -190,16 +190,17 @@ function LessonEditor() {
         setSavingMetadata(true); setMetadataError(null)
         try {
           await contentApi.updateLesson(id, {
-            language_id: Number(values.get('language_id')),
-            standalone_level: Number(values.get('standalone_level')),
+            title: String(values.get('title') ?? '').trim(),
+            ...(!setId ? { language_id: Number(values.get('language_id')), standalone_level: Number(values.get('standalone_level')) } : {}),
             summary: String(values.get('summary') ?? '').trim(),
           })
           await lesson.refetch()
         } catch (err) { setMetadataError(err instanceof ApiError ? err.message : 'Could not save language and level.') }
         finally { setSavingMetadata(false) }
       }}>
-        <label className="flex flex-col gap-1 font-semibold">Language<select name="language_id" defaultValue={lesson.data.language_id ?? ''} className="h-10 rounded-xl border border-border bg-surface px-3" required>{config.data?.languages.map((language) => <option key={language.id} value={language.id}>{language.name}</option>)}</select></label>
-        <label className="flex flex-col gap-1 font-semibold">Level<select name="standalone_level" defaultValue={lesson.data.standalone_level ?? 1} className="h-10 rounded-xl border border-border bg-surface px-3" required>{Array.from({ length: 10 }, (_, index) => <option key={index + 1} value={index + 1}>Level {index + 1}</option>)}</select></label>
+        <label className="flex w-full flex-col gap-1 font-semibold">Lesson title<input name="title" defaultValue={lesson.data.title} maxLength={255} required className="h-10 rounded-xl border border-border bg-surface px-3 font-normal" /></label>
+        {!setId && <><label className="flex flex-col gap-1 font-semibold">Language<select name="language_id" defaultValue={lesson.data.language_id ?? ''} className="h-10 rounded-xl border border-border bg-surface px-3" required>{config.data?.languages.map((language) => <option key={language.id} value={language.id}>{language.name}</option>)}</select></label>
+        <label className="flex flex-col gap-1 font-semibold">Level<select name="standalone_level" defaultValue={lesson.data.standalone_level ?? 1} className="h-10 rounded-xl border border-border bg-surface px-3" required>{Array.from({ length: 10 }, (_, index) => <option key={index + 1} value={index + 1}>Level {index + 1}</option>)}</select></label></>}
         <label className="flex w-full flex-col gap-1 font-semibold">Text content (optional)<textarea name="summary" defaultValue={lesson.data.summary ?? ''} maxLength={1000} className="min-h-24 rounded-xl border border-border bg-surface p-3 font-normal" placeholder="Write what learners will read before the video or quiz." /></label>
         <Button type="submit" size="sm" loading={savingMetadata}>Save details</Button>
         {metadataError && <Alert variant="danger">{metadataError}</Alert>}

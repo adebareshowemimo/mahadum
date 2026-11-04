@@ -39,9 +39,11 @@ const TeacherProfilePage = lazy(() => import('@/pages/TeacherProfilePage').then(
 const ComponentsPage = lazy(() => import('@/pages/ComponentsPage').then((m) => ({ default: m.ComponentsPage })))
 const CoursesPage = lazy(() => import('@/pages/content/CoursesPage').then((m) => ({ default: m.CoursesPage })))
 const ProverbsTriviaPage = lazy(() => import('@/pages/content/ProverbsTriviaPage').then((m) => ({ default: m.ProverbsTriviaPage })))
+const LibrarySetBuilderPage = lazy(() => import('@/pages/content/LibrarySetBuilderPage').then((m) => ({ default: m.LibrarySetBuilderPage })))
 const StoriesPage = lazy(() => import('@/pages/content/StoriesPage').then((m) => ({ default: m.StoriesPage })))
 const StoryEditorPage = lazy(() => import('@/pages/content/StoryEditorPage').then((m) => ({ default: m.StoryEditorPage })))
 const ProverbsTriviaLibraryPage = lazy(() => import('@/pages/ProverbsTriviaLibraryPage').then((m) => ({ default: m.ProverbsTriviaLibraryPage })))
+const LibrarySetDetailPage = lazy(() => import('@/pages/LibrarySetDetailPage').then((m) => ({ default: m.LibrarySetDetailPage })))
 const StoryLibraryPage = lazy(() => import('@/pages/StoryLibraryPage').then((m) => ({ default: m.StoryLibraryPage })))
 const StoryReaderPage = lazy(() => import('@/pages/StoryReaderPage').then((m) => ({ default: m.StoryReaderPage })))
 const CourseBuilderPage = lazy(() => import('@/pages/content/CourseBuilderPage').then((m) => ({ default: m.CourseBuilderPage })))
@@ -392,6 +394,7 @@ export function App() {
           <Route path="/learn" element={<LearnPage />} />
           <Route path="/learn/courses" element={<CourseCatalogPage />} />
           <Route path="/learn/proverbs-trivia" element={<ProverbsTriviaLibraryPage />} />
+          <Route path="/learn/proverbs-trivia/:setId" element={<LibrarySetDetailPage />} />
           <Route path="/learn/stories" element={<StoryLibraryPage />} />
           <Route path="/achievements" element={<AchievementsPage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
@@ -426,6 +429,8 @@ export function App() {
           </Route>
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/proverbs-trivia" element={<ProverbsTriviaPage />} />
+          <Route path="/courses/proverbs-trivia/:setId" element={<LibrarySetBuilderPage />} />
+          <Route path="/courses/proverbs-trivia/:setId/lessons/:lessonId" element={<LessonBuilderPage />} />
           <Route path="/courses/proverbs-trivia/lessons/:lessonId" element={<LessonBuilderPage />} />
           <Route path="/courses/stories" element={<StoriesPage />} />
           <Route path="/courses/stories/:storyId" element={<StoryEditorPage />} />

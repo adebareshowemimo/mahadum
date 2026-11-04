@@ -1,55 +1,29 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, Button, Skeleton } from '@/components/ui'
-import { learningApi, type LibraryLesson } from '@/lib/api'
+import { Alert, Button, Input, Skeleton } from '@/components/ui'
+import { learningApi } from '@/lib/api'
+import { useConfig } from '@/lib/config/useConfig'
 import { useActiveProfile } from '@/lib/profile/ActiveProfile'
-
-function LessonCard({ lesson, onOpen, child }: { lesson: LibraryLesson; onOpen: () => void; child: boolean }) {
-  const proverb = lesson.kind === 'proverb'
-  return <article className={`flex flex-col overflow-hidden rounded-2xl border border-border bg-surface ${proverb ? 'border-l-4 border-l-amber-400' : 'border-l-4 border-l-violet-500'}`}>
-    <div className="flex-1 p-5">
-      <p className="text-xs font-bold uppercase tracking-widest text-primary">{lesson.language?.toUpperCase() ?? 'Language'}</p>
-      <h3 className="mt-2 font-display text-lg font-bold">{lesson.title}</h3>
-      {lesson.summary && <p className="mt-1 text-sm text-muted">{lesson.summary}</p>}
-      <p className="mt-1 text-sm text-muted">{lesson.level_title}</p>
-      <p className="mt-2 text-xs font-bold uppercase tracking-wide text-primary">{lesson.formats?.join(' · ') || (proverb ? 'Flashcards' : 'Quiz')}</p>
-      <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
-        <span className="rounded-full bg-surface-muted px-3 py-1.5">{proverb ? `${lesson.proverb_count} ${lesson.proverb_count === 1 ? 'proverb' : 'proverbs'}` : `${lesson.question_count} ${lesson.question_count === 1 ? 'question' : 'questions'}`}</span>
-        {!proverb && lesson.time_limit_seconds && <span className="rounded-full bg-surface-muted px-3 py-1.5">{lesson.time_limit_seconds}s per question</span>}
-        {lesson.has_audio && <span className="rounded-full bg-surface-muted px-3 py-1.5">Audio</span>}
-      </div>
-    </div>
-    <div className="border-t border-border px-5 py-4"><Button size="sm" onClick={onOpen} disabled={child && !!lesson.access_reason}>{lesson.access_reason ? child ? 'Ask a grown-up' : 'See plans' : proverb ? 'Explore set' : 'Play trivia'} →</Button></div>
-  </article>
-}
 
 export function ProverbsTriviaLibraryPage() {
   const { activeLearner } = useActiveProfile()
   const navigate = useNavigate()
-  const [proverbPage, setProverbPage] = useState(1)
-  const [triviaPage, setTriviaPage] = useState(1)
-  const proverbs = useQuery({ queryKey: ['learning', 'library-lessons', activeLearner?.id, 'proverb', proverbPage], queryFn: () => learningApi.libraryLessons({ kind: 'proverb', learner_id: activeLearner!.id, page: proverbPage }), enabled: !!activeLearner })
-  const trivia = useQuery({ queryKey: ['learning', 'library-lessons', activeLearner?.id, 'trivia', triviaPage], queryFn: () => learningApi.libraryLessons({ kind: 'trivia', learner_id: activeLearner!.id, page: triviaPage }), enabled: !!activeLearner })
-  const sample = proverbs.data?.data.find((lesson) => lesson.sample_proverb)
-  const sections = [{ title: 'Proverb sets', description: 'Short lessons with sayings, meanings and practice.', query: proverbs, page: proverbPage, setPage: setProverbPage }, { title: 'Trivia sets', description: 'Quick challenges with rules chosen by the creator.', query: trivia, page: triviaPage, setPage: setTriviaPage }]
+  const config = useConfig()
+  const [kind, setKind] = useState<'proverb' | 'trivia'>('proverb')
+  const [language, setLanguage] = useState('')
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const sets = useQuery({ queryKey: ['learning', 'library-sets', activeLearner?.id, kind, language, search, page],
+    queryFn: () => learningApi.librarySets({ learner_id: activeLearner!.id, kind, language: language || undefined, q: search || undefined, page }), enabled: !!activeLearner })
 
-  return <div className="mx-auto flex max-w-7xl flex-col gap-8">
-    <header><p className="text-xs font-bold uppercase tracking-[.2em] text-primary">Learn & play</p><h1 className="mt-2 font-display text-3xl font-bold sm:text-4xl">Proverbs & Trivia</h1><p className="mt-2 text-muted">Wisdom to explore and questions to enjoy with {activeLearner?.display_name ?? 'your learner'}.</p></header>
-    {!activeLearner && <Alert variant="info">Choose a learner profile to browse these lessons.</Alert>}
-    {sample && <section className="rounded-3xl bg-gradient-to-br from-amber-200 via-orange-100 to-violet-100 p-6 text-amber-950 sm:p-8">
-      <p className="text-xs font-bold uppercase tracking-[.2em]">Proverb of the day</p>
-      <blockquote className="mt-4 max-w-3xl font-display text-2xl font-bold leading-snug sm:text-3xl">“{sample.sample_proverb}”</blockquote>
-      {sample.sample_meaning && <p className="mt-3 text-amber-900">{sample.sample_meaning}</p>}
-      <Button className="mt-5" size="sm" disabled={activeLearner?.is_child && !!sample.access_reason} onClick={() => navigate(sample.access_reason ? '/billing' : `/learn/lessons/${sample.id}`)}>{activeLearner?.is_child && sample.access_reason ? 'Ask a grown-up' : 'Explore this set'} →</Button>
-    </section>}
-    {sections.map(({ title, description, query, page, setPage }) => <section key={title} className="flex flex-col gap-4">
-      <div><h2 className="font-display text-xl font-bold">{title}</h2><p className="text-sm text-muted">{description}</p></div>
-      {query.isError && <Alert variant="danger">Could not load {title.toLowerCase()}.</Alert>}
-      {query.isLoading && <Skeleton className="h-40" />}
-      {query.data && <><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{query.data.data.length === 0 && <p className="rounded-2xl border border-border bg-surface p-6 text-muted">No published {title.toLowerCase()} yet.</p>}{query.data.data.map((lesson) => <LessonCard key={lesson.id} lesson={lesson} child={!!activeLearner?.is_child} onOpen={() => navigate(lesson.access_reason ? '/billing' : `/learn/lessons/${lesson.id}`)} />)}</div>
-        {query.data.meta.last_page > 1 && <div className="flex items-center justify-between"><Button size="sm" variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button><span className="text-sm text-muted">Page {page} of {query.data.meta.last_page}</span><Button size="sm" variant="secondary" disabled={page >= query.data.meta.last_page} onClick={() => setPage(page + 1)}>Next</Button></div>}
-      </>}
-    </section>)}
+  return <div className="mx-auto flex max-w-7xl flex-col gap-6">
+    <header><p className="text-xs font-bold uppercase tracking-[.2em] text-primary">Learn & play</p><h1 className="mt-2 font-display text-3xl font-bold">Proverbs & Trivia</h1><p className="mt-2 text-muted">Choose a set, then move through its levels and lessons.</p></header>
+    {!activeLearner && <Alert variant="info">Choose a learner profile to browse these sets.</Alert>}
+    <div className="flex flex-wrap gap-2" role="tablist" aria-label="Library type">{(['proverb', 'trivia'] as const).map((item) => <Button key={item} role="tab" aria-selected={kind === item} variant={kind === item ? 'primary' : 'secondary'} onClick={() => { setKind(item); setPage(1) }}>{item === 'proverb' ? 'Proverb sets' : 'Trivia sets'}</Button>)}</div>
+    <div className="grid gap-3 rounded-2xl border border-border bg-surface p-4 sm:grid-cols-[1fr_12rem]"><Input label="Search sets" type="search" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} /><label className="flex flex-col gap-1.5 text-sm font-semibold">Language<select className="h-11 rounded-xl border border-border-strong bg-surface px-3" value={language} onChange={(event) => { setLanguage(event.target.value); setPage(1) }}><option value="">All languages</option>{config.data?.languages.map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}</select></label></div>
+    {sets.isError && <Alert variant="danger">Could not load these sets.</Alert>}
+    {sets.isLoading && <Skeleton className="h-48" />}
+    {sets.data && <><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{sets.data.data.length === 0 && <p className="rounded-2xl border border-border bg-surface p-6 text-muted">No published {kind} sets yet.</p>}{sets.data.data.map((set) => <article key={set.id} className="flex flex-col rounded-2xl border border-border bg-surface"><div className="flex-1 p-5"><p className="text-xs font-bold uppercase tracking-widest text-primary">{set.language?.toUpperCase() ?? 'Language'}</p><h2 className="mt-2 font-display text-xl font-bold">{set.title}</h2>{set.description && <p className="mt-2 text-sm text-muted">{set.description}</p>}<p className="mt-4 text-sm font-semibold">{set.levels_count} levels · {set.lessons_count} lessons</p>{set.completed_count > 0 && <p className="mt-1 text-sm text-primary">{set.completed_count} completed</p>}</div><div className="border-t border-border p-4"><Button size="sm" onClick={() => navigate(`/learn/proverbs-trivia/${set.id}`)}>{set.completed_count > 0 ? 'Continue' : 'Explore set'} →</Button></div></article>)}</div>{sets.data.meta.last_page > 1 && <div className="flex items-center justify-between"><Button variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button><span>Page {page} of {sets.data.meta.last_page}</span><Button variant="secondary" disabled={page >= sets.data.meta.last_page} onClick={() => setPage(page + 1)}>Next</Button></div>}</>}
   </div>
 }

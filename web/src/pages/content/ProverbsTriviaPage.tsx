@@ -2,87 +2,55 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Badge, Button, Input, Modal, Skeleton } from '@/components/ui'
-import { ApiError, contentApi, type LibraryLesson } from '@/lib/api'
+import { ApiError, contentApi, type LibrarySetSummary } from '@/lib/api'
 import { useConfig } from '@/lib/config/useConfig'
 import { useCanManageContent } from '@/lib/content/permissions'
 
 type Kind = 'proverb' | 'trivia'
 
-function CreatorSection({ kind, canManage, onCreate, onDelete }: { kind: Kind; canManage: boolean; onCreate: () => void; onDelete: (lesson: LibraryLesson) => void }) {
-  const navigate = useNavigate()
-  const [page, setPage] = useState(1)
-  const lessons = useQuery({ queryKey: ['content', 'library-lessons', kind, page], queryFn: () => contentApi.libraryLessons(kind, page) })
-  const label = kind === 'proverb' ? 'Proverb sets' : 'Trivia sets'
-  return <section className="overflow-hidden rounded-3xl border border-border bg-surface">
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5 sm:p-6">
-      <div><p className="text-xs font-bold uppercase tracking-widest text-primary">{kind === 'proverb' ? 'Words of wisdom' : 'Play & learn'}</p><h2 className="mt-1 font-display text-xl font-bold">{label}</h2><p className="text-sm text-muted">{kind === 'proverb' ? 'Sayings, meanings and lesson practice.' : 'Question sets with configurable timers, attempts and XP.'}</p></div>
-      {canManage && <Button size="sm" onClick={onCreate}>+ Add {kind} set</Button>}
-    </div>
-    {lessons.isError && <div className="p-5"><Alert variant="danger">Could not load {label.toLowerCase()}.</Alert></div>}
-    {lessons.isLoading && <div className="p-5"><Skeleton className="h-40" /></div>}
-    {lessons.data && <>
-      <div className="divide-y divide-border">{lessons.data.data.length === 0 && <p className="p-6 text-sm text-muted">No {label.toLowerCase()} yet. Add one above.</p>}
-        {lessons.data.data.map((lesson) => <article key={lesson.id} className="flex flex-wrap items-center justify-between gap-4 p-5">
-          <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="font-display font-bold">{lesson.title}</h3><Badge variant={lesson.is_published ? 'success' : 'neutral'}>{lesson.is_published ? 'Published' : 'Draft'}</Badge></div>
-            {lesson.summary && <p className="mt-1 text-sm text-muted">{lesson.summary}</p>}
-            <p className="mt-1 text-sm text-muted">{lesson.level_title} · {lesson.language?.toUpperCase() ?? 'Language'}</p>
-            <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-muted"><span>{kind === 'proverb' ? `${lesson.proverb_count} proverbs` : `${lesson.question_count} questions`}</span>{lesson.formats?.map((format) => <span key={format}>· {format}</span>)}{lesson.time_limit_seconds ? <span>· {lesson.time_limit_seconds}s per question</span> : null}{lesson.has_audio && <span>· Audio</span>}</div>
-          </div>
-          <div className="flex flex-wrap gap-2"><Button size="sm" variant="secondary" onClick={() => navigate(`/courses/proverbs-trivia/lessons/${lesson.id}?preview=1`)}>Preview</Button><Button size="sm" variant="secondary" onClick={() => navigate(`/courses/proverbs-trivia/lessons/${lesson.id}`)}>{canManage ? 'Edit' : 'View'}</Button>{canManage && <Button size="sm" variant="ghost" className="text-danger" onClick={() => onDelete(lesson)}>Delete</Button>}</div>
-        </article>)}
-      </div>
-      {lessons.data.meta.last_page > 1 && <div className="flex items-center justify-between border-t border-border p-4"><Button size="sm" variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button><span className="text-sm text-muted">Page {page} of {lessons.data.meta.last_page}</span><Button size="sm" variant="secondary" disabled={page >= lessons.data.meta.last_page} onClick={() => setPage(page + 1)}>Next</Button></div>}
-    </>}
-  </section>
-}
-
 export function ProverbsTriviaPage() {
   const navigate = useNavigate()
-  const qc = useQueryClient()
+  const client = useQueryClient()
   const canManage = useCanManageContent()
+  const config = useConfig()
   const [kind, setKind] = useState<Kind>('proverb')
-  const [open, setOpen] = useState(false)
-  const [deleting, setDeleting] = useState<LibraryLesson | null>(null)
-  const [languageId, setLanguageId] = useState(0)
-  const [level, setLevel] = useState(1)
+  const [language, setLanguage] = useState('')
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [creating, setCreating] = useState(false)
   const [title, setTitle] = useState('')
-  const [summary, setSummary] = useState('')
+  const [description, setDescription] = useState('')
+  const [languageId, setLanguageId] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const config = useConfig()
+  const sets = useQuery({ queryKey: ['content', 'library-sets', kind, language, search, page], queryFn: () => contentApi.librarySets({ kind, language: language || undefined, q: search || undefined, page }) })
 
-  function openCreate(nextKind: Kind) { setKind(nextKind); setTitle(''); setSummary(''); setError(null); setOpen(true) }
   async function create(event: FormEvent) {
-    event.preventDefault()
-    if (!languageId || !title.trim()) return
-    setBusy(true); setError(null)
-    try { const lesson = await contentApi.createLibrarySet({ title: title.trim(), kind, language_id: languageId, standalone_level: level, summary: summary.trim() }); await qc.invalidateQueries({ queryKey: ['content', 'library-lessons'] }); setOpen(false); navigate(`/courses/proverbs-trivia/lessons/${lesson.id}`) }
-    catch (err) { setError(err instanceof ApiError ? err.message : 'Could not create this lesson.') }
-    finally { setBusy(false) }
-  }
-  async function remove() {
-    if (!deleting) return
-    setBusy(true); setError(null)
-    try { await contentApi.deleteLesson(deleting.id); await qc.invalidateQueries({ queryKey: ['content', 'library-lessons'] }); setDeleting(null) }
-    catch (err) { setError(err instanceof ApiError ? err.message : 'Could not delete this lesson.') }
+    event.preventDefault(); setBusy(true); setError(null)
+    try {
+      const set = await contentApi.createLibraryCollection({ kind, language_id: languageId, title: title.trim(), description: description.trim() })
+      await client.invalidateQueries({ queryKey: ['content', 'library-sets'] })
+      setCreating(false); navigate(`/courses/proverbs-trivia/${set.id}`)
+    } catch (err) { setError(err instanceof ApiError ? err.message : 'Could not create this set.') }
     finally { setBusy(false) }
   }
 
-  return <div className="flex flex-col gap-7">
-    <header className="flex flex-wrap items-end justify-between gap-3"><div><h1 className="mt-2 font-display text-3xl font-bold">Proverbs & Trivia</h1><p className="mt-1 text-muted">Create independent sets by language and level.</p></div></header>
-    <div className="rounded-2xl border border-primary/25 bg-primary-soft px-5 py-4 text-sm">Each set has its own language and level. Add text here, then video or quiz in the editor. Proverbs can also use flashcards.</div>
-    {error && !open && !deleting && <Alert variant="danger">{error}</Alert>}
-    <CreatorSection kind="proverb" canManage={canManage} onCreate={() => openCreate('proverb')} onDelete={setDeleting} />
-    <CreatorSection kind="trivia" canManage={canManage} onCreate={() => openCreate('trivia')} onDelete={setDeleting} />
-    <Modal open={open} onClose={() => setOpen(false)} title={`New ${kind} set`} description="Choose a language and level, then add its content.">
-      <form onSubmit={create} className="flex flex-col gap-4">{error && <Alert variant="danger">{error}</Alert>}
-        <label className="flex flex-col gap-1 text-sm font-semibold">Language<select className="h-11 rounded-xl border border-border bg-surface px-3" value={languageId} onChange={(event) => setLanguageId(Number(event.target.value))} required><option value={0}>Choose a language</option>{config.data?.languages.map((language) => <option key={language.id} value={language.id}>{language.name}</option>)}</select></label>
-        <label className="flex flex-col gap-1 text-sm font-semibold">Level<select className="h-11 rounded-xl border border-border bg-surface px-3" value={level} onChange={(event) => setLevel(Number(event.target.value))} required>{Array.from({ length: 10 }, (_, index) => <option key={index + 1} value={index + 1}>Level {index + 1}</option>)}</select></label>
-        <Input label="Set title" value={title} onChange={(event) => setTitle(event.target.value)} required />
-        <label className="flex flex-col gap-1 text-sm font-semibold">Text content (optional)<textarea className="min-h-24 rounded-xl border border-border bg-surface p-3" maxLength={1000} value={summary} onChange={(event) => setSummary(event.target.value)} placeholder="Write the story, saying, explanation or context learners will read." /></label>
-        <Button type="submit" disabled={!languageId || !title.trim()} loading={busy}>Create and edit</Button>
-      </form>
-    </Modal>
-    <Modal open={!!deleting} onClose={() => { setDeleting(null); setError(null) }} title="Delete lesson" description="This removes the set and its questions or proverbs."><p className="mb-4 font-semibold">{deleting?.title}</p>{error && <Alert variant="danger">{error}</Alert>}<div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setDeleting(null)}>Cancel</Button><Button variant="danger" loading={busy} onClick={remove}>Delete lesson</Button></div></Modal>
+  async function remove(set: LibrarySetSummary) {
+    if (!window.confirm(`Delete “${set.title}” and its lessons?`)) return
+    setBusy(true); setError(null)
+    try { await contentApi.deleteLibraryCollection(set.id); await client.invalidateQueries({ queryKey: ['content', 'library-sets'] }) }
+    catch (err) { setError(err instanceof ApiError ? err.message : 'Could not delete this set.') }
+    finally { setBusy(false) }
+  }
+
+  return <div className="flex flex-col gap-6">
+    <header className="flex flex-wrap items-end justify-between gap-3"><div><h1 className="font-display text-2xl font-bold">Proverbs & Trivia</h1><p className="mt-1 text-muted">Build independent sets with levels and lessons.</p></div>{canManage && <Button onClick={() => { setTitle(''); setDescription(''); setLanguageId(0); setError(null); setCreating(true) }}>New {kind} set</Button>}</header>
+    <div className="flex flex-wrap gap-2" role="tablist" aria-label="Library type">{(['proverb', 'trivia'] as const).map((item) => <Button key={item} role="tab" aria-selected={kind === item} variant={kind === item ? 'primary' : 'secondary'} onClick={() => { setKind(item); setPage(1) }}>{item === 'proverb' ? 'Proverb sets' : 'Trivia sets'}</Button>)}</div>
+    <div className="grid gap-3 rounded-2xl border border-border bg-surface p-4 sm:grid-cols-[1fr_12rem]"><Input label="Search sets" type="search" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} placeholder="Search by title" /><label className="flex flex-col gap-1.5 text-sm font-semibold">Language<select className="h-11 rounded-xl border border-border-strong bg-surface px-3" value={language} onChange={(event) => { setLanguage(event.target.value); setPage(1) }}><option value="">All languages</option>{config.data?.languages.map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}</select></label></div>
+    {error && !creating && <Alert variant="danger">{error}</Alert>}
+    {sets.isError && <Alert variant="danger">Could not load sets.</Alert>}
+    {sets.isLoading && <Skeleton className="h-48" />}
+    {sets.data && <><div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">{sets.data.data.length === 0 && <p className="p-6 text-muted">No {kind} sets yet.</p>}{sets.data.data.map((set) => <article key={set.id} className="flex flex-wrap items-center justify-between gap-4 p-5"><div><div className="flex items-center gap-2"><h2 className="font-display text-lg font-bold">{set.title}</h2><Badge variant={set.status === 'published' ? 'success' : 'neutral'}>{set.status}</Badge></div>{set.description && <p className="mt-1 text-sm text-muted">{set.description}</p>}<p className="mt-2 text-xs font-semibold text-muted">{set.language?.toUpperCase() ?? 'Language'} · {set.levels_count} levels · {set.lessons_count} published lessons</p></div><div className="flex gap-2"><Button size="sm" variant="secondary" onClick={() => navigate(`/courses/proverbs-trivia/${set.id}`)}>{canManage ? 'Edit' : 'View'}</Button>{canManage && <Button size="sm" variant="danger" disabled={busy} onClick={() => void remove(set)}>Delete</Button>}</div></article>)}</div>{sets.data.meta.last_page > 1 && <div className="flex items-center justify-between"><Button variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button><span className="text-sm">Page {page} of {sets.data.meta.last_page}</span><Button variant="secondary" disabled={page >= sets.data.meta.last_page} onClick={() => setPage(page + 1)}>Next</Button></div>}</>}
+    <Modal open={creating} onClose={() => setCreating(false)} title={`New ${kind} set`} description="Create the set, then add levels and lessons as you do for a course."><form className="flex flex-col gap-4" onSubmit={create}>{error && <Alert variant="danger">{error}</Alert>}<Input label="Set title" value={title} onChange={(event) => setTitle(event.target.value)} required /><Input label="Description" value={description} onChange={(event) => setDescription(event.target.value)} /><label className="flex flex-col gap-1.5 text-sm font-semibold">Language<select className="h-11 rounded-xl border border-border-strong bg-surface px-3" value={languageId} onChange={(event) => setLanguageId(Number(event.target.value))} required><option value={0}>Choose a language</option>{config.data?.languages.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><Button type="submit" loading={busy} disabled={!title.trim() || !languageId}>Create set</Button></form></Modal>
   </div>
 }

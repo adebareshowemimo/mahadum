@@ -33,6 +33,8 @@ class LibraryLessonController extends Controller
             ->whereNull('course_level_id');
         if (! $author) {
             $query->whereNotNull('published_at');
+            $query->where(fn ($q) => $q->whereNull('library_set_level_id')
+                ->orWhereHas('librarySetLevel.set', fn ($set) => $set->where('status', 'published')));
         }
         if ($request->filled('language')) {
             $query->whereHas('language', fn ($q) => $q->where('code', $validated['language']));
@@ -82,7 +84,7 @@ class LibraryLessonController extends Controller
                 return [
                     'id' => $lesson->id,
                     'title' => $lesson->title,
-                    'summary' => $lesson->summary,
+                    'summary' => $permission && ! $permission['allowed'] ? null : $lesson->summary,
                     'kind' => $lesson->kind,
                     'level' => $lesson->standalone_level,
                     'level_title' => 'Level '.$lesson->standalone_level,
@@ -95,8 +97,8 @@ class LibraryLessonController extends Controller
                     'formats' => array_values(array_unique($formats)),
                     'time_limit_seconds' => $timeLimitSeconds,
                     'has_audio' => $hasAudio,
-                    'sample_proverb' => $sampleProverb,
-                    'sample_meaning' => $sampleMeaning,
+                    'sample_proverb' => $permission && ! $permission['allowed'] ? null : $sampleProverb,
+                    'sample_meaning' => $permission && ! $permission['allowed'] ? null : $sampleMeaning,
                 ];
             })->values(),
             'meta' => [
