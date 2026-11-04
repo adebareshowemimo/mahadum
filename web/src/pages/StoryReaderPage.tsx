@@ -29,6 +29,13 @@ export function StoryReaderPage() {
     if (Number.isSafeInteger(purchaseId) && purchaseId > 0) navigate(`/payment/story/${purchaseId}`, { replace: true })
   }, [navigate, params])
 
+  useEffect(() => {
+    if (!story.data || !activeLearner) return
+    void learningApi.saveStoryProgress(id, activeLearner.id, story.data.resume_position ?? 1)
+      .then(() => qc.invalidateQueries({ queryKey: ['learning', 'stories', 'continue', activeLearner.id] }))
+      .catch(() => undefined)
+  }, [activeLearner, id, qc, story.data])
+
   async function purchase() {
     if (!activeLearner || !selectedGateway) return
     setBusy(true); setError(null)
@@ -61,7 +68,7 @@ export function StoryReaderPage() {
   const previewUnit = item.format === 'quiz' ? 'question' : item.format === 'text' || item.format === 'reading' ? 'chapter' : 'page'
   const paywall = !item.purchased ? <section className="rounded-2xl border border-amber-700/30 bg-[#fffaf0] p-6 text-center shadow-[0_12px_40px_rgba(48,32,11,.08)]">
       <span className="text-2xl" aria-hidden="true">✦</span>
-      <h2 className="font-display text-xl font-bold">Unlock the full story for ₦500</h2>
+      <h2 className="font-display text-xl font-bold">Unlock · ₦500</h2>
       <p className="mx-auto mt-2 max-w-2xl text-sm text-[#6b5b4a]">A parent’s purchase covers this story item for their family. An adult learner can buy it for their own account. It remains available after a subscription ends. A full refund or chargeback returns it to the free preview.</p>
       {!item.can_purchase && <p className="mx-auto mt-4 max-w-xl text-sm font-semibold text-amber-900">{activeLearner.is_child ? 'Ask a grown-up to unlock this story.' : 'Ask the learner’s parent to purchase this story. It will appear here when their payment is confirmed.'}</p>}
       {item.can_purchase && <>
@@ -82,7 +89,7 @@ export function StoryReaderPage() {
     {error && <Alert variant="danger">{error}</Alert>}{notice && <Alert variant="info">{notice}</Alert>}
     <p className="text-center text-sm font-bold uppercase tracking-widest text-amber-900">{item.format === 'quiz' ? 'Quiz' : item.format === 'video' || item.format === 'animated' ? 'Video' : 'Text'} format</p>
     {item.format === 'quiz' ? <StoryQuiz key={`${item.id}-${item.purchased}`} title={item.title} questions={item.questions} onAnswer={(question, optionIndex) => learningApi.answerStoryQuestion(id, activeLearner.id, question.id, optionIndex)} endContent={paywall} onExit={() => navigate('/learn/stories')} />
-      : <StoryContent key={`${item.id}-${item.purchased}`} format={item.format} pages={item.pages} previewVideoUrl={item.preview_video_url} fullVideoUrl={item.full_video_url} endLabel={item.can_purchase ? 'Unlock story' : 'Story access'} tone="light" endContent={paywall} />}
+      : <StoryContent key={`${item.id}-${item.purchased}`} format={item.format} pages={item.pages} previewVideoUrl={item.preview_video_url} fullVideoUrl={item.full_video_url} initialIndex={Math.min((item.resume_position ?? 1) - 1, Math.max(item.pages.length - 1, 0))} onPositionChange={(position) => { void learningApi.saveStoryProgress(item.id, activeLearner.id, position).then(() => qc.invalidateQueries({ queryKey: ['learning', 'stories', 'continue', activeLearner.id] })).catch(() => undefined) }} endLabel={item.can_purchase ? 'Unlock story' : 'Story access'} tone="light" endContent={paywall} />}
     </main>
   </div>
 }

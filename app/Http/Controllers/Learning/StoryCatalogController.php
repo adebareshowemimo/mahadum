@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LearnerProfile;
 use App\Models\Story;
 use App\Models\StoryPage;
+use App\Models\StoryProgress;
 use App\Models\User;
 use App\Services\Learning\StoryAccess;
 use Illuminate\Http\JsonResponse;
@@ -23,7 +24,7 @@ class StoryCatalogController extends Controller
         $learner = $this->learner($request);
         $query = Story::with('language')->withCount(['pages', 'questions'])
             ->whereNotNull('published_at');
-        if (! $this->maySeeAdult($learner, $request->user())) {
+        if (! $this->access->maySeeAdult($learner, $request->user())) {
             $query->where('age_band', '!=', '18_plus');
         }
         if ($request->filled('band')) {
@@ -39,6 +40,7 @@ class StoryCatalogController extends Controller
             'meta' => [
                 'current_page' => $stories->currentPage(), 'last_page' => $stories->lastPage(),
                 'per_page' => $stories->perPage(), 'total' => $stories->total(),
+                'can_view_adult' => $this->access->maySeeAdult($learner, $request->user()),
             ],
         ]);
     }
@@ -67,7 +69,50 @@ class StoryCatalogController extends Controller
             'preview_video_url' => $story->preview_video_path ? $media('preview') : null,
             'full_video_url' => $purchased && $story->full_video_path ? $media('full') : null,
             'preview_ends_at' => $limit,
+            'resume_position' => StoryProgress::where('learner_profile_id', $learner->id)->where('story_id', $story->id)->value('position') ?? 1,
         ]]);
+    }
+
+    public function continueReading(Request $request): JsonResponse
+    {
+        $learner = $this->learner($request);
+        $items = StoryProgress::with('story.language')
+            ->where('learner_profile_id', $learner->id)
+            ->whereHas('story', function ($query) use ($learner, $request) {
+                $query->whereNotNull('published_at');
+                if (! $this->access->maySeeAdult($learner, $request->user())) {
+                    $query->where('age_band', '!=', '18_plus');
+                }
+            })
+            ->latest('updated_at')->limit(12)->get()
+            ->filter(fn (StoryProgress $progress) => $this->access->isVisible($progress->story, $learner, $request->user()))
+            ->take(12)
+            ->map(fn (StoryProgress $progress) => $this->summary($progress->story, $learner, $request->user()) + [
+                'resume_position' => $progress->position,
+            ])->values();
+
+        return response()->json(['data' => $items]);
+    }
+
+    public function saveProgress(Request $request, Story $story): JsonResponse
+    {
+        $learner = $this->learner($request);
+        Gate::authorize('redeemReward', $learner);
+        abort_unless($story->published_at && $this->access->isVisible($story, $learner, $request->user()), 404);
+        $data = $request->validate(['position' => ['required', 'integer', 'between:1,1000']]);
+        $accessible = $this->access->isPurchased($story, $learner);
+        $max = match ($story->format) {
+            'video', 'animated' => 1,
+            'quiz' => $accessible ? $story->questions()->count() : $this->access->previewPageCount($story),
+            default => $accessible ? $story->pages()->count() : $this->access->previewPageCount($story),
+        };
+        abort_if($data['position'] > $max, 403);
+        $progress = StoryProgress::updateOrCreate(
+            ['learner_profile_id' => $learner->id, 'story_id' => $story->id],
+            ['position' => $data['position']],
+        );
+
+        return response()->json(['data' => ['position' => $progress->position]]);
     }
 
     public function answer(Request $request, Story $story): JsonResponse
@@ -118,13 +163,6 @@ class StoryCatalogController extends Controller
         Gate::authorize('view', $learner);
 
         return $learner;
-    }
-
-    private function maySeeAdult(LearnerProfile $learner, User $viewer): bool
-    {
-        return ! $viewer->hasAnyRole(['teacher', 'school_admin', 'supervisor'])
-            && $learner->organization_id === null
-            && $this->access->ageFor($learner, $viewer) >= 18;
     }
 
     private function pagePath(Story $story, int $pageId, bool $purchased): ?string

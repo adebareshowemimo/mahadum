@@ -65,6 +65,7 @@ use App\Http\Controllers\Content\LibrarySetController;
 use App\Http\Controllers\Content\MediaController;
 use App\Http\Controllers\Content\QuizImportController;
 use App\Http\Controllers\Content\StoryController;
+use App\Http\Controllers\Content\VideoMediaController;
 use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\Family\ChoreController;
 use App\Http\Controllers\Family\FamilyController;
@@ -273,6 +274,10 @@ Route::prefix('v1')->group(function () {
             ->middleware('can:content.media.upload');
         Route::post('media/upload', [MediaController::class, 'upload'])
             ->middleware('can:content.media.upload');
+        Route::post('content/videos/{video}/captions', [VideoMediaController::class, 'caption'])
+            ->middleware('can:content.media.upload');
+        Route::post('content/videos/{video}/transcode', [VideoMediaController::class, 'transcode'])
+            ->middleware('can:content.media.upload');
         Route::patch('media/{asset}', [MediaController::class, 'update'])
             ->middleware('can:content.media.upload');
         Route::delete('media/{asset}', [MediaController::class, 'destroy'])
@@ -285,7 +290,9 @@ Route::prefix('v1')->group(function () {
         // staff who merely have progress-view access.
         Route::post('enrollments', [EnrollmentController::class, 'store']);
         Route::get('learning/stories', [StoryCatalogController::class, 'index']);
+        Route::get('learning/stories/continue', [StoryCatalogController::class, 'continueReading']);
         Route::get('learning/stories/{story}', [StoryCatalogController::class, 'show']);
+        Route::post('learning/stories/{story}/progress', [StoryCatalogController::class, 'saveProgress']);
         Route::post('learning/stories/{story}/answer', [StoryCatalogController::class, 'answer']);
         Route::post('learning/stories/{story}/purchase', [StoryPurchaseController::class, 'store'])->middleware('idempotency');
         Route::post('learning/story-purchases/{purchase}/confirm', [StoryPurchaseController::class, 'confirm']);

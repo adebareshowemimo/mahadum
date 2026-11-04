@@ -189,6 +189,9 @@ class LessonComponentController extends Controller
             $payload['external_url'] = null;
         }
 
+        if (isset($payload['source_asset_id']) || isset($payload['external_url'])) {
+            $component->video?->renditions()->delete();
+        }
         $component->video()->updateOrCreate([], $payload);
     }
 
@@ -288,7 +291,7 @@ class LessonComponentController extends Controller
     private function detailLoads(): array
     {
         return [
-            'video', 'quiz.questions.options', 'quiz.questions.promptAudioAsset', 'quiz.questions.promptImageAsset',
+            'video.sourceAsset', 'video.captions', 'video.renditions', 'quiz.questions.options', 'quiz.questions.promptAudioAsset', 'quiz.questions.promptImageAsset',
             'speakingPrompt', 'assignment', 'exercise.flashcards.audioAsset', 'exercise.flashcards.imageAsset', 'game',
         ];
     }

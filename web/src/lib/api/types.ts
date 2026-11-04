@@ -607,6 +607,7 @@ export interface StorySummary {
   published_at?: string | null
   purchased?: boolean
   can_purchase?: boolean
+  resume_position?: number
 }
 
 export interface StoryPage {

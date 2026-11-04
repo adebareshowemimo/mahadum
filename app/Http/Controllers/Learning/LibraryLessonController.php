@@ -53,6 +53,7 @@ class LibraryLessonController extends Controller
                 $hasAudio = false;
                 $sampleProverb = null;
                 $sampleMeaning = null;
+                $dailyCards = collect();
                 $formats = [];
                 if (filled($lesson->summary)) {
                     $formats[] = 'text';
@@ -65,13 +66,17 @@ class LibraryLessonController extends Controller
                         $cards = $component->exercise->flashcards;
                         $proverbCount += $cards->count();
                         $hasAudio = $hasAudio || $cards->contains(fn ($card) => $card->audio_asset_id !== null);
-                        $sampleProverb ??= $cards->first()?->front_text;
-                        $sampleMeaning ??= $cards->first()?->back_text;
+                        $dailyCards = $dailyCards->concat($cards);
                     }
                     if ($component->quiz) {
                         $questionCount += $component->quiz->questions->count();
                         $timeLimitSeconds ??= $component->quiz->time_limit_seconds;
                     }
+                }
+                if ($dailyCards->isNotEmpty()) {
+                    $dailyCard = $dailyCards->values()->get((now()->dayOfYear - 1) % $dailyCards->count());
+                    $sampleProverb = $dailyCard?->front_text;
+                    $sampleMeaning = $dailyCard?->back_text;
                 }
 
                 return [

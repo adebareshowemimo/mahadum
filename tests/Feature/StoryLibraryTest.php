@@ -9,6 +9,7 @@ use App\Models\Organization;
 use App\Models\Story;
 use App\Models\StoryPurchase;
 use App\Services\Billing\PaymentService;
+use App\Services\Content\StoryPreviewInspector;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
@@ -138,6 +139,26 @@ class StoryLibraryTest extends TestCase
         ])->assertForbidden();
     }
 
+    public function test_continue_reading_is_per_learner_and_cannot_resume_locked_pages(): void
+    {
+        $this->seedRbac();
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $first = $this->parentWithChild($parent);
+        $second = LearnerProfile::create(['family_id' => $first->family_id, 'display_name' => 'Sibling']);
+        $story = $this->story();
+
+        $this->postJson("/api/v1/learning/stories/{$story->id}/progress", [
+            'learner_id' => $first->id, 'position' => 13,
+        ])->assertForbidden();
+        $this->postJson("/api/v1/learning/stories/{$story->id}/progress", [
+            'learner_id' => $first->id, 'position' => 1,
+        ])->assertOk()->assertJsonPath('data.position', 1);
+        $this->getJson("/api/v1/learning/stories/continue?learner_id={$first->id}")
+            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.resume_position', 1);
+        $this->getJson("/api/v1/learning/stories/continue?learner_id={$second->id}")
+            ->assertOk()->assertJsonCount(0, 'data');
+    }
+
     public function test_school_admin_can_open_story_and_set_builders_read_only(): void
     {
         $this->seedRbac();
@@ -167,6 +188,8 @@ class StoryLibraryTest extends TestCase
     {
         $this->seedRbac();
         Storage::fake('local');
+        $inspector = $this->mock(StoryPreviewInspector::class);
+        $inspector->shouldReceive('durationSeconds')->once()->andReturn(60.0);
         $this->actingAsUser($this->userWithRole('content_owner'));
         $language = Language::create(['code' => 'ig', 'name' => 'Igbo', 'script' => 'latin', 'is_active' => true]);
         $id = $this->postJson('/api/v1/content/stories', [
@@ -181,6 +204,25 @@ class StoryLibraryTest extends TestCase
         $this->postJson("/api/v1/content/stories/{$id}/publish")->assertOk();
         $this->getJson("/api/v1/content/stories/{$id}")
             ->assertOk()->assertJsonPath('data.has_preview_video', true)->assertJsonPath('data.has_full_video', true);
+    }
+
+    public function test_story_preview_rejects_video_longer_than_one_minute(): void
+    {
+        $this->seedRbac();
+        Storage::fake('local');
+        $this->mock(StoryPreviewInspector::class)
+            ->shouldReceive('durationSeconds')->once()->andReturn(61.0);
+        $this->actingAsUser($this->userWithRole('content_owner'));
+        $language = Language::create(['code' => 'ig', 'name' => 'Igbo', 'script' => 'latin', 'is_active' => true]);
+        $storyId = $this->postJson('/api/v1/content/stories', [
+            'title' => 'Video tale', 'language_id' => $language->id,
+            'standalone_level' => 1, 'age_band' => '0_5', 'format' => 'video',
+        ])->assertCreated()->json('data.id');
+
+        $this->postJson("/api/v1/content/stories/{$storyId}/upload", [
+            'slot' => 'preview_video', 'file' => UploadedFile::fake()->create('preview.mp4', 100, 'video/mp4'),
+        ])->assertStatus(422);
+        $this->assertNull(Story::findOrFail($storyId)->preview_video_path);
     }
 
     private function story(string $band = '0_5'): Story
@@ -385,11 +427,31 @@ class StoryLibraryTest extends TestCase
         $adult = LearnerProfile::create(['family_id' => $family->id, 'display_name' => 'Eighteen', 'date_of_birth' => now()->subYears(18)]);
         $story = $this->story('18_plus');
 
+        $this->getJson("/api/v1/learning/stories?learner_id={$minor->id}")
+            ->assertOk()->assertJsonPath('meta.can_view_adult', false)->assertJsonPath('meta.total', 0);
         $this->getJson("/api/v1/learning/stories/{$story->id}?learner_id={$minor->id}")->assertNotFound();
         $this->getJson("/api/v1/learning/stories/{$story->id}?learner_id={$adult->id}")->assertOk();
         $school = Organization::create(['name' => 'School', 'slug' => 'story-test-school', 'type' => 'school', 'status' => 'active']);
         $adult->update(['organization_id' => $school->id]);
         $this->getJson("/api/v1/learning/stories/{$story->id}?learner_id={$adult->id}")->assertNotFound();
+    }
+
+    public function test_family_parent_with_an_added_teacher_role_keeps_adult_family_story_access(): void
+    {
+        $this->seedRbac();
+        $parent = $this->actingAsUser($this->userWithRole('parent', ['signup_account_type' => 'family']));
+        $parent->assignRole('teacher');
+        $family = Family::create(['owner_user_id' => $parent->id, 'name' => 'Family']);
+        $adult = LearnerProfile::create([
+            'family_id' => $family->id, 'display_name' => 'Adult learner',
+            'date_of_birth' => now()->subYears(20),
+        ]);
+        $story = $this->story('18_plus');
+
+        $this->getJson("/api/v1/learning/stories?learner_id={$adult->id}")
+            ->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('meta.can_view_adult', true);
+        $this->getJson("/api/v1/learning/stories/{$story->id}?learner_id={$adult->id}")
+            ->assertOk()->assertJsonPath('data.can_purchase', true);
     }
 
     public function test_story_settlement_accepts_verified_naira_from_all_three_gateways(): void

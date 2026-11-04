@@ -6,6 +6,7 @@ use App\Models\LearnerProfile;
 use App\Models\Story;
 use App\Models\StoryPurchase;
 use App\Models\User;
+use App\Services\UserAccountType;
 use App\Support\ActiveChildProfile;
 use Illuminate\Support\Facades\Gate;
 
@@ -32,7 +33,13 @@ class StoryAccess
             return true;
         }
 
-        return ! $viewer->hasAnyRole(['teacher', 'school_admin', 'supervisor'])
+        return $this->maySeeAdult($learner, $viewer);
+    }
+
+    public function maySeeAdult(LearnerProfile $learner, User $viewer): bool
+    {
+        return (! $viewer->hasAnyRole(['teacher', 'school_admin', 'supervisor'])
+                || UserAccountType::forUser($viewer) === 'family')
             && $learner->organization_id === null
             && $this->ageFor($learner, $viewer) >= 18;
     }

@@ -1,4 +1,5 @@
 import { useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   DndContext,
@@ -43,6 +44,7 @@ import {
   usePublishLesson,
   useReorderComponents,
   useUpdateComponent,
+  contentKeys,
 } from '@/lib/content/queries'
 import { useCanManageContent } from '@/lib/content/permissions'
 import { LessonPreviewModal } from './LessonPreviewModal'
@@ -487,6 +489,7 @@ function useComponentForm(lessonId: number, editing: AuthorComponent | undefined
 }
 
 function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editing?: AuthorComponent; onClose: () => void }) {
+  const queryClient = useQueryClient()
   const { submit, error, pending, isEdit } = useComponentForm(lessonId, editing, onClose)
   const [librarySearch, setLibrarySearch] = useState('')
   const [appliedLibrarySearch, setAppliedLibrarySearch] = useState('')
@@ -507,13 +510,48 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
   const [uploadProgress, setUploadProgress] = useState<{ loaded: number; total: number } | null>(null)
   const [uploadedAssetId, setUploadedAssetId] = useState<number | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [captionFile, setCaptionFile] = useState<File | null>(null)
+  const [captionLanguage, setCaptionLanguage] = useState('en')
+  const [mediaBusy, setMediaBusy] = useState(false)
+  const videoId = typeof d.video_id === 'number' ? d.video_id : null
+  const captions = Array.isArray(d.captions) ? d.captions as { language_code: string }[] : []
+  const renditions = Array.isArray(d.renditions) ? d.renditions as string[] : []
+  const [savedCaptions, setSavedCaptions] = useState(captions.map((caption) => caption.language_code))
+  const [savedRenditions, setSavedRenditions] = useState(renditions)
 
   const videoAssets = (library.data ?? []).filter((a) => a.type === 'video')
   const youtubeUrlValid = /^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(youtubeUrl.trim())
   const uploadPercent = uploadProgress
     ? Math.min(100, Math.round((uploadProgress.loaded / uploadProgress.total) * 100))
     : 0
-  const busy = uploading || pending
+  const busy = uploading || pending || mediaBusy
+
+  async function saveCaptions() {
+    if (!videoId || !captionFile) return
+    setUploadError(null)
+    setMediaBusy(true)
+    try {
+      await contentApi.uploadVideoCaptions(videoId, captionFile, captionLanguage.trim().toLowerCase())
+      await queryClient.invalidateQueries({ queryKey: contentKeys.lesson(lessonId) })
+      setSavedCaptions((current) => [...new Set([...current, captionLanguage.trim().toLowerCase()])])
+      setCaptionFile(null)
+    } catch (err) {
+      setUploadError(err instanceof ApiError ? err.message : 'Could not upload captions.')
+    } finally { setMediaBusy(false) }
+  }
+
+  async function processVideo() {
+    if (!videoId) return
+    setUploadError(null)
+    setMediaBusy(true)
+    try {
+      await contentApi.transcodeVideo(videoId)
+      await queryClient.invalidateQueries({ queryKey: contentKeys.lesson(lessonId) })
+      setSavedRenditions(['240p', '360p', '720p'])
+    } catch (err) {
+      setUploadError(err instanceof ApiError ? err.message : 'Could not process video.')
+    } finally { setMediaBusy(false) }
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -697,6 +735,17 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
         )}
 
         <Input label="Video title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+        {videoId && <div className="rounded-xl border border-border bg-surface-muted p-4 text-sm">
+          <p className="font-semibold">Captions and video quality</p>
+          <p className="mt-1 text-muted">Upload a WebVTT file for a video without built-in text. Learners can turn captions on in the player.</p>
+          <p className="mt-2 text-xs text-muted">Captions: {savedCaptions.join(', ') || 'none'} · Processed qualities: {savedRenditions.join(', ') || 'none'}</p>
+          <div className="mt-3 flex flex-wrap items-end gap-2">
+            <label className="text-xs">Language code<input className="mt-1 block w-20 rounded-lg border border-border bg-surface p-2" value={captionLanguage} onChange={(event) => setCaptionLanguage(event.target.value)} /></label>
+            <label className="text-xs">WebVTT captions<input className="mt-1 block text-xs" type="file" accept=".vtt,text/vtt" onChange={(event) => setCaptionFile(event.target.files?.[0] ?? null)} /></label>
+            <Button type="button" size="sm" variant="secondary" disabled={busy || !captionFile} onClick={saveCaptions}>Upload captions</Button>
+            {d.source_type === 'upload' && <Button type="button" size="sm" variant="secondary" disabled={busy} onClick={processVideo}>Process video qualities</Button>}
+          </div>
+        </div>}
         <Input label="Presenter (optional)" value={presenter} onChange={(e) => setPresenter(e.target.value)} />
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-semibold text-foreground">Default quality</span>

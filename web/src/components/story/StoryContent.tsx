@@ -9,10 +9,12 @@ type StoryContentProps = {
   endContent?: ReactNode
   endLabel?: string
   tone?: 'light' | 'dark'
+  initialIndex?: number
+  onPositionChange?: (position: number) => void
 }
 
-export function StoryContent({ format, pages, previewVideoUrl, fullVideoUrl, endContent, endLabel = 'Finish preview', tone = 'dark' }: StoryContentProps) {
-  const [index, setIndex] = useState(0)
+export function StoryContent({ format, pages, previewVideoUrl, fullVideoUrl, endContent, endLabel = 'Finish preview', tone = 'dark', initialIndex = 0, onPositionChange }: StoryContentProps) {
+  const [index, setIndex] = useState(initialIndex)
   const deckRef = useRef<HTMLElement>(null)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
   const videoUrl = fullVideoUrl || previewVideoUrl
@@ -25,6 +27,7 @@ export function StoryContent({ format, pages, previewVideoUrl, fullVideoUrl, end
   function go(next: number) {
     if (next < 0 || next >= total || next === current) return
     setIndex(next)
+    if (next < slides.length) onPositionChange?.(next + 1)
     requestAnimationFrame(() => deckRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }))
   }
 

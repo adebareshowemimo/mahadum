@@ -7,6 +7,7 @@ use App\Models\Story;
 use App\Models\StoryPage;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Content\StoryPreviewInspector;
 use App\Services\Learning\StoryAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -187,7 +188,7 @@ class StoryController extends Controller
         return response()->json(null, 204);
     }
 
-    public function upload(Request $request, Story $story): JsonResponse
+    public function upload(Request $request, Story $story, StoryPreviewInspector $inspector): JsonResponse
     {
         Gate::authorize('update', $story);
         $data = $request->validate([
@@ -202,6 +203,11 @@ class StoryController extends Controller
             ? str_starts_with((string) $request->file('file')->getMimeType(), 'image/')
             : str_starts_with((string) $request->file('file')->getMimeType(), 'video/'),
             422, 'Choose the correct image or video file.');
+        if ($slot === 'preview_video') {
+            $duration = $inspector->durationSeconds($request->file('file')->getRealPath());
+            abort_unless($duration !== null && $duration > 0 && $duration <= 60, 422,
+                'The preview clip must be a playable video no longer than one minute.');
+        }
         $page = null;
         if ($slot === 'page_image') {
             $page = StoryPage::where('story_id', $story->id)->findOrFail($data['page_id']);

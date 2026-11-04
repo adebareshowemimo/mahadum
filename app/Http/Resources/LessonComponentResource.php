@@ -34,6 +34,7 @@ class LessonComponentResource extends JsonResource
     {
         return match ($this->type) {
             'video' => $this->whenLoaded('video', fn () => $this->video ? [
+                'video_id' => $this->video->id,
                 'title' => $this->video->title,
                 'presenter_name' => $this->video->presenter_name,
                 'duration_seconds' => $this->video->duration_seconds,
@@ -45,6 +46,12 @@ class LessonComponentResource extends JsonResource
                 'src' => $this->video->relationLoaded('sourceAsset') && $this->video->sourceAsset
                     ? Storage::disk('public')->url($this->video->sourceAsset->url)
                     : null,
+                'captions' => $this->video->relationLoaded('captions')
+                    ? $this->video->captions->map(fn ($caption) => [
+                        'language_code' => $caption->language_code, 'url' => $caption->url,
+                    ])->values() : [],
+                'renditions' => $this->video->relationLoaded('renditions')
+                    ? $this->video->renditions->where('ready', true)->pluck('quality')->values() : [],
             ] : null),
             'quiz' => $this->whenLoaded('quiz', fn () => $this->quiz ? [
                 'pass_threshold' => (float) $this->quiz->pass_threshold,

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Alert, Button, Skeleton } from '@/components/ui'
@@ -17,9 +17,19 @@ export function StoryLibraryPage() {
     queryFn: () => learningApi.stories({ learner_id: activeLearner!.id, band: band || undefined, page }),
     enabled: !!activeLearner,
   })
+  const continuing = useQuery({
+    queryKey: ['learning', 'stories', 'continue', activeLearner?.id],
+    queryFn: () => learningApi.continuingStories(activeLearner!.id),
+    enabled: !!activeLearner,
+  })
   const items = stories.data?.data ?? []
   const featured = items.find((item) => item.age_band === 'folklore') ?? items[0]
-  const groups = band ? STORY_BANDS.filter((group) => group.value === band) : STORY_BANDS
+  const visibleBands = STORY_BANDS.filter((group) => group.value !== '18_plus' || stories.data?.meta.can_view_adult)
+  const groups = band ? visibleBands.filter((group) => group.value === band) : visibleBands
+
+  useEffect(() => {
+    if (band === '18_plus' && stories.data?.meta.can_view_adult === false) { setBand(''); setPage(1) }
+  }, [band, stories.data?.meta.can_view_adult])
 
   function openStory(story: StorySummary) { navigate(`/learn/stories/${story.id}`) }
 
@@ -32,7 +42,7 @@ export function StoryLibraryPage() {
     {!activeLearner && <Alert variant="info">Choose a learner profile to browse stories.</Alert>}
     <nav className="flex flex-wrap gap-2" aria-label="Story age groups">
       <Button size="sm" variant={band === '' ? 'primary' : 'secondary'} onClick={() => { setBand(''); setPage(1) }}>All stories</Button>
-      {STORY_BANDS.map((group) => <Button key={group.value} size="sm" variant={band === group.value ? 'primary' : 'secondary'} onClick={() => { setBand(group.value); setPage(1) }}>{group.short}</Button>)}
+      {visibleBands.map((group) => <Button key={group.value} size="sm" variant={band === group.value ? 'primary' : 'secondary'} onClick={() => { setBand(group.value); setPage(1) }}>{group.short}</Button>)}
     </nav>
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gold-400/40 bg-gold-400/10 px-5 py-4">
       <div><p className="font-display text-lg font-bold">Preview free. Keep your favourites.</p><p className="text-sm text-muted">Each story is ₦500. Your purchase stays with your account; a parent’s purchase covers their family.</p></div>
@@ -40,7 +50,15 @@ export function StoryLibraryPage() {
     </div>
     {stories.isError && <Alert variant="danger">Could not load stories.</Alert>}
     {stories.isLoading && <Skeleton className="h-80" />}
-    {stories.data && items.length === 0 && <p className="rounded-2xl border border-border bg-surface p-8 text-muted">No published stories in this group yet.</p>}
+    {!!continuing.data?.length && <section className="flex flex-col gap-3">
+      <h2 className="font-display text-xl font-bold">Continue reading</h2>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {continuing.data.map((story) => <button key={story.id} type="button" onClick={() => openStory(story)} className="flex items-center gap-4 rounded-2xl border border-border bg-surface p-3 text-left hover:border-primary">
+          <StoryCover story={story} className="h-24 w-20 shrink-0" />
+          <span className="min-w-0"><span className="block font-display font-bold">{story.title}</span><span className="mt-1 block text-sm text-muted">{story.format === 'video' || story.format === 'animated' ? 'Continue watching' : story.format === 'quiz' ? 'Continue quiz' : `Resume at ${story.format === 'reading' || story.format === 'text' ? 'chapter' : 'page'} ${story.resume_position ?? 1}`}</span></span>
+        </button>)}
+      </div>
+    </section>}
     {featured && <section className="grid overflow-hidden rounded-3xl border border-border bg-surface lg:grid-cols-[minmax(220px,35%)_1fr]">
       <StoryCover story={featured} className="aspect-[4/3] w-full rounded-none lg:aspect-auto lg:min-h-80" />
       <div className="flex flex-col justify-center p-6 sm:p-9">
@@ -53,9 +71,9 @@ export function StoryLibraryPage() {
     </section>}
     {groups.map((group) => {
       const groupStories = items.filter((item) => item.age_band === group.value)
-      if (groupStories.length === 0) return null
       return <section key={group.value} className="flex flex-col gap-4">
         <div><h2 className="font-display text-xl font-bold">{group.label}</h2><p className="text-sm text-muted">{group.description}</p></div>
+        {groupStories.length === 0 && <p className="rounded-2xl border border-border bg-surface p-6 text-sm text-muted">Stories for this age group are being prepared.</p>}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {groupStories.map((story) => <article key={story.id} className="flex flex-col rounded-2xl border border-border bg-surface p-3">
             <StoryCover story={story} className="aspect-[3/4] w-full" />

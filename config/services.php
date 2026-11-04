@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'video' => [
+        'ffprobe' => env('FFPROBE_BIN', 'ffprobe'),
+        'ffmpeg' => env('FFMPEG_BIN', 'ffmpeg'),
+    ],
 
     /*
     |--------------------------------------------------------------------------

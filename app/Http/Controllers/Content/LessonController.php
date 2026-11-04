@@ -49,6 +49,8 @@ class LessonController extends Controller
         $lesson->load([
             'components' => fn ($q) => $q->orderBy('position'),
             'components.video.sourceAsset',
+            'components.video.captions',
+            'components.video.renditions',
             'components.quiz.questions.options',
             'components.quiz.questions.promptAudioAsset',
             'components.quiz.questions.promptImageAsset',

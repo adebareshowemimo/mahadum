@@ -458,9 +458,18 @@ export const learningApi = {
     return data
   },
 
-  async stories(query: { learner_id: number; band?: StoryAgeBand; language?: string; page?: number }): Promise<Paginated<StorySummary>> {
+  async stories(query: { learner_id: number; band?: StoryAgeBand; language?: string; page?: number }): Promise<Paginated<StorySummary> & { meta: { can_view_adult: boolean } }> {
     const { data } = await api.get('/learning/stories', { params: query })
     return data
+  },
+
+  async continuingStories(learnerId: number): Promise<StorySummary[]> {
+    const { data } = await api.get('/learning/stories/continue', { params: { learner_id: learnerId } })
+    return data.data
+  },
+
+  async saveStoryProgress(id: number, learnerId: number, position: number): Promise<void> {
+    await api.post(`/learning/stories/${id}/progress`, { learner_id: learnerId, position })
   },
 
   async story(id: number, learnerId: number): Promise<StoryDetail> {
@@ -858,6 +867,17 @@ export const contentApi = {
       },
     })
     return data.data
+  },
+
+  async uploadVideoCaptions(videoId: number, file: File, languageCode: string): Promise<void> {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('language_code', languageCode)
+    await api.post(`/content/videos/${videoId}/captions`, form)
+  },
+
+  async transcodeVideo(videoId: number): Promise<void> {
+    await api.post(`/content/videos/${videoId}/transcode`)
   },
 
   /** Lightweight list (first page) — used by the video picker; pass type/per_page. */
