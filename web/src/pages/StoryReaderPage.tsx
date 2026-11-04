@@ -25,7 +25,8 @@ export function StoryReaderPage() {
   const selectedGateway = gateway && gateways.data?.available.includes(gateway) ? gateway : gateways.data?.default
 
   useEffect(() => {
-    const purchaseId = Number(params.get('purchase_id'))
+    // Monnify can append its callback query with another '?' after ours.
+    const purchaseId = Number(params.get('purchase_id')?.match(/^([1-9]\d*)(?:\?.*)?$/)?.[1])
     if (!purchaseId || !activeLearner) return
     let cancelled = false
     learningApi.confirmStoryPurchase(purchaseId).then(async (purchase) => {
@@ -47,7 +48,7 @@ export function StoryReaderPage() {
     setBusy(true); setError(null)
     try {
       const result = await learningApi.purchaseStory(id, activeLearner.id, selectedGateway)
-      if (result.status === 'paid') { await qc.invalidateQueries({ queryKey: ['learning', 'story', id] }); setNotice('This story is already yours.') }
+      if (result.status === 'paid') { await qc.invalidateQueries({ queryKey: ['learning', 'story', id, activeLearner.id] }); setNotice('This story is already yours.') }
       else if (result.checkout_url) window.location.assign(result.checkout_url)
       else { setPendingPurchaseId(result.id); setNotice('Checkout is being prepared. No new payment has been requested.') }
     } catch (err) { setError(err instanceof ApiError ? err.message : 'Could not start checkout.') }
