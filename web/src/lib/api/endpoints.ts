@@ -37,6 +37,8 @@ import type {
   StoryFormat,
   StoryPage,
   StoryPurchase,
+  SubscriptionConfirmation,
+  InvoiceConfirmation,
   StorySummary,
   LearnerProfile,
   LessonAnalytics,
@@ -361,6 +363,11 @@ export const familyApi = {
     status: string
     message: string
     currency_minor: number
+    amount_minor: number
+    currency: string
+    gateway: string
+    created_at: string
+    confirmed_at: string | null
   }> {
     const { data } = await api.post(`/wallet/fundings/${fundingId}/confirm`)
     return data.data
@@ -950,7 +957,7 @@ export const billingApi = {
     return data.data
   },
 
-  async confirmSubscription(id: number): Promise<{ status: string }> {
+  async confirmSubscription(id: number): Promise<SubscriptionConfirmation> {
     const { data } = await api.post(`/subscriptions/${id}/confirm`)
     return data.data
   },
@@ -1675,6 +1682,11 @@ export const schoolApi = {
 
   async invoices(orgId: number): Promise<SchoolInvoice[]> {
     const { data } = await api.get(`/schools/${orgId}/invoices`)
+    return data.data
+  },
+
+  async confirmInvoice(orgId: number, invoiceId: number): Promise<InvoiceConfirmation> {
+    const { data } = await api.post(`/schools/${orgId}/invoices/${invoiceId}/confirm`)
     return data.data
   },
 

@@ -70,6 +70,11 @@ class WalletController extends Controller
             'status' => $status,
             'message' => $message,
             'currency_minor' => $wallet->fresh()->currency_balance_minor,
+            'amount_minor' => $funding->amount_minor,
+            'currency' => $funding->currency,
+            'gateway' => $funding->gateway,
+            'created_at' => $funding->created_at,
+            'confirmed_at' => $status === 'success' ? $funding->fresh()->updated_at : null,
         ]]);
     }
 

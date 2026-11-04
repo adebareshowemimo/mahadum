@@ -87,6 +87,8 @@ class StoryPurchaseController extends Controller
             'id' => $purchase->id, 'story_id' => $purchase->story_id,
             'status' => $purchase->status, 'provider' => $purchase->provider,
             'amount_minor' => $purchase->amount_minor, 'checkout_url' => $purchase->checkout_url,
+            'reference' => $purchase->reference, 'paid_at' => $purchase->paid_at,
+            'story_title' => $purchase->story->title,
         ];
     }
 }

@@ -231,7 +231,7 @@ class StoryLibraryTest extends TestCase
             ->json('data.id');
         Http::assertSent(fn ($request) => str_ends_with($request->url(), '/transaction/initialize')
             && $request['amount'] === Story::PRICE_MINOR
-            && $request['callback_url'] === "https://learn.example.test/learn/stories/{$story->id}?purchase_id={$purchaseId}");
+            && $request['callback_url'] === "https://learn.example.test/payment/story/{$purchaseId}");
 
         $this->postJson("/api/v1/learning/story-purchases/{$purchaseId}/confirm")
             ->assertOk()->assertJsonPath('data.status', 'paid');

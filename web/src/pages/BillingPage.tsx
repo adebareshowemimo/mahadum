@@ -1,5 +1,6 @@
 import { PurchasePolicyNotice } from '@/components/billing/PurchasePolicyNotice'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
@@ -48,6 +49,7 @@ function friendlyBillingError(err: unknown, fallback: string): string {
 }
 
 export function BillingPage() {
+  const navigate = useNavigate()
   const { user, hasRole } = useAuth()
   const queryClient = useQueryClient()
   const entitlements = useEntitlements()
@@ -73,34 +75,10 @@ export function BillingPage() {
   const [promo, setPromo] = useState<{ code: string; byPlan: Record<number, PromoPreview> } | null>(null)
   const [promoError, setPromoError] = useState<string | null>(null)
   const [promoBusy, setPromoBusy] = useState(false)
-  const checkedPayments = useRef(new Set<number>())
-
   useEffect(() => {
-    const returnedId = Number(new URLSearchParams(window.location.search).get('subscription_id'))
-    const ids = [returnedId].filter((id) => Number.isSafeInteger(id) && id > 0)
-    for (const id of ids) {
-      if (checkedPayments.current.has(id)) continue
-      checkedPayments.current.add(id)
-      void billingApi.confirmSubscription(id).then((result) => {
-        if (result.status === 'active') {
-          setNotice('Payment confirmed — your plan is now active.')
-          void queryClient.invalidateQueries({ queryKey: ['me'] })
-          void queryClient.invalidateQueries({ queryKey: ['learner-path'] })
-          void queryClient.invalidateQueries({ queryKey: ['hearts'] })
-          void queryClient.invalidateQueries({ queryKey: ['subscriptions'] })
-        } else if (id === returnedId) {
-          setNotice('Payment confirmation is still pending. Please check again shortly.')
-        }
-      }).catch((err: unknown) => {
-        if (id === returnedId) setError(friendlyBillingError(err, 'Could not verify your payment.'))
-      })
-    }
-    if (returnedId > 0) {
-      const url = new URL(window.location.href)
-      url.searchParams.delete('subscription_id')
-      window.history.replaceState(null, '', url.pathname + url.search + url.hash)
-    }
-  }, [queryClient])
+    const returnedId = Number(new URLSearchParams(window.location.search).get('subscription_id')?.match(/^([1-9]\d*)(?:\?.*)?$/)?.[1])
+    if (Number.isSafeInteger(returnedId) && returnedId > 0) navigate(`/payment/subscription/${returnedId}`, { replace: true })
+  }, [navigate])
 
   const sub = user?.subscription ?? null
   const telcoState = telco.data?.state
@@ -153,7 +131,7 @@ export function BillingPage() {
       if (res.checkout_url) {
         window.location.href = res.checkout_url
       } else {
-        setNotice(res.status === 'active' ? 'Your subscription is active. No payment is due for this billing period.' : 'Subscription created. Complete payment at checkout to activate — your plan unlocks once payment is confirmed.')
+        navigate(`/payment/subscription/${res.subscription_id}`)
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not start the subscription.')
@@ -186,7 +164,7 @@ export function BillingPage() {
       if (res.checkout_url) {
         window.location.href = res.checkout_url
       } else {
-        setNotice(res.status === 'active' ? 'Your new plan is active. No payment is due for this billing period.' : 'Plan changed. Complete payment at checkout to activate — your new plan unlocks once payment is confirmed.')
+        navigate(`/payment/subscription/${res.subscription_id}`)
       }
     } catch (err) {
       setError(friendlyBillingError(err, 'Could not change your plan.'))

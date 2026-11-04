@@ -213,6 +213,8 @@ export interface DataBundlePurchase {
     fulfillment_provider?: 'monnify' | 'flutterwave'
   payment_confirmed?: boolean
   delivery_started?: boolean
+  created_at?: string | null
+  paid_at?: string | null
   check_issue?: 'provider_unavailable'
 }
 
@@ -620,6 +622,21 @@ export interface StoryPurchase {
   provider: string
   amount_minor: number
   checkout_url: string | null
+  reference?: string
+  paid_at?: string | null
+  story_title?: string
+}
+
+export interface SubscriptionConfirmation {
+  status: string
+  plan_name: string
+  amount_minor: number
+  currency: string
+  gateway: string | null
+  reference: string
+  receipt_id: number | null
+  paid_at: string | null
+  renews_at: string | null
 }
 
 /** Question types the grader supports (option-based, ordered, pairs + free-text). */
@@ -1214,6 +1231,17 @@ export interface PayInvoiceResult {
   invoice_id: number
   payment_reference: string
   checkout_url: string | null
+}
+
+export interface InvoiceConfirmation {
+  id: number
+  status: string
+  verification: 'success' | 'pending' | 'failed' | 'needs_review'
+  amount_minor: number
+  payment_gateway: string | null
+  payment_reference: string
+  issued_at: string | null
+  paid_at: string | null
 }
 
 export interface RosterImportResult {

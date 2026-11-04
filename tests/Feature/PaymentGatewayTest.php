@@ -75,7 +75,7 @@ class PaymentGatewayTest extends TestCase
             ->json('data.payment_reference');
 
         Http::assertSent(fn ($request) => $request['amount'] === $plan->price_minor && $request['reference'] === $ref);
-        Http::assertSent(fn ($request) => $request['callback_url'] === config('app.url').'/billing?subscription_id='.substr($ref, 4));
+        Http::assertSent(fn ($request) => $request['callback_url'] === rtrim((string) config('app.frontend_url'), '/').'/payment/subscription/'.substr($ref, 4));
     }
 
     public function test_subscription_saves_chosen_gateway_and_rejects_an_unavailable_one(): void
@@ -150,9 +150,13 @@ class PaymentGatewayTest extends TestCase
             'Idempotency-Key' => 'flutterwave-return',
         ])->assertCreated()->json('data.subscription_id');
         Http::assertSent(fn ($request) => str_ends_with($request->url(), '/payments')
-            && $request['redirect_url'] === config('app.url').'/billing?subscription_id='.$id);
+            && $request['redirect_url'] === rtrim((string) config('app.frontend_url'), '/').'/payment/subscription/'.$id);
 
-        $this->postJson("/api/v1/subscriptions/$id/confirm")->assertOk()->assertJsonPath('data.status', 'active');
+        $this->postJson("/api/v1/subscriptions/$id/confirm")->assertOk()
+            ->assertJsonPath('data.status', 'active')
+            ->assertJsonPath('data.reference', 'sub_'.$id)
+            ->assertJsonPath('data.amount_minor', $plan->price_minor)
+            ->assertJsonPath('data.gateway', 'flutterwave');
         $this->getJson("/api/v1/lessons/{$lesson->id}/play?learner_id={$learner->id}")->assertOk();
         $this->postJson("/api/v1/subscriptions/$id/confirm")->assertOk()->assertJsonPath('data.status', 'active');
         $this->assertDatabaseCount('subscription_payment_receipts', 1);
@@ -254,7 +258,7 @@ class PaymentGatewayTest extends TestCase
         Http::assertSent(fn ($request) => str_contains($request->url(), '/init-transaction')
             && $request['paymentReference'] === $ref
             && $request['amount'] === round($plan->price_minor / 100, 2)
-            && $request['redirectUrl'] === config('app.url').'/billing?subscription_id='.substr($ref, 4));
+            && $request['redirectUrl'] === rtrim((string) config('app.frontend_url'), '/').'/payment/subscription/'.substr($ref, 4));
     }
 
     public function test_no_live_gateway_blocks_wallet_checkout_without_http_or_pending_transaction(): void

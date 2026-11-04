@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Alert, Badge, Button, Card, CardBody, Icon, Input, Skeleton } from '@/components/ui'
 import { ApiError, schoolApi, type SchoolInvoice } from '@/lib/api'
 import { formatMoney } from '@/lib/format'
@@ -17,6 +18,7 @@ const STATUS_TONE: Record<string, 'success' | 'gold' | 'danger' | 'neutral'> = {
 }
 
 function Invoices({ orgId }: { orgId: number }) {
+  const navigate = useNavigate()
   const { data, isLoading, isError, refetch } = useInvoices(orgId)
   const paymentGateways = useInvoiceGateways(orgId)
   const [requestedGateway, setRequestedGateway] = useState<'monnify' | 'paystack' | 'flutterwave' | null>(null)
@@ -78,7 +80,7 @@ function Invoices({ orgId }: { orgId: number }) {
     setCheckoutUrl(null)
     try {
       const result = await pay.mutateAsync({ invoiceId: id, gateway: checkoutGateway ?? undefined })
-      if (result.settled) { await refetch(); return }
+      if (result.settled) { navigate(`/payment/invoice/${orgId}/${id}`); return }
       if (result.checkout_url) setCheckoutUrl(result.checkout_url)
       else setError('Payment started — the invoice will be marked paid once confirmed.')
     } catch (err) {

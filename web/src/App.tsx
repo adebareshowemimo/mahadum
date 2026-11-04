@@ -126,6 +126,7 @@ const CompetitionDetailPage = lazy(() => import('@/pages/CompetitionDetailPage')
 const CompetitionsAdminPage = lazy(() => import('@/pages/CompetitionsAdminPage').then((m) => ({ default: m.CompetitionsAdminPage })))
 const CoursePerformancePage = lazy(() => import('@/pages/content/CoursePerformancePage').then((m) => ({ default: m.CoursePerformancePage })))
 const WalletPage = lazy(() => import('@/pages/WalletPage').then((m) => ({ default: m.WalletPage })))
+const PaymentResultPage = lazy(() => import('@/pages/PaymentResultPage').then((m) => ({ default: m.PaymentResultPage })))
 const LoginPage = lazy(() => import('@/pages/LoginPage').then((m) => ({ default: m.LoginPage })))
 const RegisterPage = lazy(() => import('@/pages/RegisterPage').then((m) => ({ default: m.RegisterPage })))
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })))
@@ -164,6 +165,7 @@ function PageTitleManager() {
     let title = PAGE_TITLES[pathname]
     if (!title && /^\/classes\/\d+/.test(pathname)) title = pathname.endsWith('/invite') ? 'Invite Learner' : 'Class Workspace'
     if (!title && /^\/assignments\/\d+/.test(pathname)) title = 'Assignment Review'
+    if (!title && pathname.startsWith('/payment/')) title = 'Payment result'
     if (!title && pathname.startsWith('/admin/')) title = 'Administration'
     if (!title && pathname.startsWith('/courses/')) title = 'Course'
     document.title = title ? `${title} · ${DISPLAY_NAME}` : DISPLAY_NAME
@@ -401,6 +403,8 @@ export function App() {
           </Route>
           <Route path="/family/children/:learnerId" element={<ChildPage />} />
           <Route path="/wallet" element={<WalletPage />} />
+          <Route path="/payment/:kind/:id" element={<PaymentResultPage />} />
+          <Route path="/payment/invoice/:orgId/:id" element={<PaymentResultPage />} />
           <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/tasks" element={<TasksPage />} />
           <Route path="/billing" element={<BillingPage />} />

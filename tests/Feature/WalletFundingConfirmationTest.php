@@ -47,7 +47,7 @@ class WalletFundingConfirmationTest extends TestCase
             ->assertCreated()->json('data.funding_id');
 
         Http::assertSent(fn ($request) => str_ends_with($request->url(), '/payments')
-            && $request['redirect_url'] === "https://learn.example.test/wallet?funding_id={$id}");
+            && $request['redirect_url'] === "https://learn.example.test/payment/wallet/{$id}");
 
         return WalletFundingTransaction::findOrFail($id);
     }
@@ -66,7 +66,10 @@ class WalletFundingConfirmationTest extends TestCase
         $this->verifyResponse($funding);
 
         $this->postJson("/api/v1/wallet/fundings/{$funding->id}/confirm")
-            ->assertOk()->assertJsonPath('data.status', 'success')->assertJsonPath('data.currency_minor', 50000);
+            ->assertOk()->assertJsonPath('data.status', 'success')->assertJsonPath('data.currency_minor', 50000)
+            ->assertJsonPath('data.amount_minor', 50000)
+            ->assertJsonPath('data.gateway_ref', $funding->gateway_ref)
+            ->assertJsonPath('data.gateway', 'flutterwave');
         $this->postJson("/api/v1/wallet/fundings/{$funding->id}/confirm")
             ->assertOk()->assertJsonPath('data.currency_minor', 50000);
         $this->assertSame('FLW-987', $funding->fresh()->gateway_txn_ref);
@@ -114,7 +117,7 @@ class WalletFundingConfirmationTest extends TestCase
         $id = $this->postJson('/api/v1/wallet/fund', ['amount' => 50000, 'gateway' => 'monnify'], ['Idempotency-Key' => 'monnify-wallet-return'])
             ->assertCreated()->json('data.funding_id');
         Http::assertSent(fn ($request) => str_ends_with($request->url(), '/init-transaction')
-            && $request['redirectUrl'] === "https://learn.example.test/wallet?funding_id={$id}");
+            && $request['redirectUrl'] === "https://learn.example.test/payment/wallet/{$id}");
         $funding = WalletFundingTransaction::findOrFail($id);
         Http::fake(['*/api/v2/merchant/transactions/query*' => function ($request) use ($funding) {
             $expired = str_contains($request->url(), 'expired-monnify');

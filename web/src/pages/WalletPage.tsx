@@ -1,5 +1,6 @@
 import { PurchasePolicyNotice } from '@/components/billing/PurchasePolicyNotice'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
+import { Navigate } from 'react-router-dom'
 import {
   Alert,
   Button,
@@ -13,11 +14,14 @@ import {
 } from '@/components/ui'
 import { ApiError, type FamilyWalletReport } from '@/lib/api'
 import { formatMoney } from '@/lib/format'
-import { useConfirmWalletFunding, useFamily, useFundWallet, useTransfer, useWallet } from '@/lib/family/queries'
+import { useFamily, useFundWallet, useTransfer, useWallet } from '@/lib/family/queries'
 
 export function WalletPage() {
   const { data: wallet, isLoading, isError } = useWallet()
   const { data: family } = useFamily()
+  const returnedFundingId = Number(new URLSearchParams(window.location.search).get('funding_id')?.match(/^([1-9]\d*)(?:\?.*)?$/)?.[1])
+
+  if (Number.isSafeInteger(returnedFundingId) && returnedFundingId > 0) return <Navigate to={`/payment/wallet/${returnedFundingId}`} replace />
 
   if (isLoading) return <Skeleton className="h-40 max-w-md" />
   if (isError || !wallet) {
@@ -25,8 +29,6 @@ export function WalletPage() {
   }
 
   const learners = family?.learners ?? []
-  // Monnify may append its callback parameters with a second '?' after ours.
-  const returnedFundingId = Number(new URLSearchParams(window.location.search).get('funding_id')?.match(/^([1-9]\d*)(?:\?.*)?$/)?.[1])
 
   return (
     <div className="flex flex-col gap-8">
@@ -53,7 +55,6 @@ export function WalletPage() {
         </CardBody>
       </Card>
 
-      {Number.isSafeInteger(returnedFundingId) && returnedFundingId > 0 && <FundingResult fundingId={returnedFundingId} />}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <TransferCard learners={learners} maxCoins={wallet.coin_balance} />
@@ -63,35 +64,9 @@ export function WalletPage() {
           : <Alert variant="info">Wallet funding is currently unavailable. Please try again later.</Alert>}
       </div>
       {wallet.report && <WalletReport report={wallet.report} currency={wallet.currency} />}
-      {!!wallet.funding_transactions?.length && <Card><CardHeader><CardTitle>Recent wallet payments</CardTitle></CardHeader><CardBody className="space-y-3">{wallet.funding_transactions.map((payment) => <div key={payment.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3 text-sm last:border-0 last:pb-0"><span>{formatMoney(payment.amount_minor, payment.currency)} · {payment.gateway} · {new Date(payment.created_at).toLocaleDateString()}</span><span className="font-medium capitalize">{payment.status}</span>{payment.status === 'pending' && <a className="font-semibold text-primary underline" href={`/wallet?funding_id=${payment.id}`}>Check status</a>}</div>)}</CardBody></Card>}
+      {!!wallet.funding_transactions?.length && <Card><CardHeader><CardTitle>Recent wallet payments</CardTitle></CardHeader><CardBody className="space-y-3">{wallet.funding_transactions.map((payment) => <div key={payment.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3 text-sm last:border-0 last:pb-0"><span>{formatMoney(payment.amount_minor, payment.currency)} · {payment.gateway} · {new Date(payment.created_at).toLocaleDateString()}</span><span className="font-medium capitalize">{payment.status}</span><a className="font-semibold text-primary underline" href={`/payment/wallet/${payment.id}`}>View details</a></div>)}</CardBody></Card>}
     </div>
   )
-}
-
-function FundingResult({ fundingId }: { fundingId: number }) {
-  const confirm = useConfirmWalletFunding()
-  const started = useRef(false)
-  const [result, setResult] = useState<{ status: string; message: string; gateway_ref: string } | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  async function check() {
-    setError(null)
-    try { setResult(await confirm.mutateAsync(fundingId)) }
-    catch (err) { setError(err instanceof ApiError ? err.message : 'We could not verify this payment. Please do not pay again; check later or contact support.') }
-  }
-
-  useEffect(() => {
-    if (started.current) return
-    started.current = true
-    void check()
-  }, [fundingId])
-
-  return <div className="space-y-3" aria-live="polite">
-    {confirm.isPending && <Alert variant="info">Checking your payment with the provider…</Alert>}
-    {error && <Alert variant="warning">{error}</Alert>}
-    {result && <Alert variant={result.status === 'success' ? 'success' : result.status === 'failed' ? 'danger' : 'info'} title="Wallet payment result">{result.message} {result.status !== 'success' && <span>Reference: {result.gateway_ref}</span>}</Alert>}
-    {!confirm.isPending && <Button variant="secondary" onClick={() => { void check() }}>Check payment status</Button>}
-  </div>
 }
 
 function TransferCard({

@@ -7,6 +7,7 @@ use App\Http\Requests\Billing\ChangeSubscriptionRequest;
 use App\Http\Requests\Billing\StoreSubscriptionRequest;
 use App\Models\Plan;
 use App\Models\Subscription;
+use App\Models\SubscriptionPaymentReceipt;
 use App\Models\User;
 use App\Services\Billing\PaymentGatewayManager;
 use App\Services\Billing\PaymentService;
@@ -262,7 +263,7 @@ class SubscriptionController extends Controller
         );
 
         if ($subscription->status !== 'pending' || $subscription->method !== 'card') {
-            return response()->json(['data' => ['status' => $subscription->status]]);
+            return response()->json(['data' => $this->confirmationPayload($subscription)]);
         }
 
         $provider = $subscription->payment_gateway ?? (string) config('services.payments.default', 'monnify');
@@ -284,7 +285,27 @@ class SubscriptionController extends Controller
             );
         }
 
-        return response()->json(['data' => ['status' => $subscription->fresh()->status]]);
+        return response()->json(['data' => $this->confirmationPayload($subscription->fresh())]);
+    }
+
+    /** @return array<string, mixed> */
+    private function confirmationPayload(Subscription $subscription): array
+    {
+        $subscription->loadMissing('plan');
+        $receipt = SubscriptionPaymentReceipt::where('subscription_id', $subscription->id)
+            ->where('direction', 'payment')->latest('id')->first();
+
+        return [
+            'status' => $subscription->status,
+            'plan_name' => $subscription->plan->name,
+            'amount_minor' => $receipt !== null ? $receipt->amount_minor : ($subscription->initial_charge_minor ?? $subscription->plan->price_minor),
+            'currency' => $receipt !== null ? $receipt->currency : $subscription->plan->currency,
+            'gateway' => $subscription->payment_gateway,
+            'reference' => 'sub_'.$subscription->id,
+            'receipt_id' => $receipt?->id,
+            'paid_at' => $receipt !== null ? $receipt->created_at : $subscription->started_at,
+            'renews_at' => $subscription->renews_at,
+        ];
     }
 
     /**

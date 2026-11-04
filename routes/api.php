@@ -436,6 +436,7 @@ Route::prefix('v1')->group(function () {
             Route::get('invoices', [InvoiceController::class, 'index'])->middleware('can:billing.invoices.view');
             Route::get('invoices/gateways', [InvoiceController::class, 'gateways'])->middleware('can:billing.invoices.manage');
             Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'download'])->middleware('can:billing.invoices.view');
+            Route::post('invoices/{invoice}/confirm', [InvoiceController::class, 'confirm'])->middleware('can:billing.invoices.view');
             Route::post('invoices/{invoice}/promo', [InvoiceController::class, 'applyPromo'])->middleware('can:billing.invoices.manage');
             Route::post('invoices/{invoice}/pay', [InvoiceController::class, 'pay'])->middleware('can:billing.invoices.manage');
             Route::get('referrals/summary', [SchoolReferralController::class, 'summary'])->middleware('can:referrals.view');

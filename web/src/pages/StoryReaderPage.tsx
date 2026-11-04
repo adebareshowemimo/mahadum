@@ -11,7 +11,7 @@ type Gateway = 'monnify' | 'paystack' | 'flutterwave'
 
 export function StoryReaderPage() {
   const id = Number(useParams().storyId)
-  const [params, setParams] = useSearchParams()
+  const [params] = useSearchParams()
   const navigate = useNavigate()
   const qc = useQueryClient()
   const { activeLearner } = useActiveProfile()
@@ -25,30 +25,16 @@ export function StoryReaderPage() {
   const selectedGateway = gateway && gateways.data?.available.includes(gateway) ? gateway : gateways.data?.default
 
   useEffect(() => {
-    // Monnify can append its callback query with another '?' after ours.
     const purchaseId = Number(params.get('purchase_id')?.match(/^([1-9]\d*)(?:\?.*)?$/)?.[1])
-    if (!purchaseId || !activeLearner) return
-    let cancelled = false
-    learningApi.confirmStoryPurchase(purchaseId).then(async (purchase) => {
-      if (cancelled) return
-      if (purchase.story_id !== id) {
-        setError('This payment belongs to a different story.')
-      } else if (purchase.status === 'paid') {
-        await qc.invalidateQueries({ queryKey: ['learning', 'story', id, activeLearner.id] })
-        await qc.invalidateQueries({ queryKey: ['learning', 'stories'] })
-        setNotice('Purchase restored. Your full story is ready.')
-        const next = new URLSearchParams(params); next.delete('purchase_id'); setParams(next, { replace: true })
-      } else { setPendingPurchaseId(purchaseId); setNotice('Payment is still being verified. You can check again shortly.') }
-    }).catch(() => { if (!cancelled) setError('Could not verify the payment yet. Please try again.') })
-    return () => { cancelled = true }
-  }, [activeLearner, id, params, qc, setParams])
+    if (Number.isSafeInteger(purchaseId) && purchaseId > 0) navigate(`/payment/story/${purchaseId}`, { replace: true })
+  }, [navigate, params])
 
   async function purchase() {
     if (!activeLearner || !selectedGateway) return
     setBusy(true); setError(null)
     try {
       const result = await learningApi.purchaseStory(id, activeLearner.id, selectedGateway)
-      if (result.status === 'paid') { await qc.invalidateQueries({ queryKey: ['learning', 'story', id, activeLearner.id] }); setNotice('This story is already yours.') }
+      if (result.status === 'paid') { await qc.invalidateQueries({ queryKey: ['learning', 'story', id, activeLearner.id] }); navigate(`/payment/story/${result.id}`) }
       else if (result.checkout_url) window.location.assign(result.checkout_url)
       else { setPendingPurchaseId(result.id); setNotice('Checkout is being prepared. No new payment has been requested.') }
     } catch (err) { setError(err instanceof ApiError ? err.message : 'Could not start checkout.') }

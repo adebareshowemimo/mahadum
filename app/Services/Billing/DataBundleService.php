@@ -236,6 +236,7 @@ class DataBundleService
             'payment_provider' => $purchase->payment_provider ?? 'monnify',
             'fulfillment_provider' => $purchase->fulfillment_provider ?? 'monnify',
             'payment_confirmed' => $purchase->paid_at !== null, 'delivery_started' => $purchase->vend_started_at !== null,
+            'created_at' => $purchase->created_at, 'paid_at' => $purchase->paid_at,
         ];
     }
 }
