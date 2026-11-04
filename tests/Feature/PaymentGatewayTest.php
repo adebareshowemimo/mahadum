@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\LearnerProfile;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Services\Billing\PaymentService;
@@ -76,6 +77,41 @@ class PaymentGatewayTest extends TestCase
 
         Http::assertSent(fn ($request) => $request['amount'] === $plan->price_minor && $request['reference'] === $ref);
         Http::assertSent(fn ($request) => $request['callback_url'] === rtrim((string) config('app.frontend_url'), '/').'/payment/subscription/'.substr($ref, 4));
+    }
+
+    public function test_adult_individual_can_open_subscription_checkout_but_minor_and_teacher_cannot(): void
+    {
+        $this->goLive('paystack');
+        Http::fake(['api.paystack.co/*' => Http::response([
+            'status' => true, 'data' => ['authorization_url' => 'https://checkout.paystack.test/individual'],
+        ])]);
+        $this->seedRbac();
+        $this->seed(PlanSeeder::class);
+        $plan = Plan::where('code', 'premium_individual')->firstOrFail();
+
+        $adult = $this->userWithRole('student', [
+            'signup_account_type' => 'individual', 'date_of_birth' => now()->subYears(25),
+        ]);
+        LearnerProfile::create(['user_id' => $adult->id, 'display_name' => 'Adult learner']);
+        $this->actingAsUser($adult->fresh());
+        $this->getJson('/api/v1/subscriptions/gateways')->assertOk()
+            ->assertJsonPath('data.default', 'paystack');
+        $this->postJson('/api/v1/subscriptions', [
+            'plan_id' => $plan->id, 'method' => 'card', 'gateway' => 'paystack',
+        ], ['Idempotency-Key' => 'individual-subscription'])
+            ->assertCreated()->assertJsonPath('data.checkout_url', 'https://checkout.paystack.test/individual');
+
+        $minor = $this->actingAsUser($this->userWithRole('student', ['date_of_birth' => now()->subYears(13)]));
+        LearnerProfile::create(['user_id' => $minor->id, 'display_name' => 'Minor learner']);
+        $this->postJson('/api/v1/subscriptions', [
+            'plan_id' => $plan->id, 'method' => 'card', 'gateway' => 'paystack',
+        ], ['Idempotency-Key' => 'minor-subscription'])->assertForbidden();
+
+        $this->actingAsUser($this->userWithRole('teacher'));
+        $this->postJson('/api/v1/subscriptions', [
+            'plan_id' => $plan->id, 'method' => 'card', 'gateway' => 'paystack',
+        ], ['Idempotency-Key' => 'teacher-subscription'])->assertForbidden();
+        Http::assertSentCount(1);
     }
 
     public function test_subscription_saves_chosen_gateway_and_rejects_an_unavailable_one(): void

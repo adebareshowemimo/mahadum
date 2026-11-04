@@ -285,6 +285,45 @@ class StoryLibraryTest extends TestCase
             ->assertOk()->assertJsonPath('data.can_purchase', false);
     }
 
+    public function test_existing_adult_individual_without_profile_birth_date_can_buy_and_open_adult_stories(): void
+    {
+        $this->seedRbac();
+        $adult = $this->actingAsUser($this->userWithRole('student', [
+            'date_of_birth' => now()->subYears(25), 'signup_account_type' => 'individual',
+        ]));
+        $profile = LearnerProfile::create(['user_id' => $adult->id, 'display_name' => 'Individual learner']);
+        $story = $this->story('18_plus');
+        config([
+            'services.payments.live' => true,
+            'services.paystack.secret' => 'sk_test',
+            'services.paystack.base_url' => 'https://api.paystack.co',
+        ]);
+        Http::fake(['api.paystack.co/transaction/initialize' => Http::response([
+            'status' => true, 'data' => ['authorization_url' => 'https://checkout.paystack.test/story'],
+        ])]);
+
+        $this->getJson("/api/v1/learning/stories?learner_id={$profile->id}")
+            ->assertOk()->assertJsonPath('meta.total', 1);
+        $this->getJson("/api/v1/learning/stories/{$story->id}?learner_id={$profile->id}")
+            ->assertOk()->assertJsonPath('data.can_purchase', true);
+        $this->postJson("/api/v1/learning/stories/{$story->id}/purchase", [
+            'learner_id' => $profile->id, 'provider' => 'paystack',
+        ], ['Idempotency-Key' => 'individual-story-purchase'])
+            ->assertCreated()->assertJsonPath('data.checkout_url', 'https://checkout.paystack.test/story');
+        $this->assertDatabaseHas('story_purchases', ['story_id' => $story->id, 'user_id' => $adult->id, 'status' => 'pending']);
+    }
+
+    public function test_an_adult_account_birth_date_never_unlocks_a_child_family_profile(): void
+    {
+        $this->seedRbac();
+        $adult = $this->actingAsUser($this->userWithRole('student', ['date_of_birth' => now()->subYears(25)]));
+        $family = Family::create(['owner_user_id' => $adult->id, 'name' => 'Family']);
+        $child = LearnerProfile::create(['family_id' => $family->id, 'user_id' => $adult->id, 'display_name' => 'Child']);
+        $story = $this->story('18_plus');
+
+        $this->getJson("/api/v1/learning/stories/{$story->id}?learner_id={$child->id}")->assertNotFound();
+    }
+
     public function test_adult_stories_start_at_eighteen_and_are_hidden_from_school_profiles(): void
     {
         $this->seedRbac();

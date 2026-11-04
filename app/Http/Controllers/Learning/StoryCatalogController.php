@@ -124,8 +124,7 @@ class StoryCatalogController extends Controller
     {
         return ! $viewer->hasAnyRole(['teacher', 'school_admin', 'supervisor'])
             && $learner->organization_id === null
-            && $learner->date_of_birth !== null
-            && $learner->date_of_birth->age >= 18;
+            && $this->access->ageFor($learner, $viewer) >= 18;
     }
 
     private function pagePath(Story $story, int $pageId, bool $purchased): ?string

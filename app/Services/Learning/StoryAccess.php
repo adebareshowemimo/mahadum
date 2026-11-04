@@ -22,7 +22,7 @@ class StoryAccess
 
         return $viewer->hasRole('parent')
             || ($learner->user_id === $viewer->id
-                && $learner->date_of_birth?->age >= 18
+                && $this->ageFor($learner, $viewer) >= 18
                 && $learner->organization_id === null);
     }
 
@@ -34,8 +34,18 @@ class StoryAccess
 
         return ! $viewer->hasAnyRole(['teacher', 'school_admin', 'supervisor'])
             && $learner->organization_id === null
-            && $learner->date_of_birth !== null
-            && $learner->date_of_birth->age >= 18;
+            && $this->ageFor($learner, $viewer) >= 18;
+    }
+
+    public function ageFor(LearnerProfile $learner, User $viewer): ?int
+    {
+        // Direct learner profiles created before DOB was copied at sign-up
+        // still belong to the account holder. Family child DOB never falls
+        // back to a parent's age.
+        return ($learner->date_of_birth
+            ?? ($learner->user_id === $viewer->id && $learner->family_id === null
+                ? $viewer->date_of_birth
+                : null))?->age;
     }
 
     public function isPurchased(Story $story, LearnerProfile $learner): bool

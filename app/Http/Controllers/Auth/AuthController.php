@@ -284,6 +284,7 @@ class AuthController extends Controller
             LearnerProfile::create([
                 'user_id' => $user->id,
                 'display_name' => $user->name,
+                'date_of_birth' => $user->date_of_birth,
             ]);
 
             return null;
