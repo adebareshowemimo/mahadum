@@ -36,8 +36,9 @@ class CoursePracticeInvitationController extends Controller
         $lesson = $this->currentLesson($learner, $access);
         abort_if($lesson === null, 422, 'This learner has no active lesson to practice yet.');
 
-        $recipient = User::findOrFail($request->integer('recipient_user_id'));
-        abort_unless($eligibility->isEligible($learner, $request->user(), $recipient), 422, 'Invite someone from this learner’s family or school.');
+        $recipient = User::find($request->integer('recipient_user_id'));
+        abort_unless($recipient && $eligibility->isEligible($learner, $request->user(), $recipient), 422,
+            "This person isn't on your approved list. Only registered parents, guardians or teachers can be invited to practise.");
 
         $plainToken = Str::random(64);
         $invitation = CoursePracticeInvitation::create([

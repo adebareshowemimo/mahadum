@@ -13,12 +13,19 @@ class UpdateLessonRequest extends FormRequest
 
     public function rules(): array
     {
+        $standalone = $this->route('lesson')?->course_level_id === null;
+        $ungrouped = $standalone && $this->route('lesson')?->library_set_level_id === null;
+
         return [
             'title' => ['sometimes', 'string', 'max:255'],
+            'kind' => ['prohibited'],
             'position' => ['sometimes', 'integer', 'min:1'],
             'est_minutes' => ['sometimes', 'integer', 'min:1'],
             'is_free_preview' => ['prohibited'],
             'is_locked_by_default' => ['boolean'],
+            'language_id' => [$ungrouped ? 'sometimes' : 'prohibited', 'integer', 'exists:languages,id'],
+            'standalone_level' => [$ungrouped ? 'sometimes' : 'prohibited', 'integer', 'between:1,10'],
+            'summary' => [$standalone ? 'sometimes' : 'prohibited', 'nullable', 'string', 'max:1000'],
         ];
     }
 }

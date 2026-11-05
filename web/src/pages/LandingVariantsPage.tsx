@@ -286,7 +286,7 @@ export function LandingV1Page() {
                 <p className="font-display text-2xl font-extrabold text-[#ffb277]">From “what does it mean?”</p>
                 <p className="mt-3 font-display text-4xl font-extrabold leading-tight">to “I know this story.”</p>
                 <p className="mt-5 text-lg font-semibold leading-relaxed text-white/78">
-                  Tone marks, greetings for elders, proverbs, songs, folktales and festivals sit inside the course—not outside it as decoration.
+                  Courses teach tone marks and greetings for elders. Explore proverbs and trivia by language and level in their own libraries, alongside songs, folktales and festivals.
                 </p>
                 <ul className="mt-7 space-y-3">
                   <CheckLine inverse>Native-speaker audio and speaking practice</CheckLine>

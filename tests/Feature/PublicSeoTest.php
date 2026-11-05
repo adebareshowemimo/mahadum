@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Course;
 use App\Models\Language;
 use App\Models\PublicDocument;
 use App\Models\User;
 use App\Services\SignupDiscovery;
+use Database\Seeders\LanguageSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -67,6 +69,32 @@ class PublicSeoTest extends TestCase
                 ->assertSee('href="/assets/website.css"', false)
                 ->assertSee('src="/assets/public-chrome.js"', false);
         }
+    }
+
+    public function test_english_is_only_advertised_when_live_with_a_published_free_lesson(): void
+    {
+        $english = Language::create(['code' => 'en', 'name' => 'English', 'is_active' => false]);
+        $course = Course::create(['language_id' => $english->id, 'title' => 'English', 'status' => 'published', 'is_published' => true]);
+        $level = $course->levels()->create(['title' => 'Level 0', 'position' => 0, 'is_free' => true]);
+        $level->lessons()->create(['title' => 'Greetings', 'position' => 1, 'published_at' => now()]);
+
+        $this->get('/languages')->assertOk()
+            ->assertSee('THREE LANGUAGES')->assertDontSee('Start English free')
+            ->assertDontSee('FOUR LANGUAGES')->assertDontSee('and English through short lessons')
+            ->assertDontSee('Choose Igbo, Yorùbá, Hausa or English');
+        $this->getJson('/api/v1/config')->assertOk()->assertJsonMissing(['code' => 'en']);
+        $this->seed(LanguageSeeder::class);
+        $this->assertFalse($english->fresh()->is_active);
+
+        $english->update(['is_active' => true]);
+        $this->get('/languages')->assertOk()
+            ->assertSee('FOUR LANGUAGES')->assertSee('Start English free')
+            ->assertSee('/register?lang=english')
+            ->assertSee('Choose Igbo, Yorùbá, Hausa or English');
+        $this->getJson('/api/v1/config')->assertOk()->assertJsonFragment(['code' => 'en']);
+
+        $level->lessons()->update(['published_at' => null]);
+        $this->get('/languages')->assertOk()->assertDontSee('Start English free');
     }
 
     public function test_missing_chrome_build_returns_service_unavailable(): void
@@ -179,26 +207,53 @@ class PublicSeoTest extends TestCase
         $user->forceFill(['email_verified_at' => now()])->save();
         $this->postJson('/api/v1/language-votes', ['language' => 'Invalid'])->assertUnprocessable();
         $this->postJson('/api/v1/language-votes', ['language' => 'Other', 'other_language' => '   '])->assertUnprocessable();
-        $this->postJson('/api/v1/language-votes', ['language' => 'Benin'])->assertCreated();
+        $this->postJson('/api/v1/language-votes', ['language' => 'Benin'])->assertUnprocessable();
+        $this->postJson('/api/v1/language-votes', ['language' => 'Bini'])->assertCreated();
         $this->postJson('/api/v1/language-votes', ['language' => 'Tiv'])->assertConflict();
         $this->assertDatabaseCount('language_votes', 1);
     }
 
-    public function test_benin_replaces_edo_and_existing_votes_keep_their_count(): void
+    public function test_bini_replaces_benin_and_existing_votes_keep_their_count(): void
     {
         $user = User::factory()->create(['email_verified_at' => now()]);
         DB::table('language_votes')->insert([
             'user_id' => $user->id,
-            'language' => 'Edo',
+            'language' => 'Benin',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        (require database_path('migrations/2026_10_23_000001_rename_edo_votes_to_benin.php'))->up();
+        (require database_path('migrations/2026_11_03_000005_rename_benin_votes_to_bini.php'))->up();
 
-        $this->assertDatabaseHas('language_votes', ['user_id' => $user->id, 'language' => 'Benin']);
-        $this->get('/vote')->assertOk()->assertSee('Choose Benin')->assertSee('1 of 10,000 votes')->assertDontSee('Choose Edo');
-        $this->get('/languages')->assertOk()->assertSee('Benin')->assertDontSee('>Edo<');
+        $this->assertDatabaseHas('language_votes', ['user_id' => $user->id, 'language' => 'Bini']);
+        $this->get('/vote')->assertOk()->assertSee('Choose Bini')->assertSee('1 of 10,000 votes')->assertDontSee('Choose Benin');
+        $this->get('/languages')->assertOk()->assertSee('Bini')->assertDontSee('>Benin<');
+        $this->getJson('/api/v1/config')->assertOk()->assertJsonFragment(['Bini']);
+        $this->seedRbac();
+        $admin = $this->userWithRole('super_admin');
+        $this->actingAsUser($admin);
+        $this->getJson('/api/v1/website/reports')->assertOk()->assertJsonPath('data.votes.0.language', 'Bini');
+        $csv = $this->get('/api/v1/website/votes.csv')->assertOk()->streamedContent();
+        $this->assertStringContainsString('Bini', $csv);
+        $this->assertStringNotContainsString('Benin', $csv);
+    }
+
+    public function test_test_vote_cleanup_requires_exact_vote_and_account_and_preview_does_not_delete(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $voteId = DB::table('language_votes')->insertGetId([
+            'user_id' => $user->id,
+            'language' => 'Bini',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->artisan('language-votes:remove-test', ['vote_id' => $voteId, 'email' => 'wrong@example.test', '--execute' => true])->assertFailed();
+        $this->artisan('language-votes:remove-test', ['vote_id' => $voteId, 'email' => $user->email])->assertSuccessful();
+        $this->assertDatabaseHas('language_votes', ['id' => $voteId]);
+        $this->artisan('language-votes:remove-test', ['vote_id' => $voteId, 'email' => $user->email, '--execute' => true])->assertSuccessful();
+        $this->assertDatabaseMissing('language_votes', ['id' => $voteId]);
+        $this->assertDatabaseHas('users', ['id' => $user->id]);
     }
 
     /** @return array<string, mixed> */

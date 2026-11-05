@@ -6,9 +6,14 @@ function titles(roles: Parameters<typeof visibleSections>[0]) {
 }
 
 describe('visibleSections', () => {
+  it('shows only learning destinations while a child profile is active', () => {
+    const paths = visibleSections(['parent'], ['billing.subscriptions.manage'], true).flatMap((section) => section.items.map((item) => item.to))
+    expect(paths).toEqual(['/learn', '/tasks', '/learn/courses', '/achievements', '/leaderboard', '/competitions'])
+  })
   it('shows adult consumer capabilities without family or teacher-only destinations', () => {
     const paths = visibleSections(['student'], ['referrals.view', 'payouts.view', 'billing.subscriptions.manage', 'billing.databundles.manage']).flatMap((section) => section.items.map((item) => item.to))
-    expect(paths).toEqual(expect.arrayContaining(['/billing', '/billing/data', '/referrals']))
+    expect(paths).toEqual(expect.arrayContaining(['/billing', '/referrals']))
+    expect(paths).not.toContain('/billing/data')
     expect(paths).not.toContain('/family')
     expect(paths).not.toContain('/wallet')
     expect(paths).not.toContain('/earnings')
@@ -30,6 +35,15 @@ describe('visibleSections', () => {
 
   it('shows the Admin section to super admins', () => {
     expect(titles(['super_admin'])).toContain('Admin')
+  })
+
+  it('keeps global content builders out of the school admin menu', () => {
+    const paths = visibleSections(['school_admin']).flatMap((section) => section.items.map((item) => item.to))
+    expect(paths).toContain('/school')
+    expect(paths).not.toContain('/courses')
+    expect(paths).not.toContain('/courses/stories')
+    expect(paths).not.toContain('/courses/proverbs-trivia')
+    expect(paths).not.toContain('/media')
   })
 
   it('always includes the unlabeled Home group and System', () => {

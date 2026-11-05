@@ -110,7 +110,7 @@ class ManagedRewardedVideoTest extends TestCase
         $this->assertDatabaseHas('hearts', ['learner_profile_id' => $this->learner->id, 'current' => 0]);
     }
 
-    public function test_real_progress_completes_then_refills_all_hearts_exactly_once(): void
+    public function test_real_progress_completes_then_adds_one_heart_exactly_once(): void
     {
         $id = $this->requestVideo();
         $this->postJson("/api/v1/ads/{$id}/complete")->assertOk()->assertJsonPath('data.shown', false);
@@ -121,8 +121,8 @@ class ManagedRewardedVideoTest extends TestCase
         // Lost completion response can be retried without a second shown event.
         $this->postJson("/api/v1/ads/{$id}/complete")->assertOk()->assertJsonPath('data.shown', true);
         $this->assertTrue($shownAt->equalTo(AdImpression::findOrFail($id)->shown_at));
-        $this->refill($id)->assertOk()->assertJsonPath('data.current', 5)->assertJsonPath('data.practice_mode', false);
-        $this->assertDatabaseHas('hearts', ['learner_profile_id' => $this->learner->id, 'current' => 5, 'questions_since_loss' => 0, 'refills_at' => null, 'competitive_paused_until' => null]);
+        $this->refill($id)->assertOk()->assertJsonPath('data.current', 1)->assertJsonPath('data.practice_mode', false);
+        $this->assertDatabaseHas('hearts', ['learner_profile_id' => $this->learner->id, 'current' => 1, 'questions_since_loss' => 0, 'refills_at' => null, 'competitive_paused_until' => null]);
         Heart::where('learner_profile_id', $this->learner->id)->update(['current' => 1]);
         $this->refill($id)->assertUnprocessable();
         $this->assertDatabaseHas('hearts', ['learner_profile_id' => $this->learner->id, 'current' => 1]);

@@ -17,7 +17,7 @@ use Illuminate\Http\Request;
 class PlanController extends Controller
 {
     /** Boolean entitlement flags that are safe to toggle from the admin UI. */
-    private const FEATURE_FLAGS = ['ads', 'offline_download', 'unlimited_hearts', 'family_dashboard', 'teacher_analytics'];
+    private const FEATURE_FLAGS = ['ads', 'unlimited_hearts', 'family_dashboard', 'teacher_analytics'];
 
     private const INTERVALS = 'month,quarter,year,term,week';
 

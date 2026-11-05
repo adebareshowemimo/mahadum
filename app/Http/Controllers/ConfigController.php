@@ -4,12 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\LanguageResource;
 use App\Models\Language;
+use App\Services\Learning\LearningGoals;
 use App\Services\Settings;
 use Illuminate\Http\JsonResponse;
 
 class ConfigController extends Controller
 {
-    public function __construct(private Settings $settings) {}
+    public function __construct(private Settings $settings, private LearningGoals $learningGoals) {}
 
     /**
      * Launch-time bootstrap: force-update gate, feature flags, CDN base, languages.
@@ -27,7 +28,13 @@ class ConfigController extends Controller
             // Drives the sign-up age gate on the web SPA.
             'digital_age' => $this->settings->get('compliance.minor_age', config('compliance.minor_age')),
             'language_vote_options' => config('language-votes.languages'),
+            'learning_goal_question' => $this->settings->get('learning_goal.question'),
+            'streak_shield_price_coins' => (int) $this->settings->get('streak.shield_price_coins'),
+            'learning_goals' => array_map(fn ($goal) => [
+                'key' => $goal['key'], 'label' => $goal['label'], 'message' => $goal['message'],
+            ], $this->learningGoals->options()),
             'feature_flags' => [
+                'data_bundle_purchases' => (bool) config('services.data_bundles.enabled'),
                 'show_google_login' => $this->settings->get('auth.show_google_login'),
                 'telco_billing' => $this->settings->get('feature.telco_billing'),
                 'ai_pronunciation' => $this->settings->get('feature.ai_pronunciation'),

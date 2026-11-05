@@ -2,11 +2,11 @@
 
 namespace App\Services\Learning;
 
-use App\Models\FamilyMember;
 use App\Models\LearnerProfile;
 use App\Models\OrganizationUser;
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Who a "Practice with me" invitation may be sent to for a given learner:
@@ -22,10 +22,9 @@ class PracticeRecipientEligibility
     /** @return Collection<int, array{id:int,name:string,email:string,relation:string,role:string}> */
     public function candidates(LearnerProfile $learner, User $excluding, string $search): Collection
     {
-        $family = $this->familyCandidates($learner, $excluding, $search);
-        $school = $this->schoolCandidates($learner, $excluding, $search);
-
-        return $family->concat($school)->unique('id')->values();
+        return $learner->family_id !== null
+            ? $this->familyCandidates($learner, $excluding, $search)
+            : $this->schoolCandidates($learner, $excluding, $search);
     }
 
     public function isEligible(LearnerProfile $learner, User $excluding, User $recipient): bool
@@ -34,12 +33,11 @@ class PracticeRecipientEligibility
             return false;
         }
 
-        $inFamily = $learner->family_id !== null && ($learner->family?->owner_user_id === $recipient->id
-            || (FamilyMember::where('family_id', $learner->family_id)->where('user_id', $recipient->id)->exists()
-                && $recipient->hasAnyRole(['parent', 'supervisor'])));
-
-        if ($inFamily) {
-            return true;
+        if ($learner->family_id !== null) {
+            return $recipient->hasVerifiedEmail()
+                && $recipient->hasAnyRole(['parent', 'teacher', 'supervisor'])
+                && DB::table('learner_practice_partners')->where('learner_profile_id', $learner->id)
+                    ->where('user_id', $recipient->id)->exists();
         }
 
         if ($learner->organization_id === null || ! $recipient->hasAnyRole(self::SCHOOL_STAFF_ROLES)) {
@@ -56,15 +54,12 @@ class PracticeRecipientEligibility
     /** @return Collection<int, array{id:int,name:string,email:string,relation:string,role:string}> */
     private function familyCandidates(LearnerProfile $learner, User $excluding, string $search): Collection
     {
-        if ($learner->family_id === null) {
-            return collect();
-        }
-
         return User::query()
-            ->where(fn ($query) => $query->where('id', $learner->family?->owner_user_id)
-                ->orWhere(fn ($members) => $members->whereIn('id', FamilyMember::where('family_id', $learner->family_id)->whereNotNull('user_id')->pluck('user_id'))->role(['parent', 'supervisor'])))
+            ->whereIn('id', DB::table('learner_practice_partners')->where('learner_profile_id', $learner->id)->pluck('user_id'))
             ->when($learner->user_id !== null, fn ($query) => $query->where('id', '!=', $learner->user_id))
             ->where('status', 'active')
+            ->whereNotNull('email_verified_at')
+            ->role(['parent', 'teacher', 'supervisor'])
             ->when($search !== '', fn ($q) => $q->where(fn ($q2) => $q2->where('first_name', 'like', "%{$search}%")
                 ->orWhere('last_name', 'like', "%{$search}%")
                 ->orWhere('email', 'like', "%{$search}%")))

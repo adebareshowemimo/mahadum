@@ -55,6 +55,46 @@ class ClassLearnerInvitationTest extends TestCase
         Notification::assertSentOnDemand(ClassLearnerInvited::class);
     }
 
+    public function test_teacher_lists_resends_and_cancels_invitations_and_existing_name_is_shown(): void
+    {
+        Notification::fake();
+        $this->seedRbac();
+        $school = $this->school();
+        $teacher = $this->userWithRole('teacher');
+        $school->members()->attach($teacher->id, ['role' => 'teacher', 'status' => 'active']);
+        $class = SchoolClass::create(['organization_id' => $school->id,
+            'teacher_user_id' => $teacher->id, 'name' => 'Igbo 1']);
+        User::factory()->create(['email' => 'joined@example.com', 'first_name' => 'Ada', 'last_name' => 'Okafor']);
+        $this->actingAsUser($teacher);
+        $this->postJson("/api/v1/classes/{$class->id}/invitations", [
+            'name' => 'Ada', 'email' => 'joined@example.com',
+        ])->assertCreated();
+        $original = ClassLearnerInvitation::where('school_class_id', $class->id)->firstOrFail();
+        $this->getJson("/api/v1/classes/{$class->id}/invitations")
+            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.status', 'pending');
+        $this->postJson("/api/v1/classes/{$class->id}/invitations/{$original->id}/resend")
+            ->assertOk();
+        $this->assertNotNull($original->fresh()->cancelled_at);
+        $replacement = ClassLearnerInvitation::where('school_class_id', $class->id)->latest('id')->firstOrFail();
+        $this->assertNotSame($original->id, $replacement->id);
+        $this->getJson("/api/v1/classes/{$class->id}/invitations")
+            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $replacement->id);
+        $this->postJson("/api/v1/classes/{$class->id}/invitations/{$replacement->id}/cancel")
+            ->assertOk()->assertJsonPath('data.status', 'cancelled');
+        $this->getJson("/api/v1/classes/{$class->id}/invitations")
+            ->assertOk()->assertJsonCount(0, 'data');
+
+        $token = str_repeat('z', 64);
+        $pending = ClassLearnerInvitation::create(['school_class_id' => $class->id,
+            'organization_id' => $school->id, 'invited_by_user_id' => $teacher->id,
+            'name' => 'Ada', 'email' => 'joined@example.com',
+            'token_hash' => hash('sha256', $token), 'expires_at' => now()->addDay()]);
+        $this->getJson("/api/v1/class-invitations/{$token}")
+            ->assertOk()->assertJsonPath('data.existing_account_name', 'Ada Okafor');
+        $pending->update(['cancelled_at' => now()]);
+        $this->getJson("/api/v1/class-invitations/{$token}")->assertNotFound();
+    }
+
     public function test_available_learner_search_is_limited_to_the_teachers_school(): void
     {
         $this->seedRbac();

@@ -93,7 +93,7 @@ export function AdModal({ open, learnerId, placement, onClose, onRewarded }: {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Watch a video to refill hearts">
+    <Modal open={open} onClose={onClose} title="Watch a video to earn one heart">
       {phase === 'requesting' && <p className="py-8 text-center text-sm text-muted">Finding a video…</p>}
       {phase === 'ineligible' && <Alert variant="warning">{session?.reason === 'coppa' ? 'Ads aren’t available on this profile.' : 'No video is available right now. You can wait for your hearts to refill or view plans.'}</Alert>}
       {(phase === 'playing' || phase === 'rewarding') && session?.video && <div className="flex flex-col gap-4">
@@ -112,10 +112,10 @@ export function AdModal({ open, learnerId, placement, onClose, onRewarded }: {
           onEnded={() => { void finish() }}
           onError={fail}
         />
-        <p className="text-center text-sm text-muted">{phase === 'rewarding' ? 'Verifying playback and refilling hearts…' : 'Watch the whole video without seeking to refill all five hearts. Pausing is fine.'}</p>
+        <p className="text-center text-sm text-muted">{phase === 'rewarding' ? 'Verifying playback and adding one heart…' : 'Watch the whole video without seeking to earn one heart. Pausing is fine.'}</p>
       </div>}
       {phase === 'error' && <Alert variant="warning">We couldn’t verify playback or finish the refill. Close this window and check your hearts before trying again.</Alert>}
-      {phase === 'done' && <Alert variant="success">{placement === 'rewarded_heart' ? 'All five hearts are refilled!' : 'Video completed.'}</Alert>}
+      {phase === 'done' && <Alert variant="success">{placement === 'rewarded_heart' ? 'One heart added!' : 'Video completed.'}</Alert>}
       <Button fullWidth className="mt-4" onClick={onClose}>Close</Button>
     </Modal>
   )

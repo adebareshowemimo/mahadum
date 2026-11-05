@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { useQueries } from '@tanstack/react-query'
+import { useQueries, useQuery } from '@tanstack/react-query'
 import { Alert, Button3D, Icon, Skeleton } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { contentApi, type AuthorLesson, type AuthorLevel } from '@/lib/api'
@@ -28,11 +28,35 @@ import {
  * Quizzes are graded locally against the authoring answer key; nothing persists.
  */
 export function CoursePreviewPage() {
-  const { courseId, levelId } = useParams()
+  const { courseId, levelId, lessonId } = useParams()
   const id = Number(courseId)
 
+  if (lessonId != null) return <StandaloneLessonView courseId={id} lessonId={Number(lessonId)} />
   if (levelId != null) return <UnitView courseId={id} levelId={Number(levelId)} />
   return <CourseOverview courseId={id} />
+}
+
+function StandaloneLessonView({ courseId, lessonId }: { courseId: number; lessonId: number }) {
+  const navigate = useNavigate()
+  const lesson = useQuery({ queryKey: contentKeys.lesson(lessonId), queryFn: () => contentApi.lesson(lessonId), enabled: lessonId > 0 })
+  const [run, setRun] = useState(0)
+  const backToEditor = `/courses/${courseId}/lessons/${lessonId}`
+
+  if (lesson.isLoading) return <Shell kind="Lesson preview" title="Loading…" closeTo={backToEditor}><Skeleton className="h-72" /></Shell>
+  if (lesson.isError || !lesson.data) return <Shell kind="Lesson preview" title="Preview" closeTo={backToEditor}><Alert variant="danger">Couldn’t load this lesson.</Alert></Shell>
+
+  const built = authorToSlides(lesson.data)
+  if (built.slides.length === 0) return <Shell kind="Lesson preview" title={lesson.data.title} closeTo={backToEditor}><Alert variant="info">Add a lesson step to preview it.</Alert></Shell>
+
+  return <LessonDeck
+    key={run}
+    lesson={lesson.data}
+    built={built}
+    onComplete={() => {}}
+    onExit={() => navigate(backToEditor)}
+    onReplay={() => setRun((value) => value + 1)}
+    exitLabel="Back to editor"
+  />
 }
 
 // ---- Course scope: a start card per unit ----
@@ -305,6 +329,7 @@ function LessonDeck({
   onExit,
   onReplay,
   onNext,
+  exitLabel,
 }: {
   lesson: AuthorLesson
   built: ReturnType<typeof authorToSlides>
@@ -313,6 +338,7 @@ function LessonDeck({
   onExit: () => void
   onReplay: () => void
   onNext?: () => void
+  exitLabel?: string
 }) {
   // Fresh hearts holder for this lesson's run.
   const hearts = useRef({ value: 5 })
@@ -336,6 +362,7 @@ function LessonDeck({
           onExit={onExit}
           onReplay={onReplay}
           onNext={onNext}
+          exitLabel={exitLabel}
         />
       )}
     />
@@ -349,6 +376,7 @@ function LessonEnd({
   onExit,
   onReplay,
   onNext,
+  exitLabel = 'Back to unit path',
 }: {
   stats: DeckStats
   nextTitle?: string
@@ -356,6 +384,7 @@ function LessonEnd({
   onExit: () => void
   onReplay: () => void
   onNext?: () => void
+  exitLabel?: string
 }) {
   // Mark the lesson complete on the path the moment its end screen appears.
   useEffect(() => {
@@ -403,7 +432,7 @@ function LessonEnd({
           Replay lesson
         </Button3D>
         <Button3D variant="neutral" size="lg" fullWidth onClick={onExit}>
-          Back to unit path
+          {exitLabel}
         </Button3D>
       </div>
     </div>

@@ -165,10 +165,11 @@ Requested action: No action needed.
 Audit status: Not met. Tested: Identity goal-setting (grandparents, travel, school, business).
 Audit evidence: Not seen in sign-up or on the learner home. Meant as an onboarding question asking why the learner is learning, e.g. "To talk with my grandparents", "For travel back home", "For school", "For business or work". The answer would shape suggested lessons, progress messages ("You can now greet Grandma!") and reminders.
 Requested action: Add an onboarding question after sign-up: 'Why are you learning?' (grandparents, travel, school, business). Save the answer to the profile and use it for lesson suggestions and progress messages.
-- [ ] C — code/change or documented no-change finding
-- [ ] T — automated/visual verification; evidence: not run
+Implementation release (4 Nov 2026): Individual sign-up routes to a goal question; parents can set or change a child's goal. The choice is stored on the learner profile. Admin System settings controls the question, each option's label/availability, lesson keywords and progress message. The learner path suggests matching available lessons and shows a completed lesson count with the configured message. Production release `69c41a2` passed health and asset checks; the migration is recorded as run, `/learning-goal` loads, and `/config` lists all four goals. Human acceptance remains pending.
+- [x] C — code/change implemented locally
+- [x] T — 706 backend tests passed (1 skipped), 567 frontend tests passed, production build, Pint and PHPStan passed
 - [ ] L — Adebare local confirmation; pending
-- [ ] D — production deployment; not deployed
+- [x] D — production deployment `69c41a2`; live config and onboarding route checked
 - [ ] Q — Deborah live QA; not requested
 
 ### B5 · Delivery BRD · Account · 2026-10-15

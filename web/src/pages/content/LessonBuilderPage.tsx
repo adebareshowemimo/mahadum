@@ -1,5 +1,6 @@
 import { useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   DndContext,
   KeyboardSensor,
@@ -43,6 +44,7 @@ import {
   usePublishLesson,
   useReorderComponents,
   useUpdateComponent,
+  contentKeys,
 } from '@/lib/content/queries'
 import { useCanManageContent } from '@/lib/content/permissions'
 import { LessonPreviewModal } from './LessonPreviewModal'
@@ -78,21 +80,26 @@ export function LessonBuilderPage() {
 }
 
 function LessonEditor() {
-  const { courseId, lessonId } = useParams()
+  const { courseId, setId, lessonId } = useParams()
+  const [searchParams] = useSearchParams()
+  const standalone = !courseId
   const id = Number(lessonId)
   const lesson = useLessonDetail(id)
+  const config = useConfig()
   const publish = usePublishLesson(id)
   const reorderComponents = useReorderComponents(id)
   const canManage = useCanManageContent()
   const [modal, setModal] = useState<{ type: 'video' | 'quiz' | 'exercise' | 'game'; component?: AuthorComponent } | null>(null)
   const [deleting, setDeleting] = useState<AuthorComponent | null>(null)
-  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(searchParams.has('preview'))
   const [insightsOpen, setInsightsOpen] = useState(false)
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
   const [publishErrors, setPublishErrors] = useState<string[] | null>(null)
+  const [metadataError, setMetadataError] = useState<string | null>(null)
+  const [savingMetadata, setSavingMetadata] = useState(false)
 
   async function onPublish() {
     setPublishErrors(null)
@@ -129,11 +136,20 @@ function LessonEditor() {
 
   const components = lesson.data.components ?? []
 
+  if (standalone && !canManage) return <div className="flex flex-col gap-5">
+    <Link to="/courses/proverbs-trivia" className="text-sm font-semibold text-primary">← Proverbs & Trivia</Link>
+    <h1 className="font-display text-2xl font-bold">{lesson.data.title}</h1>
+    {lesson.data.summary && <p className="whitespace-pre-wrap rounded-xl border border-border p-5">{lesson.data.summary}</p>}
+    <Alert variant="info">This is a read-only catalogue view. Content owners edit and publish sets.</Alert>
+    <Button variant="secondary" onClick={() => setPreviewOpen(true)}>Play preview</Button>
+    <LessonPreviewModal lesson={lesson.data} open={previewOpen} onClose={() => setPreviewOpen(false)} />
+  </div>
+
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Link to={`/courses/${courseId}`} className="text-sm font-medium text-primary hover:underline">
-          ← Course
+        <Link to={standalone ? (setId ? `/courses/proverbs-trivia/${setId}` : '/courses/proverbs-trivia') : `/courses/${courseId}`} className="text-sm font-medium text-primary hover:underline">
+          ← {standalone ? 'Proverbs & Trivia' : 'Course'}
         </Link>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <h1 className="font-display text-2xl font-bold text-foreground">{lesson.data.title}</h1>
@@ -141,8 +157,11 @@ function LessonEditor() {
             <Badge variant={lesson.data.is_published ? 'success' : 'neutral'}>
               {lesson.data.is_published ? 'Published' : 'Draft'}
             </Badge>
+            <Button variant="secondary" onClick={() => standalone ? setPreviewOpen(true) : window.open(`/courses/${courseId}/lessons/${id}/preview`, '_blank', 'noopener')}>
+              Play preview
+            </Button>
             <Button variant="secondary" onClick={() => setPreviewOpen(true)}>
-              Preview
+              Review steps
             </Button>
             {canManage && (
               <Button variant="secondary" onClick={() => setInsightsOpen(true)}>
@@ -158,12 +177,34 @@ function LessonEditor() {
         </div>
       </div>
 
-      <CourseContents courseId={Number(courseId)} currentLessonId={id} />
+      {!standalone && <CourseContents courseId={Number(courseId)} currentLessonId={id} />}
 
-      <div className="rounded-xl border border-border p-4 text-sm">
+      {!standalone && <div className="rounded-xl border border-border p-4 text-sm">
         <Badge variant={lesson.data.is_free ? 'success' : 'neutral'}>{lesson.data.is_free ? 'Free access' : 'Paid access'}</Badge>
         <p className="mt-2 text-muted">Access is set for the whole level. <Link to={`/courses/${courseId}#course-structure`} className="font-semibold text-primary underline">Edit the level’s access</Link></p>
-      </div>
+      </div>}
+      {standalone && <form className="flex flex-wrap items-end gap-3 rounded-xl border border-border p-4 text-sm" onSubmit={async (event) => {
+        event.preventDefault()
+
+        const values = new FormData(event.currentTarget)
+        setSavingMetadata(true); setMetadataError(null)
+        try {
+          await contentApi.updateLesson(id, {
+            title: String(values.get('title') ?? '').trim(),
+            ...(!setId ? { language_id: Number(values.get('language_id')), standalone_level: Number(values.get('standalone_level')) } : {}),
+            summary: String(values.get('summary') ?? '').trim(),
+          })
+          await lesson.refetch()
+        } catch (err) { setMetadataError(err instanceof ApiError ? err.message : 'Could not save language and level.') }
+        finally { setSavingMetadata(false) }
+      }}>
+        <label className="flex w-full flex-col gap-1 font-semibold">Lesson title<input name="title" defaultValue={lesson.data.title} maxLength={255} required className="h-10 rounded-xl border border-border bg-surface px-3 font-normal" /></label>
+        {!setId && <><label className="flex flex-col gap-1 font-semibold">Language<select name="language_id" defaultValue={lesson.data.language_id ?? ''} className="h-10 rounded-xl border border-border bg-surface px-3" required>{config.data?.languages.map((language) => <option key={language.id} value={language.id}>{language.name}</option>)}</select></label>
+        <label className="flex flex-col gap-1 font-semibold">Level<select name="standalone_level" defaultValue={lesson.data.standalone_level ?? 1} className="h-10 rounded-xl border border-border bg-surface px-3" required>{Array.from({ length: 10 }, (_, index) => <option key={index + 1} value={index + 1}>Level {index + 1}</option>)}</select></label></>}
+        <label className="flex w-full flex-col gap-1 font-semibold">Text content (optional)<textarea name="summary" defaultValue={lesson.data.summary ?? ''} maxLength={1000} className="min-h-24 rounded-xl border border-border bg-surface p-3 font-normal" placeholder="Write what learners will read before the video or quiz." /></label>
+        <Button type="submit" size="sm" loading={savingMetadata}>Save details</Button>
+        {metadataError && <Alert variant="danger">{metadataError}</Alert>}
+      </form>}
 
       {publishErrors && (
         <Alert variant="warning" title="Can’t publish yet">
@@ -191,7 +232,7 @@ function LessonEditor() {
         {components.length === 0 ? (
           <Card>
             <CardBody className="py-8 text-center text-sm text-muted">
-              No steps yet. A publishable lesson needs at least one video and one quiz.
+              No steps yet. {standalone ? 'Add video or quiz, or save text content above.' : 'A publishable lesson needs at least one video and one quiz.'}
             </CardBody>
           </Card>
         ) : (
@@ -449,6 +490,7 @@ function useComponentForm(lessonId: number, editing: AuthorComponent | undefined
 }
 
 function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editing?: AuthorComponent; onClose: () => void }) {
+  const queryClient = useQueryClient()
   const { submit, error, pending, isEdit } = useComponentForm(lessonId, editing, onClose)
   const [librarySearch, setLibrarySearch] = useState('')
   const [appliedLibrarySearch, setAppliedLibrarySearch] = useState('')
@@ -457,6 +499,8 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
   const [source, setSource] = useState<'upload' | 'library' | 'youtube'>(d.source_type === 'youtube' ? 'youtube' : 'upload')
   const [title, setTitle] = useState((d.title as string) ?? '')
   const [presenter, setPresenter] = useState((d.presenter_name as string) ?? '')
+  const [isCultural, setIsCultural] = useState(Boolean(d.is_cultural))
+  const [durationSeconds, setDurationSeconds] = useState(d.duration_seconds == null ? '' : String(d.duration_seconds))
   const [quality, setQuality] = useState<'240p' | '360p' | '720p'>(((d.default_quality as string) ?? '360p') as '240p' | '360p' | '720p')
   // Default new videos to "must watch"; respect the saved value when editing.
   const [requireWatch, setRequireWatch] = useState<boolean>(
@@ -469,13 +513,48 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
   const [uploadProgress, setUploadProgress] = useState<{ loaded: number; total: number } | null>(null)
   const [uploadedAssetId, setUploadedAssetId] = useState<number | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [captionFile, setCaptionFile] = useState<File | null>(null)
+  const [captionLanguage, setCaptionLanguage] = useState('en')
+  const [mediaBusy, setMediaBusy] = useState(false)
+  const videoId = typeof d.video_id === 'number' ? d.video_id : null
+  const captions = Array.isArray(d.captions) ? d.captions as { language_code: string }[] : []
+  const renditions = Array.isArray(d.renditions) ? d.renditions as string[] : []
+  const [savedCaptions, setSavedCaptions] = useState(captions.map((caption) => caption.language_code))
+  const [savedRenditions, setSavedRenditions] = useState(renditions)
 
   const videoAssets = (library.data ?? []).filter((a) => a.type === 'video')
   const youtubeUrlValid = /^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(youtubeUrl.trim())
   const uploadPercent = uploadProgress
     ? Math.min(100, Math.round((uploadProgress.loaded / uploadProgress.total) * 100))
     : 0
-  const busy = uploading || pending
+  const busy = uploading || pending || mediaBusy
+
+  async function saveCaptions() {
+    if (!videoId || !captionFile) return
+    setUploadError(null)
+    setMediaBusy(true)
+    try {
+      await contentApi.uploadVideoCaptions(videoId, captionFile, captionLanguage.trim().toLowerCase())
+      await queryClient.invalidateQueries({ queryKey: contentKeys.lesson(lessonId) })
+      setSavedCaptions((current) => [...new Set([...current, captionLanguage.trim().toLowerCase()])])
+      setCaptionFile(null)
+    } catch (err) {
+      setUploadError(err instanceof ApiError ? err.message : 'Could not upload captions.')
+    } finally { setMediaBusy(false) }
+  }
+
+  async function processVideo() {
+    if (!videoId) return
+    setUploadError(null)
+    setMediaBusy(true)
+    try {
+      await contentApi.transcodeVideo(videoId)
+      await queryClient.invalidateQueries({ queryKey: contentKeys.lesson(lessonId) })
+      setSavedRenditions(['240p', '360p', '720p'])
+    } catch (err) {
+      setUploadError(err instanceof ApiError ? err.message : 'Could not process video.')
+    } finally { setMediaBusy(false) }
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -508,6 +587,8 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
       video: {
         title,
         presenter_name: presenter || undefined,
+        is_cultural: isCultural,
+        duration_seconds: durationSeconds ? Number(durationSeconds) : undefined,
         default_quality: quality,
         status: 'ready',
         source_asset_id: sourceAssetId,
@@ -659,7 +740,24 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
         )}
 
         <Input label="Video title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+        {videoId && <div className="rounded-xl border border-border bg-surface-muted p-4 text-sm">
+          <p className="font-semibold">Captions and video quality</p>
+          <p className="mt-1 text-muted">Upload a WebVTT file for a video without built-in text. Learners can turn captions on in the player.</p>
+          <p className="mt-2 text-xs text-muted">Captions: {savedCaptions.join(', ') || 'none'} · Processed qualities: {savedRenditions.join(', ') || 'none'}</p>
+          <div className="mt-3 flex flex-wrap items-end gap-2">
+            <label className="text-xs">Language code<input className="mt-1 block w-20 rounded-lg border border-border bg-surface p-2" value={captionLanguage} onChange={(event) => setCaptionLanguage(event.target.value)} /></label>
+            <label className="text-xs">WebVTT captions<input className="mt-1 block text-xs" type="file" accept=".vtt,text/vtt" onChange={(event) => setCaptionFile(event.target.files?.[0] ?? null)} /></label>
+            <Button type="button" size="sm" variant="secondary" disabled={busy || !captionFile} onClick={saveCaptions}>Upload captions</Button>
+            {d.source_type === 'upload' && <Button type="button" size="sm" variant="secondary" disabled={busy} onClick={processVideo}>Process video qualities</Button>}
+          </div>
+        </div>}
         <Input label="Presenter (optional)" value={presenter} onChange={(e) => setPresenter(e.target.value)} />
+        <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <input type="checkbox" checked={isCultural} onChange={(event) => { setIsCultural(event.target.checked); if (event.target.checked) setRequireWatch(true) }} />
+          Cultural video (60–180 seconds, two caption languages, three processed qualities)
+        </label>
+        {isCultural && <Input label="Duration in seconds" type="number" min={60} max={180} value={durationSeconds} onChange={(event) => setDurationSeconds(event.target.value)} required />}
+        {isCultural && source === 'youtube' && <Alert variant="warning">Upload a cultural video file so full playback and video quality can be verified.</Alert>}
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-semibold text-foreground">Default quality</span>
           <select value={quality} onChange={(e) => setQuality(e.target.value as typeof quality)} className="h-11 rounded-xl border border-border-strong bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
@@ -672,6 +770,7 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
           <span className="text-sm font-semibold text-foreground">Completion rule</span>
           <select
             value={requireWatch ? 'required' : 'optional'}
+            disabled={isCultural}
             onChange={(e) => setRequireWatch(e.target.value === 'required')}
             className="h-11 rounded-xl border border-border-strong bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           >
@@ -688,7 +787,7 @@ function AddVideoModal({ lessonId, editing, onClose }: { lessonId: number; editi
             type="submit"
             fullWidth
             loading={busy}
-            disabled={(source === 'library' && pickedAssetId == null) || (source === 'youtube' && !youtubeUrlValid)}
+            disabled={(source === 'library' && pickedAssetId == null) || (source === 'youtube' && (!youtubeUrlValid || isCultural))}
           >
             {uploading
               ? uploadPercent >= 100 ? 'Processing video…' : `Uploading ${uploadPercent}%`
@@ -1352,6 +1451,13 @@ function isValidDraft(q: QDraft): boolean {
 
 function QuizBuilderModal({ lessonId, editing, onClose }: { lessonId: number; editing?: AuthorComponent; onClose: () => void }) {
   const { submit, error, pending, isEdit } = useComponentForm(lessonId, editing, onClose)
+  const detail = editing?.detail
+  const [passPercent, setPassPercent] = useState(Number(detail?.pass_threshold ?? 0.6) * 100)
+  const [maxAttempts, setMaxAttempts] = useState(Number(detail?.max_attempts ?? 0))
+  const [timeLimit, setTimeLimit] = useState(Number(detail?.time_limit_seconds ?? 0))
+  const [xpPerCorrect, setXpPerCorrect] = useState(Number(detail?.xp_per_correct ?? 1))
+  const [heartsEnabled, setHeartsEnabled] = useState(Boolean(detail?.hearts_enabled ?? true))
+  const [shuffleQuestions, setShuffleQuestions] = useState(Boolean(detail?.shuffle_questions ?? false))
   const audio = useMediaAssets({ type: 'audio', per_page: 100 })
   const audioAssets = (audio.data ?? []) as AudioAsset[]
   const [questions, setQuestions] = useState<QDraft[]>(() => draftsFromComponent(editing))
@@ -1493,7 +1599,12 @@ function QuizBuilderModal({ lessonId, editing, onClose }: { lessonId: number; ed
       }
       return item
     })
-    const ok = await submit({ type: 'quiz', quiz: { pass_threshold: 0.6, hearts_enabled: true, questions: out } })
+    const ok = await submit({ type: 'quiz', quiz: {
+      pass_threshold: passPercent / 100, max_attempts: maxAttempts || null,
+      time_limit_seconds: timeLimit || null, hearts_enabled: heartsEnabled,
+      xp_per_correct: xpPerCorrect,
+      shuffle_questions: shuffleQuestions, questions: out,
+    } })
     if (ok && !isEdit) {
       const fresh = newQuestion()
       setQuestions([fresh])
@@ -1508,6 +1619,21 @@ function QuizBuilderModal({ lessonId, editing, onClose }: { lessonId: number; ed
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         {error && <Alert variant="danger">{error}</Alert>}
         {localError && <Alert variant="danger">{localError}</Alert>}
+
+        <details className="rounded-xl border border-border bg-surface-muted p-3" open>
+          <summary className="cursor-pointer text-sm font-semibold">Quiz rules</summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Input label="Pass score (%)" type="number" min={0} max={100} value={passPercent} onChange={(e) => setPassPercent(Number(e.target.value))} />
+            <Input label="Maximum attempts (0 = unlimited)" type="number" min={0} value={maxAttempts} onChange={(e) => setMaxAttempts(Number(e.target.value))} />
+            <Input label="Seconds per question (0 = untimed)" type="number" min={0} max={300} value={timeLimit} onChange={(e) => setTimeLimit(Number(e.target.value))} />
+            <Input label="XP per correct answer" type="number" min={0} max={100} value={xpPerCorrect} onChange={(e) => setXpPerCorrect(Number(e.target.value))} />
+          </div>
+          <div className="mt-3 flex flex-wrap gap-5 text-sm">
+            <label className="flex items-center gap-2"><input type="checkbox" checked={heartsEnabled} onChange={(e) => setHeartsEnabled(e.target.checked)} /> Lose hearts for wrong answers</label>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={shuffleQuestions} onChange={(e) => setShuffleQuestions(e.target.checked)} /> Shuffle questions</label>
+          </div>
+          <p className="mt-2 text-xs text-muted">The pass score uses the percentage of correct answers. Progress and retries use the normal lesson rules.</p>
+        </details>
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-muted">

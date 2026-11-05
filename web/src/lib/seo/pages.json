@@ -71,6 +71,10 @@
     "title": "No Refund Policy | Mahadum360",
     "description": "Learning payments, cancellation, billing corrections and your consumer rights. Data top-ups are separate from lessons and subscriptions."
   },
+  "/data-top-up-terms": {
+    "title": "Data Top-Up Terms | Mahadum360",
+    "description": "Payment confirmation, mobile data delivery checks and help for failed or undelivered data purchases."
+  },
   "/children-privacy": {
     "title": "Children’s Privacy and Parental Consent | Mahadum360",
     "description": "How Mahadum360 handles information about learners under 18, parental consent, recordings, photos, retention and privacy requests."

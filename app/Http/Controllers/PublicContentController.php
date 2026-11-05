@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Language;
 use App\Models\PublicDocument;
 use App\Services\PublicSeo;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +14,19 @@ class PublicContentController extends Controller
 
     public function languages(): Response
     {
-        return $this->page('/languages', 'public.languages', ['languages' => $this->languagesList()]);
+        $englishAvailable = Language::query()->where('code', 'en')->where('is_active', true)
+            ->whereHas('courses', fn ($courses) => $courses->where('is_published', true)
+                ->whereHas('levels', fn ($levels) => $levels->where('is_free', true)
+                    ->whereHas('lessons', fn ($lessons) => $lessons->whereNotNull('published_at'))))
+            ->exists();
+        $meta = $this->seo->pages()['/languages'];
+        if (! $englishAvailable) {
+            $meta['description'] = 'Choose Igbo, Yorùbá or Hausa. Learn with five-minute lessons, native voices and stories. Start free with Level 0.';
+        }
+
+        return $this->page('/languages', 'public.languages', [
+            'languages' => $this->languagesList(), 'englishAvailable' => $englishAvailable,
+        ], meta: $meta);
     }
 
     public function language(string $language): Response

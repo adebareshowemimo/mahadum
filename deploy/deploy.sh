@@ -148,6 +148,14 @@ echo "==> Syncing achievement badge definitions"
 # Completion can award First Steps only when its canonical definition exists.
 php artisan db:seed --class="Database\Seeders\BadgeSeeder" --force
 
+# Sample story, proverb and trivia content is opt-in. The seeder is idempotent
+# and its production guard checks the same flag, so ordinary deploys do not
+# publish demo content or recreate samples that an editor removed.
+if [ "${SEED_STORIES_TRIVIA_SAMPLES:-0}" = "1" ]; then
+    echo "==> Seeding sample stories, proverbs and trivia"
+    php artisan db:seed --class="Database\Seeders\StoriesTriviaSampleSeeder" --force
+fi
+
 echo "==> Caching config/routes/views"
 php artisan config:cache
 # route:cache clears the cache internally, but that is too late when this

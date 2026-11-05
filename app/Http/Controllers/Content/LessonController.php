@@ -35,6 +35,7 @@ class LessonController extends Controller
 
         $lesson = $level->lessons()->create([
             'title' => $request->string('title'),
+            'kind' => 'lesson',
             'position' => $position,
             'est_minutes' => $request->input('est_minutes', 5),
             'is_locked_by_default' => $request->boolean('is_locked_by_default', true),
@@ -48,6 +49,8 @@ class LessonController extends Controller
         $lesson->load([
             'components' => fn ($q) => $q->orderBy('position'),
             'components.video.sourceAsset',
+            'components.video.captions',
+            'components.video.renditions',
             'components.quiz.questions.options',
             'components.quiz.questions.promptAudioAsset',
             'components.quiz.questions.promptImageAsset',

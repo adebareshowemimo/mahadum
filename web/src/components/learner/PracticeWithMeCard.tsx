@@ -80,7 +80,7 @@ export function PracticeWithMeCard({ learnerId }: { learnerId: number }) {
                 </div>
               )}
               {!contacts.isLoading && results.length === 0 && (
-                <p className="py-2 text-sm text-muted">No one found in this learner’s family or school yet.</p>
+                <p className="py-2 text-sm text-muted">{query.trim() ? "This person isn't on your approved list. Only registered parents, guardians or teachers can be invited to practise." : 'Ask your grown-up to add practice partners.'}</p>
               )}
               {results.map((contact) => (
                 <button

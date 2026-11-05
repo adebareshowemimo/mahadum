@@ -106,7 +106,7 @@ describe('data purchase payment return', () => {
     show()
     expect(await screen.findByText(status === 'payment_failed' ? 'Payment unsuccessful' : status === 'failed' ? 'Your purchase needs attention' : 'Payment needs review')).toBeInTheDocument()
     expect(screen.queryByText('Data delivered')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('link', { name: 'Buy another bundle' }))
+    fireEvent.click(screen.getByRole('link', { name: 'View data purchases' }))
     expect(await screen.findByText('Buy data catalogue')).toBeInTheDocument()
     expect(sessionStorage.getItem('mahadum:data-purchase:1')).toBeNull()
   })
@@ -122,7 +122,7 @@ describe('data purchase payment return', () => {
     show()
     expect(await screen.findByText('Purchase unavailable')).toBeInTheDocument()
     expect(screen.queryByText('1GB weekly')).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Buy another bundle' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'View data purchases' })).toBeInTheDocument()
   })
 
   it('can retry a temporary verification failure using the same reference', async () => {

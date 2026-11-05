@@ -20,14 +20,13 @@ class FlutterwaveGateway implements PaymentGateway
             'tx_ref' => $reference,
             'amount' => round($amountMinor / 100, 2),
             'currency' => 'NGN',
-            'redirect_url' => ($metadata['purpose'] ?? null) === 'data_bundle'
-                ? rtrim((string) config('app.url'), '/').'/billing/data/status'
-                : (string) config('app.url'),
+            'redirect_url' => ReturnUrl::fromMetadata($metadata),
             'customer' => ['email' => $email],
             'meta' => $metadata,
         ];
         $response = Http::withToken($this->secret)
             ->acceptJson()
+            ->connectTimeout(5)->timeout(15)
             ->post(rtrim($this->baseUrl, '/').'/payments', $payload)
             ->throw()
             ->json();
@@ -43,11 +42,13 @@ class FlutterwaveGateway implements PaymentGateway
     {
         $response = Http::withToken($this->secret)
             ->acceptJson()
+            ->connectTimeout(5)->timeout(15)
             ->get(rtrim($this->baseUrl, '/').'/transactions/verify_by_reference', ['tx_ref' => $reference]);
 
         // A reference the gateway has never seen a checkout for (e.g. one only
         // ever created locally, never initialized) 404s — not paid, not a fault.
-        if ($response->status() === 404) {
+        if ($response->status() === 404 || ($response->status() === 400
+            && str_contains(strtolower((string) $response->json('message')), 'no transaction was found'))) {
             return new GatewayTransactionStatus('pending');
         }
 

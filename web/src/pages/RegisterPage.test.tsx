@@ -61,6 +61,14 @@ describe('RegisterPage age gate', () => {
     expect(screen.getByRole('radio', { name: /Institution/i })).toBeInTheDocument()
   })
 
+  it('offers only individual and family accounts from a school join link', () => {
+    setup(`/register?school_join=${'a'.repeat(48)}`)
+    expect(screen.getByRole('radio', { name: /Individual/i })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: /Family/i })).toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: /^Teacher/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: /^School/i })).not.toBeInTheDocument()
+  })
+
   async function continueAsFamily() {
     await userEvent.click(screen.getByRole('radio', { name: /Family/i }))
     await userEvent.click(screen.getByRole('button', { name: /continue/i }))

@@ -13,6 +13,7 @@ export interface TeacherDirectory {
     email: string
     status: string
     account_status: string
+    profile: { years_experience: number | null; native_language: string | null; state: string | null; dialects: string[] } | null
   }[]
   invitations: {
     id: number

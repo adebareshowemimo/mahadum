@@ -15,6 +15,7 @@ class ClassLearnerInvitation extends Model
     protected $casts = [
         'expires_at' => 'datetime',
         'accepted_at' => 'datetime',
+        'cancelled_at' => 'datetime',
     ];
 
     /** @return BelongsTo<SchoolClass, $this> */

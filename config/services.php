@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'video' => [
+        'ffprobe' => env('FFPROBE_BIN', 'ffprobe'),
+        'ffmpeg' => env('FFMPEG_BIN', 'ffmpeg'),
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -83,10 +87,15 @@ return [
         // Outbound gateway calls are OFF unless explicitly enabled, so local/CI
         // never hit a live gateway (PaymentGatewayManager → NullGateway).
         'live' => (bool) env('PAYMENT_GATEWAY_LIVE', false),
+        // Re-enable only after a real wallet checkout, return, and credit have
+        // been verified. Existing funding confirmations remain available.
+        'wallet_funding_enabled' => (bool) env('WALLET_FUNDING_ENABLED', env('APP_ENV') === 'testing'),
         'default' => env('PAYMENT_DEFAULT_GATEWAY', 'monnify'),
     ],
 
     'data_bundles' => [
+        // Remain closed until successful live delivery is observed on each network.
+        'enabled' => (bool) env('DATA_BUNDLE_PURCHASES_ENABLED', env('APP_ENV') === 'testing'),
         'default_provider' => env('DATA_BUNDLE_DEFAULT_PROVIDER', 'monnify'),
     ],
 

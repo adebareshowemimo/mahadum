@@ -50,8 +50,10 @@ export interface LearnerProfile {
   current_level: number | null
   learning_level?: LearningLevel
   target_language?: string | null
+  learning_goal?: string | null
   /** True for child profiles (no own user account). */
   is_child: boolean
+  school_name?: string | null
   /** Requires a parental PIN to switch into. */
   pin_protected: boolean
   coin_balance: number
@@ -122,6 +124,7 @@ export interface Me {
   learner_profiles: LearnerProfile[]
   organizations: OrganizationMembership[]
   active_organization_id: number | null
+  active_child_profile_id?: number | null
   subscription: SubscriptionInfo | null
   entitlements: Entitlements
 }
@@ -211,6 +214,8 @@ export interface DataBundlePurchase {
     fulfillment_provider?: 'monnify' | 'flutterwave'
   payment_confirmed?: boolean
   delivery_started?: boolean
+  created_at?: string | null
+  paid_at?: string | null
   check_issue?: 'provider_unavailable'
 }
 
@@ -226,16 +231,48 @@ export interface AppLanguage {
 
 export interface WalletBalance {
   coin_balance: number
+  coin_price_minor?: number
   /** Cash balance in minor units (e.g. kobo). */
   currency_minor: number
   currency: string
   funding_gateways?: ('monnify' | 'paystack' | 'flutterwave')[]
+  funding_transactions?: WalletFundingTransaction[]
+  report?: FamilyWalletReport
+}
+
+export interface FamilyWalletReport {
+  total_coins: number
+  coins_added: number
+  coins_spent: number
+  accounts: { name: string; coin_balance: number; ledger_balance: number; reconciled: boolean }[]
+  coin_reconciled: boolean
+  cash: {
+    balance_minor: number
+    confirmed_funding_minor: number
+    coin_purchases_minor: number
+    unexplained_minor: number
+    reconciled: boolean
+    accounts: { name: string; balance_minor: number; expected_minor: number; reconciled: boolean }[]
+  }
+  coin_sources: { source: string; net_coins: number }[]
+  activity: { id: number; account: string; type: string; source: string; amount: number; balance_after: number; created_at: string }[]
+  cash_activity: { id: number; account: string; type: string; source: string; amount_minor: number; balance_after_minor: number; created_at: string }[]
+}
+
+export interface WalletFundingTransaction {
+  id: number
+  gateway: 'monnify' | 'paystack' | 'flutterwave'
+  amount_minor: number
+  currency: string
+  status: string
+  created_at: string
 }
 
 export interface FamilyOverview {
   id: number
   name: string
   child_limit: number
+  pending_study_rewards?: number
   wallet: WalletBalance
   parent: { id: number; name: string; email: string }
   learners: {
@@ -246,6 +283,11 @@ export interface FamilyOverview {
     is_child: boolean
     pin_protected: boolean
     coin_balance: number
+    currency_minor: number
+    lessons_completed?: number
+    streak_days?: number
+    speaking_score?: number | null
+    rank?: number | null
   }[]
 }
 
@@ -261,16 +303,22 @@ export interface ChildCoinTransaction {
 export interface ChildDetail {
   id: number
   display_name: string
+  learning_goal?: string | null
   avatar_id: number | null
   avatar_url: string | null
   age_band: string | null
   current_level: number | null
+  starting_level_position?: number | null
+  starting_level_options?: number[]
   target_language: string | null
   pin_protected: boolean
   /** Balance of this child's learner-owned, ledger-backed wallet. */
   coin_balance: number
+  currency_minor: number
   coin_transactions: ChildCoinTransaction[]
+  teachers?: { name: string; years_experience: number | null; native_language: string | null; state: string | null; dialects: string[] }[]
 }
+export interface TeacherProfileFields { years_experience: number | null; native_language: string | null; state: string | null; dialects: string[] }
 
 export type ChoreStatus = 'active' | 'pending_review' | 'approved' | 'rejected'
 
@@ -307,7 +355,7 @@ export interface ReviewQueue {
 
 export interface LearnerTasks {
   chores: { id: number; title: string; description: string | null; coin_reward: number; status: ChoreStatus; due_at: string | null; review_decision: ChoreDecision | null }[]
-  assignments: { id: number; title: string; instructions: string | null; class_name: string; coin_reward: number; status: 'submitted' | 'graded' | null; due_at: string | null; feedback: string | null; parent_review_status: string | null }[]
+  assignments: { id: number; title: string; instructions: string | null; class_name: string; coin_reward: number; status: 'submitted' | 'graded' | null; due_at: string | null; feedback: string | null; parent_review_status: string | null; linked_lesson_id?: number | null; score?: number | null }[]
 }
 
 export interface StudentAnalytics {
@@ -323,6 +371,7 @@ export interface AddChildInput {
   date_of_birth?: string
   age_band?: string
   target_language_id?: number
+  learning_goal?: string
   /** Verifiable parental consent — required by the API for every child. */
   consent: boolean
 }
@@ -357,6 +406,15 @@ export interface PathUnit {
 
 export interface LearnerPath {
   units: PathUnit[]
+  learning_goal?: LearningGoal | null
+  completed_lessons?: number
+  suggested_lessons?: { lesson_id: number; title: string }[]
+}
+
+export interface LearningGoal {
+  key: string
+  label: string
+  message: string
 }
 
 export interface CourseSummary {
@@ -472,7 +530,12 @@ export interface AuthorLesson {
   /** Read-only compatibility alias for the level access setting. */
   is_free_preview?: boolean
   id: number
+  language_id?: number | null
+  standalone_level?: number | null
+  library_set_level_id?: number | null
+  kind: 'lesson' | 'proverb' | 'trivia'
   title: string
+  summary?: string | null
   position: number
   est_minutes: number | null
   is_locked_by_default: boolean
@@ -480,6 +543,38 @@ export interface AuthorLesson {
   published_at: string | null
   is_published: boolean
   components?: AuthorComponent[]
+}
+
+export interface LibrarySetLesson {
+  id: number
+  title: string
+  summary: string | null
+  position: number
+  published_at: string | null
+  completed: boolean
+  access_reason: string | null
+}
+
+export interface LibrarySetLevel {
+  id: number
+  title: string
+  position: number
+  is_free: boolean
+  lessons: LibrarySetLesson[]
+}
+
+export interface LibrarySetSummary {
+  id: number
+  kind: 'proverb' | 'trivia'
+  title: string
+  description: string | null
+  language_id: number
+  language: string | null
+  status: 'draft' | 'published'
+  levels_count: number
+  lessons_count: number
+  completed_count: number
+  levels: LibrarySetLevel[] | null
 }
 
 export interface AuthorLevel {
@@ -507,9 +602,99 @@ export interface CreateLevelInput {
 
 export interface CreateLessonInput {
   title: string
+  summary?: string | null
+  kind?: 'lesson' | 'proverb' | 'trivia'
   est_minutes?: number
   position?: number
   is_locked_by_default?: boolean
+  language_id?: number
+  standalone_level?: number
+}
+
+export interface LibraryLesson {
+  id: number
+  title: string
+  summary: string | null
+  kind: 'proverb' | 'trivia'
+  level: number
+  level_title: string
+  language: string
+  est_minutes: number | null
+  is_published: boolean
+  access_reason: string | null
+  proverb_count: number
+  question_count: number
+  formats?: Array<'video' | 'text' | 'quiz'>
+  time_limit_seconds: number | null
+  has_audio: boolean
+  sample_proverb: string | null
+  sample_meaning: string | null
+}
+
+export type StoryAgeBand = '0_5' | '6_12' | '13_17' | '18_plus' | 'folklore'
+export type StoryFormat = 'colouring' | 'tracing' | 'animated' | 'reading' | 'video' | 'text' | 'quiz'
+
+export interface StorySummary {
+  id: number
+  title: string
+  summary: string | null
+  language_id: number
+  level: number
+  language: string
+  age_band: StoryAgeBand
+  format: StoryFormat
+  price_minor: number
+  preview_count: number
+  cover_url: string | null
+  pages_count: number
+  questions_count: number
+  published_at?: string | null
+  purchased?: boolean
+  can_purchase?: boolean
+  resume_position?: number
+}
+
+export interface StoryPage {
+  id: number
+  position: number
+  title: string | null
+  body: string | null
+  has_image?: boolean
+  image_url?: string | null
+}
+
+export interface StoryDetail extends StorySummary {
+  pages: StoryPage[]
+  questions: Array<{ id: number; position: number; prompt: string; options: string[]; correct_index?: number; explanation?: string | null }>
+  has_preview_video?: boolean
+  has_full_video?: boolean
+  preview_video_url?: string | null
+  full_video_url?: string | null
+  preview_ends_at?: number | null
+}
+
+export interface StoryPurchase {
+  id: number
+  story_id: number
+  status: string
+  provider: string
+  amount_minor: number
+  checkout_url: string | null
+  reference?: string
+  paid_at?: string | null
+  story_title?: string
+}
+
+export interface SubscriptionConfirmation {
+  status: string
+  plan_name: string
+  amount_minor: number
+  currency: string
+  gateway: string | null
+  reference: string
+  receipt_id: number | null
+  paid_at: string | null
+  renews_at: string | null
 }
 
 /** Question types the grader supports (option-based, ordered, pairs + free-text). */
@@ -553,6 +738,7 @@ export interface AddComponentInput {
     title: string
     presenter_name?: string
     duration_seconds?: number
+    is_cultural?: boolean
     default_quality?: '240p' | '360p' | '720p'
     status?: 'uploading' | 'processing' | 'ready' | 'failed'
     language_id?: number
@@ -563,6 +749,10 @@ export interface AddComponentInput {
     title?: string
     pass_threshold?: number
     hearts_enabled?: boolean
+    shuffle_questions?: boolean
+    max_attempts?: number | null
+    time_limit_seconds?: number | null
+    xp_per_correct?: number
     questions?: AuthorQuestionInput[]
   }
   speaking?: { prompt_text: string; target_text?: string }
@@ -622,6 +812,8 @@ export interface QuizPayload {
   pass_threshold: number
   hearts_enabled: boolean
   max_attempts?: number | null
+  time_limit_seconds?: number | null
+  xp_per_correct?: number
   questions: QuizQuestion[]
 }
 
@@ -669,7 +861,7 @@ export interface PlayComponent {
 
 export interface LessonPlay {
   hearts_remaining?: number | null
-  lesson: { id: number; title: string; est_minutes: number | null }
+  lesson: { id: number; title: string; summary?: string | null; est_minutes: number | null }
   components: PlayComponent[]
 }
 
@@ -992,6 +1184,10 @@ export interface SeatInfo {
   bands: SeatPricingBand[]
   allocations: SeatAllocation[]
 }
+export interface InactiveSeatReview {
+  inactive_days: number
+  learners: { learner_id: number; name: string; last_activity_at: string | null; added_at: string; classes: string[] }[]
+}
 
 export interface SchoolClassRow {
   id: number
@@ -1021,6 +1217,10 @@ export interface ClassCourseRow {
   assigned: boolean
   is_published: boolean
 }
+export interface ClassCourseOutline {
+  id: number; title: string
+  levels: { id: number; title: string; lessons: { id: number; title: string; quizzes: { id: number; title: string }[] }[] }[]
+}
 
 export interface AddClassLearnerInput {
   learner_id: number
@@ -1039,6 +1239,14 @@ export interface InviteClassLearnerResult extends InviteClassLearnerInput {
   expires_at: string
   delivery_status: 'queued' | 'not_configured'
 }
+export interface ClassLearnerInvitationRow {
+  id: number
+  name: string
+  email: string
+  sent_at: string
+  expires_at: string
+  status: 'pending' | 'expired'
+}
 export interface ClassLearnerInvitationInfo {
   name: string
   email: string
@@ -1047,6 +1255,7 @@ export interface ClassLearnerInvitationInfo {
   expires_at: string
   status: 'pending' | 'accepted' | 'expired'
   existing_user: boolean
+  existing_account_name: string | null
 }
 export interface AcceptClassLearnerInvitationResult {
   class_id: number
@@ -1100,6 +1309,17 @@ export interface PayInvoiceResult {
   checkout_url: string | null
 }
 
+export interface InvoiceConfirmation {
+  id: number
+  status: string
+  verification: 'success' | 'pending' | 'failed' | 'needs_review'
+  amount_minor: number
+  payment_gateway: string | null
+  payment_reference: string
+  issued_at: string | null
+  paid_at: string | null
+}
+
 export interface RosterImportResult {
   created: number
   matched?: number
@@ -1144,6 +1364,16 @@ export interface ClassAssignmentRow {
   total_students: number
   submitted_count: number
   graded_count: number
+  linked_lesson_id?: number | null
+}
+export interface ClassAssignmentLessonOption { id: number; title: string; course_title: string }
+export interface ClassQuizReportRow {
+  quiz_id: number; title: string; lesson_id: number; attempts: number; average_score: number | null
+  most_missed: { question_id: number; prompt: string; wrong_count: number }[]
+}
+export interface ClassQuizAttemptDetail {
+  id: number; learner: string; quiz_title: string; score: number | null; completed_at: string | null
+  questions: { id: number; prompt: string; given_answer: string | null; is_correct: boolean | null; correct_options: string[] }[]
 }
 
 export interface ClassCompletionRow {
@@ -1177,6 +1407,7 @@ export interface ClassAssignmentDetail {
   instructions: string | null
   due_at: string | null
   coin_reward: number
+  linked_lesson_id?: number | null
   roster: ClassAssignmentRosterEntry[]
 }
 
@@ -1185,6 +1416,7 @@ export interface CreateClassAssignmentInput {
   instructions?: string
   due_at?: string
   coin_reward?: number
+  linked_lesson_id?: number
 }
 
 export interface GradeSubmissionInput {
@@ -1717,6 +1949,26 @@ export interface SubscriptionsReport {
   total: number
 }
 
+export interface SubscriptionRecord {
+  id: number
+  user_id: number
+  name: string
+  email: string
+  phone: string | null
+  account_status: string
+  subscription_plan: string | null
+  subscription_status: string
+  subscription_start: string | null
+  subscription_expiry: string | null
+  payment_status: string
+}
+
+export interface SubscriptionRecordsQuery {
+  q?: string
+  status?: string
+  page?: number
+}
+
 export interface ReferralsReport {
   from: string
   to: string
@@ -2067,7 +2319,10 @@ export interface PromoCode {
 
 /** Response from GET /config — launch-time bootstrap (public). */
 export interface AppConfig {
+  streak_shield_price_coins?: number
   language_vote_options?: string[]
+  learning_goals?: LearningGoal[]
+  learning_goal_question?: string
   min_supported_version: { ios: string | null; android: string | null }
   /** Age below which a learner needs verifiable parental consent (admin-set). */
   digital_age: number

@@ -31,6 +31,15 @@ import type {
   LeaderboardRow,
   LeagueStanding,
   LearnerPath,
+  LibraryLesson,
+  StoryAgeBand,
+  StoryDetail,
+  StoryFormat,
+  StoryPage,
+  StoryPurchase,
+  SubscriptionConfirmation,
+  InvoiceConfirmation,
+  StorySummary,
   LearnerProfile,
   LessonAnalytics,
   LessonPlay,
@@ -61,6 +70,8 @@ import type {
   RenewalsReport,
   ReferralsReport,
   SubscriptionsReport,
+  SubscriptionRecord,
+  SubscriptionRecordsQuery,
   AdminOrgDetail,
   AdminOrgList,
   AdminOrgQuery,
@@ -70,6 +81,7 @@ import type {
   AcceptClassLearnerInvitationResult,
   AvailableClassLearner,
   ClassLearnerInvitationInfo,
+  ClassLearnerInvitationRow,
   InviteClassLearnerInput,
   InviteClassLearnerResult,
   AdminAdvertPlacementList,
@@ -122,8 +134,12 @@ import type {
   BillingHealth,
   ClassAssignmentDetail,
   ClassAssignmentRow,
+  ClassAssignmentLessonOption,
+  ClassQuizReportRow,
+  ClassQuizAttemptDetail,
   ClassCompletionRow,
   ClassCourseRow,
+  ClassCourseOutline,
   CreateClassAssignmentInput,
   CreateClassInput,
   GradeSubmissionInput,
@@ -132,6 +148,7 @@ import type {
   SchoolReferralSummary,
   SchoolTeacher,
   TeacherCompensationSummary,
+  TeacherProfileFields,
   CreateCourseInput,
   CreateLessonInput,
   CreateLevelInput,
@@ -165,6 +182,7 @@ import type {
   SchoolInvoice,
   SchoolLead,
   SeatInfo,
+  InactiveSeatReview,
   Settlements,
   StreakInfo,
   SubscriptionHistoryRow,
@@ -310,6 +328,23 @@ export const familyApi = {
     return data.data
   },
 
+  async setStartingLevel(learnerId: number, position: number): Promise<void> {
+    await api.put(`/family/children/${learnerId}/starting-level`, { position })
+  },
+
+  async practicePartners(learnerId: number): Promise<{ id: number; name: string; email: string }[]> {
+    const { data } = await api.get(`/family/children/${learnerId}/practice-partners`)
+    return data.data
+  },
+
+  async addPracticePartner(learnerId: number, email: string): Promise<void> {
+    await api.post(`/family/children/${learnerId}/practice-partners`, { email })
+  },
+
+  async removePracticePartner(learnerId: number, partnerId: number): Promise<void> {
+    await api.delete(`/family/children/${learnerId}/practice-partners/${partnerId}`)
+  },
+
   async updateLearnerAvatar(
     learnerId: number,
     input: { avatarId?: number; photo?: File },
@@ -332,6 +367,11 @@ export const familyApi = {
     return data.data
   },
 
+  async buyCoins(coins: number, key = idempotencyKey()): Promise<{ coins: number; price_minor: number; amount_minor: number; coin_balance: number }> {
+    const { data } = await api.post('/wallet/coins', { coins }, { headers: { 'Idempotency-Key': key } })
+    return data.data
+  },
+
   /** Start a gateway top-up; the wallet is credited later by the webhook. */
   async fundWallet(input: { amount: number; gateway: 'flutterwave' | 'monnify' | 'paystack' }, key = idempotencyKey()): Promise<{
     funding_id: number
@@ -346,9 +386,27 @@ export const familyApi = {
     return data.data
   },
 
-  async transfer(input: { to_learner_id: number; coins: number }): Promise<{
-    family_balance: number
-    learner_balance: number
+  async confirmWalletFunding(fundingId: number): Promise<{
+    funding_id: number
+    gateway_ref: string
+    status: string
+    message: string
+    currency_minor: number
+    amount_minor: number
+    currency: string
+    gateway: string
+    created_at: string
+    confirmed_at: string | null
+  }> {
+    const { data } = await api.post(`/wallet/fundings/${fundingId}/confirm`)
+    return data.data
+  },
+
+  async transfer(input: { to_learner_id: number } & ({ coins: number } | { amount_minor: number })): Promise<{
+    family_balance?: number
+    learner_balance?: number
+    family_balance_minor?: number
+    learner_balance_minor?: number
   }> {
     const { data } = await api.post('/wallet/transfer', input, {
       headers: { 'Idempotency-Key': idempotencyKey() },
@@ -409,6 +467,18 @@ export const familyApi = {
 }
 
 export const learningApi = {
+  async placementQuestions(learnerId: number, languageId: number): Promise<{ available: boolean; result_level: string | null; questions: { id: number; prompt: string; prompt_audio: string | null; options: { id: number; label: string }[] }[] }> {
+    const { data } = await api.get('/assessments/questions', { params: { learner_id: learnerId, language_id: languageId } })
+    return data.data
+  },
+  async submitPlacement(learnerId: number, languageId: number, answers: { question_id: number; option_id: number }[]): Promise<{ result_level: string; score: number; starting_level_position: number }> {
+    const { data } = await api.post('/assessments', { learner_id: learnerId, language_id: languageId, answers })
+    return data.data
+  },
+  async setLearningGoal(learnerId: number, learningGoal: string): Promise<{ learner_id: number; learning_goal: string }> {
+    const { data } = await api.put(`/learners/${learnerId}/learning-goal`, { learning_goal: learningGoal })
+    return data.data
+  },
   async path(learnerId: number): Promise<LearnerPath> {
     const { data } = await api.get(`/learners/${learnerId}/path`)
     return data.data
@@ -420,6 +490,55 @@ export const learningApi = {
     return data
   },
 
+  async libraryLessons(query: { kind: 'proverb' | 'trivia'; learner_id?: number; language?: string; page?: number }): Promise<Paginated<LibraryLesson>> {
+    const { data } = await api.get('/library-lessons', { params: query })
+    return data
+  },
+
+  async librarySets(query: { learner_id: number; kind?: 'proverb' | 'trivia'; language?: string; q?: string; page?: number }): Promise<Paginated<import('./types').LibrarySetSummary>> {
+    const { data } = await api.get('/library-sets', { params: query }); return data
+  },
+
+  async librarySet(id: number, learnerId: number): Promise<import('./types').LibrarySetSummary> {
+    const { data } = await api.get(`/library-sets/${id}`, { params: { learner_id: learnerId } }); return data.data
+  },
+
+  async stories(query: { learner_id: number; band?: StoryAgeBand; language?: string; page?: number }): Promise<Paginated<StorySummary> & { meta: { can_view_adult: boolean } }> {
+    const { data } = await api.get('/learning/stories', { params: query })
+    return data
+  },
+
+  async continuingStories(learnerId: number): Promise<StorySummary[]> {
+    const { data } = await api.get('/learning/stories/continue', { params: { learner_id: learnerId } })
+    return data.data
+  },
+
+  async saveStoryProgress(id: number, learnerId: number, position: number): Promise<void> {
+    await api.post(`/learning/stories/${id}/progress`, { learner_id: learnerId, position })
+  },
+
+  async story(id: number, learnerId: number): Promise<StoryDetail> {
+    const { data } = await api.get(`/learning/stories/${id}`, { params: { learner_id: learnerId } })
+    return data.data
+  },
+
+  async answerStoryQuestion(id: number, learnerId: number, questionId: number, optionIndex: number): Promise<{ correct: boolean; correct_index: number; explanation: string | null }> {
+    const { data } = await api.post(`/learning/stories/${id}/answer`, { learner_id: learnerId, question_id: questionId, option_index: optionIndex })
+    return data.data
+  },
+
+  async purchaseStory(id: number, learnerId: number, provider: 'monnify' | 'paystack' | 'flutterwave'): Promise<StoryPurchase> {
+    const { data } = await api.post(`/learning/stories/${id}/purchase`, { learner_id: learnerId, provider }, {
+      headers: { 'Idempotency-Key': idempotencyKey() },
+    })
+    return data.data
+  },
+
+  async confirmStoryPurchase(id: number): Promise<StoryPurchase> {
+    const { data } = await api.post(`/learning/story-purchases/${id}/confirm`)
+    return data.data
+  },
+
   async enroll(learnerId: number, courseId: number): Promise<{ enrollment_id: number }> {
     const { data } = await api.post('/enrollments', { learner_id: learnerId, course_id: courseId })
     return data.data
@@ -429,6 +548,11 @@ export const learningApi = {
     const { data } = await api.get(`/lessons/${lessonId}/play`, {
       params: learnerId ? { learner_id: learnerId } : undefined,
     })
+    return data.data
+  },
+
+  async studyHeartbeat(lessonId: number, learnerId: number): Promise<{ status: 'studying' | 'pending' | 'paid'; progress_seconds: number; remaining_seconds: number; reward_coins: number }> {
+    const { data } = await api.post('/learning/study/heartbeat', { lesson_id: lessonId, learner_id: learnerId })
     return data.data
   },
 
@@ -561,8 +685,107 @@ export const learningApi = {
 }
 
 export const contentApi = {
+  async librarySets(query: { kind?: 'proverb' | 'trivia'; language?: string; q?: string; page?: number } = {}): Promise<Paginated<import('./types').LibrarySetSummary>> {
+    const { data } = await api.get('/library-sets', { params: query }); return data
+  },
+  async librarySet(id: number): Promise<import('./types').LibrarySetSummary> {
+    const { data } = await api.get(`/library-sets/${id}`); return data.data
+  },
+  async createLibraryCollection(input: { kind: 'proverb' | 'trivia'; language_id: number; title: string; description?: string }): Promise<import('./types').LibrarySetSummary> {
+    const { data } = await api.post('/library-sets', input); return data.data
+  },
+  async updateLibraryCollection(id: number, input: { title?: string; description?: string; language_id?: number }): Promise<import('./types').LibrarySetSummary> {
+    const { data } = await api.patch(`/library-sets/${id}`, input); return data.data
+  },
+  async deleteLibraryCollection(id: number): Promise<void> { await api.delete(`/library-sets/${id}`) },
+  async setLibraryCollectionPublished(id: number, publish: boolean): Promise<import('./types').LibrarySetSummary> {
+    const { data } = await api.post(`/library-sets/${id}/${publish ? 'publish' : 'unpublish'}`); return data.data
+  },
+  async addLibraryLevel(id: number, input: { title: string; is_free: boolean }): Promise<import('./types').LibrarySetLevel> {
+    const { data } = await api.post(`/library-sets/${id}/levels`, input); return data.data
+  },
+  async updateLibraryLevel(id: number, input: { title?: string; is_free?: boolean }): Promise<import('./types').LibrarySetLevel> {
+    const { data } = await api.patch(`/library-set-levels/${id}`, input); return data.data
+  },
+  async deleteLibraryLevel(id: number): Promise<void> { await api.delete(`/library-set-levels/${id}`) },
+  async reorderLibraryLevels(id: number, order: number[]): Promise<import('./types').LibrarySetSummary> {
+    const { data } = await api.post(`/library-sets/${id}/levels/reorder`, { order }); return data.data
+  },
+  async addLibraryLesson(levelId: number, input: { title: string; summary?: string }): Promise<{ id: number; title: string }> {
+    const { data } = await api.post(`/library-set-levels/${levelId}/lessons`, input); return data.data
+  },
+  async reorderLibraryLessons(levelId: number, order: number[]): Promise<import('./types').LibrarySetLevel> {
+    const { data } = await api.post(`/library-set-levels/${levelId}/lessons/reorder`, { order }); return data.data
+  },
+  async createLibrarySet(input: { title: string; kind: 'proverb' | 'trivia'; language_id: number; standalone_level: number; summary?: string }): Promise<AuthorLesson> {
+    const { data } = await api.post('/library-lessons', input)
+    return data.data
+  },
+  async libraryLessons(kind: 'proverb' | 'trivia', page = 1): Promise<Paginated<LibraryLesson>> {
+    const { data } = await api.get('/library-lessons', { params: { kind, page } })
+    return data
+  },
+
+  async stories(page = 1): Promise<Paginated<StorySummary>> {
+    const { data } = await api.get('/content/stories', { params: { page } })
+    return data
+  },
+
+  async story(id: number): Promise<StoryDetail> {
+    const { data } = await api.get(`/content/stories/${id}`)
+    return data.data
+  },
+
+  async createStory(input: { language_id: number; standalone_level: number; title: string; summary?: string; age_band: StoryAgeBand; format: StoryFormat }): Promise<StoryDetail> {
+    const { data } = await api.post('/content/stories', input)
+    return data.data
+  },
+
+  async updateStory(id: number, input: Partial<{ title: string; summary: string; language_id: number; standalone_level: number; age_band: StoryAgeBand; format: StoryFormat; preview_count: number }>): Promise<StoryDetail> {
+    const { data } = await api.patch(`/content/stories/${id}`, input)
+    return data.data
+  },
+
+  async setStoryPublished(id: number, publish: boolean): Promise<StoryDetail> {
+    const { data } = await api.post(`/content/stories/${id}/${publish ? 'publish' : 'unpublish'}`)
+    return data.data
+  },
+
+  async addStoryPage(id: number, input: { title?: string; body?: string }): Promise<StoryPage> {
+    const { data } = await api.post(`/content/stories/${id}/pages`, input)
+    return data.data
+  },
+
+  async updateStoryPage(id: number, pageId: number, input: { title?: string; body?: string }): Promise<StoryPage> {
+    const { data } = await api.patch(`/content/stories/${id}/pages/${pageId}`, input)
+    return data.data
+  },
+
+  async deleteStoryPage(id: number, pageId: number): Promise<void> {
+    await api.delete(`/content/stories/${id}/pages/${pageId}`)
+  },
+
+  async addStoryQuestion(id: number, input: { prompt: string; options: string[]; correct_index: number; explanation?: string }): Promise<void> {
+    await api.post(`/content/stories/${id}/questions`, input)
+  },
+
+  async deleteStoryQuestion(id: number, questionId: number): Promise<void> {
+    await api.delete(`/content/stories/${id}/questions/${questionId}`)
+  },
+
+  async uploadStoryMedia(id: number, slot: 'cover' | 'preview_video' | 'full_video' | 'page_image', file: File, pageId?: number): Promise<void> {
+    const body = new FormData()
+    body.append('slot', slot)
+    if (pageId) body.append('page_id', String(pageId))
+    body.append('file', file)
+    await api.post(`/content/stories/${id}/upload`, body)
+  },
+
+  async deleteStory(id: number): Promise<void> {
+    await api.delete(`/content/stories/${id}`)
+  },
   async courses(): Promise<CourseSummary[]> {
-    const { data } = await api.get('/courses')
+    const { data } = await api.get('/courses', { params: { per_page: 100 } })
     return data.data
   },
 
@@ -728,6 +951,17 @@ export const contentApi = {
     return data.data
   },
 
+  async uploadVideoCaptions(videoId: number, file: File, languageCode: string): Promise<void> {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('language_code', languageCode)
+    await api.post(`/content/videos/${videoId}/captions`, form)
+  },
+
+  async transcodeVideo(videoId: number): Promise<void> {
+    await api.post(`/content/videos/${videoId}/transcode`)
+  },
+
   /** Lightweight list (first page) — used by the video picker; pass type/per_page. */
   async media(params: MediaQuery = {}): Promise<MediaAsset[]> {
     const { data } = await api.get('/media', { params })
@@ -826,6 +1060,11 @@ export const billingApi = {
     const { data } = await api.post(`/subscriptions/${id}/retry`, undefined, {
       headers: { 'Idempotency-Key': idempotencyKey() },
     })
+    return data.data
+  },
+
+  async confirmSubscription(id: number): Promise<SubscriptionConfirmation> {
+    const { data } = await api.post(`/subscriptions/${id}/confirm`)
     return data.data
   },
 
@@ -1079,6 +1318,11 @@ export const adminApi = {
   async subscriptionsReport(params: IncomeReportQuery = {}): Promise<SubscriptionsReport> {
     const { data } = await api.get('/admin/reports/subscriptions', { params })
     return data.data
+  },
+
+  async subscriptionRecords(params: SubscriptionRecordsQuery = {}): Promise<Paginated<SubscriptionRecord>> {
+    const { data } = await api.get('/admin/reports/subscriptions/records', { params })
+    return data
   },
 
   async referralsReport(params: IncomeReportQuery = {}): Promise<ReferralsReport> {
@@ -1407,6 +1651,33 @@ export const competitionApi = {
 }
 
 export const schoolApi = {
+  async joinLink(orgId: number): Promise<{ active: boolean; expires_at: string; url: string | null } | null> {
+    const { data } = await api.get(`/schools/${orgId}/join-link`)
+    return data.data
+  },
+  async rotateJoinLink(orgId: number): Promise<{ active: boolean; expires_at: string; url: string | null }> {
+    const { data } = await api.post(`/schools/${orgId}/join-link`)
+    return data.data
+  },
+  async revokeJoinLink(orgId: number): Promise<void> {
+    await api.delete(`/schools/${orgId}/join-link`)
+  },
+  async schoolJoinPreview(token: string): Promise<{ school: string; expires_at: string }> {
+    const { data } = await api.get(`/school-join/${token}`)
+    return data.data
+  },
+  async joinSchool(token: string, learnerId?: number): Promise<{ learner_id: number; school: string }> {
+    const { data } = await api.post(`/school-join/${token}`, learnerId ? { learner_id: learnerId } : {})
+    return data.data
+  },
+  async teacherProfile(): Promise<TeacherProfileFields> {
+    const { data } = await api.get('/teacher/profile')
+    return data.data
+  },
+  async updateTeacherProfile(input: TeacherProfileFields): Promise<TeacherProfileFields> {
+    const { data } = await api.put('/teacher/profile', input)
+    return data.data
+  },
   async dashboard(orgId: number): Promise<SchoolDashboard> {
     const { data } = await api.get(`/schools/${orgId}/dashboard`)
     return data.data
@@ -1447,8 +1718,27 @@ export const schoolApi = {
     return data.data
   },
 
+  async classInvitations(classId: number): Promise<ClassLearnerInvitationRow[]> {
+    const { data } = await api.get(`/classes/${classId}/invitations`)
+    return data.data
+  },
+
+  async resendClassInvitation(classId: number, invitationId: number): Promise<ClassLearnerInvitationRow> {
+    const { data } = await api.post(`/classes/${classId}/invitations/${invitationId}/resend`)
+    return data.data
+  },
+
+  async cancelClassInvitation(classId: number, invitationId: number): Promise<void> {
+    await api.post(`/classes/${classId}/invitations/${invitationId}/cancel`)
+  },
+
   async classCourses(classId: number): Promise<ClassCourseRow[]> {
     const { data } = await api.get(`/classes/${classId}/courses`)
+    return data.data
+  },
+
+  async classCourseOutline(classId: number, courseId: number): Promise<ClassCourseOutline> {
+    const { data } = await api.get(`/classes/${classId}/courses/${courseId}/outline`)
     return data.data
   },
 
@@ -1479,6 +1769,21 @@ export const schoolApi = {
 
   async classAssignments(classId: number): Promise<ClassAssignmentRow[]> {
     const { data } = await api.get(`/classes/${classId}/assignments`)
+    return data.data
+  },
+
+  async classAssignmentLessons(classId: number): Promise<ClassAssignmentLessonOption[]> {
+    const { data } = await api.get(`/classes/${classId}/assignment-lessons`)
+    return data.data
+  },
+
+  async classQuizReport(classId: number): Promise<ClassQuizReportRow[]> {
+    const { data } = await api.get(`/classes/${classId}/quizzes`)
+    return data.data
+  },
+
+  async classQuizAttempt(classId: number, attemptId: number): Promise<ClassQuizAttemptDetail> {
+    const { data } = await api.get(`/classes/${classId}/quiz-attempts/${attemptId}`)
     return data.data
   },
 
@@ -1537,6 +1842,15 @@ export const schoolApi = {
     return data.data
   },
 
+  async inactiveSeats(orgId: number): Promise<InactiveSeatReview> {
+    const { data } = await api.get(`/schools/${orgId}/seats/inactive`)
+    return data.data
+  },
+
+  async releaseInactiveSeat(orgId: number, learnerId: number): Promise<void> {
+    await api.post(`/schools/${orgId}/seats/inactive/${learnerId}/release`)
+  },
+
   async purchaseSeats(orgId: number, input: PurchaseSeatsInput, idempotencyKey: string = crypto.randomUUID()): Promise<PurchaseSeatsResult> {
     const { data } = await api.post(`/schools/${orgId}/seats/purchase`, input, { headers: { 'Idempotency-Key': idempotencyKey } })
     return data.data
@@ -1544,6 +1858,11 @@ export const schoolApi = {
 
   async invoices(orgId: number): Promise<SchoolInvoice[]> {
     const { data } = await api.get(`/schools/${orgId}/invoices`)
+    return data.data
+  },
+
+  async confirmInvoice(orgId: number, invoiceId: number): Promise<InvoiceConfirmation> {
+    const { data } = await api.post(`/schools/${orgId}/invoices/${invoiceId}/confirm`)
     return data.data
   },
 
@@ -1706,6 +2025,9 @@ export const gamificationApi = {
 }
 
 export const profileApi = {
+  async exit(pin: string): Promise<void> {
+    await api.post('/profiles/exit', { pin })
+  },
   /** Create or return the signed-in parent's/student's own adult learner identity. */
   async ensureSelfLearner(): Promise<LearnerProfile> {
     const { data } = await api.post('/me/learner-profile')

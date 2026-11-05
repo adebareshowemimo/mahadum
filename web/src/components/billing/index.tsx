@@ -97,7 +97,7 @@ export function RemoveAdsCTA() {
       <span className="text-2xl" aria-hidden>✨</span>
       <div className="flex-1">
         <p className="font-display font-semibold">Learning, ad-free</p>
-        <p className="text-sm text-navy-200">Upgrade to Mahadum Plus — no ads, offline lessons.</p>
+        <p className="text-sm text-navy-200">Upgrade to Mahadum Plus for ad-free learning and unlimited hearts.</p>
       </div>
       <Button variant="premium" size="sm" className="bg-gold-400 text-charcoal-900 hover:bg-gold-300">Upgrade</Button>
     </div>

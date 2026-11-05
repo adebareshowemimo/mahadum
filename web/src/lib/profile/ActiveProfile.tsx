@@ -38,6 +38,25 @@ export function ActiveProfileProvider({ children }: { children: ReactNode }) {
     [user],
   )
 
+  // The server token is authoritative for child mode. Ignore an old or edited
+  // browser preference that would otherwise show a child without API protection.
+  useEffect(() => {
+    if (!user) return
+    const serverChild = user.active_child_profile_id ?? null
+    setId((current) => {
+      const storedChild = learners.some((learner) => learner.id === current && learner.is_child)
+      if (!serverChild && storedChild) {
+        localStorage.removeItem(STORAGE_KEY)
+        return null
+      }
+      if (serverChild && current !== serverChild) {
+        localStorage.setItem(STORAGE_KEY, String(serverChild))
+        return serverChild
+      }
+      return current
+    })
+  }, [user, learners])
+
   const setActiveLearner = useCallback((id: number | null) => {
     setId(id)
     if (id == null) localStorage.removeItem(STORAGE_KEY)
@@ -70,14 +89,15 @@ export function ActiveProfileProvider({ children }: { children: ReactNode }) {
     }
   }, [user, learners, activeLearnerId, setActiveLearner])
 
+  const selectedId = user?.active_child_profile_id ?? activeLearnerId
   const value = useMemo<ActiveProfileValue>(
     () => ({
       learners,
-      activeLearnerId,
-      activeLearner: learners.find((l) => l.id === activeLearnerId) ?? null,
+      activeLearnerId: selectedId,
+      activeLearner: learners.find((l) => l.id === selectedId) ?? null,
       setActiveLearner,
     }),
-    [learners, activeLearnerId, setActiveLearner],
+    [learners, selectedId, setActiveLearner],
   )
 
   return <ActiveProfileContext.Provider value={value}>{children}</ActiveProfileContext.Provider>

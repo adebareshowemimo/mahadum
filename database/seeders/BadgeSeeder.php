@@ -12,6 +12,7 @@ class BadgeSeeder extends Seeder
         $badges = [
             ['code' => 'first_lesson',  'name' => 'First Steps',     'description' => 'Completed your first lesson.',      'icon' => '👣'],
             ['code' => 'streak_7',      'name' => 'Week Warrior',    'description' => 'Kept a 7-day streak.',              'icon' => '🔥'],
+            ['code' => 'streak_30',     'name' => 'Month Maker',     'description' => 'Kept a 30-day streak.',             'icon' => '🔥'],
             ['code' => 'sharp_shooter', 'name' => 'Sharp Shooter',   'description' => 'Scored 100% on a quiz.',            'icon' => '🎯'],
             ['code' => 'family_hero',   'name' => 'Family Hero',     'description' => 'Earned the most legitimate XP in your family for a day.', 'icon' => '⭐'],
 

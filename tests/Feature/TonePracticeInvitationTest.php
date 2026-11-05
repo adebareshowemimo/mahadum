@@ -25,6 +25,7 @@ class TonePracticeInvitationTest extends TestCase
         $this->postJson('/api/v1/enrollments', ['learner_id' => $learner->id, 'course_id' => $lesson->courseLevel->course_id])->assertCreated();
         $minor = $this->userWithRole('student', ['date_of_birth' => now()->subYears(12)]);
         FamilyMember::create(['family_id' => $learner->family_id, 'user_id' => $minor->id, 'relationship' => 'child', 'is_account_owner' => false]);
+        $this->approvePracticePartner($learner, $parent, $parent);
         $contacts = $this->getJson("/api/v1/learners/{$learner->id}/practice-contacts")->assertOk()->json('data');
         $this->assertSame([$parent->id], array_column($contacts, 'id'));
         $this->postJson('/api/v1/tone-practice/invitations', ['learner_id' => $learner->id, 'component_id' => $component->id, 'recipient_email' => $parent->email])->assertCreated();
@@ -33,7 +34,7 @@ class TonePracticeInvitationTest extends TestCase
             $this->postJson('/api/v1/tone-practice/invitations', ['learner_id' => $learner->id, 'component_id' => $component->id, 'recipient_email' => $stranger->email])->assertUnprocessable();
             $this->postJson('/api/v1/course-practice/invitations', ['learner_id' => $learner->id, 'recipient_user_id' => $stranger->id])->assertUnprocessable();
         }
-        $this->postJson('/api/v1/tone-practice/invitations', ['learner_id' => $learner->id, 'component_id' => $component->id, 'recipient_email' => 'missing@example.test'])->assertUnprocessable()->assertJsonPath('message', 'Choose an active adult from this learner’s family or school practice contacts.');
+        $this->postJson('/api/v1/tone-practice/invitations', ['learner_id' => $learner->id, 'component_id' => $component->id, 'recipient_email' => 'missing@example.test'])->assertUnprocessable()->assertJsonPath('message', "This person isn't on your approved list. Only registered parents, guardians or teachers can be invited to practise.");
     }
 
     public function test_parent_can_invite_registered_parent_for_48_hours(): void
@@ -46,6 +47,7 @@ class TonePracticeInvitationTest extends TestCase
         $component = $this->publishedLesson()->components->firstWhere('type', 'speaking');
 
         FamilyMember::create(['family_id' => $learner->family_id, 'user_id' => $recipient->id, 'relationship' => 'guardian', 'is_account_owner' => false]);
+        $this->approvePracticePartner($learner, $recipient, $parent);
 
         $this->postJson('/api/v1/tone-practice/invitations', [
             'learner_id' => $learner->id,
@@ -99,6 +101,7 @@ class TonePracticeInvitationTest extends TestCase
         $learner = $this->parentWithChild($parent);
         $lesson = $this->publishedLesson();
         FamilyMember::create(['family_id' => $learner->family_id, 'user_id' => $recipient->id, 'relationship' => 'guardian', 'is_account_owner' => false]);
+        $this->approvePracticePartner($learner, $recipient, $parent);
         $first = $lesson->components->firstWhere('type', 'video');
         $first->video->update(['external_url' => 'https://example.com/first-video.mp4']);
         $video = $lesson->components()->create(['type' => 'video', 'position' => 4, 'xp_value' => 0]);

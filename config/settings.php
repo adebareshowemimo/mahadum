@@ -8,14 +8,65 @@
  *
  * Keys are grouped only for display; the key string is global and unique.
  */
+$goalDefaults = [
+    'grandparents' => ['Grandparents', 'family,greeting,elder,grandparent,conversation', 'Every lesson brings you closer to sharing a conversation with your grandparents.'],
+    'travel' => ['Travel', 'travel,journey,direction,market,transport,food', 'Every lesson helps you feel more at home on your travels.'],
+    'school' => ['School', 'school,class,study,reading,writing,number', 'Every lesson builds confidence for school.'],
+    'business' => ['Business', 'business,work,market,customer,money,meeting', 'Every lesson helps you communicate with more confidence at work.'],
+];
+$goalSettings = [];
+foreach ($goalDefaults as $key => [$label, $keywords, $message]) {
+    $goalSettings["learning_goal.$key.enabled"] = [
+        'label' => "$label: available for learners", 'help' => 'Show this goal in onboarding and profile settings.',
+        'type' => 'bool', 'default' => true,
+    ];
+    $goalSettings["learning_goal.$key.label"] = [
+        'label' => "$label: option label", 'help' => 'The wording learners see when choosing a goal.',
+        'type' => 'string', 'default' => $label,
+    ];
+    $goalSettings["learning_goal.$key.keywords"] = [
+        'label' => "$label: lesson keywords", 'help' => 'Comma-separated words used to suggest matching lessons from the learner’s path.',
+        'type' => 'string', 'default' => $keywords,
+    ];
+    $goalSettings["learning_goal.$key.message"] = [
+        'label' => "$label: progress message", 'help' => 'Shown beside the learner’s completed lesson count.',
+        'type' => 'string', 'default' => $message,
+    ];
+}
+
 return [
     'groups' => [
+        'family_coins' => [
+            'label' => 'Family coins',
+            'settings' => [
+                'wallet.coin_price_minor' => [
+                    'label' => 'Coin price (kobo per coin)',
+                    'help' => 'Set a positive price to let parents buy coins from their verified naira wallet balance. Zero keeps coin purchases off.',
+                    'type' => 'int', 'min' => 0, 'max' => 100000, 'default' => 0,
+                ],
+                'streak.shield_price_coins' => [
+                    'label' => 'Streak Shield price (coins)',
+                    'help' => 'The price of one Streak Shield. Zero turns purchases off.',
+                    'type' => 'int', 'min' => 0, 'max' => 100000, 'default' => 10,
+                ],
+            ],
+        ],
+        'learning_goals' => [
+            'label' => 'Learning goals',
+            'settings' => [
+                'learning_goal.question' => [
+                    'label' => 'Onboarding question', 'help' => 'Question shown after sign-up and when a learner changes their goal.',
+                    'type' => 'string', 'default' => 'Why are you learning?',
+                ],
+                ...$goalSettings,
+            ],
+        ],
         'rewarded_video' => [
             'label' => 'Rewarded video',
             'settings' => [
                 'ads.managed_video_enabled' => [
                     'label' => 'Enable rewarded video',
-                    'help' => 'Eligible free learners can watch the configured video to refill all five hearts. Consent-age and staff restrictions still apply.',
+                    'help' => 'Eligible free learners can watch the configured video to earn one heart. Consent-age and staff restrictions still apply.',
                     'type' => 'bool', 'default' => false,
                 ],
                 'ads.managed_video_asset_id' => [
@@ -136,6 +187,16 @@ return [
                     'type' => 'int',
                     'min' => 0,
                     'default' => 0,
+                ],
+            ],
+        ],
+        'school_seats' => [
+            'label' => 'School seats',
+            'settings' => [
+                'school.seat_inactive_days' => [
+                    'label' => 'Seat inactivity review (days)',
+                    'help' => 'School learners with no learning activity for this many days can be reviewed for seat release.',
+                    'type' => 'int', 'min' => 7, 'max' => 365, 'default' => 30,
                 ],
             ],
         ],

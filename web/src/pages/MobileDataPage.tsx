@@ -96,8 +96,13 @@ function MobileDataStorePage() {
             {(store.status === 'failed' || store.status === 'needs_review') && <Alert variant="danger" title="Let’s check your purchase">Delivery couldn’t be confirmed. Contact support with this reference to resolve this purchase.</Alert>}
             <p className="break-all text-xs text-muted">Reference: {store.purchase.data.payment_reference}</p>
           </>}
-          <div className="flex flex-wrap gap-3"><Button variant="outline" loading={store.purchase.isFetching} onClick={() => { store.track('status_check_clicked'); void store.purchase.refetch() }}>Check status</Button><Button onClick={store.reset}>Buy another bundle</Button><LinkButton to="/support" onClick={() => store.track('support_clicked')} variant="ghost">Get help</LinkButton></div>
+          <div className="flex flex-wrap gap-3"><Button variant="outline" loading={store.purchase.isFetching} onClick={() => { store.track('status_check_clicked'); void store.purchase.refetch() }}>Check status</Button>{!!store.providers.data?.length && <Button onClick={store.reset}>Buy another bundle</Button>}<LinkButton to="/support" onClick={() => store.track('support_clicked')} variant="ghost">Get help</LinkButton></div>
           <p className="text-xs leading-5 text-muted">Buying another bundle creates a separate purchase. This order stays in your recent purchases below.</p>
+        </section>
+      ) : !store.providers.isLoading && !store.providers.data?.length ? (
+        <section className={cn(panel, 'mx-auto max-w-2xl space-y-4')} aria-label="Data purchases paused">
+          <Alert variant="warning" title="New data purchases are paused">We’re resolving delivery issues. No new payment can be started here. Existing orders remain below, and you can check their status or contact support for help.</Alert>
+          <p className="text-sm text-muted">Read the <Link to="/data-top-up-terms" className="font-semibold underline">Data Top-Up Terms</Link> for delivery and refund information.</p>
         </section>
       ) : (
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_310px]">

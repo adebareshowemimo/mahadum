@@ -195,13 +195,17 @@ export function CourseCatalogPage() {
                       startAsSelf.mutate(course.id, {
                         onSuccess: (learner) => {
                           setActiveLearner(learner.id)
-                          navigate('/learn')
+                          const languageId = config?.languages.find((item) => item.code === course.language)?.id
+                          if (languageId) navigate(`/learn/placement?course=${course.id}&language=${languageId}`)
+                          else enroll.mutate(course.id, { onSuccess: () => navigate('/learn') })
                         },
                       })
                     } else if (course.is_enrolled) {
                       navigate('/learn')
                     } else {
-                      enroll.mutate(course.id, { onSuccess: () => navigate('/learn') })
+                      const languageId = config?.languages.find((item) => item.code === course.language)?.id
+                      if (languageId) navigate(`/learn/placement?course=${course.id}&language=${languageId}`)
+                      else enroll.mutate(course.id, { onSuccess: () => navigate('/learn') })
                     }
                   }}
                 >
