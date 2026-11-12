@@ -171,10 +171,15 @@ mkdir -p storage/app/public/media
 # A shared writable group permits file access, but only the owner (or root)
 # can chmod a file. Uploaded media and invoice PDFs belong to www-data;
 # trying to chmod them as the deploy user aborts an otherwise healthy deploy.
-find storage bootstrap/cache -user "$(id -un)" \( -type f -o -type d \) -exec chmod ug+rwX {} +
+# Private assets can also live inside owner-only directories. Filtering by
+# owner does not prevent find from descending into those directories. Prune
+# the private disk before traversal, preserving its access restrictions.
+find storage bootstrap/cache -path storage/app/private -prune -o \
+    -user "$(id -un)" \( -type f -o -type d \) -exec chmod ug+rwX {} +
 # Preserve the configured shared group on files created by either Artisan or
 # the web server. Ownership is provisioned once by bootstrap-ubuntu.sh.
-find storage bootstrap/cache -user "$(id -un)" -type d -exec chmod g+s {} +
+find storage bootstrap/cache -path storage/app/private -prune -o \
+    -user "$(id -un)" -type d -exec chmod g+s {} +
 
 echo "==> Leaving maintenance mode"
 php artisan up

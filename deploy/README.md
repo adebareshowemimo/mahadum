@@ -149,6 +149,11 @@ The script is safe to re-run and re-trigger:
   by the user running the deploy. Uploads and generated PDFs owned by
   `www-data` keep their existing permissions. The shared group and directory
   ownership are provisioned by `bootstrap-ubuntu.sh`.
+  The private disk (`storage/app/private`) is excluded from traversal entirely:
+  owner-only story directories must not fail deployment or have their access
+  restrictions broadened. If an older script rolled back with a private-story
+  permission error, fetch and pull the deployment branch before rerunning the
+  script, as shown above; this loads the corrected script before deployment starts.
 - Override `HEALTH_URL` (defaults to `http://127.0.0.1/up`) if the app
   isn't reachable on localhost, or `LOCK_FILE` if running multiple
   apps' deploys need distinct locks on the same box.
