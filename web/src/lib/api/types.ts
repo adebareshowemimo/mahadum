@@ -546,6 +546,7 @@ export interface AuthorLesson {
 }
 
 export interface LibrarySetLesson {
+  est_minutes?: number | null
   id: number
   title: string
   summary: string | null
@@ -564,13 +565,15 @@ export interface LibrarySetLevel {
 }
 
 export interface LibrarySetSummary {
+  owner?: string | null
+  level_band?: string | null
   id: number
   kind: 'proverb' | 'trivia'
   title: string
   description: string | null
   language_id: number
   language: string | null
-  status: 'draft' | 'published'
+  status: 'draft' | 'published' | 'archived'
   levels_count: number
   lessons_count: number
   completed_count: number

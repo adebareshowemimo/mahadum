@@ -10,6 +10,12 @@ class LibrarySet extends Model
 {
     protected $guarded = [];
 
+    /** @return BelongsTo<User, $this> */
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'owner_user_id');
+    }
+
     /** @return BelongsTo<Language, $this> */
     public function language(): BelongsTo
     {

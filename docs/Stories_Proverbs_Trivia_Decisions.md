@@ -13,13 +13,14 @@ These decisions resolve the open items in `Mahadum360_Stories_Trivia_Spec_2.docx
 
 ## Proverbs & Trivia
 
-- Proverbs and Trivia are ordinary lessons, tagged by kind. Authors create them within an existing course level using the standard lesson editor. Parents and learners have a separate browse page that opens the standard lesson player.
+- Proverbs and Trivia use independent sets containing levels and lessons, tagged by kind. Authors use the standard lesson editor; sets are not attached to a course. Parents and learners have a separate browse page that opens the standard lesson player.
+- Set management includes owner and optional level-band metadata, search/language/status filters, publication controls, and archiving. Archiving hides the set and its lessons from learners; unarchiving returns the set to draft until explicitly published. Publication continues to require all lessons to pass the existing checks, with lesson-specific reasons shown to the author.
 - Their free or paid access follows the containing level and the learner's existing plan rules. There is no separate item charge for a Proverb or Trivia lesson.
 - The author configures the quiz pass percentage, maximum attempts (or unlimited), hearts, question shuffle, seconds per question (or untimed), and XP per correct answer. Correct-answer percentage determines the pass result. The existing lesson system records answers, progress, retries, XP, and hearts. A timed-out question records an unanswered, incorrect response.
 
 ## Creator preview mode
 
-- Proverbs and Trivia use the same interactive lesson preview as course lessons. It includes draft content, grades answers locally, and does not save learner progress, hearts, XP, or attempts. The lesson editor also retains its read-only step review with answer keys.
+- Proverbs and Trivia offer whole-set and individual-level previews, including draft lessons and text-only lessons, alongside the same interactive lesson preview as course lessons. It includes draft content, grades answers locally, and does not save learner progress, hearts, XP, or attempts. The lesson editor also retains its read-only step review with answer keys.
 - Stories open in a separate creator preview with **Free preview** and **Full story** views. The free view applies the same page/chapter cutoff or preview clip as the parent reader. The full view shows all draft or published content and the full video without requiring a purchase. Private media links are generated for authorized creators and expire after 30 minutes.
 
 ## Sample content

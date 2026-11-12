@@ -47,6 +47,7 @@ const LibrarySetDetailPage = lazy(() => import('@/pages/LibrarySetDetailPage').t
 const StoryLibraryPage = lazy(() => import('@/pages/StoryLibraryPage').then((m) => ({ default: m.StoryLibraryPage })))
 const StoryReaderPage = lazy(() => import('@/pages/StoryReaderPage').then((m) => ({ default: m.StoryReaderPage })))
 const CourseBuilderPage = lazy(() => import('@/pages/content/CourseBuilderPage').then((m) => ({ default: m.CourseBuilderPage })))
+const LibrarySetPreviewPage = lazy(() => import('@/pages/content/LibrarySetPreviewPage').then((m) => ({ default: m.LibrarySetPreviewPage })))
 const CoursePreviewPage = lazy(() => import('@/pages/content/CoursePreviewPage').then((m) => ({ default: m.CoursePreviewPage })))
 const StoryPreviewPage = lazy(() => import('@/pages/content/StoryPreviewPage').then((m) => ({ default: m.StoryPreviewPage })))
 const LessonBuilderPage = lazy(() => import('@/pages/content/LessonBuilderPage').then((m) => ({ default: m.LessonBuilderPage })))
@@ -387,6 +388,8 @@ export function App() {
         <Route path="/learning-goal" element={<LearningGoalPage />} />
         <Route path="/tone-practice/:token" element={<TonePracticeInvitationPage />} />
         <Route path="/course-practice/:token" element={<CoursePracticeInvitationPage />} />
+        <Route path="/courses/proverbs-trivia/:setId/preview" element={<LibrarySetPreviewPage />} />
+        <Route path="/courses/proverbs-trivia/:setId/levels/:levelId/preview" element={<LibrarySetPreviewPage />} />
         <Route path="/courses/:courseId/preview" element={<CoursePreviewPage />} />
         <Route path="/courses/:courseId/levels/:levelId/preview" element={<CoursePreviewPage />} />
         <Route path="/courses/:courseId/lessons/:lessonId/preview" element={<CoursePreviewPage />} />

@@ -685,17 +685,20 @@ export const learningApi = {
 }
 
 export const contentApi = {
-  async librarySets(query: { kind?: 'proverb' | 'trivia'; language?: string; q?: string; page?: number } = {}): Promise<Paginated<import('./types').LibrarySetSummary>> {
+  async librarySets(query: { kind?: 'proverb' | 'trivia'; language?: string; q?: string; status?: string; page?: number } = {}): Promise<Paginated<import('./types').LibrarySetSummary>> {
     const { data } = await api.get('/library-sets', { params: query }); return data
   },
   async librarySet(id: number): Promise<import('./types').LibrarySetSummary> {
     const { data } = await api.get(`/library-sets/${id}`); return data.data
   },
-  async createLibraryCollection(input: { kind: 'proverb' | 'trivia'; language_id: number; title: string; description?: string }): Promise<import('./types').LibrarySetSummary> {
+  async createLibraryCollection(input: { kind: 'proverb' | 'trivia'; language_id: number; title: string; description?: string; level_band?: string }): Promise<import('./types').LibrarySetSummary> {
     const { data } = await api.post('/library-sets', input); return data.data
   },
-  async updateLibraryCollection(id: number, input: { title?: string; description?: string; language_id?: number }): Promise<import('./types').LibrarySetSummary> {
+  async updateLibraryCollection(id: number, input: { title?: string; description?: string; language_id?: number; level_band?: string }): Promise<import('./types').LibrarySetSummary> {
     const { data } = await api.patch(`/library-sets/${id}`, input); return data.data
+  },
+  async setLibraryCollectionArchived(id: number, archive: boolean): Promise<import('./types').LibrarySetSummary> {
+    const { data } = await api.post(`/library-sets/${id}/archive`, { archive }); return data.data
   },
   async deleteLibraryCollection(id: number): Promise<void> { await api.delete(`/library-sets/${id}`) },
   async setLibraryCollectionPublished(id: number, publish: boolean): Promise<import('./types').LibrarySetSummary> {
@@ -711,7 +714,7 @@ export const contentApi = {
   async reorderLibraryLevels(id: number, order: number[]): Promise<import('./types').LibrarySetSummary> {
     const { data } = await api.post(`/library-sets/${id}/levels/reorder`, { order }); return data.data
   },
-  async addLibraryLesson(levelId: number, input: { title: string; summary?: string }): Promise<{ id: number; title: string }> {
+  async addLibraryLesson(levelId: number, input: { title: string; summary?: string; est_minutes?: number }): Promise<{ id: number; title: string }> {
     const { data } = await api.post(`/library-set-levels/${levelId}/lessons`, input); return data.data
   },
   async reorderLibraryLessons(levelId: number, order: number[]): Promise<import('./types').LibrarySetLevel> {

@@ -1,3 +1,5 @@
+import { useRefreshLibrary } from '@/lib/content/libraryQueries'
+import { LibrarySetContents } from '@/components/content/LibrarySetContents'
 import { useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
@@ -83,6 +85,7 @@ function LessonEditor() {
   const { courseId, setId, lessonId } = useParams()
   const [searchParams] = useSearchParams()
   const standalone = !courseId
+  const refreshLibrary = useRefreshLibrary()
   const id = Number(lessonId)
   const lesson = useLessonDetail(id)
   const config = useConfig()
@@ -105,6 +108,7 @@ function LessonEditor() {
     setPublishErrors(null)
     try {
       await publish.mutateAsync()
+      if (setId) await refreshLibrary()
     } catch (err) {
       if (err instanceof ApiError && Array.isArray(err.details)) setPublishErrors(err.details as string[])
       else setPublishErrors([err instanceof ApiError ? err.message : 'Publish failed.'])
@@ -139,6 +143,7 @@ function LessonEditor() {
   if (standalone && !canManage) return <div className="flex flex-col gap-5">
     <Link to="/courses/proverbs-trivia" className="text-sm font-semibold text-primary">← Proverbs & Trivia</Link>
     <h1 className="font-display text-2xl font-bold">{lesson.data.title}</h1>
+    {setId && <LibrarySetContents setId={Number(setId)} currentLessonId={id} />}
     {lesson.data.summary && <p className="whitespace-pre-wrap rounded-xl border border-border p-5">{lesson.data.summary}</p>}
     <Alert variant="info">This is a read-only catalogue view. Content owners edit and publish sets.</Alert>
     <Button variant="secondary" onClick={() => setPreviewOpen(true)}>Play preview</Button>
@@ -178,6 +183,7 @@ function LessonEditor() {
       </div>
 
       {!standalone && <CourseContents courseId={Number(courseId)} currentLessonId={id} />}
+      {setId && <LibrarySetContents setId={Number(setId)} currentLessonId={id} />}
 
       {!standalone && <div className="rounded-xl border border-border p-4 text-sm">
         <Badge variant={lesson.data.is_free ? 'success' : 'neutral'}>{lesson.data.is_free ? 'Free access' : 'Paid access'}</Badge>
@@ -195,6 +201,7 @@ function LessonEditor() {
             summary: String(values.get('summary') ?? '').trim(),
           })
           await lesson.refetch()
+          if (setId) await refreshLibrary()
         } catch (err) { setMetadataError(err instanceof ApiError ? err.message : 'Could not save language and level.') }
         finally { setSavingMetadata(false) }
       }}>

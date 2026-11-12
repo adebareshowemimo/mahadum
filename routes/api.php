@@ -217,6 +217,7 @@ Route::prefix('v1')->group(function () {
         Route::delete('library-sets/{set}', [LibraryCollectionController::class, 'destroy'])->middleware('can:content.lessons.manage');
         Route::post('library-sets/{set}/publish', [LibraryCollectionController::class, 'publish'])->middleware('can:content.courses.publish');
         Route::post('library-sets/{set}/unpublish', [LibraryCollectionController::class, 'unpublish'])->middleware('can:content.courses.publish');
+        Route::post('library-sets/{set}/archive', [LibraryCollectionController::class, 'archive'])->middleware('can:content.courses.publish');
         Route::post('library-sets/{set}/levels', [LibraryCollectionController::class, 'addLevel'])->middleware('can:content.lessons.manage');
         Route::post('library-sets/{set}/levels/reorder', [LibraryCollectionController::class, 'reorderLevels'])->middleware('can:content.lessons.manage');
         Route::patch('library-set-levels/{level}', [LibraryCollectionController::class, 'updateLevel'])->middleware('can:content.lessons.manage');

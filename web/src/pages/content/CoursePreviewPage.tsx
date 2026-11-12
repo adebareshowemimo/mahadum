@@ -321,7 +321,7 @@ function UnitPath({
   )
 }
 
-function LessonDeck({
+export function LessonDeck({
   lesson,
   built,
   nextTitle,

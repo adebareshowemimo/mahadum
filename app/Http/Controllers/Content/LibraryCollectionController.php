@@ -26,14 +26,16 @@ class LibraryCollectionController extends Controller
             'q' => ['nullable', 'string', 'max:100'],
             'learner_id' => ['nullable', 'integer', 'exists:learner_profiles,id'],
             'page' => ['nullable', 'integer', 'min:1'],
+            'status' => ['nullable', 'in:draft,published,archived'],
         ]);
         $author = $request->user()->can('content.courses.view') && ! $request->filled('learner_id');
         $learner = $author ? null : LearnerProfile::findOrFail($request->integer('learner_id'));
         if ($learner) {
             Gate::authorize('view', $learner);
         }
-        $query = LibrarySet::with(['language', 'levels.lessons'])
+        $query = LibrarySet::with(['language', 'owner', 'levels.lessons'])
             ->when(! $author, fn ($q) => $q->where('status', 'published'))
+            ->when($author && $request->filled('status'), fn ($q) => $q->where('status', $values['status']))
             ->when($request->filled('kind'), fn ($q) => $q->where('kind', $values['kind']))
             ->when($request->filled('language'), fn ($q) => $q->whereHas('language', fn ($l) => $l->where('code', $values['language'])))
             ->when($request->filled('q'), fn ($q) => $q->where('title', 'like', '%'.$values['q'].'%'));
@@ -64,6 +66,7 @@ class LibraryCollectionController extends Controller
         $values = $request->validate([
             'kind' => ['required', 'in:proverb,trivia'], 'language_id' => ['required', 'integer', 'exists:languages,id'],
             'title' => ['required', 'string', 'max:255'], 'description' => ['nullable', 'string', 'max:2000'],
+            'level_band' => ['nullable', 'string', 'max:50'],
         ]);
         $set = LibrarySet::create($values + ['owner_user_id' => $request->user()->id, 'status' => 'draft']);
         $audit->record('library_set.created', $set, [], $values);
@@ -76,6 +79,7 @@ class LibraryCollectionController extends Controller
         $values = $request->validate([
             'title' => ['sometimes', 'string', 'max:255'], 'description' => ['nullable', 'string', 'max:2000'],
             'language_id' => ['sometimes', 'integer', 'exists:languages,id'], 'kind' => ['prohibited'],
+            'level_band' => ['nullable', 'string', 'max:50'],
         ]);
         $before = $set->only(array_keys($values));
         $set->update($values);
@@ -189,6 +193,7 @@ class LibraryCollectionController extends Controller
 
     public function publish(LibrarySet $set, LessonPublishService $publisher): JsonResponse
     {
+        abort_if($set->status === 'archived', 409, 'Unarchive this set before publishing.');
         $lessons = Lesson::whereHas('librarySetLevel', fn ($q) => $q->where('library_set_id', $set->id))->get();
         $failures = [];
         if ($lessons->isEmpty()) {
@@ -216,14 +221,30 @@ class LibraryCollectionController extends Controller
 
     public function unpublish(LibrarySet $set): JsonResponse
     {
+        abort_if($set->status === 'archived', 409, 'Unarchive this set before changing publication.');
         $set->update(['status' => 'draft']);
+        app(AuditLogger::class)->record('library_set.unpublished', $set);
 
         return $this->show(request(), $set, app(LessonAccess::class));
     }
 
+    public function archive(Request $request, LibrarySet $set, AuditLogger $audit): JsonResponse
+    {
+        $values = $request->validate(['archive' => ['required', 'boolean']]);
+        $before = $set->only('status');
+        if ($values['archive']) {
+            $set->update(['status' => 'archived']);
+        } elseif ($set->status === 'archived') {
+            $set->update(['status' => 'draft']);
+        }
+        $audit->record($values['archive'] ? 'library_set.archived' : 'library_set.unarchived', $set, $before, $set->only('status'));
+
+        return $this->show($request, $set, app(LessonAccess::class));
+    }
+
     private function serialize(LibrarySet $set, ?LearnerProfile $learner, LessonAccess $access, bool $withLevels): array
     {
-        $set->loadMissing('language');
+        $set->loadMissing(['language', 'owner']);
         $levels = $withLevels ? $set->levels()->with('lessons')->get() : collect();
         $lessons = $withLevels ? $levels->flatMap->lessons : $set->levels->flatMap->lessons;
         $published = $lessons->whereNotNull('published_at');
@@ -234,6 +255,7 @@ class LibraryCollectionController extends Controller
         return [
             'id' => $set->id, 'kind' => $set->kind, 'title' => $set->title,
             'description' => $set->description, 'language_id' => $set->language_id,
+            'level_band' => $set->level_band, 'owner' => $learner ? null : $set->owner?->name,
             'language' => $set->language?->code, 'status' => $set->status,
             'levels_count' => $set->levels->count(), 'lessons_count' => $published->count(),
             'completed_count' => count($completed),
@@ -253,6 +275,7 @@ class LibraryCollectionController extends Controller
                 'id' => $lesson->id, 'title' => $lesson->title,
                 'summary' => $learner && $access->content($learner, $lesson, $tier)['reason'] !== null ? null : $lesson->summary,
                 'position' => $lesson->position, 'published_at' => $lesson->published_at,
+                'est_minutes' => $lesson->est_minutes,
                 'completed' => in_array($lesson->id, $completed, true),
                 'access_reason' => $learner ? ($access->content($learner, $lesson, $tier)['reason'] ?? null) : null,
             ])->values()];
