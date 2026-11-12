@@ -369,47 +369,49 @@ function StartScreen({
   onExit: () => void
 }) {
   return (
-    <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-4 py-10 text-center">
-      <span className="relative mb-1 flex size-28 items-center justify-center" aria-hidden="true">
-        <span className="absolute inset-0 rounded-full bg-gold-500/15" />
-        <span className="absolute inset-2 rounded-full border-2 border-dashed border-gold-500/40" />
-        <span className="text-5xl">{icon}</span>
-      </span>
-      <h1 className="font-display text-3xl font-bold text-foreground">{title}</h1>
-      {subtitle && <p className="text-muted">{subtitle}</p>}
-      {canResume && <p className="text-sm font-semibold text-gold-300">Pick up where you left off.</p>}
+    <main className="flex flex-1 items-center justify-center px-4 py-8">
+      <div className="flex w-full max-w-lg flex-col items-center gap-4 rounded-3xl border border-navy-500/50 bg-navy-900/95 px-5 py-7 text-center shadow-2xl sm:px-8 sm:py-9">
+        <span className="relative mb-1 flex size-28 items-center justify-center" aria-hidden="true">
+          <span className="absolute inset-0 rounded-full bg-gold-500/15" />
+          <span className="absolute inset-2 rounded-full border-2 border-dashed border-gold-500/40" />
+          <span className="text-5xl">{icon}</span>
+        </span>
+        <h1 className="font-display text-3xl font-bold text-foreground">{title}</h1>
+        {subtitle && <p className="text-navy-100">{subtitle}</p>}
+        {canResume && <p className="text-sm font-semibold text-gold-300">Pick up where you left off.</p>}
 
-      {empty ? (
-        <>
-          <p className="text-sm text-muted">There’s no content to play here yet.</p>
-          <Button3D variant="neutral" size="lg" fullWidth onClick={onExit}>
-            Go back
-          </Button3D>
-        </>
-      ) : (
-        <div className="mt-1 flex w-full flex-col gap-3">
-          {items.length > 0 && <CompletionChecklist items={items} />}
-          {canResume ? (
-            <>
-              <Button3D variant="reward" size="lg" fullWidth onClick={onResume}>
-                Resume
-              </Button3D>
-              <button
-                type="button"
-                onClick={onStartOver}
-                className="text-sm font-medium text-muted underline underline-offset-2 hover:text-foreground"
-              >
-                Start over from the beginning
-              </button>
-            </>
-          ) : (
-            <Button3D variant="reward" size="lg" fullWidth onClick={onResume}>
-              {cta}
+        {empty ? (
+          <>
+            <p className="text-sm text-navy-100">There’s no content to play here yet.</p>
+            <Button3D variant="neutral" size="lg" fullWidth onClick={onExit}>
+              Go back
             </Button3D>
-          )}
-        </div>
-      )}
-    </div>
+          </>
+        ) : (
+          <div className="mt-1 flex w-full flex-col gap-3">
+            {items.length > 0 && <CompletionChecklist items={items} />}
+            {canResume ? (
+              <>
+                <Button3D variant="reward" size="lg" fullWidth onClick={onResume}>
+                  Resume
+                </Button3D>
+                <button
+                  type="button"
+                  onClick={onStartOver}
+                  className="text-sm font-medium text-navy-100 underline underline-offset-2 hover:text-white"
+                >
+                  Start over from the beginning
+                </button>
+              </>
+            ) : (
+              <Button3D variant="reward" size="lg" fullWidth onClick={onResume}>
+                {cta}
+              </Button3D>
+            )}
+          </div>
+        )}
+      </div>
+    </main>
   )
 }
 
@@ -450,30 +452,31 @@ const KIND_META: Record<Slide['kind'], { icon: string; label: string }> = {
 /** Shows which steps are already done (✓) so the learner can see their progress. */
 function CompletionChecklist({ items }: { items: CompItem[] }) {
   return (
-    <ul className="flex flex-col gap-1.5 rounded-2xl bg-foreground/5 p-3 text-left ring-1 ring-foreground/10">
-      {items.map((it) => {
+    <ol className="flex flex-col gap-1 rounded-2xl bg-navy-800/80 p-3 text-left ring-1 ring-navy-500/50">
+      {items.map((it, index) => {
         const meta = KIND_META[it.kind]
         const done = it.done >= it.total
         return (
-          <li key={it.componentId} className="flex items-center gap-3 text-sm">
+          <li key={it.componentId} className="flex min-h-9 items-center gap-3 rounded-lg px-2 text-sm sm:text-base">
+            <span className="w-5 shrink-0 text-right text-xs font-semibold tabular-nums text-navy-200">{index + 1}.</span>
             <span
               className={cn(
                 'flex size-6 shrink-0 items-center justify-center rounded-full text-xs',
-                done ? 'bg-leaf-400/20 text-leaf-300 ring-1 ring-leaf-400/40' : 'bg-foreground/10',
+                done ? 'bg-leaf-400/20 text-leaf-300 ring-1 ring-leaf-400/40' : 'bg-navy-700',
               )}
             >
               {done ? '✓' : meta.icon}
             </span>
-            <span className={cn('flex-1', done ? 'text-foreground' : 'text-muted')}>
+            <span className="flex-1 text-navy-100">
               {meta.label}
               {it.kind === 'quiz' && it.total > 1 && (
-                <span className="text-xs text-muted"> · {it.done}/{it.total} answered</span>
+                <span className="text-xs text-navy-200"> · {it.done}/{it.total} answered</span>
               )}
             </span>
             {done && <span className="text-xs font-semibold text-leaf-300">Completed</span>}
           </li>
         )
       })}
-    </ul>
+    </ol>
   )
 }
