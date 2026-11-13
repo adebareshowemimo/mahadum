@@ -258,6 +258,7 @@ class PublicSeoTest extends TestCase
         $this->seed(GuideLibrarySeeder::class);
         $this->assertDatabaseCount('guide_videos', 48);
         $this->assertDatabaseCount('guide_faqs', 5);
+        $this->assertDatabaseMissing('guide_faqs', ['answer' => 'Example answer: Create an account, choose a learner profile, and select a course to begin. Replace this example with approved support copy.']);
         $this->assertSame(['hausa', 'yoruba', 'igbo'], GuideVideo::query()->where('section', 'sample')->orderBy('sort_order')->limit(3)->pluck('language')->all());
         $video = GuideVideo::query()->where('section', 'sample')->where('youtube_id', 'NAC7DVDMGzM')->firstOrFail();
         $video->update(['title' => 'Reviewed Hausa title', 'is_visible' => false]);
@@ -266,6 +267,31 @@ class PublicSeoTest extends TestCase
         $this->assertDatabaseCount('guide_faqs', 5);
         $this->assertDatabaseHas('guide_videos', ['id' => $video->id, 'title' => 'Reviewed Hausa title', 'is_visible' => false]);
         $this->get('/guides')->assertOk()->assertSee('Showing 1–9 of 23 videos')->assertSee('How-to videos');
+    }
+
+    public function test_production_guide_seed_requires_an_explicit_flag(): void
+    {
+        $previousEnvironment = app()->environment();
+        $previousFlag = getenv('SEED_GUIDE_LIBRARY');
+
+        try {
+            putenv('SEED_GUIDE_LIBRARY');
+            app()->detectEnvironment(fn () => 'production');
+            try {
+                (new GuideLibrarySeeder)->run();
+                $this->fail('Production guides were seeded without an explicit flag.');
+            } catch (\RuntimeException $exception) {
+                $this->assertStringContainsString('SEED_GUIDE_LIBRARY=1', $exception->getMessage());
+            }
+            $this->assertDatabaseCount('guide_videos', 0);
+            putenv('SEED_GUIDE_LIBRARY=1');
+            (new GuideLibrarySeeder)->run();
+            $this->assertDatabaseCount('guide_videos', 48);
+            $this->assertDatabaseCount('guide_faqs', 5);
+        } finally {
+            app()->detectEnvironment(fn () => $previousEnvironment);
+            putenv($previousFlag === false ? 'SEED_GUIDE_LIBRARY' : "SEED_GUIDE_LIBRARY={$previousFlag}");
+        }
     }
 
     public function test_language_voting_requires_verified_account_and_prevents_duplicates(): void

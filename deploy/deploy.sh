@@ -156,6 +156,14 @@ if [ "${SEED_STORIES_TRIVIA_SAMPLES:-0}" = "1" ]; then
     php artisan db:seed --class="Database\Seeders\StoriesTriviaSampleSeeder" --force
 fi
 
+# Populate the public Guides library only on an explicitly requested deploy.
+# Re-running is safe for edited entries, but an ordinary deploy must not
+# recreate a guide that an editor intentionally deleted.
+if [ "${SEED_GUIDE_LIBRARY:-0}" = "1" ]; then
+    echo "==> Seeding guide videos and FAQs"
+    php artisan db:seed --class="Database\Seeders\GuideLibrarySeeder" --force
+fi
+
 echo "==> Caching config/routes/views"
 php artisan config:cache
 # route:cache clears the cache internally, but that is too late when this

@@ -14,8 +14,8 @@ class GuideLibrarySeeder extends Seeder
 {
     public function run(): void
     {
-        if (app()->environment('production')) {
-            throw new \RuntimeException('Example guide FAQs must not be seeded in production.');
+        if (app()->environment('production') && getenv('SEED_GUIDE_LIBRARY') !== '1') {
+            throw new \RuntimeException('Set SEED_GUIDE_LIBRARY=1 to explicitly seed guide content in production.');
         }
 
         $playlists = [
@@ -75,11 +75,11 @@ class GuideLibrarySeeder extends Seeder
         }
 
         $faqs = [
-            ['How do I start learning?', 'Example answer: Create an account, choose a learner profile, and select a course to begin. Replace this example with approved support copy.'],
-            ['Which languages can I explore?', 'Example answer: Browse the available Yorùbá, Igbo, Hausa and English courses. Replace this example with approved support copy.'],
-            ['Can I switch between learner profiles?', 'Example answer: Parents can choose a learner profile from the profile switcher. Replace this example with approved support copy.'],
-            ['Where do I find stories and proverbs?', 'Example answer: Open the Stories or Proverbs & Trivia section from the learning menu. Replace this example with approved support copy.'],
-            ['What should I do if a video does not play?', 'Example answer: Check your connection and try again. If the issue continues, contact support. Replace this example with approved support copy.'],
+            ['How do I start learning?', 'Create an account, choose a learner profile, and select a course to begin.'],
+            ['Which languages can I explore?', 'Browse the available Yorùbá, Igbo, Hausa and English courses.'],
+            ['Can I switch between learner profiles?', 'Parents can choose a learner profile from the profile switcher.'],
+            ['Where do I find stories and proverbs?', 'Open Stories or Proverbs & Trivia from the learning menu.'],
+            ['What should I do if a video does not play?', 'Check your connection and try again. If the issue continues, contact support.'],
         ];
         foreach ($faqs as $index => [$question, $answer]) {
             GuideFaq::firstOrCreate(['question' => $question], ['answer' => $answer, 'sort_order' => $index + 1, 'is_visible' => true]);
