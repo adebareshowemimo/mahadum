@@ -1,0 +1,40 @@
+[
+  {
+    "id": "data-1",
+    "title": "1. Before you buy",
+    "paragraphs": [
+      "Mobile data bundles are separate from Mahadum360 learning subscriptions. An adult account holder must check the network, recipient number, bundle and total price before paying. A child profile cannot make a data purchase.",
+      "A bundle can be offered only while the payment and delivery providers make it available. We may pause new data purchases when delivery cannot be confirmed reliably."
+    ]
+  },
+  {
+    "id": "data-2",
+    "title": "2. Payment and delivery",
+    "paragraphs": [
+      "We start delivery only after the payment provider confirms the payment amount, currency and order reference. A payment confirmation is not a delivery confirmation. Your order page shows the payment and delivery states separately.",
+      "Data is sent to the number entered at checkout through the selected provider and mobile network. Delivery may take time. Keep the order reference and do not pay again for an order that is still being checked."
+    ]
+  },
+  {
+    "id": "data-3",
+    "title": "3. Failed or unconfirmed delivery",
+    "paragraphs": [
+      "If you paid but the bundle has not arrived, contact support with the order reference, recipient number and payment date. Do not send card details. We will check the payment and the provider's delivery record.",
+      "If payment is confirmed and delivery failed or cannot be established after investigation, we will arrange a refund to the original payment method or another remedy you agree to. We will not treat an unconfirmed provider response as proof that data was delivered."
+    ]
+  },
+  {
+    "id": "data-4",
+    "title": "4. Incorrect recipient or network",
+    "paragraphs": [
+      "Please check the recipient and network carefully. Once a provider confirms delivery to the number submitted at checkout, we may be unable to reverse that bundle. Contact support promptly if you notice a mistake; your rights under applicable law remain unaffected."
+    ]
+  },
+  {
+    "id": "data-5",
+    "title": "5. Help and records",
+    "paragraphs": [
+      "You can check an order's status from your account. For unresolved purchases, email support@mahadum360.com or use the Support page and include the order reference. We retain transaction and delivery records needed to investigate and resolve a purchase."
+    ]
+  }
+]

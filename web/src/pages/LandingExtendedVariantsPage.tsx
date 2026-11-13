@@ -219,11 +219,11 @@ export function LandingV4Page() {
           <div className="mx-auto grid max-w-7xl gap-0 overflow-hidden px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
             <Reveal className="bg-[#0f63bc] p-8 sm:p-12">
               <p className="font-display text-3xl font-extrabold">Weak connection? The lesson keeps moving.</p>
-              <p className="mt-4 text-lg font-semibold leading-relaxed text-white/78">Lightweight activities, downloadable lessons and offline convenience respect families whose data and signal are not unlimited.</p>
+              <p className="mt-4 text-lg font-semibold leading-relaxed text-white/78">Lightweight activities and adjustable video quality respect families whose data and signal are not unlimited.</p>
             </Reveal>
             <Reveal delay={80} className="bg-white p-8 text-navy-950 sm:p-12">
               <p className="font-display text-3xl font-extrabold">Free means the whole language.</p>
-              <p className="mt-4 text-lg font-semibold leading-relaxed text-navy-700">Every learning lesson stays available on Free. Paid plans remove ads and add offline and family conveniences—not access to knowledge.</p>
+              <p className="mt-4 text-lg font-semibold leading-relaxed text-navy-700">Free learning includes published preview levels. Paid plans add ad-free learning and family features.</p>
             </Reveal>
           </div>
         </section>
@@ -247,7 +247,7 @@ const ECOSYSTEM_VIEWS = [
     label: 'Learner',
     heading: 'A playful path from free Level 0 to deeper learning.',
     body: 'Five-minute listening, speaking, quiz and culture activities build toward confident use.',
-    features: ['Start free with Level 0', 'XP, badges and leagues', 'Out of data? Buy data on Mahadum360.'],
+    features: ['Start free with Level 0', 'XP, badges and leagues', 'Short lessons that fit your day.'],
   },
   {
     id: 'family',
@@ -430,7 +430,7 @@ export function LandingV5Page() {
               {[
                 ['Free learning', 'Level 0 is available without payment; paid plans unlock further learning.'],
                 ['Child-safe identity', 'Under-18 learners use profiles while adults manage consent and sensitive actions.'],
-                ['Reliable connection', 'Low data won’t keep you from learning, buy data directly from the website and continue learning.'],
+                ['Learn at your pace', 'Short lessons make it easier to keep your language practice going when you have time to connect.'],
                 ['Real school operations', 'Seats, rosters, classes, invoices, assignments and reporting are part of the platform.'],
               ].map(([title, body], index) => (
                 <Reveal key={title} className="grid gap-3 py-6 sm:grid-cols-[3rem_0.35fr_0.65fr] sm:items-start" delay={index * 55}>

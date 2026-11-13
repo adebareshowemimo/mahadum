@@ -26,6 +26,8 @@ Schedule::command('compensation:accrue-teachers')->monthlyOn(1, '03:00');
 
 // Upcoming-renewal reminders for card/invoice subscriptions (telco auto-bills).
 Schedule::command('subscriptions:remind')->dailyAt('09:00');
+Schedule::command('subscriptions:expire-checkouts')->hourly()->withoutOverlapping();
+Schedule::command('data-bundles:reconcile')->hourly()->withoutOverlapping();
 
 // Housekeeping: keep the webhook idempotency ledger bounded.
 Schedule::command('webhooks:prune')->dailyAt('03:30');

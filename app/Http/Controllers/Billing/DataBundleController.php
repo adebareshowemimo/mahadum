@@ -58,6 +58,9 @@ class DataBundleController extends Controller
 
     public function billers(Request $request, MonnifyBills $bills, FlutterwaveBills $flutterwave): JsonResponse
     {
+        if (! config('services.data_bundles.enabled')) {
+            return response()->json(['data' => []]);
+        }
         $provider = $request->validate(['provider' => ['sometimes', Rule::in(['monnify', 'flutterwave'])]])['provider'] ?? 'monnify';
 
         return response()->json(['data' => ($provider === 'flutterwave' ? $flutterwave : $bills)->billers()]);
@@ -65,6 +68,9 @@ class DataBundleController extends Controller
 
     public function index(Request $request, MonnifyBills $bills, FlutterwaveBills $flutterwave): JsonResponse
     {
+        if (! config('services.data_bundles.enabled')) {
+            return response()->json(['data' => []]);
+        }
         $input = $request->validate(['biller_code' => ['required', 'string', 'max:255'],
             'provider' => ['sometimes', Rule::in(['monnify', 'flutterwave'])]]);
 

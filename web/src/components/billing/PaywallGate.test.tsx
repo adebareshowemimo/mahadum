@@ -8,6 +8,7 @@ vi.mock('@/lib/billing/entitlements', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/billing/entitlements')>()
   return { ...actual, useEntitlements: vi.fn() }
 })
+vi.mock('@/lib/profile/ActiveProfile', () => ({ useActiveProfile: () => ({ activeLearner: null }) }))
 
 function renderGate() {
   return render(

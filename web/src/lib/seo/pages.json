@@ -40,8 +40,8 @@
     "description": "Learn Hausa with five-minute lessons, native-speaker audio and stories. Greetings, introductions and numbers. Start free with Level 0."
   },
   "/guides": {
-    "title": "Igbo, Yorùbá & Hausa Phrase Guides | Mahadum360",
-    "description": "How to say everyday words and phrases in Igbo, Yorùbá and Hausa, with audio and short videos from native speakers."
+    "title": "How-to Videos, Language Samples & FAQs | Mahadum360",
+    "description": "Watch platform walkthroughs and language lesson samples, find answers to common questions, and explore Igbo, Yorùbá and Hausa phrase guides."
   },
   "/vote": {
     "title": "Vote for the Next Nigerian Language | Mahadum360",
@@ -70,6 +70,10 @@
   "/refunds": {
     "title": "No Refund Policy | Mahadum360",
     "description": "Learning payments, cancellation, billing corrections and your consumer rights. Data top-ups are separate from lessons and subscriptions."
+  },
+  "/data-top-up-terms": {
+    "title": "Data Top-Up Terms | Mahadum360",
+    "description": "Payment confirmation, mobile data delivery checks and help for failed or undelivered data purchases."
   },
   "/children-privacy": {
     "title": "Children’s Privacy and Parental Consent | Mahadum360",

@@ -30,9 +30,11 @@ class LearnerTasksController extends Controller
                 ->with(['schoolClass', 'submissions' => fn ($q) => $q->where('learner_profile_id', $learner->id)])
                 ->latest()->get()->map(fn ($a) => [
                     'id' => $a->id, 'title' => $a->title, 'instructions' => $a->instructions,
+                    'linked_lesson_id' => $a->linked_lesson_id,
                     'class_name' => $a->schoolClass->name, 'due_at' => $a->due_at,
                     'coin_reward' => $a->coin_reward, 'status' => $a->submissions->first()?->status,
                     'feedback' => $a->submissions->first()?->feedback,
+                    'score' => $a->submissions->first()?->score,
                     'parent_review_status' => $a->submissions->first()?->parent_review_status,
                 ]),
         ]]);

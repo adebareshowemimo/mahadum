@@ -80,6 +80,7 @@ Naming convention: `aspect.subject.action`.
 | Permission group | content_owner | school_admin | teacher | supervisor | parent |
 |---|:--:|:--:|:--:|:--:|:--:|
 | content.* | ● | | | | |
+| content.courses.view | ● | ● (read only) | | | |
 | gamification.* | ● | | | | |
 | schools.* | | ● | partial | partial | |
 | schools.classes.view | | ● | ● | ● | |

@@ -175,7 +175,7 @@ export function useDeleteCourse() {
 }
 
 export function useCourseLevels(courseId: number) {
-  return useQuery({ queryKey: contentKeys.levels(courseId), queryFn: () => contentApi.levels(courseId) })
+  return useQuery({ queryKey: contentKeys.levels(courseId), queryFn: () => contentApi.levels(courseId), enabled: courseId > 0 })
 }
 
 export function useCreateLevel(courseId: number) {

@@ -148,6 +148,22 @@ echo "==> Syncing achievement badge definitions"
 # Completion can award First Steps only when its canonical definition exists.
 php artisan db:seed --class="Database\Seeders\BadgeSeeder" --force
 
+# Sample story, proverb and trivia content is opt-in. The seeder is idempotent
+# and its production guard checks the same flag, so ordinary deploys do not
+# publish demo content or recreate samples that an editor removed.
+if [ "${SEED_STORIES_TRIVIA_SAMPLES:-0}" = "1" ]; then
+    echo "==> Seeding sample stories, proverbs and trivia"
+    php artisan db:seed --class="Database\Seeders\StoriesTriviaSampleSeeder" --force
+fi
+
+# Populate the public Guides library only on an explicitly requested deploy.
+# Re-running is safe for edited entries, but an ordinary deploy must not
+# recreate a guide that an editor intentionally deleted.
+if [ "${SEED_GUIDE_LIBRARY:-0}" = "1" ]; then
+    echo "==> Seeding guide videos and FAQs"
+    php artisan db:seed --class="Database\Seeders\GuideLibrarySeeder" --force
+fi
+
 echo "==> Caching config/routes/views"
 php artisan config:cache
 # route:cache clears the cache internally, but that is too late when this
@@ -163,10 +179,15 @@ mkdir -p storage/app/public/media
 # A shared writable group permits file access, but only the owner (or root)
 # can chmod a file. Uploaded media and invoice PDFs belong to www-data;
 # trying to chmod them as the deploy user aborts an otherwise healthy deploy.
-find storage bootstrap/cache -user "$(id -un)" \( -type f -o -type d \) -exec chmod ug+rwX {} +
+# Private assets can also live inside owner-only directories. Filtering by
+# owner does not prevent find from descending into those directories. Prune
+# the private disk before traversal, preserving its access restrictions.
+find storage bootstrap/cache -path storage/app/private -prune -o \
+    -user "$(id -un)" \( -type f -o -type d \) -exec chmod ug+rwX {} +
 # Preserve the configured shared group on files created by either Artisan or
 # the web server. Ownership is provisioned once by bootstrap-ubuntu.sh.
-find storage bootstrap/cache -user "$(id -un)" -type d -exec chmod g+s {} +
+find storage bootstrap/cache -path storage/app/private -prune -o \
+    -user "$(id -un)" -type d -exec chmod g+s {} +
 
 echo "==> Leaving maintenance mode"
 php artisan up

@@ -229,6 +229,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'billing.invoices.manage',
                     'users.view', 'users.manage', 'roles.view', 'roles.assign',
                     'learning.progress.view',
+                    'content.courses.view',
                     'referrals.view',
                     'payouts.request', // request payout of the school's own referral commission balance
                     'competitions.enter', // enter the school play on the school's behalf

@@ -32,6 +32,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'My learning', to: '/learn', icon: 'book', roles: ['student', 'parent', 'supervisor'] },
       { label: 'My tasks', to: '/tasks', icon: 'clipboard', roles: ['student', 'parent'] },
       { label: 'Courses', to: '/learn/courses', icon: 'layers', roles: ['student', 'parent', 'supervisor'] },
+      { label: 'Proverbs & Trivia', to: '/learn/proverbs-trivia', icon: 'book', roles: ['student', 'parent', 'supervisor'] },
+      { label: 'Stories', to: '/learn/stories', icon: 'book', roles: ['student', 'parent', 'supervisor'] },
       { label: 'Achievements', to: '/achievements', icon: 'sparkles', roles: ['student', 'parent', 'supervisor'] },
       { label: 'Leaderboard', to: '/leaderboard', icon: 'trophy', roles: ['student', 'parent', 'supervisor'] },
       { label: 'Competition', to: '/competitions', icon: 'trophy', roles: ['student', 'parent', 'supervisor', 'teacher', 'school_admin'] },
@@ -46,7 +48,6 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Reviews', to: '/reviews', icon: 'clipboard', roles: ['parent', 'supervisor'] },
       { label: 'Referrals', to: '/referrals', icon: 'gift', roles: ['parent', 'teacher'] },
       { label: 'Billing', to: '/billing', icon: 'card', roles: ['parent'], end: true },
-      { label: 'Buy data', to: '/billing/data', icon: 'signal', roles: ['parent', 'super_admin'] },
     ],
   },
   {
@@ -71,12 +72,14 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    // Courses visible to global admin + content team (+ school admins, read-only);
-    // media management stays with the content team + global admin.
+    // Content builders are for global admins and the content team.
     title: 'Content',
     items: [
       { label: 'Website content', to: '/content/website', icon: 'book', roles: ['super_admin', 'content_owner'] },
-      { label: 'Courses', to: '/courses', icon: 'layers', roles: ['super_admin', 'content_owner', 'school_admin'] },
+      { label: 'Guide library', to: '/content/guides', icon: 'book', roles: ['super_admin', 'content_owner'] },
+      { label: 'Courses', to: '/courses', icon: 'layers', roles: ['super_admin', 'content_owner'] },
+      { label: 'Proverbs & Trivia', to: '/courses/proverbs-trivia', icon: 'book', roles: ['super_admin', 'content_owner'] },
+      { label: 'Stories', to: '/courses/stories', icon: 'book', roles: ['super_admin', 'content_owner'] },
       { label: 'Media', to: '/media', icon: 'book', roles: ['super_admin', 'content_owner'] },
       { label: 'Performance', to: '/content/performance', icon: 'sparkles', roles: ['super_admin', 'content_owner'] },
       { label: 'Competitions', to: '/competitions/manage', icon: 'trophy', roles: ['super_admin', 'content_owner'] },
@@ -135,7 +138,15 @@ function itemVisible(item: NavItem, roles: Role[], capabilities: string[]): bool
 }
 
 /** Sections (with their items pre-filtered) the given roles are allowed to see. */
-export function visibleSections(roles: Role[], capabilities: string[] = []): NavSection[] {
+export function visibleSections(roles: Role[], capabilities: string[] = [], child = false): NavSection[] {
+  if (child) return [{ title: 'Learn', items: [
+    { label: 'Learn', to: '/learn', icon: 'book' },
+    { label: 'My tasks', to: '/tasks', icon: 'clipboard' },
+    { label: 'Courses', to: '/learn/courses', icon: 'layers' },
+    { label: 'Achievements', to: '/achievements', icon: 'sparkles' },
+    { label: 'Leaderboard', to: '/leaderboard', icon: 'trophy' },
+    { label: 'Competition', to: '/competitions', icon: 'trophy' },
+  ] }]
   return NAV_SECTIONS.map((section) => ({
     ...section,
     items: section.items.filter((item) => itemVisible(item, roles, capabilities)),

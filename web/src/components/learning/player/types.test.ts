@@ -40,10 +40,27 @@ describe('playToSlides — video gate & resume', () => {
   })
 })
 
+it('plays lesson stages in the required order even when authored positions differ', () => {
+  const play: LessonPlay = {
+    lesson: { id: 1, title: 'Ordered lesson', est_minutes: 5 },
+    components: [
+      { id: 6, type: 'assignment', position: 1, xp: 1, assignment: { prompt: 'Try it', expected_media: 'video', max_duration_seconds: null, coin_reward: 0 } },
+      { id: 5, type: 'game', position: 2, xp: 1, game: { game_type: 'memory', pairs: [] } },
+      { id: 4, type: 'exercise', position: 3, xp: 1, exercise: { mode: 'flashcards', cards: [] } },
+      { id: 3, type: 'speaking', position: 4, xp: 1, speaking: { prompt: 'Say hello', target_text: null } },
+      { id: 2, type: 'quiz', position: 5, xp: 1, quiz: { pass_threshold: 0.6, hearts_enabled: true, questions: [{ id: 21, type: 'mcq_single', prompt: 'Choose', options: [] }] } },
+      { id: 1, type: 'video', position: 6, xp: 1, video: null },
+    ],
+  }
+  expect(playToSlides(play).map((slide) => slide.kind))
+    .toEqual(['video', 'quiz', 'speaking', 'exercise', 'game', 'assignment'])
+})
+
 describe('authorToSlides — preview has no resume context', () => {
   const lesson: AuthorLesson = {
     id: 1,
     title: 'L',
+    kind: 'lesson',
     position: 1,
     est_minutes: 5,
     is_locked_by_default: false,
@@ -154,6 +171,7 @@ describe('createPreviewService — local grading by type', () => {
   const lesson: AuthorLesson = {
     id: 1,
     title: 'L',
+    kind: 'lesson',
     position: 1,
     est_minutes: 5,
     is_locked_by_default: false,

@@ -10,7 +10,7 @@ import {
 
 export const competitionKeys = {
   list: ['competitions'] as const,
-  detail: (id: number) => ['competition', id] as const,
+  detail: (slug: string) => ['competition', slug] as const,
   mine: ['competitions-mine'] as const,
   admin: ['admin-competitions'] as const,
   adminDetail: (id: number) => ['admin-competition', id] as const,
@@ -20,23 +20,34 @@ export function useCompetitions() {
   return useQuery({ queryKey: competitionKeys.list, queryFn: competitionApi.list })
 }
 
-export function useCompetition(id: number | null) {
+export function useCompetition(slug: string | null) {
   return useQuery({
-    queryKey: competitionKeys.detail(id ?? 0),
-    queryFn: () => competitionApi.show(id as number),
-    enabled: !!id,
+    queryKey: competitionKeys.detail(slug ?? ''),
+    queryFn: () => competitionApi.show(slug as string),
+    enabled: !!slug,
   })
 }
 
-export function useMyEntries() {
-  return useQuery({ queryKey: competitionKeys.mine, queryFn: competitionApi.mine })
+export function useMyEntries(enabled = true) {
+  return useQuery({ queryKey: competitionKeys.mine, queryFn: competitionApi.mine, enabled })
+}
+
+export function useApproveEntryAsGuardian() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ competitionId, entryId }: { competitionId: number; entryId: number }) => competitionApi.approveEntryAsGuardian(competitionId, entryId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: competitionKeys.mine })
+      void qc.invalidateQueries({ queryKey: ['competition'] })
+    },
+  })
 }
 
 export function useVote(competitionId: number) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (entryId: number) => competitionApi.vote(competitionId, entryId),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: competitionKeys.detail(competitionId) }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['competition'] }),
   })
 }
 
@@ -45,7 +56,7 @@ export function useSubmitEntry(competitionId: number) {
   return useMutation({
     mutationFn: (input: SubmitEntryInput) => competitionApi.submitEntry(competitionId, input),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: competitionKeys.detail(competitionId) })
+      void qc.invalidateQueries({ queryKey: ['competition'] })
       void qc.invalidateQueries({ queryKey: competitionKeys.mine })
     },
   })
@@ -62,6 +73,19 @@ export function useCreateCompetition() {
   return useMutation({
     mutationFn: (input: CreateCompetitionInput) => adminApi.createCompetition(input),
     onSuccess: () => void qc.invalidateQueries({ queryKey: competitionKeys.admin }),
+  })
+}
+
+export function useUpdateCompetition() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, input }: { id: number; input: Partial<CreateCompetitionInput> }) => adminApi.updateCompetition(id, input),
+    onSuccess: (_data, { id }) => {
+      void qc.invalidateQueries({ queryKey: competitionKeys.admin })
+      void qc.invalidateQueries({ queryKey: competitionKeys.adminDetail(id) })
+      void qc.invalidateQueries({ queryKey: competitionKeys.list })
+      void qc.invalidateQueries({ queryKey: ['competition'] })
+    },
   })
 }
 

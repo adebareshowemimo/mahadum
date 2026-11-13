@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DashboardPage } from './DashboardPage'
 
@@ -91,5 +91,14 @@ describe('DashboardPage for a content owner', () => {
   it('hides the referral section when the profile has no activity', () => {
     render(<MemoryRouter><DashboardPage /></MemoryRouter>)
     expect(screen.queryByRole('region', { name: 'Referral activity' })).not.toBeInTheDocument()
+  })
+
+  it('sends an accepted teacher account to My classes', async () => {
+    mocks.useAuth.mockReturnValue({
+      user: { user: { first_name: 'Amina', signup_account_type: 'teacher' } },
+      hasRole: (role: string) => role === 'teacher',
+    })
+    render(<MemoryRouter initialEntries={['/home']}><Routes><Route path="/home" element={<DashboardPage />} /><Route path="/classes" element={<h1>My classes</h1>} /></Routes></MemoryRouter>)
+    expect(await screen.findByRole('heading', { name: 'My classes' })).toBeInTheDocument()
   })
 })

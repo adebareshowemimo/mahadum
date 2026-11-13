@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ClassAssignment;
 use App\Models\ClassAssignmentSubmission;
+use App\Models\ClassCourseAssignment;
 use App\Models\ClassEnrollment;
 use App\Models\CoinTransaction;
 use App\Models\LessonProgress;
@@ -134,6 +135,8 @@ class Batch2FamilyFlowsTest extends TestCase
     {
         [$class, $assignment, $teacher, , $learner] = $this->schoolFixture();
         $lesson = $this->publishedLesson();
+        ClassCourseAssignment::create(['school_class_id' => $class->id,
+            'course_id' => $lesson->courseLevel->course_id, 'assigned_by_user_id' => $teacher->id]);
         LessonProgress::create(['learner_profile_id' => $learner->id, 'lesson_id' => $lesson->id, 'status' => 'completed', 'score' => 80, 'completed_at' => now()]);
         QuizAttempt::create(['learner_profile_id' => $learner->id, 'quiz_id' => $lesson->components->firstWhere('type', 'quiz')->quiz->id, 'attempt_no' => 1, 'score' => 0.5, 'started_at' => now(), 'completed_at' => now()]);
         $this->getJson("/api/v1/classes/$class->id/analytics")->assertOk()->assertJsonPath('data.students.0.lessons_completed', 1);

@@ -13,7 +13,18 @@ class UserAccountType
         if (($user->owned_families_count ?? $user->ownedFamilies()->count()) > 0) {
             return 'family';
         }
-        if (($user->signup_account_type === 'teacher' || $user->hasRole('teacher')) && ! $user->hasRole('school_admin')) {
+        $chosen = match ($user->signup_account_type) {
+            'family', 'parent' => 'family',
+            'individual', 'learner' => 'single',
+            'teacher' => 'teacher',
+            'school', 'educator_school' => 'school',
+            'institution' => 'institution',
+            default => null,
+        };
+        if ($chosen !== null) {
+            return $chosen;
+        }
+        if ($user->hasRole('teacher') && ! $user->hasRole('school_admin')) {
             return 'teacher';
         }
         $organizations = $user->organizations;
@@ -27,24 +38,35 @@ class UserAccountType
     public static function filter(Builder $query, string $type): Builder
     {
         if ($type === 'family') {
-            return $query->whereHas('ownedFamilies');
+            return $query->where(fn ($sub) => $sub->whereHas('ownedFamilies')
+                ->orWhereIn('signup_account_type', ['family', 'parent']));
         }
-        $query->whereDoesntHave('ownedFamilies');
-        $teacher = fn ($sub) => $sub->where('signup_account_type', 'teacher')->orWhereHas('roles', fn ($role) => $role->where('name', 'teacher'));
+        $query->whereDoesntHave('ownedFamilies')->where(fn ($sub) => $sub->whereNull('signup_account_type')
+            ->orWhereNotIn('signup_account_type', ['family', 'parent']));
+        $teacher = fn ($sub) => $sub->where('signup_account_type', 'teacher')
+            ->orWhere(fn ($legacy) => $legacy->whereNull('signup_account_type')
+                ->whereHas('roles', fn ($role) => $role->where('name', 'teacher'))
+                ->whereDoesntHave('roles', fn ($role) => $role->where('name', 'school_admin')));
+        $notLegacyTeacher = fn ($sub) => $sub->whereDoesntHave('roles', fn ($role) => $role->where('name', 'teacher'))
+            ->orWhereHas('roles', fn ($role) => $role->where('name', 'school_admin'));
         if ($type === 'teacher') {
-            return $query->where($teacher)->whereDoesntHave('roles', fn ($role) => $role->where('name', 'school_admin'));
+            return $query->where($teacher);
         }
-        $query->where(fn ($sub) => $sub->whereHas('roles', fn ($role) => $role->where('name', 'school_admin'))
-            ->orWhere(fn ($other) => $other->where(fn ($intent) => $intent->whereNull('signup_account_type')->orWhere('signup_account_type', '!=', 'teacher'))
-                ->whereDoesntHave('roles', fn ($role) => $role->where('name', 'teacher'))));
-        $institution = fn ($org) => $org->where('organizations.type', 'institution');
         if ($type === 'institution') {
-            return $query->whereHas('organizations', $institution);
+            return $query->where(fn ($sub) => $sub->where('signup_account_type', 'institution')
+                ->orWhere(fn ($legacy) => $legacy->whereNull('signup_account_type')
+                    ->whereHas('organizations', fn ($org) => $org->where('organizations.type', 'institution'))
+                    ->where($notLegacyTeacher)));
         }
         if ($type === 'school') {
-            return $query->whereDoesntHave('organizations', $institution)->whereHas('organizations');
+            return $query->where(fn ($sub) => $sub->whereIn('signup_account_type', ['school', 'educator_school'])
+                ->orWhere(fn ($legacy) => $legacy->whereNull('signup_account_type')
+                    ->whereDoesntHave('organizations', fn ($org) => $org->where('organizations.type', 'institution'))
+                    ->whereHas('organizations')->where($notLegacyTeacher)));
         }
 
-        return $query->whereDoesntHave('organizations');
+        return $query->where(fn ($sub) => $sub->whereIn('signup_account_type', ['individual', 'learner'])
+            ->orWhere(fn ($legacy) => $legacy->whereNull('signup_account_type')
+                ->whereDoesntHave('organizations')->where($notLegacyTeacher)));
     }
 }

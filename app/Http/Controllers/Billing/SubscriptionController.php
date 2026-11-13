@@ -7,11 +7,13 @@ use App\Http\Requests\Billing\ChangeSubscriptionRequest;
 use App\Http\Requests\Billing\StoreSubscriptionRequest;
 use App\Models\Plan;
 use App\Models\Subscription;
+use App\Models\SubscriptionPaymentReceipt;
 use App\Models\User;
 use App\Services\Billing\PaymentGatewayManager;
 use App\Services\Billing\PaymentService;
 use App\Services\Billing\PromoException;
 use App\Services\Billing\PromoService;
+use App\Services\Billing\SubscriptionEligibility;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -21,6 +23,7 @@ class SubscriptionController extends Controller
         private PaymentGatewayManager $gateways,
         private PromoService $promos,
         private PaymentService $payments,
+        private SubscriptionEligibility $eligibility,
     ) {}
 
     public function gateways(): JsonResponse
@@ -69,6 +72,7 @@ class SubscriptionController extends Controller
         $subscriptions = Subscription::with('plan')
             ->where('subscriber_type', User::class)
             ->where('subscriber_id', $user->id)
+            ->whereNotIn('status', ['pending', 'expired'])
             ->latest()
             ->get()
             ->map(fn ($s) => [
@@ -95,6 +99,9 @@ class SubscriptionController extends Controller
     public function store(StoreSubscriptionRequest $request): JsonResponse
     {
         $plan = Plan::findOrFail($request->integer('plan_id'));
+        if ($message = $this->eligibility->problem($request->user(), $plan)) {
+            return response()->json(['error' => ['code' => 'plan_ineligible', 'message' => $message, 'status' => 422]], 422);
+        }
 
         try {
             $data = $this->createSubscription(
@@ -112,8 +119,8 @@ class SubscriptionController extends Controller
     }
 
     /**
-     * Switch the caller's own subscription to a different plan: cancels the
-     * current one and creates a fresh one for the target plan in a single call,
+     * Switch the caller's own subscription to a different plan: creates a fresh
+     * checkout and leaves the current plan in place until payment succeeds,
      * so the SPA doesn't have to drive cancel + subscribe as two separate steps.
      * Card subscriptions still go through the normal checkout/webhook activation.
      */
@@ -133,6 +140,9 @@ class SubscriptionController extends Controller
         }
 
         $plan = Plan::findOrFail($request->integer('plan_id'));
+        if ($message = $this->eligibility->problem($user, $plan)) {
+            return response()->json(['error' => ['code' => 'plan_ineligible', 'message' => $message, 'status' => 422]], 422);
+        }
 
         if ((int) $subscription->plan_id === $plan->id) {
             return response()->json([
@@ -145,8 +155,6 @@ class SubscriptionController extends Controller
         } catch (PromoException $e) {
             return response()->json(['error' => ['code' => $e->reason, 'message' => $e->getMessage(), 'status' => 422]], 422);
         }
-
-        $subscription->update(['status' => 'cancelled', 'cancelled_at' => now()]);
 
         return response()->json(['data' => $data], 201);
     }
@@ -195,13 +203,16 @@ class SubscriptionController extends Controller
             return response()->json(['data' => ['status' => 'active']]);
         }
 
-        if (in_array($subscription->status, ['cancelled', 'refunded'], true)) {
+        if (in_array($subscription->status, ['cancelled', 'refunded', 'expired'], true)) {
             return response()->json([
                 'error' => ['code' => 'subscription_cancelled', 'message' => 'This subscription is no longer active.', 'status' => 422],
             ], 422);
         }
 
         $reference = 'sub_'.$subscription->id;
+        if ($message = $this->eligibility->problem($user, $subscription->plan)) {
+            return response()->json(['error' => ['code' => 'plan_ineligible', 'message' => $message, 'status' => 422]], 422);
+        }
         // Legacy subscriptions have no saved gateway; retain the historical global-default fallback.
         $provider = $subscription->payment_gateway ?? (string) config('services.payments.default', 'monnify');
         $gateway = $this->gateways->driver($provider);
@@ -239,6 +250,62 @@ class SubscriptionController extends Controller
             'payment_reference' => $reference,
             'checkout_url' => $checkout->checkoutUrl,
         ]]);
+    }
+
+    /** Verify a returning checkout without opening a second payment. */
+    public function confirm(Subscription $subscription, Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless(
+            $subscription->subscriber_type === User::class && (int) $subscription->subscriber_id === (int) $user->id,
+            403,
+            'Not your subscription.',
+        );
+
+        if ($subscription->status !== 'pending' || $subscription->method !== 'card') {
+            return response()->json(['data' => $this->confirmationPayload($subscription)]);
+        }
+
+        $provider = $subscription->payment_gateway ?? (string) config('services.payments.default', 'monnify');
+        $reference = 'sub_'.$subscription->id;
+        $verified = $this->gateways->driver($provider)->verify($reference);
+        if ($verified->status === 'success') {
+            $transactionId = match ($provider) {
+                'flutterwave', 'paystack' => $verified->raw['data']['id'] ?? null,
+                'monnify' => $verified->raw['responseBody']['transactionReference'] ?? null,
+                default => null,
+            };
+            $this->payments->process(
+                $provider,
+                (string) ($transactionId ?? 'manual_verify_'.$subscription->id),
+                $reference,
+                'success',
+                $verified->amountMinor,
+                $verified->raw,
+            );
+        }
+
+        return response()->json(['data' => $this->confirmationPayload($subscription->fresh())]);
+    }
+
+    /** @return array<string, mixed> */
+    private function confirmationPayload(Subscription $subscription): array
+    {
+        $subscription->loadMissing('plan');
+        $receipt = SubscriptionPaymentReceipt::where('subscription_id', $subscription->id)
+            ->where('direction', 'payment')->latest('id')->first();
+
+        return [
+            'status' => $subscription->status,
+            'plan_name' => $subscription->plan->name,
+            'amount_minor' => $receipt !== null ? $receipt->amount_minor : ($subscription->initial_charge_minor ?? $subscription->plan->price_minor),
+            'currency' => $receipt !== null ? $receipt->currency : $subscription->plan->currency,
+            'gateway' => $subscription->payment_gateway,
+            'reference' => 'sub_'.$subscription->id,
+            'receipt_id' => $receipt?->id,
+            'paid_at' => $receipt !== null ? $receipt->created_at : $subscription->started_at,
+            'renews_at' => $subscription->renews_at,
+        ];
     }
 
     /**
@@ -280,6 +347,13 @@ class SubscriptionController extends Controller
             $subscription->renews_at = $this->renewsAt($plan);
         }
         $subscription->save();
+
+        if ($method !== 'card') {
+            Subscription::query()->where('subscriber_type', User::class)
+                ->where('subscriber_id', $user->id)->where('id', '!=', $subscription->id)
+                ->whereIn('status', ['active', 'grace'])
+                ->update(['status' => 'cancelled', 'cancelled_at' => now()]);
+        }
 
         if ($outcome !== null) {
             $this->promos->redeem($outcome->promo, $user, $subscription);

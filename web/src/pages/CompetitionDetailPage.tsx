@@ -12,8 +12,7 @@ const CATEGORY_LABEL: Record<CompetitionCategory, string> = {
 
 export function CompetitionDetailPage() {
   const { competitionId } = useParams()
-  const id = Number(competitionId)
-  const { data, isLoading, isError } = useCompetition(id)
+  const { data, isLoading, isError } = useCompetition(competitionId ?? null)
   const [submitOpen, setSubmitOpen] = useState(false)
 
   if (isLoading) return <Skeleton className="h-96" />
@@ -37,6 +36,20 @@ export function CompetitionDetailPage() {
           )}
         </div>
         {data.description && <p className="mt-3 max-w-2xl text-sm text-muted">{data.description}</p>}
+        <p className="mt-3 max-w-2xl text-sm text-muted">Learners under 18 need approval from their linked parent or guardian account before an entry can be published or receive votes.</p>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          {data.eligibility && <InfoBlock title="Eligibility" body={data.eligibility} />}
+          {data.rules && <InfoBlock title="Rules" body={data.rules} />}
+          {data.prizes && <InfoBlock title="Prizes" body={data.prizes} />}
+          <div className="text-sm text-muted">
+            <h2 className="font-bold text-foreground">Dates</h2>
+            {data.entries_open_at && <p>Entries open: {new Date(data.entries_open_at).toLocaleDateString()}</p>}
+            {data.submissions_close_at && <p>Entries close: {new Date(data.submissions_close_at).toLocaleDateString()}</p>}
+            {data.voting_closes_at && <p>Voting closes: {new Date(data.voting_closes_at).toLocaleDateString()}</p>}
+            {data.judging_starts_at && <p>Judging starts: {new Date(data.judging_starts_at).toLocaleDateString()}</p>}
+            {data.judging_closes_at && <p>Judging ends: {new Date(data.judging_closes_at).toLocaleDateString()}</p>}
+          </div>
+        </div>
         {!data.accepting_votes && (
           <Alert variant="info" className="mt-4">
             Voting is {data.status === 'closed' ? 'closed — results are final.' : 'not open yet.'}
@@ -53,6 +66,10 @@ export function CompetitionDetailPage() {
       )}
     </div>
   )
+}
+
+function InfoBlock({ title, body }: { title: string; body: string }) {
+  return <section className="text-sm"><h2 className="font-bold text-foreground">{title}</h2><p className="whitespace-pre-line text-muted">{body}</p></section>
 }
 
 function CategorySection({ competition, category }: { competition: CompetitionDetail; category: CompetitionCategory }) {
@@ -87,6 +104,7 @@ function CategorySection({ competition, category }: { competition: CompetitionDe
 }
 
 function EntryRow({ competitionId, entry, canVote }: { competitionId: number; entry: CompetitionEntry; canVote: boolean }) {
+  const { status } = useAuth()
   const vote = useVote(competitionId)
   const [error, setError] = useState<string | null>(null)
 
@@ -116,9 +134,7 @@ function EntryRow({ competitionId, entry, canVote }: { competitionId: number; en
         </div>
         <div className="flex shrink-0 items-center gap-3">
           <span className="font-display text-lg font-bold text-foreground">{entry.votes_count}</span>
-          <Button size="sm" variant="secondary" disabled={!canVote} loading={vote.isPending} onClick={onVote}>
-            Vote
-          </Button>
+          {status === 'authenticated' ? <Button size="sm" variant="secondary" disabled={!canVote} loading={vote.isPending} onClick={onVote}>Vote</Button> : canVote ? <Link to="/login" className="text-sm font-semibold text-chore-700">Sign in to vote</Link> : <span className="text-xs text-muted">Voting closed</span>}
         </div>
       </CardBody>
     </Card>
@@ -138,13 +154,17 @@ function SubmitEntryModal({ competition, open, onClose }: { competition: Competi
   const [learnerId, setLearnerId] = useState<number | ''>(learners[0]?.id ?? '')
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+  const [guardianConsent, setGuardianConsent] = useState(false)
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
     const input: SubmitEntryInput = { category, title, synopsis: synopsis || undefined }
     if (category === 'school_play') input.organization_id = Number(orgId)
-    else input.learner_profile_id = Number(learnerId)
+    else {
+      input.learner_profile_id = Number(learnerId)
+      input.guardian_consent = guardianConsent
+    }
 
     try {
       await submit.mutateAsync(input)
@@ -159,6 +179,7 @@ function SubmitEntryModal({ competition, open, onClose }: { competition: Competi
     setSynopsis('')
     setError(null)
     setDone(false)
+    setGuardianConsent(false)
     onClose()
   }
 
@@ -222,6 +243,7 @@ function SubmitEntryModal({ competition, open, onClose }: { competition: Competi
           )}
 
           <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="e.g. The Talking Drum" />
+          {category === 'diaspora_folklore' && <label className="flex items-start gap-2 text-sm text-foreground"><input type="checkbox" checked={guardianConsent} onChange={(e) => setGuardianConsent(e.target.checked)} required /><span>I am this learner’s parent or guardian and approve this competition entry.</span></label>}
           <label className="flex flex-col gap-1.5 text-sm">
             <span className="font-semibold text-foreground">Synopsis (optional)</span>
             <textarea
@@ -242,7 +264,7 @@ function SubmitEntryModal({ competition, open, onClose }: { competition: Competi
               variant="premium"
               fullWidth
               loading={submit.isPending}
-              disabled={!title || (category === 'school_play' ? orgId === '' : learnerId === '')}
+              disabled={!title || (category === 'school_play' ? orgId === '' : learnerId === '' || !guardianConsent)}
             >
               Submit
             </Button>

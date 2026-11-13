@@ -25,6 +25,7 @@ class PaystackGateway implements PaymentGateway
                 'email' => $email,
                 'currency' => 'NGN',
                 'metadata' => $metadata,
+                ...(! empty($metadata['purpose']) ? ['callback_url' => ReturnUrl::fromMetadata($metadata)] : []),
             ])
             ->throw()
             ->json();

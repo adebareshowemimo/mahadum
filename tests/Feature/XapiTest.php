@@ -3,10 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\Course;
-use App\Models\Language;
+use App\Models\MediaAsset;
 use App\Models\XapiStatement;
 use App\Services\Learning\XapiRecorder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\MakesContent;
 use Tests\TestCase;
 
@@ -69,16 +70,40 @@ class XapiTest extends TestCase
         $this->seedRbac();
         $parent = $this->actingAsUser($this->userWithRole('parent'));
         $learner = $this->parentWithChild($parent);
-        $language = Language::firstOrCreate(['code' => 'ig'], ['name' => 'Igbo', 'script' => 'latin', 'is_active' => true]);
-
+        $lesson = $this->publishedLesson();
+        $language = $lesson->courseLevel->course->language;
+        $quiz = $lesson->components->firstWhere('type', 'quiz')->quiz;
+        Storage::fake('public');
+        Storage::disk('public')->put('placement/audio.mp3', 'audio');
+        $audio = MediaAsset::create(['type' => 'audio', 'url' => 'placement/audio.mp3']);
+        $text = $quiz->questions()->create(['type' => 'mcq_single', 'prompt' => 'Text question', 'position' => 2]);
+        $questions = [$quiz->questions->first(), $text];
+        foreach ([3, 4] as $position) {
+            $questions[] = $quiz->questions()->create(['type' => 'listen_and_respond', 'prompt' => 'Audio question',
+                'prompt_audio_asset_id' => $audio->id, 'position' => $position]);
+        }
+        foreach (array_slice($questions, 1) as $question) {
+            $question->options()->create(['label' => 'Yes', 'is_correct' => true, 'position' => 1]);
+            $question->options()->create(['label' => 'No', 'is_correct' => false, 'position' => 2]);
+        }
+        $this->getJson("/api/v1/assessments/questions?learner_id={$learner->id}&language_id={$language->id}")
+            ->assertOk()->assertJsonPath('data.available', true)->assertDontSee('is_correct');
+        $this->postJson('/api/v1/assessments', ['learner_id' => $learner->id,
+            'language_id' => $language->id, 'score' => 1])->assertUnprocessable();
+        $answers = array_map(fn ($question) => ['question_id' => $question->id,
+            'option_id' => $question->options()->where('is_correct', true)->firstOrFail()->id], $questions);
         $this->postJson('/api/v1/assessments', [
-            'learner_id' => $learner->id, 'language_id' => $language->id, 'score' => 0.9,
-        ])->assertOk()->assertJsonPath('data.result_level', 'B1');
+            'learner_id' => $learner->id, 'language_id' => $language->id, 'answers' => $answers,
+        ])->assertOk()->assertJsonPath('data.result_level', 'Intermediate');
+        $this->assertSame(1, $learner->fresh()->current_level);
+        $this->postJson('/api/v1/assessments', [
+            'learner_id' => $learner->id, 'language_id' => $language->id, 'answers' => $answers,
+        ])->assertUnprocessable();
 
         $statement = XapiStatement::where('object_iri', 'like', '%/assessments/%')->firstOrFail();
-        $this->assertEquals(0.9, $statement->raw['result']['score']['scaled']);
+        $this->assertEquals(1.0, $statement->raw['result']['score']['scaled']);
 
         $levelKey = app(XapiRecorder::class)->iri('ext', 'level');
-        $this->assertSame('B1', $statement->raw['result']['extensions'][$levelKey]);
+        $this->assertSame('Intermediate', $statement->raw['result']['extensions'][$levelKey]);
     }
 }

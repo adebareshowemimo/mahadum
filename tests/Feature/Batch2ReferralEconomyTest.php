@@ -58,10 +58,10 @@ class Batch2ReferralEconomyTest extends TestCase
         $this->actingAsUser($referrer);
         $this->getJson('/api/v1/referrals/summary')->assertJsonPath('data.commissions.pending_escrow.total', 5_000)->assertJsonPath('data.available_minor', 0);
         $this->travel(30)->days();
-        $payments->process('paystack', 'day-thirty', "sub_$subscription->id", 'success', 100_001, []);
+        $payments->process('paystack', 'day-thirty', "sub_$subscription->id", 'success', $subscription->plan->price_minor, []);
         $this->assertDatabaseCount('commissions', 2);
         $this->travel(1)->seconds();
-        $payments->process('paystack', 'after-window', "sub_$subscription->id", 'success', 100_001, []);
+        $payments->process('paystack', 'after-window', "sub_$subscription->id", 'success', $subscription->plan->price_minor, []);
         $this->assertDatabaseCount('commissions', 2);
     }
 

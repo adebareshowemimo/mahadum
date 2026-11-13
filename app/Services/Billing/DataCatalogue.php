@@ -20,6 +20,9 @@ class DataCatalogue
     /** @return list<string> */
     public function providers(): array
     {
+        if (! config('services.data_bundles.enabled')) {
+            return [];
+        }
         $configured = $this->gateways->available();
         $providers = array_values(array_filter(['monnify', 'flutterwave'], function (string $provider) use ($configured): bool {
             if (! config('services.'.$provider.'.bills_enabled') || ! in_array($provider, $configured, true)) {

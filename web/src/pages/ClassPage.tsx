@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Alert, Avatar, Badge, Button, Input, LinkButton, Modal, Skeleton } from '@/components/ui'
 import { ApiError, schoolApi, type ClassAnalyticsStudent } from '@/lib/api'
@@ -131,8 +131,40 @@ function LearnersPanel({ classId, students }: { classId: number; students: { lea
           ))}
         </ul>
       )}
+      <PendingInvitations classId={classId} />
     </section>
   )
+}
+
+function PendingInvitations({ classId }: { classId: number }) {
+  const queryClient = useQueryClient()
+  const [error, setError] = useState<string | null>(null)
+  const invitations = useQuery({
+    queryKey: ['school-classes', classId, 'invitations'],
+    queryFn: () => schoolApi.classInvitations(classId),
+  })
+  const resend = useMutation({
+    mutationFn: (id: number) => schoolApi.resendClassInvitation(classId, id),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['school-classes', classId, 'invitations'] }),
+  })
+  const cancel = useMutation({
+    mutationFn: (id: number) => schoolApi.cancelClassInvitation(classId, id),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['school-classes', classId, 'invitations'] }),
+  })
+  async function act(id: number, action: 'resend' | 'cancel') {
+    setError(null)
+    try { await (action === 'resend' ? resend.mutateAsync(id) : cancel.mutateAsync(id)) }
+    catch (err) { setError(err instanceof ApiError ? err.message : 'Could not update the invitation.') }
+  }
+  return <div className="border-t border-border pt-5">
+    <h3 className="font-semibold text-foreground">Pending invitations</h3>
+    {error && <Alert variant="danger">{error}</Alert>}
+    {invitations.isLoading ? <Skeleton className="mt-3 h-16" /> : invitations.isError ? <Alert variant="danger">Could not load invitations.</Alert> : !invitations.data?.length ? <p className="mt-2 text-sm text-muted">No pending invitations.</p> :
+      <ul className="mt-3 divide-y divide-border rounded-xl border border-border bg-surface">{invitations.data.map((invitation) => <li key={invitation.id} className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
+        <div><p className="font-semibold">{invitation.name}</p><p className="text-muted">{invitation.email} · Sent {new Date(invitation.sent_at).toLocaleDateString()} · {invitation.status}</p></div>
+        <div className="flex gap-2"><Button size="sm" variant="outline" loading={resend.isPending && resend.variables === invitation.id} onClick={() => void act(invitation.id, 'resend')}>Resend</Button><Button size="sm" variant="outline" loading={cancel.isPending && cancel.variables === invitation.id} onClick={() => void act(invitation.id, 'cancel')}>Cancel</Button></div>
+      </li>)}</ul>}
+  </div>
 }
 
 function LearnerSearch({ classId, onAdded }: { classId: number; onAdded: () => void }) {
@@ -198,7 +230,7 @@ function CoursesPanel({ classId }: { classId: number }) {
       {assigned.length === 0 ? (
         <EmptyState title="No courses assigned" body="Choose a published course below to make it available to every learner in this class." />
       ) : (
-        <CourseList courses={assigned} busyId={unassign.isPending ? unassign.variables : undefined} actionLabel="Stop assigning" onAction={(id) => unassign.mutate(id)} />
+        <CourseList classId={classId} courses={assigned} busyId={unassign.isPending ? unassign.variables : undefined} actionLabel="Stop assigning" onAction={(id) => unassign.mutate(id)} />
       )}
 
       <div className="border-t border-border pt-6">
@@ -208,19 +240,24 @@ function CoursesPanel({ classId }: { classId: number }) {
       {available.length === 0 ? (
         <p className="text-sm text-muted">No additional published courses are available.</p>
       ) : (
-        <CourseList courses={available} busyId={assign.isPending ? assign.variables : undefined} actionLabel="Assign" onAction={(id) => assign.mutate(id)} />
+        <CourseList classId={classId} courses={available} busyId={assign.isPending ? assign.variables : undefined} actionLabel="Assign" onAction={(id) => assign.mutate(id)} />
       )}
     </section>
   )
 }
 
-function CourseList({ courses, busyId, actionLabel, onAction }: {
+function CourseList({ classId, courses, busyId, actionLabel, onAction }: {
+  classId: number
   courses: Awaited<ReturnType<typeof schoolApi.classCourses>>
   busyId?: number
   actionLabel: 'Assign' | 'Stop assigning'
   onAction: (id: number) => void
 }) {
+  const [outlineId, setOutlineId] = useState<number | null>(null)
+  const outline = useQuery({ queryKey: ['school-classes', classId, 'course-outline', outlineId],
+    queryFn: () => schoolApi.classCourseOutline(classId, outlineId as number), enabled: outlineId !== null })
   return (
+    <>
     <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
       {courses.map((course) => (
         <li key={course.id} className="flex flex-col justify-between gap-3 p-4 sm:flex-row sm:items-center">
@@ -232,10 +269,14 @@ function CourseList({ courses, busyId, actionLabel, onAction }: {
             <p className="mt-1 text-sm text-muted">{[course.language?.toUpperCase(), course.level_band].filter(Boolean).join(' · ') || 'All levels'}</p>
             {course.description && <p className="mt-1 max-w-3xl text-sm text-muted">{course.description}</p>}
           </div>
-          <Button variant={actionLabel === 'Assign' ? 'primary' : 'outline'} loading={busyId === course.id} onClick={() => onAction(course.id)}>{actionLabel}</Button>
+          <div className="flex gap-2">{course.assigned && <Button variant="outline" onClick={() => setOutlineId(course.id)}>Lessons & quizzes</Button>}<Button variant={actionLabel === 'Assign' ? 'primary' : 'outline'} loading={busyId === course.id} onClick={() => onAction(course.id)}>{actionLabel}</Button></div>
         </li>
       ))}
     </ul>
+    <Modal open={outlineId !== null} onClose={() => setOutlineId(null)} title={outline.data?.title ?? 'Course lessons'}>
+      {outline.isLoading ? <Skeleton className="h-32" /> : outline.isError || !outline.data ? <Alert variant="danger">Could not load this course outline.</Alert> : <div className="space-y-4">{outline.data.levels.map((level) => <section key={level.id}><h3 className="font-semibold">{level.title}</h3><ul className="mt-2 space-y-2">{level.lessons.map((lesson) => <li key={lesson.id} className="rounded-lg border border-border p-3"><p>{lesson.title}</p><p className="text-sm text-muted">{lesson.quizzes.length ? lesson.quizzes.map((quiz) => quiz.title).join(', ') : 'No quiz'}</p></li>)}</ul></section>)}</div>}
+    </Modal>
+    </>
   )
 }
 
@@ -292,6 +333,7 @@ function AnalyticsPanel({ classId }: { classId: number }) {
     queryKey: ['school-classes', 'analytics', classId],
     queryFn: () => schoolApi.classAnalytics(classId),
   })
+  const quizzes = useQuery({ queryKey: ['school-classes', classId, 'quiz-report'], queryFn: () => schoolApi.classQuizReport(classId) })
   if (analytics.isLoading) return <Skeleton className="h-64" />
   if (analytics.isError || !analytics.data) return <Alert variant="danger">We couldn’t load analytics for this class.</Alert>
   if (analytics.data.students.length === 0) return <EmptyState title="No learner activity yet" body="Analytics will appear after learners join the class and begin lessons or assignments." />
@@ -312,23 +354,32 @@ function AnalyticsPanel({ classId }: { classId: number }) {
           </tbody>
         </table>
       </div>
+      <div><h3 className="font-semibold text-foreground">Quizzes in assigned courses</h3>
+        {quizzes.isLoading ? <Skeleton className="mt-2 h-20" /> : quizzes.isError ? <Alert variant="danger">Could not load class quiz results.</Alert> : !quizzes.data?.length ? <p className="mt-2 text-sm text-muted">No assigned course quizzes.</p> :
+          <ul className="mt-3 divide-y divide-border rounded-xl border border-border">{quizzes.data.map((quiz) => <li key={quiz.quiz_id} className="p-4 text-sm"><p className="font-semibold">{quiz.title}</p><p className="text-muted">{quiz.attempts} completed attempts · Average {quiz.average_score == null ? '—' : `${quiz.average_score}%`}</p>{quiz.most_missed.filter((question) => question.wrong_count > 0).map((question) => <p key={question.question_id} className="text-muted">Most missed: {question.prompt} ({question.wrong_count} wrong)</p>)}</li>)}</ul>}
+      </div>
     </section>
   )
 }
 
 function AnalyticsRow({ student, classId }: { student: ClassAnalyticsStudent; classId: number }) {
   const [open, setOpen] = useState(false)
+  const [attemptId, setAttemptId] = useState<number | null>(null)
   const detail = useQuery({ queryKey: ['school-classes', 'student-analytics', classId, student.learner_id], queryFn: () => schoolApi.studentAnalytics(classId, student.learner_id), enabled: open })
+  const attempt = useQuery({ queryKey: ['school-classes', classId, 'quiz-attempt', attemptId], queryFn: () => schoolApi.classQuizAttempt(classId, attemptId as number), enabled: attemptId !== null })
   return (
     <tr>
       <td className="px-4 py-3 font-medium text-foreground"><button className="min-h-11 text-left font-semibold text-primary hover:underline" onClick={() => setOpen(true)}>{student.display_name ?? 'Learner'}</button>
         <Modal open={open} onClose={() => setOpen(false)} title={`${student.display_name ?? 'Learner'} — learning activity`} description="Up to 50 recent records in each section.">
           {detail.isLoading ? <Skeleton className="h-48" /> : detail.isError || !detail.data ? <Alert variant="danger">Couldn’t load this learner’s activity. Please try again.</Alert> : <div className="flex flex-col gap-5 text-sm">
             <section><h3 className="font-semibold text-foreground">Lessons</h3>{!detail.data.lessons.length && <p className="text-muted">No lesson activity.</p>}{detail.data.lessons.map(p => <p key={p.id} className="mt-2 text-muted">{p.title ?? 'Lesson'} · {p.status} · {p.score == null ? 'No score' : `${p.score}%`}</p>)}</section>
-            <section><h3 className="font-semibold text-foreground">Quizzes</h3>{!detail.data.quizzes.length && <p className="text-muted">No quiz attempts.</p>}{detail.data.quizzes.map(q => <p key={q.id} className="mt-2 text-muted">Quiz {q.quiz_id} · Attempt {q.attempt_no} · {q.completed_at ? 'Completed' : 'In progress'} · {q.score == null ? 'No score' : `${Math.round(q.score * 100)}%`}</p>)}</section>
+            <section><h3 className="font-semibold text-foreground">Quizzes</h3>{!detail.data.quizzes.length && <p className="text-muted">No quiz attempts.</p>}{detail.data.quizzes.map(q => <button key={q.id} className="mt-2 block text-left text-primary hover:underline" onClick={() => setAttemptId(q.id)}>Quiz {q.quiz_id} · Attempt {q.attempt_no} · {q.completed_at ? new Date(q.completed_at).toLocaleDateString() : 'In progress'} · {q.score == null ? 'No score' : `${Math.round(q.score * 100)}%`} · View answers</button>)}</section>
             <section><h3 className="font-semibold text-foreground">Speaking</h3>{!detail.data.speaking.length && <p className="text-muted">No speaking submissions.</p>}{detail.data.speaking.map(s => <p key={s.id} className="mt-2 text-muted">Submission {s.id} · {s.status}</p>)}</section>
             <section><h3 className="font-semibold text-foreground">Assignments</h3>{!detail.data.assignments.length && <p className="text-muted">No assignment submissions.</p>}{detail.data.assignments.map(a => <p key={a.id} className="mt-2 text-muted">{a.title} · {a.status}{a.score != null ? ` · ${a.score}%` : ''}{a.feedback ? ` · ${a.feedback}` : ''}</p>)}</section>
           </div>}
+        </Modal>
+        <Modal open={attemptId !== null} onClose={() => setAttemptId(null)} title="Quiz answers">
+          {attempt.isLoading ? <Skeleton className="h-32" /> : attempt.isError || !attempt.data ? <Alert variant="danger">Could not load this attempt.</Alert> : <div className="space-y-3 text-sm"><p className="font-semibold">{attempt.data.quiz_title} · {attempt.data.score ?? '—'}% · {attempt.data.completed_at ? new Date(attempt.data.completed_at).toLocaleDateString() : 'In progress'}</p>{attempt.data.questions.map((question) => <div key={question.id} className="rounded-lg border border-border p-3"><p className="font-semibold">{question.prompt}</p><p className="text-muted">Answer: {question.given_answer || 'No answer'} · {question.is_correct === null ? 'Not answered' : question.is_correct ? 'Correct' : 'Incorrect'}</p>{!question.is_correct && <p className="text-muted">Correct: {question.correct_options.join(', ') || 'See course answer key'}</p>}</div>)}</div>}
         </Modal>
       </td>
       <td className="px-3 py-3 text-right tabular-nums text-foreground">{student.lessons_completed}</td>

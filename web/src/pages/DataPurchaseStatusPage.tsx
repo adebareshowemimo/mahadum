@@ -38,6 +38,9 @@ export function DataPurchaseStatusPage() {
         <dl className="space-y-3 text-sm">
           <div className="flex justify-between gap-4"><dt className="text-muted">Recipient</dt><dd>{order.phone_number}</dd></div>
           <div className="flex justify-between gap-4"><dt className="text-muted">Amount</dt><dd>{formatMoney(order.amount_minor, 'NGN')}</dd></div>
+          <div className="flex justify-between gap-4"><dt className="text-muted">Provider</dt><dd>{providerName}</dd></div>
+          <div className="flex justify-between gap-4"><dt className="text-muted">Order</dt><dd>#{order.purchase_id}</dd></div>
+          {order.paid_at && <div className="flex justify-between gap-4"><dt className="text-muted">Paid</dt><dd>{new Date(order.paid_at).toLocaleString()}</dd></div>}
           <div className="flex justify-between gap-4"><dt className="text-muted">Payment</dt><dd>{order.payment_confirmed ? 'Confirmed' : order.status === 'payment_failed' ? 'Unsuccessful' : order.status === 'needs_review' ? 'Needs review' : 'Awaiting confirmation'}</dd></div>
           <div className="flex justify-between gap-4"><dt className="text-muted">Data delivery</dt><dd>{order.status === 'success' ? 'Delivered' : order.status === 'failed' ? 'Failed' : order.delivery_started ? order.status === 'needs_review' ? 'Needs review' : 'Awaiting confirmation' : 'Not started'}</dd></div>
         </dl>
@@ -53,10 +56,10 @@ export function DataPurchaseStatusPage() {
       {order?.bill_tx_ref && <p className="break-all text-xs text-muted">Data delivery reference: {order.bill_tx_ref}</p>}
       <div className="flex flex-wrap gap-3">
         {validReference && <Button variant="outline" loading={purchase.isFetching} onClick={() => void purchase.refetch()}>Check status</Button>}
-        <LinkButton to="/billing/data" onClick={startAnother}>Buy another bundle</LinkButton>
+        <LinkButton to="/billing/data" onClick={startAnother}>View data purchases</LinkButton>
         <LinkButton to="/support" variant="ghost">Get help</LinkButton>
       </div>
-      <p className="text-xs leading-5 text-muted">A new bundle is a separate purchase. Your existing order remains in Recent purchases.</p>
+      <p className="text-xs leading-5 text-muted">Your existing order remains in Recent purchases. If delivery is not confirmed, contact support with this reference.</p>
     </section>
   </div>
 }

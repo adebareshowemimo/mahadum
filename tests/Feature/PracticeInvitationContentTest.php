@@ -89,6 +89,7 @@ class PracticeInvitationContentTest extends TestCase
         $next = $lesson->courseLevel->lessons()->create(['title' => 'Published next lesson', 'position' => 2, 'published_at' => now()]);
         $this->postJson('/api/v1/enrollments', ['learner_id' => $learner->id, 'course_id' => $lesson->courseLevel->course_id])->assertCreated();
         $lesson->update(['published_at' => null]);
+        $this->approvePracticePartner($learner, $parent, $parent);
 
         $this->postJson('/api/v1/course-practice/invitations', ['learner_id' => $learner->id, 'recipient_user_id' => $parent->id])->assertCreated();
         $this->assertDatabaseHas('course_practice_invitations', ['learner_profile_id' => $learner->id, 'lesson_id' => $next->id]);

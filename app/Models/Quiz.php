@@ -17,6 +17,8 @@ use Illuminate\Support\Carbon;
  * @property bool $shuffle_questions
  * @property int|null $max_attempts
  * @property bool $hearts_enabled
+ * @property int|null $time_limit_seconds
+ * @property int $xp_per_correct
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Collection<int, QuizAttempt> $attempts

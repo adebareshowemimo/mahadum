@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, Badge, Button, Card, CardBody, Skeleton, Textarea } from '@/components/ui'
+import { Alert, Badge, Button, Card, CardBody, LinkButton, Skeleton, Textarea } from '@/components/ui'
 import { ApiError } from '@/lib/api'
 import { useLearnerTasks, useSubmitTask } from '@/lib/family/queries'
 import { useActiveProfile } from '@/lib/profile/ActiveProfile'
@@ -40,7 +40,7 @@ export function TasksPage() {
       {tasks.data.assignments.map(a => <Card key={a.id}><CardBody className="flex flex-col gap-3">
         <div><h3 className="font-semibold text-foreground">{a.title}</h3><p className="text-sm text-muted">{a.class_name}{a.due_at ? ` · Due ${new Date(a.due_at).toLocaleDateString()}` : ''} · {a.coin_reward} coins on parent approval</p></div>
         {a.instructions && <p className="whitespace-pre-wrap text-foreground">{a.instructions}</p>}
-        {a.status ? <><Badge variant="info">{a.status === 'graded' ? 'Graded' : 'Submitted'}</Badge>{a.feedback && <p className="text-muted">Teacher feedback: {a.feedback}</p>}{a.parent_review_status === 'pending' && <p className="text-sm text-muted">Coins are waiting for your {reviewer}’s approval.</p>}</> : <>
+        {a.status ? <><Badge variant="info">{a.status === 'graded' ? 'Graded' : 'Submitted'}</Badge>{a.score != null && <p className="text-sm text-muted">Quiz score: {a.score}%</p>}{a.feedback && <p className="text-muted">Teacher feedback: {a.feedback}</p>}{a.parent_review_status === 'pending' && <p className="text-sm text-muted">Coins are waiting for your {reviewer}’s approval.</p>}</> : a.linked_lesson_id ? <LinkButton className="self-start" to={`/learn/lessons/${a.linked_lesson_id}`}>Open course quiz</LinkButton> : <>
           <Textarea label={`Your answer for ${a.title}`} value={answers[a.id] ?? ''} maxLength={10000} onChange={e => setAnswers(v => ({ ...v, [a.id]: e.target.value }))} />
           <Button className="self-start" disabled={!answers[a.id]?.trim()} loading={submit.isPending && submit.variables?.kind === 'assignment' && submit.variables.id === a.id} onClick={() => void send('assignment', a.id)}>Submit assignment</Button>
         </>}

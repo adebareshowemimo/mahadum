@@ -118,6 +118,77 @@ class ReportController extends Controller
         ]]);
     }
 
+    /** One row per user's most recent subscription, matching the users export fields. */
+    public function subscriptionRecords(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:200'],
+            'status' => ['nullable', 'string', 'max:40'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $query = Subscription::query()
+            ->where('subscriber_type', User::class)
+            ->whereIn('id', Subscription::query()
+                ->selectRaw('MAX(id)')
+                ->where('subscriber_type', User::class)
+                ->groupBy('subscriber_id'))
+            ->whereHasMorph('subscriber', [User::class])
+            ->with(['subscriber', 'plan:id,name']);
+
+        if ($search = trim($validated['q'] ?? '')) {
+            $terms = preg_split('/\s+/', $search);
+            $query->whereHasMorph('subscriber', [User::class], function ($users) use ($terms) {
+                foreach ($terms ?: [] as $term) {
+                    $users->where(function ($user) use ($term) {
+                        $user->where('first_name', 'like', "%{$term}%")
+                            ->orWhere('last_name', 'like', "%{$term}%")
+                            ->orWhere('email', 'like', "%{$term}%")
+                            ->orWhere('phone', 'like', "%{$term}%");
+                    });
+                }
+            });
+        }
+
+        if ($status = $validated['status'] ?? null) {
+            $query->where('status', $status);
+        }
+
+        $page = $query->orderByDesc('id')->paginate(20);
+
+        return response()->json([
+            'data' => collect($page->items())->map(function (Subscription $sub) {
+                /** @var User $user */
+                $user = $sub->subscriber;
+
+                return [
+                    'id' => $sub->id,
+                    'user_id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'phone' => $user->phone,
+                    'account_status' => $user->status,
+                    'subscription_plan' => $sub->plan->name,
+                    'subscription_status' => $sub->status,
+                    'subscription_start' => $sub->started_at?->toDateString(),
+                    'subscription_expiry' => $sub->renews_at?->toDateString(),
+                    'payment_status' => match ($sub->status) {
+                        'active' => 'paid',
+                        'grace' => 'past_due',
+                        'pending' => 'pending',
+                        default => 'inactive',
+                    },
+                ];
+            }),
+            'meta' => [
+                'current_page' => $page->currentPage(),
+                'last_page' => $page->lastPage(),
+                'per_page' => $page->perPage(),
+                'total' => $page->total(),
+            ],
+        ]);
+    }
+
     /**
      * Organizations & schools: new orgs per month, the org status mix, and
      * platform-wide class + enrolled-student totals.

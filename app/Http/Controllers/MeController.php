@@ -12,6 +12,7 @@ use App\Services\AuditLogger;
 use App\Services\Billing\EntitlementResolver;
 use App\Services\ConsumerAccess;
 use App\Services\UserAccountType;
+use App\Support\ActiveChildProfile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -19,6 +20,31 @@ class MeController extends Controller
 {
     public function show(Request $request, EntitlementResolver $entitlements): JsonResponse
     {
+        $activeChildId = ActiveChildProfile::id($request);
+        if ($activeChildId !== null) {
+            $child = LearnerProfile::with(['targetLanguage', 'profilePhoto', 'organization'])->findOrFail($activeChildId);
+
+            return response()->json(['data' => [
+                'user' => [
+                    'id' => $request->user()->id,
+                    'first_name' => $child->display_name,
+                    'last_name' => '',
+                    'name' => $child->display_name,
+                    'email' => '',
+                    'email_verified' => true,
+                    'roles' => ['student'],
+                    'capabilities' => [],
+                ],
+                'families' => [],
+                'learner_profiles' => [new LearnerProfileResource($child)],
+                'organizations' => [],
+                'active_organization_id' => null,
+                'active_child_profile_id' => $child->id,
+                'subscription' => null,
+                'entitlements' => $entitlements->forLearner($child),
+            ]]);
+        }
+
         $user = $request->user()->load([
             'ownedFamilies.learnerProfiles.targetLanguage',
             'ownedFamilies.learnerProfiles.profilePhoto',
@@ -58,6 +84,7 @@ class MeController extends Controller
                 'role' => $m->role,
             ])->values(),
             'active_organization_id' => app()->bound('currentTenantId') ? app('currentTenantId') : null,
+            'active_child_profile_id' => ActiveChildProfile::id($request),
             'subscription' => $subscription ? [
                 'id' => $subscription->id,
                 'status' => $subscription->status,

@@ -7,7 +7,8 @@ use Illuminate\Support\Str;
 
 /**
  * Enforces the lesson publish rule (Content Model §6 / Business Rule 1):
- * a lesson cannot publish without ≥1 video + ≥1 quiz, every video must be
+ * course lessons need a video and quiz; proverb and trivia lessons need at
+ * least one text, video, quiz or flashcard format. Every video must be
  * `ready`, and every quiz must have ≥1 question with a valid correct-answer
  * configuration.
  *
@@ -22,11 +23,17 @@ class LessonPublishService
      */
     public function failures(Lesson $lesson): array
     {
-        $lesson->loadMissing(['components.video', 'components.quiz.questions.options']);
+        $lesson->loadMissing(['components.video.captions', 'components.video.renditions', 'components.quiz.questions.options']);
         $components = $lesson->components;
         $failures = [];
 
-        foreach (['video', 'quiz'] as $required) {
+        $requiredTypes = in_array($lesson->kind, ['proverb', 'trivia'], true) ? [] : ['video', 'quiz'];
+        if (in_array($lesson->kind, ['proverb', 'trivia'], true)
+            && blank($lesson->summary)
+            && $components->whereIn('type', ['video', 'quiz', 'exercise'])->isEmpty()) {
+            $failures[] = 'Add text, video, quiz, or flashcards before publishing this set.';
+        }
+        foreach ($requiredTypes as $required) {
             if ($components->where('type', $required)->isEmpty()) {
                 $failures[] = "Lesson needs at least one {$required} component.";
             }
@@ -37,6 +44,25 @@ class LessonPublishService
                 $failures[] = "Video component #{$component->id} has no video record.";
             } elseif ($component->video->status !== 'ready') {
                 $failures[] = "Video component #{$component->id} is not ready (status: {$component->video->status}).";
+            } elseif (data_get($component->settings, 'require_watch', false)
+                && $component->video->source_type === 'youtube') {
+                $failures[] = "Video component #{$component->id} must be uploaded to verify full playback before continuing.";
+            }
+            if ($component->video?->is_cultural) {
+                $video = $component->video;
+                if (! data_get($component->settings, 'require_watch', false)) {
+                    $failures[] = "Cultural video #{$component->id} must require full playback.";
+                }
+                if ($video->duration_seconds < 60 || $video->duration_seconds > 180) {
+                    $failures[] = "Cultural video #{$component->id} must be 60–180 seconds long.";
+                }
+                if ($video->captions->pluck('language_code')->unique()->count() < 2) {
+                    $failures[] = "Cultural video #{$component->id} needs captions in two languages.";
+                }
+                if ($video->source_type !== 'upload'
+                    || $video->renditions->where('ready', true)->pluck('quality')->intersect(['240p', '360p', '720p'])->count() < 3) {
+                    $failures[] = "Cultural video #{$component->id} needs ready 240p, 360p and 720p versions.";
+                }
             }
         }
 

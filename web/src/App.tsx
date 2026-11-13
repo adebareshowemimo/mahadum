@@ -3,6 +3,8 @@ import { Navigate, Outlet, Route, Routes, useLocation, useParams } from 'react-r
 import { AdminRoute, GuestRoute, ProtectedRoute, RoleRoute, TeacherRoute } from '@/components/auth/ProtectedRoute'
 import { AdminLayout } from '@/components/admin'
 import { AppLayout } from '@/components/layout/AppLayout'
+import { ConceptHeader } from '@/components/landing/ConceptHeader'
+import { ConceptFooter } from '@/components/landing/ConceptFooter'
 import { Spinner } from '@/components/ui/Spinner'
 // ComingSoon stays static: it backs every not-yet-built nav destination in the
 // .map() below, so lazy-loading it would mean one chunk request per placeholder.
@@ -15,11 +17,13 @@ import { applyPublicMetadata } from '@/lib/seo/metadata'
 // the `.then(m => ({ default: m.X }))` shim React.lazy requires.
 const AboutPage = lazy(() => import('@/pages/AboutPage').then((m) => ({ default: m.AboutPage })))
 const WebsiteEditorPage = lazy(() => import('@/pages/WebsiteEditorPage').then((m) => ({ default: m.WebsiteEditorPage })))
+const GuideManagerPage = lazy(() => import('@/pages/GuideManagerPage').then((m) => ({ default: m.GuideManagerPage })))
 const FamiliesPage = lazy(() => import('@/pages/PublicAudiencePages').then((m) => ({ default: m.FamiliesPage })))
 const InstitutionsPage = lazy(() => import('@/pages/PublicAudiencePages').then((m) => ({ default: m.InstitutionsPage })))
 const ContactPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.ContactPage })))
 const PrivacyPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.PrivacyPage })))
 const RefundPolicyPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.RefundPolicyPage })))
+const DataTopUpTermsPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.DataTopUpTermsPage })))
 const ChildrenPrivacyPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.ChildrenPrivacyPage })))
 const TermsPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.TermsPage })))
 const ChildSafetyPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.ChildSafetyPage })))
@@ -37,17 +41,29 @@ const ClassInvitationPage = lazy(() => import('@/pages/ClassInvitationPage').the
 const TeacherProfilePage = lazy(() => import('@/pages/TeacherProfilePage').then((m) => ({ default: m.TeacherProfilePage })))
 const ComponentsPage = lazy(() => import('@/pages/ComponentsPage').then((m) => ({ default: m.ComponentsPage })))
 const CoursesPage = lazy(() => import('@/pages/content/CoursesPage').then((m) => ({ default: m.CoursesPage })))
+const ProverbsTriviaPage = lazy(() => import('@/pages/content/ProverbsTriviaPage').then((m) => ({ default: m.ProverbsTriviaPage })))
+const LibrarySetBuilderPage = lazy(() => import('@/pages/content/LibrarySetBuilderPage').then((m) => ({ default: m.LibrarySetBuilderPage })))
+const StoriesPage = lazy(() => import('@/pages/content/StoriesPage').then((m) => ({ default: m.StoriesPage })))
+const StoryEditorPage = lazy(() => import('@/pages/content/StoryEditorPage').then((m) => ({ default: m.StoryEditorPage })))
+const ProverbsTriviaLibraryPage = lazy(() => import('@/pages/ProverbsTriviaLibraryPage').then((m) => ({ default: m.ProverbsTriviaLibraryPage })))
+const LibrarySetDetailPage = lazy(() => import('@/pages/LibrarySetDetailPage').then((m) => ({ default: m.LibrarySetDetailPage })))
+const StoryLibraryPage = lazy(() => import('@/pages/StoryLibraryPage').then((m) => ({ default: m.StoryLibraryPage })))
+const StoryReaderPage = lazy(() => import('@/pages/StoryReaderPage').then((m) => ({ default: m.StoryReaderPage })))
 const CourseBuilderPage = lazy(() => import('@/pages/content/CourseBuilderPage').then((m) => ({ default: m.CourseBuilderPage })))
+const LibrarySetPreviewPage = lazy(() => import('@/pages/content/LibrarySetPreviewPage').then((m) => ({ default: m.LibrarySetPreviewPage })))
 const CoursePreviewPage = lazy(() => import('@/pages/content/CoursePreviewPage').then((m) => ({ default: m.CoursePreviewPage })))
+const StoryPreviewPage = lazy(() => import('@/pages/content/StoryPreviewPage').then((m) => ({ default: m.StoryPreviewPage })))
 const LessonBuilderPage = lazy(() => import('@/pages/content/LessonBuilderPage').then((m) => ({ default: m.LessonBuilderPage })))
 const MediaPage = lazy(() => import('@/pages/content/MediaPage').then((m) => ({ default: m.MediaPage })))
 const EarningsPage = lazy(() => import('@/pages/EarningsPage').then((m) => ({ default: m.EarningsPage })))
 const DashboardPage = lazy(() => import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
 const FamilyPage = lazy(() => import('@/pages/FamilyPage').then((m) => ({ default: m.FamilyPage })))
+const LearningGoalPage = lazy(() => import('@/pages/LearningGoalPage').then((m) => ({ default: m.LearningGoalPage })))
 const FamilyGoalsPage = lazy(() => import('@/pages/FamilyGoalsPage').then((m) => ({ default: m.FamilyGoalsPage })))
 const SchoolStudentsPage = lazy(() => import('@/pages/SchoolDirectoriesPage').then((m) => ({ default: m.SchoolStudentsPage })))
 const SchoolTeachersPage = lazy(() => import('@/pages/SchoolDirectoriesPage').then((m) => ({ default: m.SchoolTeachersPage })))
 const TeacherInvitationPage = lazy(() => import('@/pages/TeacherInvitationPage').then((m) => ({ default: m.TeacherInvitationPage })))
+const SchoolJoinPage = lazy(() => import('@/pages/SchoolJoinPage').then((m) => ({ default: m.SchoolJoinPage })))
 const NotificationsPage = lazy(() => import('@/pages/NotificationsPage').then((m) => ({ default: m.NotificationsPage })))
 const ChildPage = lazy(() => import('@/pages/ChildPage').then((m) => ({ default: m.ChildPage })))
 const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })))
@@ -103,6 +119,7 @@ const UserDetailPage = lazy(() => import('@/pages/UserDetailPage').then((m) => (
 const LeaderboardPage = lazy(() => import('@/pages/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })))
 const LearnPage = lazy(() => import('@/pages/LearnPage').then((m) => ({ default: m.LearnPage })))
 const CourseCatalogPage = lazy(() => import('@/pages/CourseCatalogPage').then((m) => ({ default: m.CourseCatalogPage })))
+const PlacementPage = lazy(() => import('@/pages/PlacementPage').then((m) => ({ default: m.PlacementPage })))
 const LessonPlayerPage = lazy(() => import('@/pages/LessonPlayerPage').then((m) => ({ default: m.LessonPlayerPage })))
 const TonePracticeInvitationPage = lazy(() => import('@/pages/TonePracticeInvitationPage').then((m) => ({ default: m.TonePracticeInvitationPage })))
 const CoursePracticeInvitationPage = lazy(() => import('@/pages/CoursePracticeInvitationPage').then((m) => ({ default: m.CoursePracticeInvitationPage })))
@@ -118,6 +135,7 @@ const CompetitionDetailPage = lazy(() => import('@/pages/CompetitionDetailPage')
 const CompetitionsAdminPage = lazy(() => import('@/pages/CompetitionsAdminPage').then((m) => ({ default: m.CompetitionsAdminPage })))
 const CoursePerformancePage = lazy(() => import('@/pages/content/CoursePerformancePage').then((m) => ({ default: m.CoursePerformancePage })))
 const WalletPage = lazy(() => import('@/pages/WalletPage').then((m) => ({ default: m.WalletPage })))
+const PaymentResultPage = lazy(() => import('@/pages/PaymentResultPage').then((m) => ({ default: m.PaymentResultPage })))
 const LoginPage = lazy(() => import('@/pages/LoginPage').then((m) => ({ default: m.LoginPage })))
 const RegisterPage = lazy(() => import('@/pages/RegisterPage').then((m) => ({ default: m.RegisterPage })))
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })))
@@ -129,7 +147,12 @@ const PAGE_TITLES: Record<string, string> = {
   '/': 'Learn Nigerian Languages',
   '/home': 'Dashboard',
   '/learn': 'My Learning',
+  '/learning-goal': 'Learning goal',
   '/learn/courses': 'Courses',
+  '/learn/proverbs-trivia': 'Proverbs & Trivia',
+  '/learn/stories': 'Stories & Folklore',
+  '/courses/proverbs-trivia': 'Proverbs & Trivia',
+  '/courses/stories': 'Stories & Folklore',
   '/family': 'Family',
   '/family/goals': 'Family goals',
   '/school/students': 'Students',
@@ -152,6 +175,7 @@ function PageTitleManager() {
     let title = PAGE_TITLES[pathname]
     if (!title && /^\/classes\/\d+/.test(pathname)) title = pathname.endsWith('/invite') ? 'Invite Learner' : 'Class Workspace'
     if (!title && /^\/assignments\/\d+/.test(pathname)) title = 'Assignment Review'
+    if (!title && pathname.startsWith('/payment/')) title = 'Payment result'
     if (!title && pathname.startsWith('/admin/')) title = 'Administration'
     if (!title && pathname.startsWith('/courses/')) title = 'Course'
     document.title = title ? `${title} · ${DISPLAY_NAME}` : DISPLAY_NAME
@@ -236,6 +260,7 @@ function ShellSuspense() {
 // resolves to a ComingSoon placeholder so links never dead-end.
 const REAL_PAGES = new Set([
   '/content/website',
+  '/content/guides',
   '/family/goals', '/school/students', '/school/teachers', '/notifications',
   '/verify-email',
   '/home',
@@ -246,6 +271,9 @@ const REAL_PAGES = new Set([
   '/tasks',
   '/learn',
   '/learn/courses',
+  '/learn/placement',
+  '/learn/proverbs-trivia',
+  '/learn/stories',
   '/achievements',
   '/leaderboard',
   '/referrals',
@@ -300,6 +328,8 @@ const REAL_PAGES = new Set([
   '/earnings',
   '/teacher/profile',
   '/courses',
+  '/courses/proverbs-trivia',
+  '/courses/stories',
   '/media',
 ])
 
@@ -308,6 +338,10 @@ function ReferralLanding() {
   const { code } = useParams<{ code: string }>()
   const target = code ? `/register?ref=${encodeURIComponent(code)}` : '/register'
   return <Navigate to={target} replace />
+}
+
+function PublicCompetitionLayout() {
+  return <div className="flex min-h-screen flex-col bg-background"><ConceptHeader /><main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6"><Outlet /></main><ConceptFooter /></div>
 }
 
 export function App() {
@@ -329,14 +363,20 @@ export function App() {
       <Route path="/families" element={<FamiliesPage />} />
       <Route path="/institutions" element={<InstitutionsPage />} />
       <Route path="/contact" element={<ContactPage />} />
+      <Route element={<PublicCompetitionLayout />}>
+        <Route path="/competitions" element={<CompetitionsPage />} />
+        <Route path="/competitions/:competitionId" element={<CompetitionDetailPage />} />
+      </Route>
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/refunds" element={<RefundPolicyPage />} />
+      <Route path="/data-top-up-terms" element={<DataTopUpTermsPage />} />
       <Route path="/children-privacy" element={<ChildrenPrivacyPage />} />
       <Route path="/child-safety" element={<ChildSafetyPage />} />
       <Route path="/accessibility" element={<AccessibilityPage />} />
       <Route path="/class-invitations/:token" element={<ClassInvitationPage />} />
       <Route path="/teacher-invitations/:token" element={<TeacherInvitationPage />} />
+      <Route path="/school-join/:token" element={<SchoolJoinPage />} />
       {/* Referral share links (mahadum360.com/r/CODE) → sign-up with the code applied. */}
       <Route path="/r/:code" element={<ReferralLanding />} />
 
@@ -356,16 +396,26 @@ export function App() {
       <Route element={<ProtectedRoute />}>
         {/* Chrome-free, immersive screens — rendered outside the authoring shell. */}
         <Route path="/learn/lessons/:lessonId" element={<LessonPlayerPage />} />
+        <Route path="/learn/stories/:storyId" element={<StoryReaderPage />} />
+        <Route path="/learning-goal" element={<LearningGoalPage />} />
         <Route path="/tone-practice/:token" element={<TonePracticeInvitationPage />} />
         <Route path="/course-practice/:token" element={<CoursePracticeInvitationPage />} />
+        <Route path="/courses/proverbs-trivia/:setId/preview" element={<LibrarySetPreviewPage />} />
+        <Route path="/courses/proverbs-trivia/:setId/levels/:levelId/preview" element={<LibrarySetPreviewPage />} />
         <Route path="/courses/:courseId/preview" element={<CoursePreviewPage />} />
         <Route path="/courses/:courseId/levels/:levelId/preview" element={<CoursePreviewPage />} />
+        <Route path="/courses/:courseId/lessons/:lessonId/preview" element={<CoursePreviewPage />} />
+        <Route path="/courses/stories/:storyId/preview" element={<StoryPreviewPage />} />
 
         <Route element={<AppLayout />}>
           <Route element={<ShellSuspense />}>
           <Route path="/home" element={<DashboardPage />} />
           <Route path="/learn" element={<LearnPage />} />
           <Route path="/learn/courses" element={<CourseCatalogPage />} />
+          <Route path="/learn/placement" element={<PlacementPage />} />
+          <Route path="/learn/proverbs-trivia" element={<ProverbsTriviaLibraryPage />} />
+          <Route path="/learn/proverbs-trivia/:setId" element={<LibrarySetDetailPage />} />
+          <Route path="/learn/stories" element={<StoryLibraryPage />} />
           <Route path="/achievements" element={<AchievementsPage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route element={<RoleRoute roles={['parent', 'supervisor', 'super_admin']} />}>
@@ -379,6 +429,8 @@ export function App() {
           </Route>
           <Route path="/family/children/:learnerId" element={<ChildPage />} />
           <Route path="/wallet" element={<WalletPage />} />
+          <Route path="/payment/:kind/:id" element={<PaymentResultPage />} />
+          <Route path="/payment/invoice/:orgId/:id" element={<PaymentResultPage />} />
           <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/tasks" element={<TasksPage />} />
           <Route path="/billing" element={<BillingPage />} />
@@ -395,25 +447,34 @@ export function App() {
             <Route path="/earnings" element={<EarningsPage />} />
             <Route path="/teacher/profile" element={<TeacherProfilePage />} />
           </Route>
+          <Route element={<RoleRoute roles={['super_admin', 'content_owner']} />}>
           <Route path="/courses" element={<CoursesPage />} />
+          <Route path="/courses/proverbs-trivia" element={<ProverbsTriviaPage />} />
+          <Route path="/courses/proverbs-trivia/:setId" element={<LibrarySetBuilderPage />} />
+          <Route path="/courses/proverbs-trivia/:setId/lessons/:lessonId" element={<LessonBuilderPage />} />
+          <Route path="/courses/proverbs-trivia/lessons/:lessonId" element={<LessonBuilderPage />} />
+          <Route path="/courses/stories" element={<StoriesPage />} />
+          <Route path="/courses/stories/:storyId" element={<StoryEditorPage />} />
           <Route path="/courses/:courseId" element={<CourseBuilderPage />} />
           <Route path="/courses/:courseId/lessons/:lessonId" element={<LessonBuilderPage />} />
           <Route path="/media" element={<MediaPage />} />
+          </Route>
           <Route path="/referrals" element={<ReferralsPage />} />
-          <Route path="/school" element={<SchoolDashboardPage />} />
-          <Route path="/roster" element={<RosterPage />} />
-          <Route path="/seats" element={<SeatsPage />} />
-          <Route path="/invoices" element={<InvoicesPage />} />
-          <Route path="/school/referrals" element={<SchoolReferralsPage />} />
+          <Route element={<RoleRoute roles={['school_admin', 'super_admin']} />}>
+            <Route path="/school" element={<SchoolDashboardPage />} />
+            <Route path="/roster" element={<RosterPage />} />
+            <Route path="/seats" element={<SeatsPage />} />
+            <Route path="/invoices" element={<InvoicesPage />} />
+            <Route path="/school/referrals" element={<SchoolReferralsPage />} />
+          </Route>
           {/* Language & Culture competition — browse + vote open to all; organiser
               console gated to super_admin + content_owner. */}
-          <Route path="/competitions" element={<CompetitionsPage />} />
           <Route element={<RoleRoute roles={['super_admin', 'content_owner']} />}>
             <Route path="/content/website" element={<WebsiteEditorPage />} />
+            <Route path="/content/guides" element={<GuideManagerPage />} />
             <Route path="/competitions/manage" element={<CompetitionsAdminPage />} />
             <Route path="/content/performance" element={<CoursePerformancePage />} />
           </Route>
-          <Route path="/competitions/:competitionId" element={<CompetitionDetailPage />} />
           {/* Global-admin portal — super_admin only; grouped sub-nav via AdminLayout. */}
           <Route element={<AdminRoute />}>
             <Route element={<AdminLayout />}>
