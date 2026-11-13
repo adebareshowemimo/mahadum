@@ -18,6 +18,12 @@ class GuideLibrarySeeder extends Seeder
             throw new \RuntimeException('Set SEED_GUIDE_LIBRARY=1 to explicitly seed guide content in production.');
         }
 
+        $this->seedInitialContent();
+    }
+
+    /** Used by the one-time production migration as well as explicit reseeds. */
+    public function seedInitialContent(): void
+    {
         $playlists = [
             'hausa' => [
                 ['NAC7DVDMGzM', 'Body Parts in Hausa | Describe Yourself in Hausa for Beginners & Kids'],

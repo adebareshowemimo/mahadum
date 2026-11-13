@@ -294,6 +294,26 @@ class PublicSeoTest extends TestCase
         }
     }
 
+    public function test_normal_production_migration_seeds_guides_without_replacing_editor_changes(): void
+    {
+        $previousEnvironment = app()->environment();
+        $migration = require database_path('migrations/2026_11_13_000001_seed_initial_production_guides.php');
+
+        try {
+            app()->detectEnvironment(fn () => 'production');
+            $migration->up();
+            $this->assertDatabaseCount('guide_videos', 48);
+            $this->assertDatabaseCount('guide_faqs', 5);
+            $video = GuideVideo::query()->firstOrFail();
+            $video->update(['title' => 'Reviewed title']);
+            $migration->up();
+            $this->assertDatabaseCount('guide_videos', 48);
+            $this->assertDatabaseHas('guide_videos', ['id' => $video->id, 'title' => 'Reviewed title']);
+        } finally {
+            app()->detectEnvironment(fn () => $previousEnvironment);
+        }
+    }
+
     public function test_language_voting_requires_verified_account_and_prevents_duplicates(): void
     {
         $this->postJson('/api/v1/language-votes', ['language' => 'Tiv'])->assertUnauthorized();
