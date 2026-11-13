@@ -37,6 +37,7 @@ class CompetitionEntry extends Model
 
     protected $casts = [
         'submitted_at' => 'datetime',
+        'guardian_approved_at' => 'datetime',
         'votes_count' => 'integer',
         'award_rank' => 'integer',
     ];

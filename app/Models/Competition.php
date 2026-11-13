@@ -31,6 +31,9 @@ class Competition extends Model
     protected $guarded = [];
 
     protected $casts = [
+        'entries_open_at' => 'datetime',
+        'judging_starts_at' => 'datetime',
+        'judging_closes_at' => 'datetime',
         'submissions_close_at' => 'datetime',
         'voting_closes_at' => 'datetime',
         'season' => 'integer',
@@ -57,11 +60,14 @@ class Competition extends Model
 
     public function acceptingEntries(): bool
     {
-        return $this->status === 'open';
+        return $this->status === 'open'
+            && ($this->entries_open_at === null || $this->entries_open_at->isPast())
+            && ($this->submissions_close_at === null || $this->submissions_close_at->isFuture());
     }
 
     public function acceptingVotes(): bool
     {
-        return in_array($this->status, ['open', 'voting'], true);
+        return in_array($this->status, ['open', 'voting'], true)
+            && ($this->voting_closes_at === null || $this->voting_closes_at->isFuture());
     }
 }

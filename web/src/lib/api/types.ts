@@ -2385,6 +2385,9 @@ export interface CompetitionSummary {
   status: CompetitionStatus
   entries_count: number
   submissions_close_at: string | null
+  entries_open_at: string | null
+  judging_starts_at: string | null
+  judging_closes_at: string | null
   voting_closes_at: string | null
   min_activity_days: number
   accepting_entries: boolean
@@ -2405,6 +2408,9 @@ export interface CompetitionEntry {
 
 export interface CompetitionDetail extends CompetitionSummary {
   description: string | null
+  rules: string | null
+  prizes: string | null
+  eligibility: string | null
   voted_categories: CompetitionCategory[]
   can_enter: boolean
   entries: CompetitionEntry[]
@@ -2417,10 +2423,12 @@ export interface SubmitEntryInput {
   language_id?: number
   organization_id?: number
   learner_profile_id?: number
+  guardian_consent?: boolean
 }
 
 export interface MyCompetitionEntry {
   id: number
+  competition_id: number
   competition: string
   season: number
   category: CompetitionCategory
@@ -2428,6 +2436,7 @@ export interface MyCompetitionEntry {
   status: string
   votes_count: number
   award_rank: number | null
+  guardian_approved_at: string | null
 }
 
 /** Admin (organiser) view of a competition — carries the status option list. */
@@ -2437,9 +2446,15 @@ export interface AdminCompetition {
   slug: string
   season: number
   description: string | null
+  rules: string | null
+  prizes: string | null
+  eligibility: string | null
   status: CompetitionStatus
   statuses: CompetitionStatus[]
   submissions_close_at: string | null
+  entries_open_at: string | null
+  judging_starts_at: string | null
+  judging_closes_at: string | null
   voting_closes_at: string | null
   min_activity_days: number
   entries_count: number
@@ -2449,6 +2464,14 @@ export interface CreateCompetitionInput {
   title: string
   season: number
   description?: string
+  rules?: string
+  prizes?: string
+  eligibility?: string
+  entries_open_at?: string | null
+  submissions_close_at?: string | null
+  voting_closes_at?: string | null
+  judging_starts_at?: string | null
+  judging_closes_at?: string | null
   min_activity_days?: number
 }
 

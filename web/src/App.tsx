@@ -3,6 +3,8 @@ import { Navigate, Outlet, Route, Routes, useLocation, useParams } from 'react-r
 import { AdminRoute, GuestRoute, ProtectedRoute, RoleRoute, TeacherRoute } from '@/components/auth/ProtectedRoute'
 import { AdminLayout } from '@/components/admin'
 import { AppLayout } from '@/components/layout/AppLayout'
+import { ConceptHeader } from '@/components/landing/ConceptHeader'
+import { ConceptFooter } from '@/components/landing/ConceptFooter'
 import { Spinner } from '@/components/ui/Spinner'
 // ComingSoon stays static: it backs every not-yet-built nav destination in the
 // .map() below, so lazy-loading it would mean one chunk request per placeholder.
@@ -338,6 +340,10 @@ function ReferralLanding() {
   return <Navigate to={target} replace />
 }
 
+function PublicCompetitionLayout() {
+  return <div className="flex min-h-screen flex-col bg-background"><ConceptHeader /><main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6"><Outlet /></main><ConceptFooter /></div>
+}
+
 export function App() {
   return (
     <Suspense fallback={<RouteFallback />}>
@@ -357,6 +363,10 @@ export function App() {
       <Route path="/families" element={<FamiliesPage />} />
       <Route path="/institutions" element={<InstitutionsPage />} />
       <Route path="/contact" element={<ContactPage />} />
+      <Route element={<PublicCompetitionLayout />}>
+        <Route path="/competitions" element={<CompetitionsPage />} />
+        <Route path="/competitions/:competitionId" element={<CompetitionDetailPage />} />
+      </Route>
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/refunds" element={<RefundPolicyPage />} />
@@ -459,14 +469,12 @@ export function App() {
           </Route>
           {/* Language & Culture competition — browse + vote open to all; organiser
               console gated to super_admin + content_owner. */}
-          <Route path="/competitions" element={<CompetitionsPage />} />
           <Route element={<RoleRoute roles={['super_admin', 'content_owner']} />}>
             <Route path="/content/website" element={<WebsiteEditorPage />} />
             <Route path="/content/guides" element={<GuideManagerPage />} />
             <Route path="/competitions/manage" element={<CompetitionsAdminPage />} />
             <Route path="/content/performance" element={<CoursePerformancePage />} />
           </Route>
-          <Route path="/competitions/:competitionId" element={<CompetitionDetailPage />} />
           {/* Global-admin portal — super_admin only; grouped sub-nav via AdminLayout. */}
           <Route element={<AdminRoute />}>
             <Route element={<AdminLayout />}>

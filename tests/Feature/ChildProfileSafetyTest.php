@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\ClassEnrollment;
+use App\Models\Competition;
 use App\Models\Language;
 use App\Models\LearnerProfile;
 use App\Models\Organization;
@@ -24,6 +25,7 @@ class ChildProfileSafetyTest extends TestCase
         $child = $this->parentWithChild($parent);
         $language = Language::create(['code' => 'ig', 'name' => 'Igbo', 'script' => 'latin', 'is_active' => true]);
         $story = Story::create(['language_id' => $language->id, 'standalone_level' => 1, 'title' => 'Child safety story', 'age_band' => '0_5', 'format' => 'reading', 'price_minor' => Story::PRICE_MINOR, 'published_at' => now()]);
+        $competition = Competition::create(['title' => 'Child safety competition', 'slug' => 'child-safety-competition', 'season' => 2026, 'status' => 'open']);
         $this->withToken($parent->createToken('child-mode-test')->plainTextToken);
 
         $this->putJson("/api/v1/family/children/{$child->id}/pin", ['pin' => '1234'])->assertOk();
@@ -35,6 +37,8 @@ class ChildProfileSafetyTest extends TestCase
         $this->getJson('/api/v1/family')->assertForbidden()->assertJsonPath('error.code', 'parent_only');
         $this->getJson('/api/v1/me/notifications')->assertForbidden()->assertJsonPath('error.code', 'parent_only');
         $this->postJson("/api/v1/learning/stories/{$story->id}/purchase", [])->assertForbidden()->assertJsonPath('error.code', 'parent_only');
+        $this->postJson("/api/v1/competitions/{$competition->id}/entries", [])->assertForbidden()->assertJsonPath('error.code', 'parent_only');
+        $this->getJson('/api/v1/public/competitions/'.$competition->slug)->assertOk()->assertJsonPath('data.can_enter', false);
         $refreshed = $this->postJson('/api/v1/auth/refresh')->assertOk()->json('data.token');
         $this->withToken($refreshed);
         $this->getJson('/api/v1/wallet')->assertForbidden()->assertJsonPath('error.code', 'parent_only');

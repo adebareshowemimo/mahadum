@@ -1609,6 +1609,10 @@ export const adminApi = {
     const { data } = await api.post('/admin/competitions', input)
     return data.data
   },
+  async updateCompetition(id: number, input: Partial<CreateCompetitionInput>): Promise<AdminCompetition> {
+    const { data } = await api.patch(`/admin/competitions/${id}`, input)
+    return data.data
+  },
 
   async moderateEntry(competitionId: number, entryId: number, status: EntryModeration): Promise<{ id: number; status: string }> {
     const { data } = await api.post(`/admin/competitions/${competitionId}/entries/${entryId}/moderate`, { status })
@@ -1628,12 +1632,12 @@ export const adminApi = {
 
 export const competitionApi = {
   async list(): Promise<CompetitionSummary[]> {
-    const { data } = await api.get('/competitions')
+    const { data } = await api.get('/public/competitions')
     return data.data
   },
 
-  async show(id: number): Promise<CompetitionDetail> {
-    const { data } = await api.get(`/competitions/${id}`)
+  async show(slug: string): Promise<CompetitionDetail> {
+    const { data } = await api.get(`/public/competitions/${encodeURIComponent(slug)}`)
     return data.data
   },
 
@@ -1645,6 +1649,9 @@ export const competitionApi = {
   async submitEntry(competitionId: number, input: SubmitEntryInput): Promise<{ id: number; status: string }> {
     const { data } = await api.post(`/competitions/${competitionId}/entries`, input)
     return data.data
+  },
+  async approveEntryAsGuardian(competitionId: number, entryId: number): Promise<void> {
+    await api.post(`/competitions/${competitionId}/entries/${entryId}/guardian-approve`, { guardian_consent: true })
   },
 
   async vote(competitionId: number, entryId: number): Promise<{ votes_count: number }> {

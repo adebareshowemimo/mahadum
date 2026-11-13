@@ -17,6 +17,7 @@ import {
   useJudgeCompetition,
   useModerateEntry,
   useSetCompetitionStatus,
+  useUpdateCompetition,
 } from '@/lib/competition/queries'
 
 const STATUS_VARIANT: Record<CompetitionStatus, 'neutral' | 'success' | 'info'> = {
@@ -95,6 +96,7 @@ function NewCompetitionForm({ onDone }: { onDone: () => void }) {
           <Input label="Season (year)" type="number" value={form.season} onChange={(e) => setForm((f) => ({ ...f, season: Number(e.target.value) }))} error={fieldErrors.season} />
           <Input label="Min. activity days to qualify" type="number" min={0} value={form.min_activity_days ?? 90} onChange={(e) => setForm((f) => ({ ...f, min_activity_days: Number(e.target.value) }))} error={fieldErrors.min_activity_days} />
         </div>
+        <CompetitionContentFields form={form} setForm={setForm} fieldErrors={fieldErrors} />
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={onDone}>Cancel</Button>
           <Button variant="parent" loading={create.isPending} disabled={!form.title.trim()} onClick={onSubmit}>
@@ -106,10 +108,91 @@ function NewCompetitionForm({ onDone }: { onDone: () => void }) {
   )
 }
 
+type DateField = 'entries_open_at' | 'submissions_close_at' | 'voting_closes_at' | 'judging_starts_at' | 'judging_closes_at'
+const DATE_FIELDS: { key: DateField; label: string }[] = [
+  { key: 'entries_open_at', label: 'Entries open' },
+  { key: 'submissions_close_at', label: 'Entries close' },
+  { key: 'voting_closes_at', label: 'Voting closes' },
+  { key: 'judging_starts_at', label: 'Judging starts' },
+  { key: 'judging_closes_at', label: 'Judging ends' },
+]
+
+function localDateTime(value: string | null | undefined): string {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
+}
+
+function CompetitionContentFields({ form, setForm, fieldErrors }: {
+  form: CreateCompetitionInput
+  setForm: (updater: (form: CreateCompetitionInput) => CreateCompetitionInput) => void
+  fieldErrors: Record<string, string>
+}) {
+  return <div className="flex flex-col gap-4">
+    {(['description', 'rules', 'prizes', 'eligibility'] as const).map((key) => <label key={key} className="flex flex-col gap-1 text-sm font-semibold text-foreground">
+      <span>{key[0].toUpperCase() + key.slice(1)}</span>
+      <textarea rows={key === 'rules' ? 5 : 3} value={form[key] ?? ''} onChange={(e) => setForm((current) => ({ ...current, [key]: e.target.value }))} className="rounded-xl border border-border-strong bg-surface px-3 py-2 text-sm font-normal text-foreground" />
+      {fieldErrors[key] && <span className="text-xs text-danger">{fieldErrors[key]}</span>}
+    </label>)}
+    <div className="grid gap-4 sm:grid-cols-2">{DATE_FIELDS.map(({ key, label }) => <Input key={key} label={label} type="datetime-local" value={localDateTime(form[key])} onChange={(e) => setForm((current) => ({ ...current, [key]: e.target.value ? new Date(e.target.value).toISOString() : null }))} error={fieldErrors[key]} />)}</div>
+  </div>
+}
+
+function EditCompetitionDetails({ competition, onDone }: { competition: AdminCompetition; onDone: () => void }) {
+  const update = useUpdateCompetition()
+  const [form, setForm] = useState<CreateCompetitionInput>({
+    title: competition.title, season: competition.season, description: competition.description ?? '',
+    rules: competition.rules ?? '', prizes: competition.prizes ?? '', eligibility: competition.eligibility ?? '',
+    entries_open_at: competition.entries_open_at, submissions_close_at: competition.submissions_close_at,
+    voting_closes_at: competition.voting_closes_at, judging_starts_at: competition.judging_starts_at,
+    judging_closes_at: competition.judging_closes_at, min_activity_days: competition.min_activity_days,
+  })
+  const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+  async function save() {
+    setError(null)
+    setFieldErrors({})
+    try {
+      await update.mutateAsync({ id: competition.id, input: form })
+      onDone()
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setFieldErrors(err.fieldErrors)
+        setError(err.message)
+      } else setError('Could not save competition details.')
+    }
+  }
+
+  return <div className="flex flex-col gap-4 border-t border-border pt-4">
+    <h3 className="font-display font-bold text-foreground">Competition details</h3>
+    {error && <Alert variant="danger">{error}</Alert>}
+    <Input label="Title" value={form.title} onChange={(e) => setForm((current) => ({ ...current, title: e.target.value }))} error={fieldErrors.title} />
+    <CompetitionContentFields form={form} setForm={setForm} fieldErrors={fieldErrors} />
+    <div className="flex justify-end gap-2"><Button variant="ghost" onClick={onDone}>Cancel</Button><Button variant="parent" loading={update.isPending} onClick={save}>Save details</Button></div>
+  </div>
+}
+
 function CompetitionRow({ competition }: { competition: AdminCompetition }) {
   const setStatus = useSetCompetitionStatus()
   const next = NEXT[competition.status]
   const [managing, setManaging] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [copyError, setCopyError] = useState(false)
+  const [statusError, setStatusError] = useState<string | null>(null)
+  const publicUrl = `${window.location.origin}/competitions/${competition.slug}`
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(publicUrl)
+      setCopied(true)
+      setCopyError(false)
+    } catch {
+      setCopyError(true)
+    }
+  }
 
   return (
     <Card>
@@ -125,9 +208,11 @@ function CompetitionRow({ competition }: { competition: AdminCompetition }) {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Link to={`/competitions/${competition.id}`} className="text-sm font-semibold text-muted hover:text-foreground">
+            <Link to={`/competitions/${competition.slug}`} className="text-sm font-semibold text-muted hover:text-foreground">
               Public page
             </Link>
+            <Button size="sm" variant="secondary" onClick={copyLink}>{copied ? 'Copied' : 'Copy link'}</Button>
+            <Button size="sm" variant="secondary" onClick={() => setEditing((value) => !value)}>{editing ? 'Close editor' : 'Edit details'}</Button>
             <Button size="sm" variant="secondary" onClick={() => setManaging((v) => !v)}>
               {managing ? 'Hide entries' : 'Manage entries'}
             </Button>
@@ -136,7 +221,11 @@ function CompetitionRow({ competition }: { competition: AdminCompetition }) {
                 size="sm"
                 variant="parent"
                 loading={setStatus.isPending}
-                onClick={() => setStatus.mutate({ id: competition.id, status: next.to })}
+                onClick={async () => {
+                  setStatusError(null)
+                  try { await setStatus.mutateAsync({ id: competition.id, status: next.to }) }
+                  catch (err) { setStatusError(err instanceof ApiError ? err.message : 'Could not change competition status.') }
+                }}
               >
                 {next.label}
               </Button>
@@ -145,6 +234,10 @@ function CompetitionRow({ competition }: { competition: AdminCompetition }) {
         </div>
 
         {managing && <EntriesManager competitionId={competition.id} />}
+        {statusError && <Alert variant="danger">{statusError}</Alert>}
+        {competition.status === 'draft' && <p className="text-xs text-muted">Complete the description, rules, prizes, eligibility and all dates before opening. The public link works once opened.</p>}
+        {copyError && <p role="alert" className="text-sm text-danger">Could not copy automatically. Use the Public page link above.</p>}
+        {editing && <EditCompetitionDetails competition={competition} onDone={() => setEditing(false)} />}
       </CardBody>
     </Card>
   )

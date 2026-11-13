@@ -16,6 +16,7 @@ const SITE_NAV = [
   { to: '/institutions', label: 'Institutions' },
   { to: '/about', label: 'About' },
   { to: '/pricing', label: 'Pricing' },
+  { to: '/competitions', label: 'Competition' },
   { to: '/contact', label: 'Contact' },
 ]
 
@@ -77,6 +78,7 @@ export function ConceptHeader({ tone = 'light', overlay = false }: { tone?: Conc
             </NavLink>
           ))}
           <a href="/languages" className={cn('inline-flex min-h-11 items-center px-2 font-display text-sm font-bold', dark ? 'text-white' : 'text-navy-700')}>Languages</a>
+          <a href="/vote" className={cn('inline-flex min-h-11 items-center px-2 font-display text-sm font-bold', dark ? 'text-white' : 'text-navy-700')}>Vote for the next language</a>
           <a href="/guides" className={cn('inline-flex min-h-11 items-center px-2 font-display text-sm font-bold', dark ? 'text-white' : 'text-navy-700')}>Guides</a>
         </nav>
 

@@ -177,6 +177,7 @@ export function LandingV1Page() {
                 </p>
                 <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                   <LinkButton to={slide.cta.to} size="lg" variant="parent">{slide.cta.label}</LinkButton>
+                  <a href="/vote" className="inline-flex h-12 items-center justify-center rounded-xl border-2 border-chore-200 bg-white px-6 font-display font-bold text-chore-700 hover:bg-chore-50">Vote for the next language</a>
                   <a href="#v1-how" className="inline-flex h-12 items-center justify-center rounded-xl border-2 border-chore-200 bg-white px-6 font-display font-bold text-chore-700 hover:bg-chore-50">
                     See how a word travels
                   </a>

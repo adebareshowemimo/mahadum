@@ -19,6 +19,7 @@ class RestrictChildProfile
                 'me/learner-profile', 'me/devices', 'me/notifications', 'me/push'];
             $relative = preg_replace('#^api/v1/#', '', $path);
             $blockedAction = preg_match('#^learning/(stories/[^/]+/purchase|story-purchases/)#', $relative)
+                || preg_match('#^competitions/[^/]+/entries(?:$|/[^/]+/guardian-approve$)#', $relative)
                 || preg_match('#^(assignment-submissions|class-assignment-submissions)/[^/]+/review$#', $relative)
                 || (str_starts_with($relative, 'chores') && ! preg_match('#^chores/[^/]+/submissions$#', $relative));
             if ($blockedAction) {

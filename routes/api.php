@@ -137,6 +137,8 @@ Route::prefix('v1')->group(function () {
     /* ---------------------------------------------------------------- public */
     Route::get('config', [ConfigController::class, 'show']);
     Route::get('pricing', [PricingController::class, 'index']);
+    Route::get('public/competitions', [CompetitionController::class, 'index']);
+    Route::get('public/competitions/{slug}', [CompetitionController::class, 'publicShow']);
     Route::get('adverts/active', [AdvertController::class, 'active']);
     Route::middleware('throttle:60,1')->group(function () {
         Route::post('adverts/{advertPlacement}/impression', [AdvertController::class, 'impression']);
@@ -543,6 +545,8 @@ Route::prefix('v1')->group(function () {
         Route::get('competitions/mine', [CompetitionEntryController::class, 'mine']);
         Route::get('competitions/{competition}', [CompetitionController::class, 'show']);
         Route::post('competitions/{competition}/entries', [CompetitionEntryController::class, 'store'])
+            ->middleware('can:competitions.enter');
+        Route::post('competitions/{competition}/entries/{entry}/guardian-approve', [CompetitionEntryController::class, 'approveAsGuardian'])
             ->middleware('can:competitions.enter');
         Route::post('competitions/{competition}/entries/{entry}/vote', [CompetitionVoteController::class, 'store']);
 
