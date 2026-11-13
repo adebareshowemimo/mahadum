@@ -79,6 +79,7 @@ use App\Http\Controllers\Gamification\BadgeController;
 use App\Http\Controllers\Gamification\HeartController;
 use App\Http\Controllers\Gamification\LeaderboardController;
 use App\Http\Controllers\Gamification\StreakController;
+use App\Http\Controllers\GuideLibraryController;
 use App\Http\Controllers\Identity\WebPushController;
 use App\Http\Controllers\LanguageVoteController;
 use App\Http\Controllers\Learning\AnswerController;
@@ -204,6 +205,14 @@ Route::prefix('v1')->group(function () {
 
         /* ---- Content / CMS (content_owner) ---- */
         Route::get('website/documents', [WebsiteEditorController::class, 'index']);
+        Route::get('website/guide-videos', [GuideLibraryController::class, 'videos']);
+        Route::post('website/guide-videos', [GuideLibraryController::class, 'saveVideo']);
+        Route::post('website/guide-videos/{video}', [GuideLibraryController::class, 'saveVideo']);
+        Route::delete('website/guide-videos/{video}', [GuideLibraryController::class, 'deleteVideo']);
+        Route::get('website/guide-faqs', [GuideLibraryController::class, 'faqs']);
+        Route::post('website/guide-faqs', [GuideLibraryController::class, 'saveFaq']);
+        Route::put('website/guide-faqs/{faq}', [GuideLibraryController::class, 'saveFaq']);
+        Route::delete('website/guide-faqs/{faq}', [GuideLibraryController::class, 'deleteFaq']);
         Route::post('website/documents', [WebsiteEditorController::class, 'store']);
         Route::put('website/documents/{document}', [WebsiteEditorController::class, 'update']);
         Route::get('website/reports', [WebsiteEditorController::class, 'reports']);

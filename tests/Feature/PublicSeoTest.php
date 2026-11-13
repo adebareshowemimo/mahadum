@@ -3,14 +3,18 @@
 namespace Tests\Feature;
 
 use App\Models\Course;
+use App\Models\GuideVideo;
 use App\Models\Language;
 use App\Models\PublicDocument;
 use App\Models\User;
 use App\Services\SignupDiscovery;
+use Database\Seeders\GuideLibrarySeeder;
 use Database\Seeders\LanguageSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -195,6 +199,73 @@ class PublicSeoTest extends TestCase
         $this->getJson('/api/v1/website/reports')->assertForbidden();
         $this->actingAsUser($this->userWithRole('super_admin'));
         $this->get('/api/v1/website/votes.csv')->assertOk();
+    }
+
+    public function test_guide_library_editor_controls_public_visibility_search_and_pagination(): void
+    {
+        $this->seedRbac();
+        $input = ['section' => 'how_to', 'title' => 'Create your family account', 'description' => 'Getting started',
+            'language' => null, 'topic' => 'parent_guide', 'source_type' => 'youtube', 'youtube_url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+            'duration_seconds' => 120, 'sort_order' => 1, 'is_visible' => false];
+        $this->actingAsUser($this->userWithRole('student'));
+        $this->postJson('/api/v1/website/guide-videos', $input)->assertForbidden();
+        $this->actingAsUser($this->userWithRole('content_owner'));
+        $this->postJson('/api/v1/website/guide-videos', [...$input, 'youtube_url' => 'https://example.com/video'])->assertUnprocessable();
+        $created = $this->postJson('/api/v1/website/guide-videos', $input)->assertCreated();
+        $id = $created->json('data.id');
+        $this->get('/guides')->assertOk()->assertDontSee('Create your family account');
+        $this->postJson('/api/v1/website/guide-videos/'.$id, [...$input, 'is_visible' => true])->assertOk();
+        $this->get('/guides')->assertOk()->assertSee('Create your family account')->assertSee('youtube-nocookie.com/embed/dQw4w9WgXcQ');
+        $this->get('/guides?topic=learning')->assertOk()->assertDontSee('Create your family account');
+        $this->get('/guides?topic=parent_guide')->assertOk()->assertSee('Create your family account');
+        $this->get('/guides?how_search=Getting')->assertOk()->assertSee('Create your family account');
+        $this->getJson('/api/v1/website/guide-videos?section=how_to&search=family')->assertOk()->assertJsonPath('total', 1);
+        $this->getJson('/api/v1/website/guide-videos?section=how_to&search=missing')->assertOk()->assertJsonPath('total', 0);
+        $faq = $this->postJson('/api/v1/website/guide-faqs', ['question' => 'How do I start?', 'answer' => 'Choose a course.', 'sort_order' => 1, 'is_visible' => false])->assertCreated();
+        $this->get('/guides')->assertDontSee('How do I start?');
+        $this->putJson('/api/v1/website/guide-faqs/'.$faq->json('data.id'), ['question' => 'How do I start?', 'answer' => 'Choose a course.', 'sort_order' => 1, 'is_visible' => true])->assertOk();
+        $this->get('/guides')->assertSee('How do I start?');
+        $this->assertDatabaseHas('audit_logs', ['action' => 'guide.video.updated']);
+        $this->deleteJson('/api/v1/website/guide-videos/'.$id)->assertOk();
+        $this->assertDatabaseMissing('guide_videos', ['id' => $id]);
+    }
+
+    public function test_guide_video_upload_and_independent_public_pagination(): void
+    {
+        Storage::fake('public');
+        $this->seedRbac();
+        $this->actingAsUser($this->userWithRole('content_owner'));
+        $created = $this->post('/api/v1/website/guide-videos', [
+            'section' => 'sample', 'title' => 'Family words', 'description' => 'A preview', 'language' => 'igbo',
+            'source_type' => 'upload', 'file' => UploadedFile::fake()->create('sample.mp4', 10, 'video/mp4'),
+            'duration_seconds' => 60, 'sort_order' => 1, 'is_visible' => 1,
+        ], ['Accept' => 'application/json'])->assertCreated();
+        $path = GuideVideo::findOrFail($created->json('data.id'))->file_path;
+        Storage::disk('public')->assertExists($path);
+        for ($i = 0; $i < 11; $i++) {
+            GuideVideo::create(['section' => 'sample', 'title' => 'Extra '.$i, 'language' => 'igbo', 'source_type' => 'youtube',
+                'youtube_id' => 'dQw4w9WgXcQ', 'sort_order' => $i + 2, 'is_visible' => true]);
+        }
+        $this->get('/guides?language=igbo')->assertOk()->assertSee('Showing 1–9 of 12 videos')->assertSee('sample_page=2');
+        $this->get('/guides?language=igbo&sample_page=2')->assertOk()->assertSee('Showing 10–12 of 12 videos');
+        $this->get('/guides?language=hausa')->assertOk()->assertDontSee('Family words');
+        $this->deleteJson('/api/v1/website/guide-videos/'.$created->json('data.id'))->assertOk();
+        Storage::disk('public')->assertMissing($path);
+    }
+
+    public function test_guide_playlist_seed_is_repeatable_and_preserves_editor_changes(): void
+    {
+        $this->seed(GuideLibrarySeeder::class);
+        $this->assertDatabaseCount('guide_videos', 48);
+        $this->assertDatabaseCount('guide_faqs', 5);
+        $this->assertSame(['hausa', 'yoruba', 'igbo'], GuideVideo::query()->where('section', 'sample')->orderBy('sort_order')->limit(3)->pluck('language')->all());
+        $video = GuideVideo::query()->where('section', 'sample')->where('youtube_id', 'NAC7DVDMGzM')->firstOrFail();
+        $video->update(['title' => 'Reviewed Hausa title', 'is_visible' => false]);
+        $this->seed(GuideLibrarySeeder::class);
+        $this->assertDatabaseCount('guide_videos', 48);
+        $this->assertDatabaseCount('guide_faqs', 5);
+        $this->assertDatabaseHas('guide_videos', ['id' => $video->id, 'title' => 'Reviewed Hausa title', 'is_visible' => false]);
+        $this->get('/guides')->assertOk()->assertSee('Showing 1–9 of 23 videos')->assertSee('How-to videos');
     }
 
     public function test_language_voting_requires_verified_account_and_prevents_duplicates(): void

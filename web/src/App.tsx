@@ -15,6 +15,7 @@ import { applyPublicMetadata } from '@/lib/seo/metadata'
 // the `.then(m => ({ default: m.X }))` shim React.lazy requires.
 const AboutPage = lazy(() => import('@/pages/AboutPage').then((m) => ({ default: m.AboutPage })))
 const WebsiteEditorPage = lazy(() => import('@/pages/WebsiteEditorPage').then((m) => ({ default: m.WebsiteEditorPage })))
+const GuideManagerPage = lazy(() => import('@/pages/GuideManagerPage').then((m) => ({ default: m.GuideManagerPage })))
 const FamiliesPage = lazy(() => import('@/pages/PublicAudiencePages').then((m) => ({ default: m.FamiliesPage })))
 const InstitutionsPage = lazy(() => import('@/pages/PublicAudiencePages').then((m) => ({ default: m.InstitutionsPage })))
 const ContactPage = lazy(() => import('@/pages/PublicTrustPages').then((m) => ({ default: m.ContactPage })))
@@ -257,6 +258,7 @@ function ShellSuspense() {
 // resolves to a ComingSoon placeholder so links never dead-end.
 const REAL_PAGES = new Set([
   '/content/website',
+  '/content/guides',
   '/family/goals', '/school/students', '/school/teachers', '/notifications',
   '/verify-email',
   '/home',
@@ -460,6 +462,7 @@ export function App() {
           <Route path="/competitions" element={<CompetitionsPage />} />
           <Route element={<RoleRoute roles={['super_admin', 'content_owner']} />}>
             <Route path="/content/website" element={<WebsiteEditorPage />} />
+            <Route path="/content/guides" element={<GuideManagerPage />} />
             <Route path="/competitions/manage" element={<CompetitionsAdminPage />} />
             <Route path="/content/performance" element={<CoursePerformancePage />} />
           </Route>

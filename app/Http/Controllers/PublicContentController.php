@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\GuideFaq;
+use App\Models\GuideVideo;
 use App\Models\Language;
 use App\Models\PublicDocument;
 use App\Services\PublicSeo;
@@ -52,7 +54,25 @@ class PublicContentController extends Controller
 
     public function guides(): Response
     {
-        return $this->page('/guides', 'public.guides', ['guides' => PublicDocument::query()->where('kind', 'guide')->where('published', true)->latest('published_at')->get()]);
+        $searchHow = trim((string) request()->query('how_search', ''));
+        $searchSample = trim((string) request()->query('sample_search', ''));
+        $language = (string) request()->query('language', '');
+        $topic = (string) request()->query('topic', '');
+        $howTo = GuideVideo::query()->where('section', 'how_to')->where('is_visible', true)
+            ->when($searchHow, fn ($q) => $q->where(fn ($search) => $search->where('title', 'like', '%'.mb_substr($searchHow, 0, 100).'%')->orWhere('description', 'like', '%'.mb_substr($searchHow, 0, 100).'%')))
+            ->when(in_array($topic, ['getting_started', 'parent_guide', 'learning', 'billing', 'schools'], true), fn ($q) => $q->where('topic', $topic))
+            ->orderBy('sort_order')->orderBy('id')->paginate(9, ['*'], 'how_page')->withQueryString();
+        $samples = GuideVideo::query()->where('section', 'sample')->where('is_visible', true)
+            ->when($searchSample, fn ($q) => $q->where(fn ($search) => $search->where('title', 'like', '%'.mb_substr($searchSample, 0, 100).'%')->orWhere('description', 'like', '%'.mb_substr($searchSample, 0, 100).'%')))
+            ->when(in_array($language, ['yoruba', 'igbo', 'hausa', 'english'], true), fn ($q) => $q->where('language', $language))
+            ->orderBy('sort_order')->orderBy('id')->paginate(9, ['*'], 'sample_page')->withQueryString();
+
+        return $this->page('/guides', 'public.guides', [
+            'guides' => PublicDocument::query()->where('kind', 'guide')->where('published', true)->latest('published_at')->get(),
+            'howTo' => $howTo, 'samples' => $samples,
+            'faqs' => GuideFaq::query()->where('is_visible', true)->orderBy('sort_order')->orderBy('id')->get(),
+            'searchHow' => $searchHow, 'searchSample' => $searchSample, 'language' => $language, 'topic' => $topic,
+        ]);
     }
 
     public function guide(string $slug): Response

@@ -76,6 +76,7 @@ export const NAV_SECTIONS: NavSection[] = [
     title: 'Content',
     items: [
       { label: 'Website content', to: '/content/website', icon: 'book', roles: ['super_admin', 'content_owner'] },
+      { label: 'Guide library', to: '/content/guides', icon: 'book', roles: ['super_admin', 'content_owner'] },
       { label: 'Courses', to: '/courses', icon: 'layers', roles: ['super_admin', 'content_owner'] },
       { label: 'Proverbs & Trivia', to: '/courses/proverbs-trivia', icon: 'book', roles: ['super_admin', 'content_owner'] },
       { label: 'Stories', to: '/courses/stories', icon: 'book', roles: ['super_admin', 'content_owner'] },

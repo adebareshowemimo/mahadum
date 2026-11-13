@@ -1,0 +1,6 @@
+<article class="guide-card @if($sample ?? false) sample @endif">
+  <details><summary aria-label="Play {{ $video->title }}"><span class="guide-badge">{{ $video->section === 'how_to' ? (['getting_started'=>'Getting started','parent_guide'=>'Parent guide','learning'=>'Learning','billing'=>'Billing','schools'=>'Schools'][$video->topic ?? 'getting_started']) : (['yoruba'=>'Yorùbá','igbo'=>'Igbo','hausa'=>'Hausa','english'=>'English'][$video->language ?? 'english']) }}</span><span class="guide-play" aria-hidden="true">▶</span></summary>
+  @if($video->source_type === 'youtube' && $video->youtube_id)<iframe loading="lazy" title="{{ $video->title }}" src="https://www.youtube-nocookie.com/embed/{{ $video->youtube_id }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+  @elseif($video->file_path)<video controls preload="none" src="{{ Storage::disk('public')->url($video->file_path) }}"></video>@endif
+  </details><h3>{{ $video->title }}</h3><p>{{ $video->language ? ucfirst($video->language) : 'Platform guide' }} @if($video->duration_seconds) · {{ ceil($video->duration_seconds / 60) }} min @endif</p>
+</article>

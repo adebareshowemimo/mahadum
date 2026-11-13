@@ -75,6 +75,7 @@ class DevSeeder extends Seeder
         // This dedicated seeder is idempotent, so existing development
         // databases can pick up the sample placements without being reset.
         $this->call(AdvertPlacementSeeder::class);
+        $this->call(GuideLibrarySeeder::class);
 
         if (User::where('email', 'super@dev.mahadum360')->exists()) {
             $this->repairDocumentedTeacherLogin();
