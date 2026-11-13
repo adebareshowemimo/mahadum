@@ -77,7 +77,7 @@ function SidebarContent({
     <>
       <div className="flex h-16 items-center justify-between border-b border-border px-5">
         <NavLink to={child ? '/learn' : '/'} aria-label={child ? 'Go to learning' : 'Go to the Mahadum.360 homepage'} end>
-          <Logo className="h-8" />
+          <Logo className="h-8 dark:h-11" />
         </NavLink>
         {onClose && (
           <IconButton onClick={onClose} size="sm" className="lg:hidden" aria-label="Close menu">
@@ -140,7 +140,7 @@ function Topbar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
         </IconButton>
 
         <NavLink to={child ? '/learn' : '/'} aria-label={child ? 'Go to learning' : 'Go to the Mahadum.360 homepage'} end className="lg:hidden">
-          <Logo className="h-7" />
+          <Logo className="h-7 dark:h-8" />
         </NavLink>
 
         <div className="flex-1" />
