@@ -143,6 +143,8 @@ export function visibleSections(roles: Role[], capabilities: string[] = [], chil
     { label: 'Learn', to: '/learn', icon: 'book' },
     { label: 'My tasks', to: '/tasks', icon: 'clipboard' },
     { label: 'Courses', to: '/learn/courses', icon: 'layers' },
+    { label: 'Proverbs & Trivia', to: '/learn/proverbs-trivia', icon: 'book' },
+    { label: 'Stories', to: '/learn/stories', icon: 'book' },
     { label: 'Achievements', to: '/achievements', icon: 'sparkles' },
     { label: 'Leaderboard', to: '/leaderboard', icon: 'trophy' },
     { label: 'Competition', to: '/competitions', icon: 'trophy' },

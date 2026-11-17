@@ -6,6 +6,7 @@ use App\Models\ClassEnrollment;
 use App\Models\Competition;
 use App\Models\Language;
 use App\Models\LearnerProfile;
+use App\Models\LibrarySet;
 use App\Models\Organization;
 use App\Models\OrganizationUser;
 use App\Models\SchoolClass;
@@ -25,11 +26,16 @@ class ChildProfileSafetyTest extends TestCase
         $child = $this->parentWithChild($parent);
         $language = Language::create(['code' => 'ig', 'name' => 'Igbo', 'script' => 'latin', 'is_active' => true]);
         $story = Story::create(['language_id' => $language->id, 'standalone_level' => 1, 'title' => 'Child safety story', 'age_band' => '0_5', 'format' => 'reading', 'price_minor' => Story::PRICE_MINOR, 'published_at' => now()]);
+        $proverbs = LibrarySet::create(['kind' => 'proverb', 'language_id' => $language->id, 'title' => 'Igbo Proverbs', 'status' => 'published', 'owner_user_id' => $parent->id]);
+        $trivia = LibrarySet::create(['kind' => 'trivia', 'language_id' => $language->id, 'title' => 'Igbo Trivia', 'status' => 'published', 'owner_user_id' => $parent->id]);
         $competition = Competition::create(['title' => 'Child safety competition', 'slug' => 'child-safety-competition', 'season' => 2026, 'status' => 'open']);
         $this->withToken($parent->createToken('child-mode-test')->plainTextToken);
 
         $this->putJson("/api/v1/family/children/{$child->id}/pin", ['pin' => '1234'])->assertOk();
         $this->postJson("/api/v1/profiles/{$child->id}/switch", ['pin' => '1234'])->assertOk();
+        $this->getJson("/api/v1/library-sets?learner_id={$child->id}&kind=proverb")->assertOk()->assertJsonPath('data.0.id', $proverbs->id);
+        $this->getJson("/api/v1/library-sets?learner_id={$child->id}&kind=trivia")->assertOk()->assertJsonPath('data.0.id', $trivia->id);
+        $this->getJson("/api/v1/learning/stories?learner_id={$child->id}")->assertOk()->assertJsonPath('data.0.id', $story->id);
         $this->getJson('/api/v1/wallet')->assertForbidden()->assertJsonPath('error.code', 'parent_only');
         $this->getJson('/api/v1/subscriptions')->assertForbidden()->assertJsonPath('error.code', 'parent_only');
         $this->getJson('/api/v1/data-bundles')->assertForbidden()->assertJsonPath('error.code', 'parent_only');

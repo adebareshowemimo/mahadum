@@ -8,7 +8,7 @@ function titles(roles: Parameters<typeof visibleSections>[0]) {
 describe('visibleSections', () => {
   it('shows only learning destinations while a child profile is active', () => {
     const paths = visibleSections(['parent'], ['billing.subscriptions.manage'], true).flatMap((section) => section.items.map((item) => item.to))
-    expect(paths).toEqual(['/learn', '/tasks', '/learn/courses', '/achievements', '/leaderboard', '/competitions'])
+    expect(paths).toEqual(['/learn', '/tasks', '/learn/courses', '/learn/proverbs-trivia', '/learn/stories', '/achievements', '/leaderboard', '/competitions'])
   })
   it('shows adult consumer capabilities without family or teacher-only destinations', () => {
     const paths = visibleSections(['student'], ['referrals.view', 'payouts.view', 'billing.subscriptions.manage', 'billing.databundles.manage']).flatMap((section) => section.items.map((item) => item.to))
