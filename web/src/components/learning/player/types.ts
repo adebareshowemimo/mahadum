@@ -219,8 +219,7 @@ function playComponentToSlides(c: PlayComponent, lessonTitle?: string): Slide[] 
 
 /** Live learner payload → slides (correct answers come from the server). */
 export function playToSlides(play: LessonPlay): Slide[] {
-  return [...play.components].sort((left, right) => componentOrder(left.type) - componentOrder(right.type))
-    .flatMap((c) => playComponentToSlides(c, play.lesson.title))
+  return play.components.flatMap((c) => playComponentToSlides(c, play.lesson.title))
 }
 
 function componentOrder(type: string): number {

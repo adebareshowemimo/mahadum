@@ -40,7 +40,7 @@ describe('playToSlides — video gate & resume', () => {
   })
 })
 
-it('plays lesson stages in the required order even when authored positions differ', () => {
+it('plays lesson stages in authored order', () => {
   const play: LessonPlay = {
     lesson: { id: 1, title: 'Ordered lesson', est_minutes: 5 },
     components: [
@@ -53,7 +53,7 @@ it('plays lesson stages in the required order even when authored positions diffe
     ],
   }
   expect(playToSlides(play).map((slide) => slide.kind))
-    .toEqual(['video', 'quiz', 'speaking', 'exercise', 'game', 'assignment'])
+    .toEqual(['assignment', 'game', 'exercise', 'speaking', 'quiz', 'video'])
 })
 
 describe('authorToSlides — preview has no resume context', () => {
