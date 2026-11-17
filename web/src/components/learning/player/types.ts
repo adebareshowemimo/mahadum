@@ -222,10 +222,6 @@ export function playToSlides(play: LessonPlay): Slide[] {
   return play.components.flatMap((c) => playComponentToSlides(c, play.lesson.title))
 }
 
-function componentOrder(type: string): number {
-  return ({ video: 0, quiz: 1, speaking: 2, exercise: 3, game: 4, assignment: 5 } as Record<string, number>)[type] ?? 6
-}
-
 /**
  * Where to resume a run: the index of the first not-yet-completed slide (0 when
  * nothing is done, or everything is — a fresh start / full replay). `priorCorrect`
@@ -256,7 +252,7 @@ export function authorToSlides(lesson: AuthorLesson): { slides: Slide[]; key: Ma
   const slides: Slide[] = []
   const key = new Map<number, QuizKey>()
 
-  for (const c of [...(lesson.components ?? [])].sort((left, right) => componentOrder(left.type) - componentOrder(right.type))) {
+  for (const c of lesson.components ?? []) {
     const d = (c.detail ?? {}) as Record<string, unknown>
     // Preview never persists, so nothing is ever "completed".
     const base = { componentId: c.id, lessonTitle: lesson.title, completed: false }

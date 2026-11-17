@@ -86,6 +86,30 @@ describe('authorToSlides — preview has no resume context', () => {
     expect(v.resumeAt).toBe(0)
     expect(v.alreadyCompleted).toBe(false)
   })
+
+  it('preserves video, quiz, quiz, video order and quiz answer keys in admin previews', () => {
+    const video = lesson.components![0]
+    const quiz = (id: number, position: number) => ({
+      ...video, id, position, type: 'quiz' as const,
+      detail: {
+        questions: [{
+          id, type: 'mcq_single', prompt: 'Choose',
+          options: [{ id: id * 10, label: 'Answer', is_correct: true }],
+        }],
+      },
+    })
+    const previewLesson = {
+      ...lesson,
+      components: [video, quiz(21, 2), quiz(22, 3), { ...video, id: 23, position: 4 }],
+    }
+    const { slides, key } = authorToSlides(previewLesson)
+
+    expect(slides.map((slide) => [slide.componentId, slide.kind]))
+      .toEqual([[20, 'video'], [21, 'quiz'], [22, 'quiz'], [23, 'video']])
+    expect(key.get(21)?.correctOptionIds).toEqual([210])
+    expect(key.get(22)?.correctOptionIds).toEqual([220])
+    expect(previewLesson.components.map((component) => component.id)).toEqual([20, 21, 22, 23])
+  })
 })
 
 describe('playToSlides — quiz question types', () => {
