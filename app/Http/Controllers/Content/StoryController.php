@@ -1,0 +1,326 @@
+<?php
+
+namespace App\Http\Controllers\Content;
+
+use App\Http\Controllers\Controller;
+use App\Models\Story;
+use App\Models\StoryPage;
+use App\Models\User;
+use App\Services\AuditLogger;
+use App\Services\Content\StoryPreviewInspector;
+use App\Services\Learning\StoryAccess;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Validation\Rule;
+
+class StoryController extends Controller
+{
+    public function index(Request $request): JsonResponse
+    {
+        $query = Story::with('language')->withCount(['pages', 'questions'])->latest();
+        if ($request->filled('language')) {
+            $query->whereHas('language', fn ($q) => $q->where('code', $request->query('language')));
+        }
+        if ($request->filled('q')) {
+            $query->where('title', 'like', '%'.trim((string) $request->query('q')).'%');
+        }
+
+        $page = $query->paginate(30);
+
+        return response()->json([
+            'data' => collect($page->items())->map(fn (Story $story) => $this->summary($story))->values(),
+            'meta' => [
+                'current_page' => $page->currentPage(), 'last_page' => $page->lastPage(),
+                'per_page' => $page->perPage(), 'total' => $page->total(),
+            ],
+        ]);
+    }
+
+    public function store(Request $request, AuditLogger $audit): JsonResponse
+    {
+        Gate::authorize('create', Story::class);
+        $data = $this->validated($request, true);
+        $story = Story::create($data + ['course_id' => null, 'owner_user_id' => $request->user()->id, 'price_minor' => Story::PRICE_MINOR]);
+        $audit->record('story.created', $story, [], $story->only(['title', 'language_id', 'standalone_level', 'age_band', 'format']));
+
+        return response()->json(['data' => $this->detail($story->load('language', 'pages', 'questions'))], 201);
+    }
+
+    public function show(Story $story): JsonResponse
+    {
+        Gate::authorize('view', $story);
+
+        return response()->json(['data' => $this->detail($story->load('language', 'pages', 'questions'))]);
+    }
+
+    /** Signed media links let an author preview private pages and video in a browser tab. */
+    public function asset(Request $request, Story $story)
+    {
+        abort_unless($request->hasValidSignature(false), 403);
+        $viewer = User::findOrFail($request->integer('viewer'));
+        abort_unless($viewer->can('content.courses.view'), 403);
+        Gate::forUser($viewer)->authorize('view', $story);
+        $path = match ($request->query('slot')) {
+            'preview' => $story->preview_video_path,
+            'full' => $story->full_video_path,
+            'page' => $story->pages()->find($request->integer('page'))?->image_path,
+            default => null,
+        };
+        abort_unless($path && Storage::disk('local')->exists($path), 404);
+
+        return response()->file(Storage::disk('local')->path($path), ['Cache-Control' => 'private, no-store']);
+    }
+
+    public function update(Request $request, Story $story, AuditLogger $audit): JsonResponse
+    {
+        Gate::authorize('update', $story);
+        $before = $story->only(['title', 'summary', 'age_band', 'format', 'language_id', 'standalone_level', 'preview_count']);
+        $data = $this->validated($request, false);
+        if (array_key_exists('preview_count', $data) && in_array($data['format'] ?? $story->format, ['video', 'animated'], true)) {
+            abort(422, 'Video previews use a separate preview clip.');
+        }
+        if ($story->published_at !== null && array_key_exists('preview_count', $data)) {
+            $total = $story->format === 'quiz' ? $story->questions()->count() : $story->pages()->count();
+            abort_if($data['preview_count'] >= $total, 422, 'The free preview must leave at least one item to unlock.');
+        }
+        if ($story->published_at !== null) {
+            abort_if(($data['age_band'] ?? $story->age_band) !== $story->age_band
+                || ($data['format'] ?? $story->format) !== $story->format,
+                409, 'Unpublish this story before changing its age band or format.');
+        }
+        $story->update($data);
+        $audit->record('story.updated', $story, $before, $story->only(array_keys($before)));
+
+        return response()->json(['data' => $this->detail($story->load('language', 'pages', 'questions'))]);
+    }
+
+    public function publish(Story $story, AuditLogger $audit): JsonResponse
+    {
+        Gate::authorize('update', $story);
+        $previewCount = app(StoryAccess::class)->previewPageCount($story);
+        $ready = match ($story->format) {
+            'animated', 'video' => (bool) ($story->preview_video_path && $story->full_video_path),
+            'quiz' => $story->questions()->count() > $previewCount,
+            'colouring', 'tracing' => $story->pages()->count() > $previewCount
+                && ! $story->pages()->whereNull('image_path')->exists(),
+            default => $story->pages()->count() > $previewCount
+                && ! $story->pages()->where(fn ($query) => $query->whereNull('body')->orWhere('body', ''))->exists(),
+        };
+        abort_unless($ready, 422, 'Add the complete story and its free preview before publishing.');
+        $story->update(['published_at' => now()]);
+        $audit->record('story.published', $story);
+
+        return response()->json(['data' => $this->detail($story->load('language', 'pages', 'questions'))]);
+    }
+
+    public function unpublish(Story $story, AuditLogger $audit): JsonResponse
+    {
+        Gate::authorize('update', $story);
+        $story->update(['published_at' => null]);
+        $audit->record('story.unpublished', $story);
+
+        return response()->json(['data' => $this->detail($story->load('language', 'pages', 'questions'))]);
+    }
+
+    public function addQuestion(Request $request, Story $story): JsonResponse
+    {
+        Gate::authorize('update', $story);
+        abort_unless($story->format === 'quiz', 422, 'Choose the quiz format first.');
+        abort_if($story->published_at !== null, 409, 'Unpublish before changing quiz questions.');
+        $data = $request->validate([
+            'prompt' => ['required', 'string', 'max:2000'],
+            'options' => ['required', 'array', 'min:2', 'max:6'],
+            'options.*' => ['required', 'string', 'max:500', 'distinct'],
+            'correct_index' => ['required', 'integer', 'min:0'],
+            'explanation' => ['nullable', 'string', 'max:2000'],
+        ]);
+        abort_unless($data['correct_index'] < count($data['options']), 422, 'Choose a valid correct answer.');
+        $question = $story->questions()->create($data + ['position' => ($story->questions()->max('position') ?? 0) + 1]);
+
+        return response()->json(['data' => $question], 201);
+    }
+
+    public function deleteQuestion(Story $story, int $question): JsonResponse
+    {
+        Gate::authorize('update', $story);
+        abort_if($story->published_at !== null, 409, 'Unpublish before changing quiz questions.');
+        $story->questions()->findOrFail($question)->delete();
+
+        return response()->json(null, 204);
+    }
+
+    public function addPage(Request $request, Story $story): JsonResponse
+    {
+        Gate::authorize('update', $story);
+        abort_if($story->published_at !== null, 409, 'Unpublish this story before adding pages.');
+        $data = $request->validate(['title' => ['nullable', 'string', 'max:255'], 'body' => ['nullable', 'string']]);
+        $page = $story->pages()->create($data + ['position' => ($story->pages()->max('position') ?? 0) + 1]);
+
+        return response()->json(['data' => $this->page($page)], 201);
+    }
+
+    public function updatePage(Request $request, Story $story, StoryPage $page): JsonResponse
+    {
+        Gate::authorize('update', $story);
+        abort_unless($page->story_id === $story->id, 404);
+        $data = $request->validate(['title' => ['nullable', 'string', 'max:255'], 'body' => ['nullable', 'string']]);
+        if ($story->published_at !== null && $story->format === 'reading' && array_key_exists('body', $data)) {
+            abort_if(trim((string) $data['body']) === '', 422, 'Published chapters need text.');
+        }
+        $page->update($data);
+
+        return response()->json(['data' => $this->page($page)]);
+    }
+
+    public function deletePage(Story $story, StoryPage $page): JsonResponse
+    {
+        Gate::authorize('update', $story);
+        abort_if($story->published_at !== null, 409, 'Unpublish this story before deleting pages.');
+        abort_unless($page->story_id === $story->id, 404);
+        if ($page->image_path) {
+            Storage::disk('local')->delete($page->image_path);
+        }
+        $page->delete();
+
+        return response()->json(null, 204);
+    }
+
+    public function upload(Request $request, Story $story, StoryPreviewInspector $inspector): JsonResponse
+    {
+        Gate::authorize('update', $story);
+        $data = $request->validate([
+            'slot' => ['required', Rule::in(['cover', 'preview_video', 'full_video', 'page_image'])],
+            'page_id' => ['required_if:slot,page_image', 'nullable', 'integer', 'exists:story_pages,id'],
+            'file' => ['required', 'file', 'max:102400'],
+        ]);
+        $slot = $data['slot'];
+        $image = in_array($slot, ['cover', 'page_image'], true);
+        abort_unless($request->file('file')->isValid(), 422);
+        abort_unless($image
+            ? str_starts_with((string) $request->file('file')->getMimeType(), 'image/')
+            : str_starts_with((string) $request->file('file')->getMimeType(), 'video/'),
+            422, 'Choose the correct image or video file.');
+        if ($slot === 'preview_video') {
+            $duration = $inspector->durationSeconds($request->file('file')->getRealPath());
+            abort_unless($duration !== null && $duration > 0 && $duration <= 60, 422,
+                'The preview clip must be a playable video no longer than one minute.');
+        }
+        $page = null;
+        if ($slot === 'page_image') {
+            $page = StoryPage::where('story_id', $story->id)->findOrFail($data['page_id']);
+        }
+        $disk = $slot === 'cover' ? 'public' : 'local';
+        $path = $request->file('file')->store('stories/'.$story->id, $disk);
+        $field = match ($slot) {
+            'cover' => 'cover_path', 'preview_video' => 'preview_video_path',
+            'full_video' => 'full_video_path', default => 'image_path',
+        };
+        $target = $page ?? $story;
+        $old = $target->{$field};
+        $target->update([$field => $path]);
+        if ($old) {
+            Storage::disk($disk)->delete($old);
+        }
+
+        return response()->json(['data' => ['path' => $path]]);
+    }
+
+    public function destroy(Story $story): JsonResponse
+    {
+        Gate::authorize('update', $story);
+        abort_if($story->purchases()->exists(), 409, 'Unpublish stories with payment attempts instead of deleting them.');
+        foreach ([$story->preview_video_path, $story->full_video_path] as $path) {
+            if ($path) {
+                Storage::disk('local')->delete($path);
+            }
+        }
+        if ($story->cover_path) {
+            Storage::disk('public')->delete($story->cover_path);
+        }
+        foreach ($story->pages as $page) {
+            if ($page->image_path) {
+                Storage::disk('local')->delete($page->image_path);
+            }
+        }
+        $story->delete();
+
+        return response()->json(null, 204);
+    }
+
+    private function validated(Request $request, bool $creating): array
+    {
+        $rules = [
+            'course_id' => ['prohibited'],
+            'title' => [$creating ? 'required' : 'sometimes', 'string', 'max:255'],
+            'summary' => ['nullable', 'string', 'max:5000'],
+            'age_band' => [$creating ? 'required' : 'sometimes', Rule::in(['0_5', '6_12', '13_17', '18_plus', 'folklore'])],
+            'format' => [$creating ? 'required' : 'sometimes', Rule::in(['colouring', 'tracing', 'animated', 'reading', 'video', 'text', 'quiz'])],
+            'preview_count' => ['sometimes', 'nullable', 'integer', 'between:1,99'],
+        ];
+        if ($creating) {
+            $rules['language_id'] = ['required', 'integer', 'exists:languages,id'];
+            $rules['standalone_level'] = ['required', 'integer', 'between:1,10'];
+        } else {
+            $rules['language_id'] = ['sometimes', 'integer', 'exists:languages,id'];
+            $rules['standalone_level'] = ['sometimes', 'integer', 'between:1,10'];
+        }
+        $data = $request->validate($rules);
+        $band = $data['age_band'] ?? $request->route('story')->age_band;
+        $format = $data['format'] ?? $request->route('story')->format;
+        abort_unless(in_array($format, ['video', 'text', 'quiz'], true) || match ($band) {
+            '0_5' => in_array($format, ['colouring', 'tracing'], true),
+            '6_12' => $format === 'animated',
+            '13_17', '18_plus' => $format === 'reading',
+            default => true,
+        }, 422, 'This story format is unavailable for the selected age band.');
+
+        return $data;
+    }
+
+    private function summary(Story $story): array
+    {
+        return [
+            'id' => $story->id, 'language_id' => $story->language_id,
+            'level' => $story->standalone_level, 'language' => $story->language->code,
+            'title' => $story->title, 'summary' => $story->summary,
+            'age_band' => $story->age_band, 'format' => $story->format,
+            'price_minor' => $story->price_minor, 'published_at' => $story->published_at,
+            'preview_count' => app(StoryAccess::class)->previewPageCount($story),
+            'pages_count' => $story->pages_count ?? $story->pages()->count(),
+            'questions_count' => $story->questions_count ?? $story->questions()->count(),
+            'cover_url' => $story->cover_path ? Storage::disk('public')->url($story->cover_path) : null,
+        ];
+    }
+
+    private function detail(Story $story): array
+    {
+        $viewerId = auth()->id();
+        $media = fn (string $slot, ?StoryPage $page = null) => URL::temporarySignedRoute('stories.authorAsset', now()->addMinutes(30), [
+            'story' => $story->id, 'viewer' => $viewerId, 'slot' => $slot,
+            ...($page ? ['page' => $page->id] : []),
+        ], absolute: false);
+
+        return $this->summary($story) + [
+            'pages' => $story->pages->map(fn (StoryPage $page) => $this->page($page) + [
+                'image_url' => $page->image_path ? $media('page', $page) : null,
+            ])->values(),
+            'questions' => $story->questions->map(fn ($question) => $question->only(['id', 'position', 'prompt', 'options', 'correct_index', 'explanation']))->values(),
+            'has_preview_video' => (bool) $story->preview_video_path,
+            'has_full_video' => (bool) $story->full_video_path,
+            'preview_video_url' => $story->preview_video_path ? $media('preview') : null,
+            'full_video_url' => $story->full_video_path ? $media('full') : null,
+        ];
+    }
+
+    private function page(StoryPage $page): array
+    {
+        return [
+            'id' => $page->id, 'position' => $page->position,
+            'title' => $page->title, 'body' => $page->body,
+            'has_image' => (bool) $page->image_path,
+        ];
+    }
+}

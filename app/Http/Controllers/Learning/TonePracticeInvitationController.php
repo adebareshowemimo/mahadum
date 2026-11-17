@@ -36,7 +36,8 @@ class TonePracticeInvitationController extends Controller
         app(LessonAccess::class)->authorize($learner, $component->lesson);
 
         $recipient = User::whereRaw('LOWER(email) = ?', [Str::lower(trim($request->string('recipient_email')->value()))])->first();
-        abort_unless($recipient && app(PracticeRecipientEligibility::class)->isEligible($learner, $request->user(), $recipient), 422, 'Choose an active adult from this learner’s family or school practice contacts.');
+        abort_unless($recipient && app(PracticeRecipientEligibility::class)->isEligible($learner, $request->user(), $recipient), 422,
+            "This person isn't on your approved list. Only registered parents, guardians or teachers can be invited to practise.");
 
         $plainToken = Str::random(64);
         $invitation = TonePracticeInvitation::create([

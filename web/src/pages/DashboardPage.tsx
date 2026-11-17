@@ -1,5 +1,5 @@
 import { Alert, Badge, Card, CardBody, CardHeader, CardTitle, LinkButton } from '@/components/ui'
-import { useLocation } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { CoursePerformanceDashboard } from '@/components/content/CoursePerformanceDashboard'
 import { ReferralActivity } from '@/components/referral/ReferralActivity'
@@ -9,6 +9,10 @@ export function DashboardPage() {
   const { user, hasRole } = useAuth()
   const location = useLocation()
   const notice = (location.state as { notice?: string } | null)?.notice
+
+  if (hasRole('teacher') && user?.user.signup_account_type === 'teacher' && !hasRole('school_admin')) {
+    return <Navigate to="/classes" replace />
+  }
 
   if (hasRole('content_owner')) {
     return (

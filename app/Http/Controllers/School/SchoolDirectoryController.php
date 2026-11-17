@@ -46,9 +46,10 @@ class SchoolDirectoryController extends Controller
     public function teachers(Request $request, Organization $organization): JsonResponse
     {
         $this->authorizeDirectory($request, $organization);
-        $rows = OrganizationUser::where('organization_id', $organization->id)->where('role', 'teacher')->with('user')->get()
+        $rows = OrganizationUser::where('organization_id', $organization->id)->where('role', 'teacher')->with('user.teacherProfile')->get()
             ->map(fn ($membership) => ['id' => $membership->user_id, 'name' => $membership->user->name,
-                'email' => $membership->user->email, 'status' => $membership->status, 'account_status' => $membership->user->status]);
+                'email' => $membership->user->email, 'status' => $membership->status, 'account_status' => $membership->user->status,
+                'profile' => $membership->user->teacherProfile?->only(['years_experience', 'native_language', 'state', 'dialects'])]);
         $pending = TeacherInvitation::where('organization_id', $organization->id)->whereNull('accepted_at')->whereNull('revoked_at')->latest()->get()
             ->map(fn ($invitation) => ['id' => $invitation->id, 'name' => $invitation->name, 'email' => $invitation->email,
                 'status' => $invitation->expires_at->isPast() ? 'expired' : 'pending', 'expires_at' => $invitation->expires_at]);

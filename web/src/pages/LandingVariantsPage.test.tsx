@@ -33,6 +33,21 @@ function renderConcept(component: React.ReactNode) {
 }
 
 describe('landing concepts', () => {
+  it('offers language voting in the main menu and home hero', () => {
+    renderConcept(<LandingV1Page />)
+    const voteLinks = screen.getAllByRole('link', { name: 'Vote for the next language' })
+    expect(voteLinks.length).toBeGreaterThanOrEqual(2)
+    voteLinks.forEach((link) => expect(link).toHaveAttribute('href', '/vote'))
+  })
+
+  it('keeps the vote link in the expandable menu', async () => {
+    const user = userEvent.setup()
+    renderConcept(<LandingV1Page />)
+    const menu = screen.getByRole('button', { name: 'Open navigation menu' })
+    await user.click(menu)
+    expect(menu).toHaveAttribute('aria-expanded', 'true')
+    expect(within(screen.getByRole('navigation', { name: 'Primary' })).getByRole('link', { name: 'Vote for the next language' })).toHaveAttribute('href', '/vote')
+  })
   it.each([
     ['V1', <LandingV1Page />],
     ['V2', <LandingV2Page />],

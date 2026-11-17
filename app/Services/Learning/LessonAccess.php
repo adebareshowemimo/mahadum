@@ -8,12 +8,13 @@ use App\Models\Organization;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Services\Billing\EntitlementResolver;
+use App\Services\Billing\SubscriptionEligibility;
 use App\Services\Gamification\PracticeModeService;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
 class LessonAccess
 {
-    public function __construct(private EntitlementResolver $entitlements, private PracticeModeService $hearts) {}
+    public function __construct(private EntitlementResolver $entitlements, private PracticeModeService $hearts, private SubscriptionEligibility $eligibility) {}
 
     /** Resolve actual subscriptions so airtime cannot inherit card-plan content access. */
     public function tier(LearnerProfile $learner): string
@@ -28,8 +29,18 @@ class LessonAccess
                 if ($learner->organization_id !== null) {
                     $query->orWhere(fn ($q) => $q->where('subscriber_type', Organization::class)->where('subscriber_id', $learner->organization_id));
                 }
-            })->get()->filter(fn ($subscription) => $subscription->plan->price_minor > 0
-                || ($subscription->subscriber_type === Organization::class && $subscription->plan->audience === 'school'));
+            })->get()->filter(function ($subscription) use ($learner) {
+                if (! ($subscription->plan->price_minor > 0
+                    || ($subscription->subscriber_type === Organization::class && $subscription->plan->audience === 'school'))) {
+                    return false;
+                }
+                if ($subscription->subscriber_type !== User::class) {
+                    return true;
+                }
+
+                return $subscription->subscriber instanceof User
+                    && $this->eligibility->coversLearner($subscription->subscriber, $subscription->plan, $learner);
+            });
 
         if ($subscriptions->contains(fn ($subscription) => $subscription->method !== 'airtime')) {
             return 'paid';
@@ -42,6 +53,15 @@ class LessonAccess
     public function content(LearnerProfile $learner, Lesson $lesson, ?string $tier = null): array
     {
         $tier ??= $this->tier($learner);
+        if ($lesson->course_level_id === null && $lesson->library_set_level_id === null) {
+            return ['allowed' => true, 'reason' => null];
+        }
+        if ($lesson->library_set_level_id !== null) {
+            $level = $lesson->librarySetLevel;
+            $allowed = $level->is_free || $tier === 'paid' || ($tier === 'telco' && (int) $level->position === 1);
+
+            return ['allowed' => $allowed, 'reason' => $allowed ? null : 'This level requires a paid plan. Upgrade to unlock its lessons.'];
+        }
         $allowed = match ($tier) {
             'paid' => true,
             'telco' => (bool) $lesson->courseLevel->is_free || (int) $lesson->courseLevel->position === 1,
@@ -56,6 +76,9 @@ class LessonAccess
     public function authorize(LearnerProfile $learner, Lesson $lesson): void
     {
         abort_if($lesson->published_at === null, 404, 'This lesson is not published.');
+        if ($lesson->library_set_level_id !== null) {
+            abort_unless($lesson->librarySetLevel->set->status === 'published', 404, 'This set is not published.');
+        }
         $access = $this->content($learner, $lesson);
         if (! $access['allowed']) {
             $this->deny('lesson_subscription_required', $access['reason'], 403);

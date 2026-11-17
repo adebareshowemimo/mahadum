@@ -95,7 +95,7 @@ describe('Batch 2 family, learner and class flows', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Ada' }))
     const modal = await screen.findByRole('dialog', { name: 'Ada — learning activity' })
     expect(await within(modal).findByText(/Lesson A · completed · 80%/)).toBeInTheDocument()
-    expect(within(modal).getByText(/Quiz 3 · Attempt 1 · Completed · 50%/)).toBeInTheDocument()
+    expect(within(modal).getByRole('button', { name: /Quiz 3 · Attempt 1 · .* · 50% · View answers/ })).toBeInTheDocument()
     expect(within(modal).getByText('No speaking submissions.')).toBeInTheDocument()
     expect(schoolApi.studentAnalytics).toHaveBeenCalledWith(11, 21)
   })

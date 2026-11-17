@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { Alert, Button3D, Skeleton } from '@/components/ui'
 import { ApiError, learningApi, type CompleteResult, type LessonPlay } from '@/lib/api'
@@ -16,10 +16,15 @@ export function LessonPlayerPage() {
   const { lessonId } = useParams()
   const id = Number(lessonId)
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const requestedReturn = searchParams.get('return')
+  const returnTo = requestedReturn?.startsWith('/learn/proverbs-trivia/') ? requestedReturn : '/learn'
   const { activeLearner } = useActiveProfile()
 
   const [play, setPlay] = useState<LessonPlay | null>(null)
+  const [introSeen, setIntroSeen] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [studyReward, setStudyReward] = useState<{ status: 'studying' | 'pending' | 'paid'; progress_seconds: number } | null>(null)
 
   useEffect(() => {
     if (!activeLearner) {
@@ -28,6 +33,7 @@ export function LessonPlayerPage() {
     }
     let cancelled = false
     setPlay(null)
+    setIntroSeen(false)
     setLoadError(null)
     learningApi
       .play(id, activeLearner.id)
@@ -37,6 +43,20 @@ export function LessonPlayerPage() {
       cancelled = true
     }
   }, [id, activeLearner, navigate])
+
+  useEffect(() => {
+    if (!play || !activeLearner?.is_child) return
+    let cancelled = false
+    const heartbeat = () => {
+      if (document.hidden) return
+      void learningApi.studyHeartbeat(id, activeLearner.id)
+        .then((result) => { if (!cancelled) setStudyReward(result) })
+        .catch(() => undefined)
+    }
+    heartbeat()
+    const interval = window.setInterval(heartbeat, 30_000)
+    return () => { cancelled = true; window.clearInterval(interval) }
+  }, [play, activeLearner, id])
 
   const slides = useMemo(() => (play ? playToSlides(play) : []), [play])
   const { startIndex, priorCorrect } = useMemo(() => resumePlan(slides), [slides])
@@ -50,15 +70,27 @@ export function LessonPlayerPage() {
     return (
       <div className="mx-auto max-w-md p-6">
         <Alert variant="warning">{loadError}</Alert>
-        <a href="/billing" className="mt-4 block font-semibold text-primary underline">View plans and upgrade</a>
-        <Button3D variant="neutral" onClick={() => navigate('/learn')}>Back to journey</Button3D>
+        {activeLearner.is_child ? <p className="mt-4 font-semibold text-primary">Ask a grown-up to unlock this lesson.</p> : <a href="/billing" className="mt-4 block font-semibold text-primary underline">View plans and upgrade</a>}
+        <Button3D variant="neutral" onClick={() => navigate(returnTo)}>Back to journey</Button3D>
       </div>
     )
   }
   if (!play) return <Skeleton className="m-6 h-72" />
 
+  if (play.lesson.summary && !introSeen) return <main className="mx-auto flex min-h-dvh max-w-2xl flex-col justify-center gap-6 px-5 py-10">
+    <p className="text-xs font-bold uppercase tracking-widest text-primary">Text · {play.lesson.title}</p>
+    <h1 className="font-display text-3xl font-bold">{play.lesson.title}</h1>
+    <p className="whitespace-pre-wrap text-lg leading-8">{play.lesson.summary}</p>
+    <Button3D onClick={() => setIntroSeen(true)}>{play.components.length ? 'Continue to video or quiz' : 'Finish reading'}</Button3D>
+  </main>
+
+  if (play.components.length === 0) return <main className="mx-auto max-w-2xl p-6"><LessonComplete lessonId={id} learnerId={activeLearner.id} onExit={() => navigate(returnTo)} /></main>
+
   return (
+    <>
+    {studyReward && <div className="fixed bottom-3 left-3 z-30 rounded-xl border border-border bg-surface px-3 py-2 text-xs text-foreground shadow-lg" aria-live="polite">{studyReward.status === 'paid' ? '10 study coins earned today' : studyReward.status === 'pending' ? '10 study coins waiting — ask a grown-up to add coins' : `Study reward: ${Math.floor(studyReward.progress_seconds / 60)} of 5 minutes`}</div>}
     <SlideDeck
+      isChild={activeLearner.is_child}
       title={play.lesson.title}
       subtitle={play.lesson.est_minutes ? `About ${play.lesson.est_minutes} min` : undefined}
       startIcon="📚"
@@ -68,9 +100,10 @@ export function LessonPlayerPage() {
       initialHearts={play.hearts_remaining ?? null}
       startIndex={startIndex}
       initialCorrect={priorCorrect}
-      onExit={() => navigate('/learn')}
-      renderComplete={() => <LessonComplete lessonId={id} learnerId={activeLearner.id} onExit={() => navigate('/learn')} />}
+      onExit={() => navigate(returnTo)}
+      renderComplete={() => <LessonComplete lessonId={id} learnerId={activeLearner.id} onExit={() => navigate(returnTo)} />}
     />
+    </>
   )
 }
 
@@ -91,6 +124,8 @@ function LessonComplete({ lessonId, learnerId, onExit }: { lessonId: number; lea
         if (cancelled) return
         setResult(r)
         void qc.invalidateQueries({ queryKey: learningKeys.path(learnerId) })
+        void qc.invalidateQueries({ queryKey: ['learning', 'library-set'] })
+        void qc.invalidateQueries({ queryKey: ['learning', 'library-sets'] })
         for (const key of [gamificationKeys.badges(learnerId), gamificationKeys.streak(learnerId), gamificationKeys.hearts(learnerId), gamificationKeys.league(learnerId)]) {
           void qc.invalidateQueries({ queryKey: key })
         }

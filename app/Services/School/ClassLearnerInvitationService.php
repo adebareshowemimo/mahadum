@@ -19,6 +19,7 @@ class ClassLearnerInvitationService
     {
         return ClassLearnerInvitation::with(['schoolClass', 'organization'])
             ->where('token_hash', hash('sha256', $plainToken))
+            ->whereNull('cancelled_at')
             ->firstOrFail();
     }
 
@@ -44,6 +45,7 @@ class ClassLearnerInvitationService
             Organization::whereKey($invitation->organization_id)->lockForUpdate()->firstOrFail();
             User::whereKey($user->id)->lockForUpdate()->firstOrFail();
             $invitation = ClassLearnerInvitation::whereKey($invitation->id)->lockForUpdate()->firstOrFail();
+            abort_if($invitation->cancelled_at !== null, 410, 'This invitation was cancelled.');
             if ($invitation->accepted_at !== null) {
                 abort_unless((int) $invitation->accepted_by_user_id === (int) $user->id, 409, 'This invitation has already been used.');
 

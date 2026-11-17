@@ -62,6 +62,16 @@ A video has two faces: **lesson videos** (inside a lesson's component flow) and 
 **videos**
 `id, lesson_component_id(nullable — null for standalone cultural), language_id, title, description, presenter_name, is_cultural(bool), kind(lesson|proverb|folktale|festival|song|history), duration_seconds, source_asset_id, poster_asset_id, default_quality(360p), status(uploading|processing|ready|failed)`
 
+**Proverbs and trivia sets (2026-11-03):** These are standalone library items, not course lessons. They reuse lesson components for flashcards, quizzes, and media, but have `course_level_id = NULL` and their own `language_id` and `standalone_level` (1–10). Course lesson creation accepts only `kind = lesson`. The library lists and authoring flow use these standalone fields; existing proverb and trivia records are detached during migration.
+
+**Set hierarchy (2026-11-04):** Proverbs and Trivia now follow the course authoring shape independently: `library_sets → library_set_levels → lessons → lesson_components`. A set owns its language, status and level list; each level has a title, order and free/paid access; each level holds ordered lessons using the same video, text, quiz and component editor/player as courses. These lessons retain `course_level_id = NULL`; `library_set_level_id` identifies their separate hierarchy. Each existing standalone item becomes a one-lesson set during migration, retaining its title, language, publication state and lesson ID. Learners browse a set, open its levels and lessons, and see completion from existing lesson progress. Set publishing checks every lesson and publishes ready lessons; unpublishing blocks learner access without erasing progress.
+
+Proverb and trivia sets can each hold up to 1,000 characters of learner-facing text, plus video and quiz components. A set can publish with at least one of text, video, quiz or flashcards; any included video and quiz must pass the existing readiness and answer checks. The library labels the available formats. Course lessons retain their video-and-quiz publishing rule.
+
+**Stories (2026-11-03):** Stories and folklore are standalone library items with their own `language_id` and `standalone_level` (1–10), alongside their age band and format. Existing stories are detached from courses while retaining their pages, media, publication state and purchases. Author ownership is stored on the story. The ₦500 purchase and free-preview rules remain story-specific.
+
+**Story formats (28 October requirement):** Every age band, including Folklore, accepts a video, text or quiz item in addition to its legacy book formats. Video requires a free preview clip and full video; text requires two chapters with body text; quiz requires two multiple-choice questions, with the first question as the free preview. Story quizzes use the course learner quiz layout. Answers are held on the server and only the selected answer's result is returned to the learner. These formats are choices per item, not mandatory components on every item. School admins may view the creator catalogue read only.
+
 **video_renditions** — one row per quality/format
 `id, video_id, quality(240p|360p|720p), protocol(hls|mp4), manifest_url, bitrate_kbps, size_bytes, ready(bool)`
 

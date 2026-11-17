@@ -18,6 +18,7 @@ class AddChildRequest extends FormRequest
             'date_of_birth' => ['nullable', 'date', 'before:today'],
             'age_band' => ['nullable', 'string', 'max:50'],
             'target_language_id' => ['nullable', 'integer', 'exists:languages,id'],
+            'learning_goal' => ['nullable', 'string', 'in:grandparents,travel,school,business'],
             // Verifiable parental consent (COPPA / NDPA) — the guardian must
             // affirmatively consent to creating and processing the child's data.
             'consent' => ['accepted'],

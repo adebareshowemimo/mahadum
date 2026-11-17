@@ -23,7 +23,7 @@ const FAMILY_AUDIENCES = [
   },
   {
     title: 'Parents',
-    body: 'One grown-up view for progress, recordings, consent, chores and rewards—without giving children payment controls.',
+    body: 'One grown-up view to adjust the starting level and manage progress, recordings, consent, chores and rewards—without giving children payment controls.',
     link: '/child-safety',
     linkLabel: 'See parent controls',
   },

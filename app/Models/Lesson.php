@@ -13,8 +13,11 @@ use Illuminate\Support\Carbon;
 /**
  * @property bool $is_free_preview
  * @property int $id
- * @property int $course_level_id
+ * @property int|null $course_level_id
+ * @property int|null $language_id
+ * @property int|null $standalone_level
  * @property string $title
+ * @property string|null $summary
  * @property int $position
  * @property int $est_minutes
  * @property bool $is_locked_by_default
@@ -25,7 +28,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read Collection<int, LessonComponent> $components
  * @property-read int|null $components_count
- * @property-read CourseLevel $courseLevel
+ * @property-read CourseLevel|null $courseLevel
  * @property-read CourseLevel $level
  * @property-read Collection<int, LessonProgress> $progress
  * @property-read int|null $progress_count
@@ -68,6 +71,18 @@ class Lesson extends Model
     public function courseLevel(): BelongsTo
     {
         return $this->belongsTo(CourseLevel::class, 'course_level_id');
+    }
+
+    /** @return BelongsTo<Language, $this> */
+    public function language(): BelongsTo
+    {
+        return $this->belongsTo(Language::class);
+    }
+
+    /** @return BelongsTo<LibrarySetLevel, $this> */
+    public function librarySetLevel(): BelongsTo
+    {
+        return $this->belongsTo(LibrarySetLevel::class);
     }
 
     /**

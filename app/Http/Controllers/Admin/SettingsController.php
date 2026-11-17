@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\LessonComponent;
 use App\Services\AuditLogger;
+use App\Services\Learning\LearningGoals;
 use App\Services\Settings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -48,9 +49,17 @@ class SettingsController extends Controller
             $v = Validator::make(['value' => $value], ['value' => $rules]);
             if ($v->fails()) {
                 $errors[$key] = $v->errors()->get('value');
+            } elseif (str_starts_with($key, 'learning_goal.') && ! str_ends_with($key, '.enabled') && trim((string) $value) === '') {
+                $errors[$key] = ['This learning goal field cannot be empty.'];
+            } elseif (str_ends_with($key, '.keywords') && ! collect(explode(',', (string) $value))->contains(fn ($word) => trim($word) !== '')) {
+                $errors[$key] = ['Enter at least one lesson keyword.'];
             } else {
                 $clean[$key] = $value;
             }
+        }
+
+        if (collect(LearningGoals::KEYS)->every(fn ($key) => ! (bool) ($clean["learning_goal.$key.enabled"] ?? $this->settings->get("learning_goal.$key.enabled")))) {
+            $errors['learning_goals'] = ['Keep at least one learning goal available.'];
         }
 
         if ($errors !== []) {

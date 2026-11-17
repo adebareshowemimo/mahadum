@@ -18,6 +18,7 @@ use App\Services\Gamification\StreakService;
 use App\Services\Learning\LessonScorer;
 use App\Services\Learning\XapiRecorder;
 use App\Services\Referral\ReferralService;
+use App\Services\School\LinkedClassAssignmentService;
 use App\Services\SignupDiscovery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -75,6 +76,7 @@ class LessonCompletionController extends Controller
                 'components_completed' => $byComponent->where('status', 'complete')->count(),
                 'completed_at' => $progress->completed_at ?? now(),
             ]);
+            app(LinkedClassAssignmentService::class)->record($learner, $lesson);
 
             // XP awarded once per lesson (idempotent on re-complete).
             $xpTotal = (int) $lesson->components->where('type', '!=', 'quiz')->sum('xp_value');

@@ -56,6 +56,12 @@ class ClassAssignment extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /** @return BelongsTo<Lesson, $this> */
+    public function linkedLesson(): BelongsTo
+    {
+        return $this->belongsTo(Lesson::class, 'linked_lesson_id');
+    }
+
     /**
      * @return HasMany<ClassAssignmentSubmission, $this>
      */

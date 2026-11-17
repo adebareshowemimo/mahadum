@@ -1,15 +1,19 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SlideDeck } from './SlideDeck'
-import type { PlayerService, QuizSlide } from './types'
+import type { LessonPlay } from '@/lib/api'
+import { playToSlides, type PlayerService, type QuizSlide, type Slide } from './types'
 
 const grading = vi.hoisted(() => ({ correct: true }))
 
 beforeEach(() => { grading.correct = true })
 
 vi.mock('./slides', () => ({
-  SlideView: ({ onGraded, onAdvance }: { onGraded: (correct: boolean, xp: number) => void; onAdvance: () => void }) => (
-    <button onClick={() => { onGraded(grading.correct, grading.correct ? 1 : 0); onAdvance() }}>Answer correctly</button>
+  SlideView: ({ slide, onGraded, onAdvance }: { slide: Slide; onGraded: (correct: boolean, xp: number) => void; onAdvance: () => void }) => (
+    <button onClick={() => {
+      if (slide.kind === 'quiz') onGraded(grading.correct, grading.correct ? 1 : 0)
+      onAdvance()
+    }}>{slide.kind === 'quiz' ? 'Answer correctly' : `Next from video ${slide.componentId}`}</button>
   ),
 }))
 
@@ -23,6 +27,44 @@ function mount(service = {} as PlayerService) {
   render(<SlideDeck title="Quiz" slides={questions} service={service} initialHearts={5}
     startIndex={1} initialCorrect={1} onExit={() => {}} renderComplete={() => <p>Lesson finished</p>} />)
 }
+
+it('lists and plays a video, two distinct quizzes, and a practice video in authored order', () => {
+  const quiz = (id: number, position: number): LessonPlay['components'][number] => ({
+    id, position, type: 'quiz', xp: 1,
+    quiz: {
+      pass_threshold: 0.6, hearts_enabled: true,
+      questions: [{ id, type: 'mcq_single', prompt: 'Choose', options: [] }],
+    },
+  })
+  const play: LessonPlay = {
+    lesson: { id: 51, title: 'Introduce yourself', est_minutes: 5 },
+    components: [
+      { id: 10, type: 'video', position: 1, xp: 5, video: null },
+      quiz(20, 2),
+      quiz(30, 3),
+      { id: 40, type: 'video', position: 4, xp: 5, video: null },
+    ],
+  }
+  render(<SlideDeck title={play.lesson.title} slides={playToSlides(play)} service={{} as PlayerService} initialHearts={null}
+    onExit={() => {}} renderComplete={() => <p>Lesson finished</p>} />)
+
+  const checklist = within(screen.getByRole('list')).getAllByRole('listitem')
+  expect(checklist).toHaveLength(4)
+  expect(checklist[0]).toHaveTextContent('Video')
+  expect(checklist[1]).toHaveTextContent('Quiz')
+  expect(checklist[2]).toHaveTextContent('Quiz')
+  expect(checklist[3]).toHaveTextContent('Video')
+
+  const click = (name: string) => fireEvent.click(screen.getByRole('button', { name }))
+  click('Start')
+  click('Next from video 10')
+  click('Answer correctly')
+  click('Continue to next activity')
+  click('Answer correctly')
+  click('Continue to next activity')
+  click('Next from video 40')
+  expect(screen.getByText('Lesson finished')).toBeInTheDocument()
+})
 
 describe('quiz summaries', () => {
   it('counts resumed answers once', () => {

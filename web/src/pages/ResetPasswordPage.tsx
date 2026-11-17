@@ -75,6 +75,7 @@ export function ResetPasswordPage() {
           <Input
             label="New password"
             type="password"
+            passwordToggle
             autoComplete="new-password"
             hint="At least 8 characters."
             value={values.password}
@@ -86,6 +87,7 @@ export function ResetPasswordPage() {
           <Input
             label="Confirm new password"
             type="password"
+            passwordToggle
             autoComplete="new-password"
             value={values.password_confirmation}
             onChange={update('password_confirmation')}

@@ -216,6 +216,7 @@ export function PolicyPage({
           <nav aria-label="Related policies" className="mt-5 grid gap-2 text-sm font-bold">
             <Link to="/terms" className="min-h-11 py-2 hover:underline">Terms and conditions</Link>
             <Link to="/refunds" className="min-h-11 py-2 hover:underline">Refund policy</Link>
+            <Link to="/data-top-up-terms" className="min-h-11 py-2 hover:underline">Data Top-Up Terms</Link>
             <Link to="/privacy" className="min-h-11 py-2 hover:underline">Privacy notice</Link>
             <Link to="/children-privacy" className="min-h-11 py-2 hover:underline">Children’s privacy and consent</Link>
           </nav>

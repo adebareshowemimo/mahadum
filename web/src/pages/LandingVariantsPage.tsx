@@ -177,6 +177,7 @@ export function LandingV1Page() {
                 </p>
                 <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                   <LinkButton to={slide.cta.to} size="lg" variant="parent">{slide.cta.label}</LinkButton>
+                  <a href="/vote" className="inline-flex h-12 items-center justify-center rounded-xl border-2 border-chore-200 bg-white px-6 font-display font-bold text-chore-700 hover:bg-chore-50">Vote for the next language</a>
                   <a href="#v1-how" className="inline-flex h-12 items-center justify-center rounded-xl border-2 border-chore-200 bg-white px-6 font-display font-bold text-chore-700 hover:bg-chore-50">
                     See how a word travels
                   </a>
@@ -286,7 +287,7 @@ export function LandingV1Page() {
                 <p className="font-display text-2xl font-extrabold text-[#ffb277]">From “what does it mean?”</p>
                 <p className="mt-3 font-display text-4xl font-extrabold leading-tight">to “I know this story.”</p>
                 <p className="mt-5 text-lg font-semibold leading-relaxed text-white/78">
-                  Tone marks, greetings for elders, proverbs, songs, folktales and festivals sit inside the course—not outside it as decoration.
+                  Courses teach tone marks and greetings for elders. Explore proverbs and trivia by language and level in their own libraries, alongside songs, folktales and festivals.
                 </p>
                 <ul className="mt-7 space-y-3">
                   <CheckLine inverse>Native-speaker audio and speaking practice</CheckLine>

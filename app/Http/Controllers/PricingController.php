@@ -29,7 +29,7 @@ class PricingController extends Controller
                 'max_profiles' => $p->max_profiles,
                 'features' => [
                     'ads' => (bool) ($p->features['ads'] ?? false),
-                    'offline_download' => (bool) ($p->features['offline_download'] ?? false),
+                    'offline_download' => false,
                     'unlimited_hearts' => (bool) ($p->features['unlimited_hearts'] ?? false),
                     'family_dashboard' => (bool) ($p->features['family_dashboard'] ?? false),
                 ],

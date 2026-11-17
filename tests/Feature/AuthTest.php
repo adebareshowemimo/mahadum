@@ -119,7 +119,9 @@ class AuthTest extends TestCase
         ])->assertCreated()->assertJsonPath('data.abilities', ['student']);
 
         $userId = $response->json('data.user.id');
-        $this->assertDatabaseHas('learner_profiles', ['user_id' => $userId, 'display_name' => 'Chika Nwosu']);
+        $this->assertDatabaseHas('learner_profiles', [
+            'user_id' => $userId, 'display_name' => 'Chika Nwosu', 'date_of_birth' => '1992-06-14 00:00:00',
+        ]);
         $this->assertDatabaseMissing('families', ['owner_user_id' => $userId]);
     }
 

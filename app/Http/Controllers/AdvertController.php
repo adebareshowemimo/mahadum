@@ -22,6 +22,10 @@ class AdvertController extends Controller
             'position' => ['required', Rule::in(['leaderboard', 'inline', 'profile_data_topup'])],
         ]);
 
+        if ($validated['position'] === 'profile_data_topup' && ! config('services.data_bundles.enabled')) {
+            return response()->json(['data' => null]);
+        }
+
         $advert = AdvertPlacement::currentFor($validated['position']);
 
         if (! $advert) {

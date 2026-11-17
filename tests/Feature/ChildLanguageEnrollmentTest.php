@@ -6,6 +6,9 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Language;
 use App\Models\LearnerProfile;
+use App\Models\Plan;
+use App\Models\Subscription;
+use App\Models\User;
 use App\Services\Learning\PathBuilder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\MakesContent;
@@ -36,5 +39,36 @@ class ChildLanguageEnrollmentTest extends TestCase
         $this->assertSame(2, $enrollment->pathNodes()->count());
         $this->getJson("/api/v1/learners/$id/path")->assertOk()->assertJsonPath('data.units.0.nodes.0.lesson_id', $lesson->id)
             ->assertJsonPath('data.units.1.nodes.0.lesson_id', $paidLesson->id)->assertJsonPath('data.units.1.nodes.0.state', 'locked');
+    }
+
+    public function test_paid_family_subscription_opens_all_published_levels_in_the_learning_path(): void
+    {
+        $this->seedRbac();
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $learner = $this->parentWithChild($parent);
+        $first = $this->publishedLesson();
+        $course = $first->courseLevel->course;
+        $paidLevel = $course->levels()->create(['title' => 'L1', 'position' => 1, 'is_free' => false]);
+        $second = $paidLevel->lessons()->create(['title' => 'Paid', 'position' => 1, 'published_at' => now()]);
+        $enrollment = Enrollment::create(['learner_profile_id' => $learner->id, 'course_id' => $course->id, 'status' => 'active', 'started_at' => now()]);
+        app(PathBuilder::class)->build($enrollment);
+
+        $this->getJson("/api/v1/learners/{$learner->id}/path")
+            ->assertJsonPath('data.units.1.nodes.0.state', 'locked');
+
+        $plan = Plan::create(['code' => 'path-paid', 'name' => 'Paid', 'price_minor' => 1000,
+            'currency' => 'NGN', 'interval' => 'month', 'audience' => 'family', 'features' => []]);
+        $subscription = Subscription::create(['subscriber_type' => User::class, 'subscriber_id' => $parent->id,
+            'plan_id' => $plan->id, 'status' => 'active', 'method' => 'card', 'started_at' => now()]);
+
+        $this->getJson("/api/v1/learners/{$learner->id}/path")
+            ->assertJsonPath('data.units.0.nodes.0.state', 'active')
+            ->assertJsonPath('data.units.1.nodes.0.lesson_id', $second->id)
+            ->assertJsonPath('data.units.1.nodes.0.state', 'active')
+            ->assertJsonPath('data.units.1.nodes.0.access_reason', null);
+
+        $subscription->update(['status' => 'cancelled']);
+        $this->getJson("/api/v1/learners/{$learner->id}/path")
+            ->assertJsonPath('data.units.1.nodes.0.state', 'locked');
     }
 }

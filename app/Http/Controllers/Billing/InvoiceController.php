@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\ResolvesOrganization;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Billing\ApplyInvoicePromoRequest;
 use App\Http\Requests\Billing\PayInvoiceRequest;
+use App\Models\Invoice;
 use App\Models\Organization;
 use App\Models\PromoCode;
 use App\Models\PromoRedemption;
@@ -33,7 +34,7 @@ class InvoiceController extends Controller
     {
         $this->authorizeOrg($request->user(), $organization);
 
-        $invoices = $organization->invoices()->latest()->get()->map(fn ($i) => [
+        $invoices = $organization->invoices()->where('status', '!=', 'cancelled')->latest()->get()->map(fn ($i) => [
             'id' => $i->id,
             'type' => $i->type,
             'amount_minor' => $i->amount_minor,
@@ -60,6 +61,46 @@ class InvoiceController extends Controller
             'available' => $available,
             'default' => in_array($preferred, $available, true) ? $preferred : ($available[0] ?? null),
         ]]);
+    }
+
+    /** Verify a returning checkout before showing an invoice as paid. */
+    public function confirm(Request $request, Organization $organization, string $invoice, PaymentService $payments): JsonResponse
+    {
+        $this->authorizeOrg($request->user(), $organization);
+        $model = $organization->invoices()->findOrFail($invoice);
+        if ($model->status === 'paid' || $model->status === 'cancelled' || $model->gateway_txn_ref === null) {
+            return response()->json(['data' => $this->confirmationPayload($model)]);
+        }
+
+        $provider = $model->payment_gateway;
+        abort_unless(in_array($provider, $this->gateways->available(), true), 503, 'This payment provider is unavailable. Check again later.');
+        $reference = 'invoice_'.$model->id;
+        $verified = $this->gateways->driver($provider)->verify($reference);
+        if ($verified->status === 'success') {
+            $details = $provider === 'monnify' ? ($verified->raw['responseBody'] ?? []) : ($verified->raw['data'] ?? []);
+            $returnedReference = $provider === 'monnify' ? ($details['paymentReference'] ?? null)
+                : ($details[$provider === 'flutterwave' ? 'tx_ref' : 'reference'] ?? null);
+            $currency = $provider === 'monnify' ? ($details['currencyCode'] ?? $details['currency'] ?? null) : ($details['currency'] ?? null);
+            if ($returnedReference !== $reference || $currency !== 'NGN' || $verified->amountMinor !== $model->amount_minor) {
+                return response()->json(['data' => $this->confirmationPayload($model, 'needs_review')]);
+            }
+            $payments->process($provider, 'invoice_verify_'.$model->id, $reference, 'success', $verified->amountMinor, $verified->raw);
+        }
+
+        return response()->json(['data' => $this->confirmationPayload($model->fresh(), $verified->status)]);
+    }
+
+    /** @return array<string, mixed> */
+    private function confirmationPayload(Invoice $invoice, string $verification = 'pending'): array
+    {
+        return [
+            'id' => $invoice->id, 'status' => $invoice->status,
+            'verification' => $invoice->status === 'paid' ? 'success' : $verification,
+            'amount_minor' => $invoice->amount_minor,
+            'payment_gateway' => $invoice->payment_gateway,
+            'payment_reference' => 'invoice_'.$invoice->id,
+            'issued_at' => $invoice->issued_at, 'paid_at' => $invoice->paid_at,
+        ];
     }
 
     /** Apply a validated discount once, before checkout. */
@@ -144,7 +185,7 @@ class InvoiceController extends Controller
                 $reference,
                 $invoiceModel->amount_minor,
                 (string) $organization->contact_email,
-                ['purpose' => 'invoice', 'invoice_id' => $invoiceModel->id],
+                ['purpose' => 'invoice', 'invoice_id' => $invoiceModel->id, 'organization_id' => $organization->id],
             );
             abort_unless(filled($checkout->checkoutUrl), 502, 'The payment gateway did not return a checkout URL.');
 

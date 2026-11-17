@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Card, CardBody, LinkButton } from '@/components/ui'
 import type { EntitlementFeature } from '@/lib/api'
 import { FEATURE_META, useEntitlements } from '@/lib/billing/entitlements'
+import { useActiveProfile } from '@/lib/profile/ActiveProfile'
 
 /**
  * Soft paywall: renders children when the active plan grants `feature`, else an
@@ -9,6 +10,7 @@ import { FEATURE_META, useEntitlements } from '@/lib/billing/entitlements'
  */
 export function PaywallGate({ feature, children }: { feature: EntitlementFeature; children: ReactNode }) {
   const entitlements = useEntitlements()
+  const { activeLearner } = useActiveProfile()
   if (entitlements[feature]) return <>{children}</>
 
   const meta = FEATURE_META[feature]
@@ -20,11 +22,9 @@ export function PaywallGate({ feature, children }: { feature: EntitlementFeature
           <span className="flex size-14 items-center justify-center rounded-2xl bg-gold-100 text-2xl">🔒</span>
           <h1 className="font-display text-xl font-bold text-foreground">{meta.label}</h1>
           <p className="max-w-xs text-sm text-muted">
-            This is part of <strong>{meta.unlockedBy}</strong>. Upgrade to unlock it for your family.
+            {activeLearner?.is_child ? 'Ask a grown-up to unlock this for your family.' : <>This is part of <strong>{meta.unlockedBy}</strong>. Upgrade to unlock it for your family.</>}
           </p>
-          <LinkButton to="/billing" variant="premium">
-            See plans
-          </LinkButton>
+          {!activeLearner?.is_child && <LinkButton to="/billing" variant="premium">See plans</LinkButton>}
         </CardBody>
       </Card>
     </div>

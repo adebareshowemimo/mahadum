@@ -2,13 +2,19 @@
 
 namespace Tests\Feature;
 
+use App\Models\Course;
+use App\Models\GuideVideo;
 use App\Models\Language;
 use App\Models\PublicDocument;
 use App\Models\User;
 use App\Services\SignupDiscovery;
+use Database\Seeders\GuideLibrarySeeder;
+use Database\Seeders\LanguageSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -67,6 +73,32 @@ class PublicSeoTest extends TestCase
                 ->assertSee('href="/assets/website.css"', false)
                 ->assertSee('src="/assets/public-chrome.js"', false);
         }
+    }
+
+    public function test_english_is_only_advertised_when_live_with_a_published_free_lesson(): void
+    {
+        $english = Language::create(['code' => 'en', 'name' => 'English', 'is_active' => false]);
+        $course = Course::create(['language_id' => $english->id, 'title' => 'English', 'status' => 'published', 'is_published' => true]);
+        $level = $course->levels()->create(['title' => 'Level 0', 'position' => 0, 'is_free' => true]);
+        $level->lessons()->create(['title' => 'Greetings', 'position' => 1, 'published_at' => now()]);
+
+        $this->get('/languages')->assertOk()
+            ->assertSee('THREE LANGUAGES')->assertDontSee('Start English free')
+            ->assertDontSee('FOUR LANGUAGES')->assertDontSee('and English through short lessons')
+            ->assertDontSee('Choose Igbo, Yorùbá, Hausa or English');
+        $this->getJson('/api/v1/config')->assertOk()->assertJsonMissing(['code' => 'en']);
+        $this->seed(LanguageSeeder::class);
+        $this->assertFalse($english->fresh()->is_active);
+
+        $english->update(['is_active' => true]);
+        $this->get('/languages')->assertOk()
+            ->assertSee('FOUR LANGUAGES')->assertSee('Start English free')
+            ->assertSee('/register?lang=english')
+            ->assertSee('Choose Igbo, Yorùbá, Hausa or English');
+        $this->getJson('/api/v1/config')->assertOk()->assertJsonFragment(['code' => 'en']);
+
+        $level->lessons()->update(['published_at' => null]);
+        $this->get('/languages')->assertOk()->assertDontSee('Start English free');
     }
 
     public function test_missing_chrome_build_returns_service_unavailable(): void
@@ -169,6 +201,119 @@ class PublicSeoTest extends TestCase
         $this->get('/api/v1/website/votes.csv')->assertOk();
     }
 
+    public function test_guide_library_editor_controls_public_visibility_search_and_pagination(): void
+    {
+        $this->seedRbac();
+        $input = ['section' => 'how_to', 'title' => 'Create your family account', 'description' => 'Getting started',
+            'language' => null, 'topic' => 'parent_guide', 'source_type' => 'youtube', 'youtube_url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+            'duration_seconds' => 120, 'sort_order' => 1, 'is_visible' => false];
+        $this->actingAsUser($this->userWithRole('student'));
+        $this->postJson('/api/v1/website/guide-videos', $input)->assertForbidden();
+        $this->actingAsUser($this->userWithRole('content_owner'));
+        $this->postJson('/api/v1/website/guide-videos', [...$input, 'youtube_url' => 'https://example.com/video'])->assertUnprocessable();
+        $created = $this->postJson('/api/v1/website/guide-videos', $input)->assertCreated();
+        $id = $created->json('data.id');
+        $this->get('/guides')->assertOk()->assertDontSee('Create your family account');
+        $this->postJson('/api/v1/website/guide-videos/'.$id, [...$input, 'is_visible' => true])->assertOk();
+        $this->get('/guides')->assertOk()->assertSee('Create your family account')->assertSee('youtube-nocookie.com/embed/dQw4w9WgXcQ');
+        $this->get('/guides?topic=learning')->assertOk()->assertDontSee('Create your family account');
+        $this->get('/guides?topic=parent_guide')->assertOk()->assertSee('Create your family account');
+        $this->get('/guides?how_search=Getting')->assertOk()->assertSee('Create your family account');
+        $this->getJson('/api/v1/website/guide-videos?section=how_to&search=family')->assertOk()->assertJsonPath('total', 1);
+        $this->getJson('/api/v1/website/guide-videos?section=how_to&search=missing')->assertOk()->assertJsonPath('total', 0);
+        $faq = $this->postJson('/api/v1/website/guide-faqs', ['question' => 'How do I start?', 'answer' => 'Choose a course.', 'sort_order' => 1, 'is_visible' => false])->assertCreated();
+        $this->get('/guides')->assertDontSee('How do I start?');
+        $this->putJson('/api/v1/website/guide-faqs/'.$faq->json('data.id'), ['question' => 'How do I start?', 'answer' => 'Choose a course.', 'sort_order' => 1, 'is_visible' => true])->assertOk();
+        $this->get('/guides')->assertSee('How do I start?');
+        $this->assertDatabaseHas('audit_logs', ['action' => 'guide.video.updated']);
+        $this->deleteJson('/api/v1/website/guide-videos/'.$id)->assertOk();
+        $this->assertDatabaseMissing('guide_videos', ['id' => $id]);
+    }
+
+    public function test_guide_video_upload_and_independent_public_pagination(): void
+    {
+        Storage::fake('public');
+        $this->seedRbac();
+        $this->actingAsUser($this->userWithRole('content_owner'));
+        $created = $this->post('/api/v1/website/guide-videos', [
+            'section' => 'sample', 'title' => 'Family words', 'description' => 'A preview', 'language' => 'igbo',
+            'source_type' => 'upload', 'file' => UploadedFile::fake()->create('sample.mp4', 10, 'video/mp4'),
+            'duration_seconds' => 60, 'sort_order' => 1, 'is_visible' => 1,
+        ], ['Accept' => 'application/json'])->assertCreated();
+        $path = GuideVideo::findOrFail($created->json('data.id'))->file_path;
+        Storage::disk('public')->assertExists($path);
+        for ($i = 0; $i < 11; $i++) {
+            GuideVideo::create(['section' => 'sample', 'title' => 'Extra '.$i, 'language' => 'igbo', 'source_type' => 'youtube',
+                'youtube_id' => 'dQw4w9WgXcQ', 'sort_order' => $i + 2, 'is_visible' => true]);
+        }
+        $this->get('/guides?language=igbo')->assertOk()->assertSee('Showing 1–9 of 12 videos')->assertSee('sample_page=2');
+        $this->get('/guides?language=igbo&sample_page=2')->assertOk()->assertSee('Showing 10–12 of 12 videos');
+        $this->get('/guides?language=hausa')->assertOk()->assertDontSee('Family words');
+        $this->deleteJson('/api/v1/website/guide-videos/'.$created->json('data.id'))->assertOk();
+        Storage::disk('public')->assertMissing($path);
+    }
+
+    public function test_guide_playlist_seed_is_repeatable_and_preserves_editor_changes(): void
+    {
+        $this->seed(GuideLibrarySeeder::class);
+        $this->assertDatabaseCount('guide_videos', 48);
+        $this->assertDatabaseCount('guide_faqs', 5);
+        $this->assertDatabaseMissing('guide_faqs', ['answer' => 'Example answer: Create an account, choose a learner profile, and select a course to begin. Replace this example with approved support copy.']);
+        $this->assertSame(['hausa', 'yoruba', 'igbo'], GuideVideo::query()->where('section', 'sample')->orderBy('sort_order')->limit(3)->pluck('language')->all());
+        $video = GuideVideo::query()->where('section', 'sample')->where('youtube_id', 'NAC7DVDMGzM')->firstOrFail();
+        $video->update(['title' => 'Reviewed Hausa title', 'is_visible' => false]);
+        $this->seed(GuideLibrarySeeder::class);
+        $this->assertDatabaseCount('guide_videos', 48);
+        $this->assertDatabaseCount('guide_faqs', 5);
+        $this->assertDatabaseHas('guide_videos', ['id' => $video->id, 'title' => 'Reviewed Hausa title', 'is_visible' => false]);
+        $this->get('/guides')->assertOk()->assertSee('Showing 1–9 of 23 videos')->assertSee('How-to videos');
+    }
+
+    public function test_production_guide_seed_requires_an_explicit_flag(): void
+    {
+        $previousEnvironment = app()->environment();
+        $previousFlag = getenv('SEED_GUIDE_LIBRARY');
+
+        try {
+            putenv('SEED_GUIDE_LIBRARY');
+            app()->detectEnvironment(fn () => 'production');
+            try {
+                (new GuideLibrarySeeder)->run();
+                $this->fail('Production guides were seeded without an explicit flag.');
+            } catch (\RuntimeException $exception) {
+                $this->assertStringContainsString('SEED_GUIDE_LIBRARY=1', $exception->getMessage());
+            }
+            $this->assertDatabaseCount('guide_videos', 0);
+            putenv('SEED_GUIDE_LIBRARY=1');
+            (new GuideLibrarySeeder)->run();
+            $this->assertDatabaseCount('guide_videos', 48);
+            $this->assertDatabaseCount('guide_faqs', 5);
+        } finally {
+            app()->detectEnvironment(fn () => $previousEnvironment);
+            putenv($previousFlag === false ? 'SEED_GUIDE_LIBRARY' : "SEED_GUIDE_LIBRARY={$previousFlag}");
+        }
+    }
+
+    public function test_normal_production_migration_seeds_guides_without_replacing_editor_changes(): void
+    {
+        $previousEnvironment = app()->environment();
+        $migration = require database_path('migrations/2026_11_13_000001_seed_initial_production_guides.php');
+
+        try {
+            app()->detectEnvironment(fn () => 'production');
+            $migration->up();
+            $this->assertDatabaseCount('guide_videos', 48);
+            $this->assertDatabaseCount('guide_faqs', 5);
+            $video = GuideVideo::query()->firstOrFail();
+            $video->update(['title' => 'Reviewed title']);
+            $migration->up();
+            $this->assertDatabaseCount('guide_videos', 48);
+            $this->assertDatabaseHas('guide_videos', ['id' => $video->id, 'title' => 'Reviewed title']);
+        } finally {
+            app()->detectEnvironment(fn () => $previousEnvironment);
+        }
+    }
+
     public function test_language_voting_requires_verified_account_and_prevents_duplicates(): void
     {
         $this->postJson('/api/v1/language-votes', ['language' => 'Tiv'])->assertUnauthorized();
@@ -179,26 +324,53 @@ class PublicSeoTest extends TestCase
         $user->forceFill(['email_verified_at' => now()])->save();
         $this->postJson('/api/v1/language-votes', ['language' => 'Invalid'])->assertUnprocessable();
         $this->postJson('/api/v1/language-votes', ['language' => 'Other', 'other_language' => '   '])->assertUnprocessable();
-        $this->postJson('/api/v1/language-votes', ['language' => 'Benin'])->assertCreated();
+        $this->postJson('/api/v1/language-votes', ['language' => 'Benin'])->assertUnprocessable();
+        $this->postJson('/api/v1/language-votes', ['language' => 'Bini'])->assertCreated();
         $this->postJson('/api/v1/language-votes', ['language' => 'Tiv'])->assertConflict();
         $this->assertDatabaseCount('language_votes', 1);
     }
 
-    public function test_benin_replaces_edo_and_existing_votes_keep_their_count(): void
+    public function test_bini_replaces_benin_and_existing_votes_keep_their_count(): void
     {
         $user = User::factory()->create(['email_verified_at' => now()]);
         DB::table('language_votes')->insert([
             'user_id' => $user->id,
-            'language' => 'Edo',
+            'language' => 'Benin',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        (require database_path('migrations/2026_10_23_000001_rename_edo_votes_to_benin.php'))->up();
+        (require database_path('migrations/2026_11_03_000005_rename_benin_votes_to_bini.php'))->up();
 
-        $this->assertDatabaseHas('language_votes', ['user_id' => $user->id, 'language' => 'Benin']);
-        $this->get('/vote')->assertOk()->assertSee('Choose Benin')->assertSee('1 of 10,000 votes')->assertDontSee('Choose Edo');
-        $this->get('/languages')->assertOk()->assertSee('Benin')->assertDontSee('>Edo<');
+        $this->assertDatabaseHas('language_votes', ['user_id' => $user->id, 'language' => 'Bini']);
+        $this->get('/vote')->assertOk()->assertSee('Choose Bini')->assertSee('1 of 10,000 votes')->assertDontSee('Choose Benin');
+        $this->get('/languages')->assertOk()->assertSee('Bini')->assertDontSee('>Benin<');
+        $this->getJson('/api/v1/config')->assertOk()->assertJsonFragment(['Bini']);
+        $this->seedRbac();
+        $admin = $this->userWithRole('super_admin');
+        $this->actingAsUser($admin);
+        $this->getJson('/api/v1/website/reports')->assertOk()->assertJsonPath('data.votes.0.language', 'Bini');
+        $csv = $this->get('/api/v1/website/votes.csv')->assertOk()->streamedContent();
+        $this->assertStringContainsString('Bini', $csv);
+        $this->assertStringNotContainsString('Benin', $csv);
+    }
+
+    public function test_test_vote_cleanup_requires_exact_vote_and_account_and_preview_does_not_delete(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $voteId = DB::table('language_votes')->insertGetId([
+            'user_id' => $user->id,
+            'language' => 'Bini',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->artisan('language-votes:remove-test', ['vote_id' => $voteId, 'email' => 'wrong@example.test', '--execute' => true])->assertFailed();
+        $this->artisan('language-votes:remove-test', ['vote_id' => $voteId, 'email' => $user->email])->assertSuccessful();
+        $this->assertDatabaseHas('language_votes', ['id' => $voteId]);
+        $this->artisan('language-votes:remove-test', ['vote_id' => $voteId, 'email' => $user->email, '--execute' => true])->assertSuccessful();
+        $this->assertDatabaseMissing('language_votes', ['id' => $voteId]);
+        $this->assertDatabaseHas('users', ['id' => $user->id]);
     }
 
     /** @return array<string, mixed> */

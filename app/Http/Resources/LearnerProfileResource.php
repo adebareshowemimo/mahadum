@@ -17,6 +17,11 @@ class LearnerProfileResource extends JsonResource
     public function toArray(Request $request): array
     {
         $learningLevel = app(LearningLevelService::class)->forLearner($this->resource);
+        $schoolName = $this->organization_id !== null
+            && $this->organization?->type === 'school'
+            && $this->classEnrollments()->currentLearners()->exists()
+                ? $this->organization->name
+                : null;
 
         return [
             'id' => $this->id,
@@ -31,7 +36,9 @@ class LearnerProfileResource extends JsonResource
             'current_level' => $this->current_level,
             'learning_level' => $learningLevel,
             'target_language' => $this->whenLoaded('targetLanguage', fn () => $this->targetLanguage?->code),
+            'learning_goal' => $this->learning_goal,
             'is_child' => $this->user_id === null,
+            'school_name' => $schoolName,
             'pin_protected' => $this->parental_pin !== null,
             'coin_balance' => app(WalletService::class)->walletFor($this->resource)->coin_balance,
         ];

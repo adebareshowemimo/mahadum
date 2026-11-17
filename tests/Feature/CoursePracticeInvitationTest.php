@@ -33,6 +33,7 @@ class CoursePracticeInvitationTest extends TestCase
 
         $coParent = $this->userWithRole('parent');
         FamilyMember::create(['family_id' => $family->id, 'user_id' => $coParent->id, 'relationship' => 'co-parent', 'is_account_owner' => false]);
+        $this->approvePracticePartner($learner, $coParent, $parent);
 
         $stranger = $this->userWithRole('parent');
 
@@ -63,6 +64,7 @@ class CoursePracticeInvitationTest extends TestCase
 
         $coParent = $this->userWithRole('parent');
         FamilyMember::create(['family_id' => $family->id, 'user_id' => $coParent->id, 'relationship' => 'co-parent', 'is_account_owner' => false]);
+        $this->approvePracticePartner($learner, $coParent, $parent);
 
         $this->postJson('/api/v1/course-practice/invitations', [
             'learner_id' => $learner->id,
@@ -90,6 +92,7 @@ class CoursePracticeInvitationTest extends TestCase
 
         $teacher = $this->userWithRole('teacher');
         OrganizationUser::create(['organization_id' => $organization->id, 'user_id' => $teacher->id, 'role' => 'teacher', 'status' => 'active']);
+        $this->approvePracticePartner($learner, $teacher, $parent);
 
         $this->postJson('/api/v1/course-practice/invitations', [
             'learner_id' => $learner->id,

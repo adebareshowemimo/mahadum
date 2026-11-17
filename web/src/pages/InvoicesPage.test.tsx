@@ -1,8 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 import { InvoicesPage } from './InvoicesPage'
 import { ApiError } from '@/lib/api'
+
+const renderInvoices = () => render(<MemoryRouter><InvoicesPage /></MemoryRouter>)
 
 const mocks = vi.hoisted(() => ({
   applyInvoicePromo: vi.fn(),
@@ -56,7 +59,7 @@ describe('InvoicesPage', () => {
   })
 
   it('shows the two fee categories before tax and total', () => {
-    render(<InvoicesPage />)
+    renderInvoices()
 
     expect(screen.getByText('Student School Fees')).toBeInTheDocument()
     expect(screen.getByText('Registration Fees')).toBeInTheDocument()
@@ -70,14 +73,14 @@ describe('InvoicesPage', () => {
   it('sends the selected invoice payment provider', async () => {
     const mutateAsync = vi.fn().mockResolvedValue({ checkout_url: 'https://checkout.example.test/invoice' })
     mocks.usePayInvoice.mockReturnValue({ isPending: false, mutateAsync })
-    render(<InvoicesPage />)
+    renderInvoices()
     fireEvent.change(screen.getByLabelText('Payment provider'), { target: { value: 'monnify' } })
     fireEvent.click(screen.getByRole('button', { name: 'Pay now' }))
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith({ invoiceId: 27, gateway: 'monnify' }))
   })
 
   it('validates an entered promo on the server and refreshes the total before payment', async () => {
-    render(<InvoicesPage />)
+    renderInvoices()
     fireEvent.change(screen.getByLabelText('Have a promo code?'), { target: { value: 'SCHOOL20' } })
     fireEvent.click(screen.getByRole('button', { name: 'Apply promo code' }))
     await waitFor(() => expect(mocks.applyInvoicePromo).toHaveBeenCalledWith(9, 27, 'SCHOOL20'))
@@ -106,7 +109,7 @@ describe('InvoicesPage', () => {
       }],
     })
 
-    render(<InvoicesPage />)
+    renderInvoices()
 
     expect(screen.getByText('Registration Fees')).toBeInTheDocument()
     expect(screen.getByText('₦0.00')).toBeInTheDocument()
@@ -117,7 +120,7 @@ describe('InvoicesPage', () => {
     let finishRefresh!: (value: object) => void
     mocks.applyInvoicePromo.mockReturnValue(new Promise(resolve => { finishApply = resolve }))
     mocks.refetch.mockReturnValue(new Promise(resolve => { finishRefresh = resolve }))
-    render(<InvoicesPage />)
+    renderInvoices()
     fireEvent.change(screen.getByLabelText('Have a promo code?'), { target: { value: 'SCHOOL20' } })
     fireEvent.click(screen.getByRole('button', { name: 'Apply promo code' }))
     expect(screen.getByRole('button', { name: 'Pay now' })).toBeDisabled()
@@ -132,7 +135,7 @@ describe('InvoicesPage', () => {
 
   it('blocks promo submission while payment is starting', () => {
     mocks.usePayInvoice.mockReturnValue({ isPending: true, variables: { invoiceId: 27 }, mutateAsync: vi.fn() })
-    render(<InvoicesPage />)
+    renderInvoices()
     fireEvent.change(screen.getByLabelText('Have a promo code?'), { target: { value: 'SCHOOL20' } })
     expect(screen.getByRole('button', { name: 'Apply promo code' })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: 'Apply promo code' }))
@@ -141,7 +144,7 @@ describe('InvoicesPage', () => {
 
   it('shows promo rejection clearly without starting payment', async () => {
     mocks.applyInvoicePromo.mockRejectedValue(new ApiError('Invalid code', 'validation_error', 422, { code: 'A promo code has already been applied.' }))
-    render(<InvoicesPage />)
+    renderInvoices()
     fireEvent.change(screen.getByLabelText('Have a promo code?'), { target: { value: 'SECOND10' } })
     fireEvent.click(screen.getByRole('button', { name: 'Apply promo code' }))
     expect(await screen.findByText('A promo code has already been applied.')).toBeInTheDocument()

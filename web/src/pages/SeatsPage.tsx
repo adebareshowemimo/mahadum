@@ -13,7 +13,7 @@ import {
 import { ApiError, type PurchaseSeatsResult } from '@/lib/api'
 import { formatMoney } from '@/lib/format'
 import { SchoolGate } from '@/components/school/SchoolGate'
-import { usePurchaseSeats, useSeats } from '@/lib/school/queries'
+import { useInactiveSeats, usePurchaseSeats, useReleaseInactiveSeat, useSeats } from '@/lib/school/queries'
 
 export function SeatsPage() {
   return <SchoolGate>{(orgId) => <Seats orgId={orgId} />}</SchoolGate>
@@ -21,7 +21,10 @@ export function SeatsPage() {
 
 function Seats({ orgId }: { orgId: number }) {
   const { data, isLoading, isError } = useSeats(orgId)
+  const inactive = useInactiveSeats(orgId)
+  const release = useReleaseInactiveSeat(orgId)
   const [buyOpen, setBuyOpen] = useState(false)
+  const [releaseId, setReleaseId] = useState<number | null>(null)
 
   if (isLoading) return <Skeleton className="h-40" />
   if (isError || !data) return <Alert variant="danger">Couldn’t load seats.</Alert>
@@ -80,6 +83,21 @@ function Seats({ orgId }: { orgId: number }) {
           </div>
         )}
       </section>
+
+      <section>
+        <h2 className="mb-2 font-display text-lg font-bold text-foreground">Inactive seat review</h2>
+        <p className="mb-3 text-sm text-muted">Review learners with no learning activity for {inactive.data?.inactive_days ?? 30} days. Releasing a seat removes the learner from this school and its classes; their account and learning history remain.</p>
+        {inactive.isLoading ? <Skeleton className="h-20" /> : inactive.isError ? <Alert variant="danger">Could not load the inactivity review.</Alert> : !inactive.data?.learners.length ? <p className="text-sm text-muted">No inactive learners to review.</p> :
+          <div className="divide-y divide-border rounded-xl border border-border bg-surface">{inactive.data.learners.map((learner) => <div key={learner.learner_id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <div><p className="font-semibold">{learner.name}</p><p className="text-sm text-muted">{learner.last_activity_at ? `Last learning activity ${new Date(learner.last_activity_at).toLocaleDateString()}` : `No learning activity · Added ${new Date(learner.added_at).toLocaleDateString()}`} · {learner.classes.join(', ') || 'No class'}</p></div>
+            <Button variant="outline" size="sm" onClick={() => setReleaseId(learner.learner_id)}>Release seat</Button>
+          </div>)}</div>}
+        {release.isError && <Alert variant="danger">Could not release this seat. Refresh the review and try again.</Alert>}
+      </section>
+
+      <Modal open={releaseId !== null} onClose={() => setReleaseId(null)} title="Release this seat?" description="The learner will leave this school and its classes. Their account and learning history remain.">
+        <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setReleaseId(null)}>Keep seat</Button><Button loading={release.isPending} onClick={async () => { if (releaseId !== null) { try { await release.mutateAsync(releaseId); setReleaseId(null) } catch { /* shown above */ } } }}>Release seat</Button></div>
+      </Modal>
 
       <BuySeatsModal orgId={orgId} open={buyOpen} onClose={() => setBuyOpen(false)} />
     </div>

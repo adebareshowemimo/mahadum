@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
-import { Alert, Badge, Card, CardBody, Skeleton } from '@/components/ui'
-import type { CompetitionStatus } from '@/lib/api'
-import { useCompetitions } from '@/lib/competition/queries'
+import { useState } from 'react'
+import { Alert, Badge, Button, Card, CardBody, Skeleton } from '@/components/ui'
+import { ApiError, type CompetitionStatus, type MyCompetitionEntry } from '@/lib/api'
+import { useAuth } from '@/lib/auth/AuthProvider'
+import { useApproveEntryAsGuardian, useCompetitions, useMyEntries } from '@/lib/competition/queries'
 
 const STATUS_META: Record<CompetitionStatus, { label: string; variant: 'success' | 'info' | 'neutral' }> = {
   draft: { label: 'Draft', variant: 'neutral' },
@@ -12,6 +14,8 @@ const STATUS_META: Record<CompetitionStatus, { label: string; variant: 'success'
 
 export function CompetitionsPage() {
   const { data, isLoading, isError } = useCompetitions()
+  const { status } = useAuth()
+  const { data: myEntries } = useMyEntries(status === 'authenticated')
 
   return (
     <div className="flex flex-col gap-8">
@@ -38,7 +42,7 @@ export function CompetitionsPage() {
         {data?.map((c) => {
           const meta = STATUS_META[c.status]
           return (
-            <Link key={c.id} to={`/competitions/${c.id}`} className="block">
+            <Link key={c.id} to={`/competitions/${c.slug}`} className="block">
               <Card className="h-full transition hover:border-border-strong">
                 <CardBody className="flex flex-col gap-3">
                   <div className="flex items-start justify-between gap-3">
@@ -57,6 +61,24 @@ export function CompetitionsPage() {
           )
         })}
       </div>
+      {myEntries && myEntries.length > 0 && <section className="space-y-3"><h2 className="font-display text-xl font-bold text-foreground">My entries</h2>{myEntries.map((entry) => <MyEntryRow key={entry.id} entry={entry} />)}</section>}
     </div>
   )
+}
+
+function MyEntryRow({ entry }: { entry: MyCompetitionEntry }) {
+  const approve = useApproveEntryAsGuardian()
+  const [error, setError] = useState<string | null>(null)
+  async function onApprove() {
+    setError(null)
+    try {
+      await approve.mutateAsync({ competitionId: entry.competition_id, entryId: entry.id })
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not record parent approval.')
+    }
+  }
+  return <Card><CardBody className="flex flex-wrap items-center justify-between gap-3">
+    <div><p className="font-semibold text-foreground">{entry.title}</p><p className="text-xs text-muted">{entry.competition} · {entry.status}{entry.guardian_approved_at ? ' · Parent approved' : ''}</p></div>
+    {entry.category === 'diaspora_folklore' && !entry.guardian_approved_at && <div className="text-right"><p className="mb-1 text-xs text-muted">Approve this child’s entry as their parent or guardian.</p><Button size="sm" variant="parent" loading={approve.isPending} onClick={onApprove}>Approve child entry</Button>{error && <p role="alert" className="text-xs text-danger">{error}</p>}</div>}
+  </CardBody></Card>
 }

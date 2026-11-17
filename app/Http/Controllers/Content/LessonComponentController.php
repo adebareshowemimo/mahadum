@@ -126,6 +126,7 @@ class LessonComponentController extends Controller
             'title' => $v['title'],
             'presenter_name' => $v['presenter_name'] ?? null,
             'duration_seconds' => $v['duration_seconds'] ?? null,
+            'is_cultural' => (bool) ($v['is_cultural'] ?? false),
             'default_quality' => $v['default_quality'] ?? '360p',
             // Local-disk source file (uploaded via /media/upload) or a YouTube
             // link. A managed vendor would set HLS renditions instead for the
@@ -148,6 +149,8 @@ class LessonComponentController extends Controller
             'shuffle_questions' => (bool) ($q['shuffle_questions'] ?? false),
             'max_attempts' => $q['max_attempts'] ?? null,
             'hearts_enabled' => (bool) ($q['hearts_enabled'] ?? true),
+            'time_limit_seconds' => $q['time_limit_seconds'] ?? null,
+            'xp_per_correct' => $q['xp_per_correct'] ?? 1,
         ]);
 
         $this->writeQuestions($quiz, $q['questions'] ?? []);
@@ -170,6 +173,7 @@ class LessonComponentController extends Controller
             'title' => $v['title'],
             'presenter_name' => $v['presenter_name'] ?? null,
             'duration_seconds' => $v['duration_seconds'] ?? null,
+            'is_cultural' => (bool) ($v['is_cultural'] ?? false),
             'default_quality' => $v['default_quality'] ?? '360p',
             'status' => $v['status'] ?? 'ready',
             'language_id' => $v['language_id'] ?? null,
@@ -187,6 +191,9 @@ class LessonComponentController extends Controller
             $payload['external_url'] = null;
         }
 
+        if (isset($payload['source_asset_id']) || isset($payload['external_url'])) {
+            $component->video?->renditions()->delete();
+        }
         $component->video()->updateOrCreate([], $payload);
     }
 
@@ -200,6 +207,8 @@ class LessonComponentController extends Controller
             'shuffle_questions' => (bool) ($q['shuffle_questions'] ?? false),
             'max_attempts' => $q['max_attempts'] ?? null,
             'hearts_enabled' => (bool) ($q['hearts_enabled'] ?? true),
+            'time_limit_seconds' => $q['time_limit_seconds'] ?? null,
+            'xp_per_correct' => $q['xp_per_correct'] ?? 1,
         ]);
 
         // Replace questions wholesale (options cascade on delete).
@@ -284,7 +293,7 @@ class LessonComponentController extends Controller
     private function detailLoads(): array
     {
         return [
-            'video', 'quiz.questions.options', 'quiz.questions.promptAudioAsset', 'quiz.questions.promptImageAsset',
+            'video.sourceAsset', 'video.captions', 'video.renditions', 'quiz.questions.options', 'quiz.questions.promptAudioAsset', 'quiz.questions.promptImageAsset',
             'speakingPrompt', 'assignment', 'exercise.flashcards.audioAsset', 'exercise.flashcards.imageAsset', 'game',
         ];
     }

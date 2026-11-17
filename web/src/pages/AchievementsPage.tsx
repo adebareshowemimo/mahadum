@@ -23,6 +23,7 @@ import {
   useStreak,
 } from '@/lib/gamification/queries'
 import { formatDayStreak } from '@/lib/gamification/format'
+import { useConfig } from '@/lib/config/useConfig'
 
 const MAX_HEARTS = 5
 
@@ -31,6 +32,8 @@ export function AchievementsPage() {
 }
 
 function Achievements({ learner }: { learner: LearnerProfile }) {
+  const config = useConfig()
+  const shieldPrice = config.data?.streak_shield_price_coins ?? 0
   const streak = useStreak(learner.id)
   const hearts = useHearts(learner.id)
   const badges = useBadges(learner.id)
@@ -67,15 +70,17 @@ function Achievements({ learner }: { learner: LearnerProfile }) {
                   Longest: {streak.data?.longest ?? 0} days ·{' '}
                   <span className="font-medium capitalize text-foreground">{streak.data?.state}</span>
                 </p>
-                <Button
+                <p className="text-sm text-muted">{(streak.data?.count ?? 0) >= 30 ? 'Monthly streak reached' : (streak.data?.count ?? 0) >= 7 ? 'Weekly streak reached · keep going for 30 days' : `${Math.max(0, 7 - (streak.data?.count ?? 0))} days to your weekly streak`}</p>
+                {shieldPrice > 0 && !learner.is_child && <Button
                   variant="reward"
                   size="sm"
                   leftIcon={<span aria-hidden="true">🛡️</span>}
                   loading={armShield.isPending}
                   onClick={() => armShield.mutate()}
                 >
-                  Protect streak
-                </Button>
+                  Protect streak · {shieldPrice} coins
+                </Button>}
+                {armShield.isError && <Alert variant="warning">Could not buy a Streak Shield. Check your coin balance and try again.</Alert>}
                 {armShield.isSuccess && <p className="text-xs text-success">Streak shield armed 🛡️</p>}
               </>
             )}

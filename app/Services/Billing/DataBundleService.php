@@ -29,6 +29,8 @@ class DataBundleService
 
     public function purchase(User $user, array $input, string $key): DataBundlePurchase
     {
+        abort_unless(config('services.data_bundles.enabled'), 503,
+            'Mobile data purchases are temporarily unavailable. No payment has been taken.');
         $provider = $input['provider'] ?? 'monnify';
         $reference = 'data_'.hash('sha256', $user->id.'|'.$key);
 
@@ -234,6 +236,7 @@ class DataBundleService
             'payment_provider' => $purchase->payment_provider ?? 'monnify',
             'fulfillment_provider' => $purchase->fulfillment_provider ?? 'monnify',
             'payment_confirmed' => $purchase->paid_at !== null, 'delivery_started' => $purchase->vend_started_at !== null,
+            'created_at' => $purchase->created_at, 'paid_at' => $purchase->paid_at,
         ];
     }
 }

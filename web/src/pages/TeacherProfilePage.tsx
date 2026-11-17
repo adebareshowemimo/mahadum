@@ -1,5 +1,6 @@
-import { useQueries } from '@tanstack/react-query'
-import { Alert, Badge, Card, CardBody, CardHeader, CardTitle, Icon, Skeleton } from '@/components/ui'
+import { useEffect, useState, type FormEvent } from 'react'
+import { useQueries, useQuery } from '@tanstack/react-query'
+import { Alert, Badge, Button, Card, CardBody, CardHeader, CardTitle, Icon, Input, Skeleton } from '@/components/ui'
 import type { IconName } from '@/components/ui'
 import { schoolApi } from '@/lib/api'
 import { useAuth } from '@/lib/auth/AuthProvider'
@@ -9,6 +10,41 @@ import { ReferralActivity } from '@/components/referral/ReferralActivity'
 export function TeacherProfilePage() {
   const { user } = useAuth()
   const classes = useMyClasses()
+  const profile = useQuery({ queryKey: ['teacher-profile', user?.user.id], queryFn: schoolApi.teacherProfile })
+  const [experience, setExperience] = useState('')
+  const [language, setLanguage] = useState('')
+  const [state, setState] = useState('')
+  const [dialects, setDialects] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
+  useEffect(() => {
+    if (!profile.data) return
+    setExperience(profile.data.years_experience?.toString() ?? '')
+    setLanguage(profile.data.native_language ?? '')
+    setState(profile.data.state ?? '')
+    setDialects(profile.data.dialects?.join(', ') ?? '')
+  }, [profile.data])
+
+  async function saveProfile(event: FormEvent) {
+    event.preventDefault()
+    setSaving(true)
+    setMessage('')
+    try {
+      const result = await schoolApi.updateTeacherProfile({
+        years_experience: experience === '' ? null : Number(experience),
+        native_language: language.trim() || null,
+        state: state.trim() || null,
+        dialects: dialects.split(',').map((part) => part.trim()).filter(Boolean),
+      })
+      setMessage('Teaching profile saved.')
+      await profile.refetch()
+      setDialects(result.dialects?.join(', ') ?? '')
+    } catch {
+      setMessage('Could not save your teaching profile. Check the details and try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const assignmentQueries = useQueries({
     queries: (classes.data ?? []).map((c) => ({
@@ -47,6 +83,22 @@ export function TeacherProfilePage() {
           <Kpi icon="clipboard" label="Assignments" value={assignmentsCreated} loading={loadingStats} />
         </div>
       </div>
+
+      <Card>
+        <CardHeader><CardTitle>About your teaching</CardTitle></CardHeader>
+        <CardBody>
+          <p className="mb-4 text-sm text-muted">These details are visible to your school and to parents of children in your classes.</p>
+          {profile.isError && <Alert variant="danger">Couldn’t load your teaching details.</Alert>}
+          {message && <Alert variant={message.startsWith('Could') ? 'danger' : 'success'}>{message}</Alert>}
+          <form onSubmit={saveProfile} className="grid gap-4 sm:grid-cols-2">
+            <Input label="Years of teaching experience" type="number" min={0} max={80} value={experience} onChange={(event) => setExperience(event.target.value)} />
+            <Input label="Native language" value={language} onChange={(event) => setLanguage(event.target.value)} />
+            <Input label="State" value={state} onChange={(event) => setState(event.target.value)} />
+            <Input label="Dialects spoken (comma separated)" value={dialects} onChange={(event) => setDialects(event.target.value)} />
+            <div><Button type="submit" loading={saving} disabled={profile.isLoading}>Save profile</Button></div>
+          </form>
+        </CardBody>
+      </Card>
 
       <ReferralActivity key={user?.user.id} hideWhenEmpty />
 

@@ -71,6 +71,7 @@ class BadgeService
         $conditions = [
             'first_lesson' => $completedLessons >= 1,
             'streak_7' => $streakCount >= 7,
+            'streak_30' => $streakCount >= 30,
             'sharp_shooter' => $perfectQuiz,
         ];
 

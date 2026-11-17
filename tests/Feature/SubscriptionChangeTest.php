@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Family;
 use App\Models\Plan;
 use App\Models\Subscription;
 use Database\Seeders\PlanSeeder;
@@ -22,6 +23,7 @@ class SubscriptionChangeTest extends TestCase
     public function test_parent_can_switch_from_one_plan_to_another(): void
     {
         $parent = $this->actingAsUser($this->userWithRole('parent'));
+        Family::create(['owner_user_id' => $parent->id, 'name' => 'Family']);
         $individual = Plan::where('code', 'premium_individual')->firstOrFail();
         $family = Plan::where('code', 'premium_family')->firstOrFail();
 
@@ -73,6 +75,25 @@ class SubscriptionChangeTest extends TestCase
             ->assertJsonPath('error.code', 'same_plan');
 
         $this->assertSame('active', $current->fresh()->status);
+    }
+
+    public function test_card_plan_switch_keeps_current_access_until_new_payment_is_confirmed(): void
+    {
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        Family::create(['owner_user_id' => $parent->id, 'name' => 'Family']);
+        $individual = Plan::where('code', 'premium_individual')->firstOrFail();
+        $family = Plan::where('code', 'premium_family')->firstOrFail();
+        $current = new Subscription(['plan_id' => $individual->id, 'method' => 'card', 'status' => 'active', 'started_at' => now()]);
+        $current->subscriber()->associate($parent);
+        $current->save();
+
+        $this->postJson("/api/v1/subscriptions/{$current->id}/change", [
+            'plan_id' => $family->id,
+            'method' => 'card',
+        ], ['Idempotency-Key' => 'change-card-pending'])->assertCreated()->assertJsonPath('data.status', 'pending');
+
+        $this->assertSame('active', $current->fresh()->status);
+        $this->assertSame(1, Subscription::where('subscriber_id', $parent->id)->where('status', 'pending')->count());
     }
 
     public function test_cannot_change_someone_elses_subscription(): void

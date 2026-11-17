@@ -48,6 +48,25 @@ class ClassCourseController extends Controller
         return response()->json(['data' => $courses]);
     }
 
+    public function outline(SchoolClass $class, Course $course): JsonResponse
+    {
+        abort_unless($class->courseAssignments()->where('course_id', $course->id)->exists(), 404);
+        $course->load('levels.lessons.components.quiz');
+
+        return response()->json(['data' => ['id' => $course->id, 'title' => $course->title,
+            'levels' => $course->levels->sortBy('position')->map(fn ($level) => [
+                'id' => $level->id, 'title' => $level->title,
+                'lessons' => $level->lessons->filter(fn ($lesson) => $lesson->published_at !== null)
+                    ->sortBy('position')->map(fn ($lesson) => [
+                        'id' => $lesson->id, 'title' => $lesson->title,
+                        'quizzes' => $lesson->components->where('type', 'quiz')->filter(fn ($component) => $component->quiz !== null)
+                            ->map(fn ($component) => ['id' => $component->quiz->id,
+                                'title' => $component->quiz->title ?: $lesson->title])->values()->all(),
+                    ])->values()->all(),
+            ])->values()->all(),
+        ]]);
+    }
+
     /** Persistently assign a course to the class and enroll all current learners. */
     public function store(Request $request, SchoolClass $class, Course $course): JsonResponse
     {

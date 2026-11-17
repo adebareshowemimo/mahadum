@@ -128,23 +128,7 @@ class CourseController extends Controller
         return response()->json(null, 204);
     }
 
-    /**
-     * Publish a course (make it visible to learners). Publish-rule: the course
-     * must contain at least one published lesson, else there is nothing to learn.
-     */
-    /**
-     * Publish a course and everything in it. Publishing at course level is the
-     * author's "ship it" switch: every draft lesson goes live with the course,
-     * so nobody has to walk the tree publishing lessons one at a time.
-     *
-     * Deliberately unconditional — the per-lesson readiness checks in
-     * LessonPublishService still gate the *lesson-level* publish button
-     * (LessonController::publish), where an author is working on one lesson and
-     * wants to know what's missing. At course level the decision has already
-     * been made, so an incomplete lesson ships rather than silently staying
-     * behind; `meta.lessons_incomplete` names any that went out below the §6 bar
-     * so the author can follow up.
-     */
+    /** Publish a course only when every included lesson meets the lesson rule. */
     public function publish(Course $course, LessonPublishService $publisher): JsonResponse
     {
         $lessons = Lesson::whereHas('courseLevel', fn ($q) => $q->where('course_id', $course->id))
@@ -154,13 +138,8 @@ class CourseController extends Controller
         $publishedNow = [];
         $incomplete = [];
 
-        foreach ($lessons->whereNull('published_at') as $lesson) {
-            // Recorded, not enforced: the author still gets told what's thin.
+        foreach ($lessons as $lesson) {
             $failures = $publisher->failures($lesson);
-
-            $lesson->forceFill(['published_at' => now(), 'is_locked_by_default' => false])->save();
-            $publishedNow[] = ['lesson_id' => $lesson->id, 'title' => $lesson->title];
-
             if ($failures !== []) {
                 $incomplete[] = [
                     'lesson_id' => $lesson->id,
@@ -168,6 +147,21 @@ class CourseController extends Controller
                     'reasons' => $failures,
                 ];
             }
+        }
+        if ($lessons->isEmpty()) {
+            $incomplete[] = ['lesson_id' => null, 'title' => $course->title, 'reasons' => ['Add a lesson before publishing this course.']];
+        }
+        if ($incomplete !== []) {
+            return response()->json(['error' => [
+                'code' => 'publish_checks_failed',
+                'message' => 'Complete the listed lessons before publishing this course.',
+                'status' => 422,
+                'details' => $incomplete,
+            ]], 422);
+        }
+        foreach ($lessons->whereNull('published_at') as $lesson) {
+            $lesson->forceFill(['published_at' => now(), 'is_locked_by_default' => false])->save();
+            $publishedNow[] = ['lesson_id' => $lesson->id, 'title' => $lesson->title];
         }
 
         $course->update(['is_published' => true, 'status' => 'published']);

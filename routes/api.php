@@ -48,6 +48,7 @@ use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Billing\DataBundleController;
 use App\Http\Controllers\Billing\InvoiceController;
 use App\Http\Controllers\Billing\PlanController;
+use App\Http\Controllers\Billing\StoryPurchaseController;
 use App\Http\Controllers\Billing\SubscriptionController;
 use App\Http\Controllers\Billing\TelcoController;
 use App\Http\Controllers\Competition\CompetitionController;
@@ -60,12 +61,17 @@ use App\Http\Controllers\Content\CoursePerformanceController;
 use App\Http\Controllers\Content\LessonAnalyticsController;
 use App\Http\Controllers\Content\LessonComponentController;
 use App\Http\Controllers\Content\LessonController;
+use App\Http\Controllers\Content\LibraryCollectionController;
+use App\Http\Controllers\Content\LibrarySetController;
 use App\Http\Controllers\Content\MediaController;
 use App\Http\Controllers\Content\QuizImportController;
+use App\Http\Controllers\Content\StoryController;
+use App\Http\Controllers\Content\VideoMediaController;
 use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\Family\ChoreController;
 use App\Http\Controllers\Family\FamilyController;
 use App\Http\Controllers\Family\FamilyGoalsController;
+use App\Http\Controllers\Family\PracticePartnerController;
 use App\Http\Controllers\Family\ReviewController;
 use App\Http\Controllers\Family\WalletController;
 use App\Http\Controllers\Gamification\AdController;
@@ -73,6 +79,7 @@ use App\Http\Controllers\Gamification\BadgeController;
 use App\Http\Controllers\Gamification\HeartController;
 use App\Http\Controllers\Gamification\LeaderboardController;
 use App\Http\Controllers\Gamification\StreakController;
+use App\Http\Controllers\GuideLibraryController;
 use App\Http\Controllers\Identity\WebPushController;
 use App\Http\Controllers\LanguageVoteController;
 use App\Http\Controllers\Learning\AnswerController;
@@ -84,10 +91,13 @@ use App\Http\Controllers\Learning\LearnerAvatarController;
 use App\Http\Controllers\Learning\LearnerTasksController;
 use App\Http\Controllers\Learning\LessonCompletionController;
 use App\Http\Controllers\Learning\LessonPlayController;
+use App\Http\Controllers\Learning\LibraryLessonController;
 use App\Http\Controllers\Learning\PathController;
 use App\Http\Controllers\Learning\PracticeContactController;
 use App\Http\Controllers\Learning\ProgressController;
 use App\Http\Controllers\Learning\SpeakingSubmissionController;
+use App\Http\Controllers\Learning\StoryCatalogController;
+use App\Http\Controllers\Learning\StudyRewardController;
 use App\Http\Controllers\Learning\TonePracticeInvitationController;
 use App\Http\Controllers\MeController;
 use App\Http\Controllers\NotificationController;
@@ -99,13 +109,16 @@ use App\Http\Controllers\School\ClassAssignmentController;
 use App\Http\Controllers\School\ClassBadgeController;
 use App\Http\Controllers\School\ClassCourseController;
 use App\Http\Controllers\School\ClassLearnerInvitationController;
+use App\Http\Controllers\School\ClassQuizReportController;
 use App\Http\Controllers\School\RosterController;
 use App\Http\Controllers\School\SchoolClassController;
 use App\Http\Controllers\School\SchoolDashboardController;
 use App\Http\Controllers\School\SchoolDirectoryController;
+use App\Http\Controllers\School\SchoolJoinLinkController;
 use App\Http\Controllers\School\SchoolReferralController;
 use App\Http\Controllers\School\SeatController;
 use App\Http\Controllers\School\TeacherCompensationController;
+use App\Http\Controllers\School\TeacherProfileController;
 use App\Http\Controllers\SchoolLeadController;
 use App\Http\Controllers\Support\TicketController;
 use App\Http\Controllers\Webhooks\PaymentWebhookController;
@@ -113,6 +126,7 @@ use App\Http\Controllers\Webhooks\SendgridWebhookController;
 use App\Http\Controllers\Webhooks\TelcoWebhookController;
 use App\Http\Controllers\WebsiteEditorController;
 use App\Http\Middleware\RequireVerifiedEmail;
+use App\Http\Middleware\RestrictChildProfile;
 use App\Models\Course;
 use App\Models\Payout;
 use App\Models\SchoolClass;
@@ -123,6 +137,8 @@ Route::prefix('v1')->group(function () {
     /* ---------------------------------------------------------------- public */
     Route::get('config', [ConfigController::class, 'show']);
     Route::get('pricing', [PricingController::class, 'index']);
+    Route::get('public/competitions', [CompetitionController::class, 'index']);
+    Route::get('public/competitions/{slug}', [CompetitionController::class, 'publicShow']);
     Route::get('adverts/active', [AdvertController::class, 'active']);
     Route::middleware('throttle:60,1')->group(function () {
         Route::post('adverts/{advertPlacement}/impression', [AdvertController::class, 'impression']);
@@ -140,6 +156,7 @@ Route::prefix('v1')->group(function () {
     Route::get('class-invitations/{token}', [ClassLearnerInvitationController::class, 'show'])
         ->middleware('throttle:60,1');
     Route::get('teacher-invitations/{token}', [SchoolDirectoryController::class, 'showInvitation'])->middleware('throttle:60,1');
+    Route::get('school-join/{token}', [SchoolJoinLinkController::class, 'preview'])->middleware('throttle:60,1');
 
     // Email verification link (clicked from the inbox; proven by the signature
     // + hash, so no bearer token is required).
@@ -151,6 +168,10 @@ Route::prefix('v1')->group(function () {
     Route::post('webhooks/paystack', [PaymentWebhookController::class, 'paystack']);
     Route::post('webhooks/flutterwave', [PaymentWebhookController::class, 'flutterwave']);
     Route::post('webhooks/monnify', [PaymentWebhookController::class, 'monnify']);
+    Route::get('stories/{story}/asset', [StoryCatalogController::class, 'asset'])
+        ->middleware('throttle:120,1')->name('stories.asset');
+    Route::get('stories/{story}/author-asset', [StoryController::class, 'asset'])
+        ->middleware('throttle:120,1')->name('stories.authorAsset');
     Route::post('webhooks/telco/dlr', [TelcoWebhookController::class, 'dlr']);
     // SendGrid Event Webhook (token in the URL) — bounces/complaints → suppression.
     Route::post('webhooks/sendgrid/{token}', [SendgridWebhookController::class, 'handle']);
@@ -165,12 +186,13 @@ Route::prefix('v1')->group(function () {
     });
 
     /* ------------------------------------------------------------- protected */
-    Route::middleware(['auth:sanctum', RequireVerifiedEmail::class, 'identify.tenant', 'min.app.version'])->group(function () {
+    Route::middleware(['auth:sanctum', RequireVerifiedEmail::class, 'identify.tenant', 'min.app.version', RestrictChildProfile::class])->group(function () {
         Route::post('language-votes', [LanguageVoteController::class, 'store'])->middleware('throttle:10,1');
         Route::post('me/learner-profile', [MeController::class, 'ensureLearnerProfile']);
         Route::post('me/devices', [DeviceController::class, 'store']);
         Route::post('profiles/{learner}/switch', [ProfileController::class, 'switch'])
             ->can('view', 'learner');
+        Route::post('profiles/exit', [ProfileController::class, 'exit']);
         Route::post('class-invitations/{token}/accept', [ClassLearnerInvitationController::class, 'accept'])
             ->middleware('throttle:20,1');
 
@@ -185,11 +207,47 @@ Route::prefix('v1')->group(function () {
 
         /* ---- Content / CMS (content_owner) ---- */
         Route::get('website/documents', [WebsiteEditorController::class, 'index']);
+        Route::get('website/guide-videos', [GuideLibraryController::class, 'videos']);
+        Route::post('website/guide-videos', [GuideLibraryController::class, 'saveVideo']);
+        Route::post('website/guide-videos/{video}', [GuideLibraryController::class, 'saveVideo']);
+        Route::delete('website/guide-videos/{video}', [GuideLibraryController::class, 'deleteVideo']);
+        Route::get('website/guide-faqs', [GuideLibraryController::class, 'faqs']);
+        Route::post('website/guide-faqs', [GuideLibraryController::class, 'saveFaq']);
+        Route::put('website/guide-faqs/{faq}', [GuideLibraryController::class, 'saveFaq']);
+        Route::delete('website/guide-faqs/{faq}', [GuideLibraryController::class, 'deleteFaq']);
         Route::post('website/documents', [WebsiteEditorController::class, 'store']);
         Route::put('website/documents/{document}', [WebsiteEditorController::class, 'update']);
         Route::get('website/reports', [WebsiteEditorController::class, 'reports']);
         Route::get('website/votes.csv', [WebsiteEditorController::class, 'votesCsv']);
         Route::get('courses', [CourseController::class, 'index']);
+        Route::get('library-lessons', [LibraryLessonController::class, 'index']);
+        Route::get('library-sets', [LibraryCollectionController::class, 'index']);
+        Route::get('library-sets/{set}', [LibraryCollectionController::class, 'show']);
+        Route::post('library-sets', [LibraryCollectionController::class, 'store'])->middleware('can:content.lessons.manage');
+        Route::patch('library-sets/{set}', [LibraryCollectionController::class, 'update'])->middleware('can:content.lessons.manage');
+        Route::delete('library-sets/{set}', [LibraryCollectionController::class, 'destroy'])->middleware('can:content.lessons.manage');
+        Route::post('library-sets/{set}/publish', [LibraryCollectionController::class, 'publish'])->middleware('can:content.courses.publish');
+        Route::post('library-sets/{set}/unpublish', [LibraryCollectionController::class, 'unpublish'])->middleware('can:content.courses.publish');
+        Route::post('library-sets/{set}/archive', [LibraryCollectionController::class, 'archive'])->middleware('can:content.courses.publish');
+        Route::post('library-sets/{set}/levels', [LibraryCollectionController::class, 'addLevel'])->middleware('can:content.lessons.manage');
+        Route::post('library-sets/{set}/levels/reorder', [LibraryCollectionController::class, 'reorderLevels'])->middleware('can:content.lessons.manage');
+        Route::patch('library-set-levels/{level}', [LibraryCollectionController::class, 'updateLevel'])->middleware('can:content.lessons.manage');
+        Route::delete('library-set-levels/{level}', [LibraryCollectionController::class, 'deleteLevel'])->middleware('can:content.lessons.manage');
+        Route::post('library-set-levels/{level}/lessons', [LibraryCollectionController::class, 'addLesson'])->middleware('can:content.lessons.manage');
+        Route::post('library-set-levels/{level}/lessons/reorder', [LibraryCollectionController::class, 'reorderLessons'])->middleware('can:content.lessons.manage');
+        Route::get('content/stories', [StoryController::class, 'index'])->middleware('can:content.courses.view');
+        Route::post('content/stories', [StoryController::class, 'store'])->middleware('can:content.lessons.manage');
+        Route::get('content/stories/{story}', [StoryController::class, 'show'])->middleware('can:content.courses.view');
+        Route::patch('content/stories/{story}', [StoryController::class, 'update'])->middleware('can:content.lessons.manage');
+        Route::delete('content/stories/{story}', [StoryController::class, 'destroy'])->middleware('can:content.lessons.manage');
+        Route::post('content/stories/{story}/publish', [StoryController::class, 'publish'])->middleware('can:content.courses.publish');
+        Route::post('content/stories/{story}/unpublish', [StoryController::class, 'unpublish'])->middleware('can:content.courses.publish');
+        Route::post('content/stories/{story}/pages', [StoryController::class, 'addPage'])->middleware('can:content.lessons.manage');
+        Route::post('content/stories/{story}/questions', [StoryController::class, 'addQuestion'])->middleware('can:content.quizzes.manage');
+        Route::delete('content/stories/{story}/questions/{question}', [StoryController::class, 'deleteQuestion'])->middleware('can:content.quizzes.manage');
+        Route::patch('content/stories/{story}/pages/{page}', [StoryController::class, 'updatePage'])->middleware('can:content.lessons.manage');
+        Route::delete('content/stories/{story}/pages/{page}', [StoryController::class, 'deletePage'])->middleware('can:content.lessons.manage');
+        Route::post('content/stories/{story}/upload', [StoryController::class, 'upload'])->middleware('can:content.media.upload');
         Route::get('courses/{course}', [CourseController::class, 'show'])->can('view', 'course');
         Route::post('courses', [CourseController::class, 'store'])->can('create', Course::class);
         Route::match(['put', 'patch'], 'courses/{course}', [CourseController::class, 'update'])->can('update', 'course');
@@ -211,6 +269,8 @@ Route::prefix('v1')->group(function () {
             ->middleware('can:content.lessons.manage');
         Route::get('levels/{level}/lessons', [LessonController::class, 'index']);
         Route::post('levels/{level}/lessons', [LessonController::class, 'store'])
+            ->middleware('can:content.lessons.manage');
+        Route::post('library-lessons', [LibrarySetController::class, 'store'])
             ->middleware('can:content.lessons.manage');
         Route::post('levels/{level}/lessons/reorder', [LessonController::class, 'reorder'])
             ->middleware('can:content.lessons.manage');
@@ -246,20 +306,34 @@ Route::prefix('v1')->group(function () {
             ->middleware('can:content.media.upload');
         Route::post('media/upload', [MediaController::class, 'upload'])
             ->middleware('can:content.media.upload');
+        Route::post('content/videos/{video}/captions', [VideoMediaController::class, 'caption'])
+            ->middleware('can:content.media.upload');
+        Route::post('content/videos/{video}/transcode', [VideoMediaController::class, 'transcode'])
+            ->middleware('can:content.media.upload');
         Route::patch('media/{asset}', [MediaController::class, 'update'])
             ->middleware('can:content.media.upload');
         Route::delete('media/{asset}', [MediaController::class, 'destroy'])
             ->middleware('can:content.media.upload');
 
         /* ---- Learning loop (learner / parent) ---- */
+        Route::get('assessments/questions', [AssessmentController::class, 'questions']);
         Route::post('assessments', [AssessmentController::class, 'store']);
         // Record-level policy permits a learner to enroll themselves and a
         // parent to enroll only their own child. It deliberately excludes
         // staff who merely have progress-view access.
         Route::post('enrollments', [EnrollmentController::class, 'store']);
+        Route::get('learning/stories', [StoryCatalogController::class, 'index']);
+        Route::get('learning/stories/continue', [StoryCatalogController::class, 'continueReading']);
+        Route::get('learning/stories/{story}', [StoryCatalogController::class, 'show']);
+        Route::post('learning/stories/{story}/progress', [StoryCatalogController::class, 'saveProgress']);
+        Route::post('learning/stories/{story}/answer', [StoryCatalogController::class, 'answer']);
+        Route::post('learning/stories/{story}/purchase', [StoryPurchaseController::class, 'store'])->middleware('idempotency');
+        Route::post('learning/story-purchases/{purchase}/confirm', [StoryPurchaseController::class, 'confirm']);
         Route::get('learners/{learner}/path', [PathController::class, 'show'])->can('view', 'learner');
         Route::get('learners/{learner}/progress', [ProgressController::class, 'show'])->can('view', 'learner');
+        Route::put('learners/{learner}/learning-goal', [ProfileController::class, 'learningGoal'])->can('update', 'learner');
         Route::get('learners/{learner}/practice-contacts', [PracticeContactController::class, 'index'])->can('view', 'learner');
+        Route::post('learning/study/heartbeat', [StudyRewardController::class, 'heartbeat'])->middleware('throttle:120,1');
         Route::post('learners/{learner}/avatar', [LearnerAvatarController::class, 'update'])->can('update', 'learner');
         Route::get('lessons/{lesson}/play', [LessonPlayController::class, 'show']);
         Route::post('lessons/{lesson}/progress', [ProgressController::class, 'store']);
@@ -302,11 +376,19 @@ Route::prefix('v1')->group(function () {
         Route::post('family/learners/{learner}/cheers', [FamilyGoalsController::class, 'cheer'])->middleware('can:family.manage');
         Route::get('learners/{learner}/cheers', [FamilyGoalsController::class, 'cheers']);
         Route::post('family/children', [FamilyController::class, 'addChild'])->middleware('can:family.manage');
+        Route::get('family/children/{learner}/practice-partners', [PracticePartnerController::class, 'index'])->middleware('can:family.manage');
+        Route::post('family/children/{learner}/practice-partners', [PracticePartnerController::class, 'store'])->middleware('can:family.manage');
+        Route::delete('family/children/{learner}/practice-partners/{partner}', [PracticePartnerController::class, 'destroy'])->middleware('can:family.manage');
         Route::get('family/children/{learner}', [FamilyController::class, 'child'])
+            ->middleware('can:family.manage');
+        Route::put('family/children/{learner}/starting-level', [FamilyController::class, 'setStartingLevel'])
             ->middleware('can:family.manage');
         Route::put('family/children/{learner}/pin', [FamilyController::class, 'setChildPin'])
             ->middleware('can:family.manage');
         Route::get('wallet', [WalletController::class, 'show'])->middleware('can:family.wallet.view');
+        Route::post('wallet/coins', [WalletController::class, 'buyCoins'])->middleware('can:family.wallet.fund');
+        Route::post('wallet/fundings/{funding}/confirm', [WalletController::class, 'confirm'])
+            ->middleware(['can:family.wallet.view', 'throttle:20,1']);
         Route::get('chores', [ChoreController::class, 'index'])->middleware('can:family.chores.manage');
         Route::get('learners/{learner}/tasks', [LearnerTasksController::class, 'index']);
         Route::post('chores/{chore}/submissions', [LearnerTasksController::class, 'submitChore']);
@@ -335,6 +417,8 @@ Route::prefix('v1')->group(function () {
             ->middleware(['can:billing.telco.manage', 'throttle:10,1']);
         Route::post('telco/subscribe', [TelcoController::class, 'subscribe'])->middleware('can:billing.telco.manage');
         Route::post('subscriptions/{subscription}/cancel', [SubscriptionController::class, 'cancel'])
+            ->middleware('can:billing.subscriptions.manage');
+        Route::post('subscriptions/{subscription}/confirm', [SubscriptionController::class, 'confirm'])
             ->middleware('can:billing.subscriptions.manage');
         Route::get('data-bundles', [DataBundleController::class, 'index']);
         Route::get('data-bundles/providers', [DataBundleController::class, 'providers']);
@@ -386,6 +470,8 @@ Route::prefix('v1')->group(function () {
         });
 
         /* ---- School operations (org-scoped) ---- */
+        Route::get('teacher/profile', [TeacherProfileController::class, 'show']);
+        Route::put('teacher/profile', [TeacherProfileController::class, 'update']);
         Route::prefix('schools/{organization}')->group(function () {
             Route::get('dashboard', [SchoolDashboardController::class, 'show'])->middleware('can:schools.dashboard.view');
             Route::get('teachers', [SchoolClassController::class, 'teachers'])->middleware('can:schools.classes.manage');
@@ -395,11 +481,17 @@ Route::prefix('v1')->group(function () {
             Route::post('teachers/import', [SchoolDirectoryController::class, 'importTeachers'])->middleware('can:schools.classes.manage');
             Route::post('teacher-invitations/{invitation}/revoke', [SchoolDirectoryController::class, 'revoke'])->middleware('can:schools.classes.manage');
             Route::post('students/import', [RosterController::class, 'import'])->middleware('can:schools.roster.import');
+            Route::get('join-link', [SchoolJoinLinkController::class, 'show'])->middleware('can:schools.roster.import');
+            Route::post('join-link', [SchoolJoinLinkController::class, 'rotate'])->middleware('can:schools.roster.import');
+            Route::delete('join-link', [SchoolJoinLinkController::class, 'revoke'])->middleware('can:schools.roster.import');
             Route::get('seats', [SeatController::class, 'index'])->middleware('can:schools.seats.view');
+            Route::get('seats/inactive', [SeatController::class, 'inactive'])->middleware('can:schools.seats.view');
+            Route::post('seats/inactive/{learner}/release', [SeatController::class, 'release'])->middleware('can:schools.seats.purchase');
             Route::post('seats/purchase', [SeatController::class, 'purchase'])->middleware('can:schools.seats.purchase');
             Route::get('invoices', [InvoiceController::class, 'index'])->middleware('can:billing.invoices.view');
             Route::get('invoices/gateways', [InvoiceController::class, 'gateways'])->middleware('can:billing.invoices.manage');
             Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'download'])->middleware('can:billing.invoices.view');
+            Route::post('invoices/{invoice}/confirm', [InvoiceController::class, 'confirm'])->middleware('can:billing.invoices.view');
             Route::post('invoices/{invoice}/promo', [InvoiceController::class, 'applyPromo'])->middleware('can:billing.invoices.manage');
             Route::post('invoices/{invoice}/pay', [InvoiceController::class, 'pay'])->middleware('can:billing.invoices.manage');
             Route::get('referrals/summary', [SchoolReferralController::class, 'summary'])->middleware('can:referrals.view');
@@ -410,6 +502,7 @@ Route::prefix('v1')->group(function () {
             });
         });
         Route::get('classes', [SchoolClassController::class, 'index'])->can('viewAny', SchoolClass::class);
+        Route::post('school-join/{token}', [SchoolJoinLinkController::class, 'join'])->middleware('throttle:20,1');
         Route::get('classes/{class}', [SchoolClassController::class, 'show'])->can('view', 'class');
         Route::get('classes/{class}/analytics', [SchoolClassController::class, 'analytics'])
             ->can('view', 'class')
@@ -421,14 +514,21 @@ Route::prefix('v1')->group(function () {
         Route::get('classes/{class}/available-learners', [SchoolClassController::class, 'availableLearners'])->can('update', 'class');
         Route::post('classes/{class}/learners', [SchoolClassController::class, 'addLearner'])->can('update', 'class');
         Route::post('classes/{class}/invitations', [ClassLearnerInvitationController::class, 'store'])->can('update', 'class');
+        Route::get('classes/{class}/invitations', [ClassLearnerInvitationController::class, 'index'])->can('view', 'class');
+        Route::post('classes/{class}/invitations/{invitation}/resend', [ClassLearnerInvitationController::class, 'resend'])->can('update', 'class');
+        Route::post('classes/{class}/invitations/{invitation}/cancel', [ClassLearnerInvitationController::class, 'cancel'])->can('update', 'class');
 
         /* ---- Teacher course assignment (own class; current + future learners) ---- */
         Route::get('classes/{class}/courses', [ClassCourseController::class, 'index'])->can('view', 'class');
+        Route::get('classes/{class}/courses/{course}/outline', [ClassCourseController::class, 'outline'])->can('view', 'class');
         Route::post('classes/{class}/courses/{course}', [ClassCourseController::class, 'store'])->can('update', 'class');
         Route::delete('classes/{class}/courses/{course}', [ClassCourseController::class, 'destroy'])->can('update', 'class');
 
         /* ---- Class assignments (teacher → own class; schools.assignments.{create,review}) ---- */
         Route::get('classes/{class}/assignments', [ClassAssignmentController::class, 'index'])->can('view', 'class');
+        Route::get('classes/{class}/quizzes', [ClassQuizReportController::class, 'index'])->can('view', 'class');
+        Route::get('classes/{class}/quiz-attempts/{attempt}', [ClassQuizReportController::class, 'show'])->can('view', 'class');
+        Route::get('classes/{class}/assignment-lessons', [ClassAssignmentController::class, 'lessons'])->can('view', 'class');
         Route::get('classes/{class}/assignments/completion', [ClassAssignmentController::class, 'completion'])->can('view', 'class');
         Route::post('classes/{class}/assignments', [ClassAssignmentController::class, 'store'])
             ->middleware('can:schools.assignments.create');
@@ -445,6 +545,8 @@ Route::prefix('v1')->group(function () {
         Route::get('competitions/mine', [CompetitionEntryController::class, 'mine']);
         Route::get('competitions/{competition}', [CompetitionController::class, 'show']);
         Route::post('competitions/{competition}/entries', [CompetitionEntryController::class, 'store'])
+            ->middleware('can:competitions.enter');
+        Route::post('competitions/{competition}/entries/{entry}/guardian-approve', [CompetitionEntryController::class, 'approveAsGuardian'])
             ->middleware('can:competitions.enter');
         Route::post('competitions/{competition}/entries/{entry}/vote', [CompetitionVoteController::class, 'store']);
 
@@ -542,6 +644,7 @@ Route::prefix('v1')->group(function () {
             Route::get('reports/income', [ReportController::class, 'income'])->middleware('can:analytics.platform.view');
             Route::get('reports/growth', [ReportController::class, 'growth'])->middleware('can:analytics.platform.view');
             Route::get('reports/subscriptions', [ReportController::class, 'subscriptions'])->middleware('can:analytics.platform.view');
+            Route::get('reports/subscriptions/records', [ReportController::class, 'subscriptionRecords'])->middleware('can:analytics.platform.view');
             Route::get('reports/referrals', [ReportController::class, 'referrals'])->middleware('can:analytics.platform.view');
             Route::get('reports/org-activity', [ReportController::class, 'orgActivity'])->middleware('can:analytics.platform.view');
             Route::get('reports/renewals', [ReportController::class, 'renewals'])->middleware('can:analytics.platform.view');

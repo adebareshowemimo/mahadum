@@ -27,6 +27,7 @@ export const schoolKeys = {
   seats: (org: number) => ['school-seats', org] as const,
   invoices: (org: number) => ['school-invoices', org] as const,
   assignments: (classId: number) => ['class-assignments', classId] as const,
+  assignmentLessons: (classId: number) => ['class-assignments', classId, 'lesson-options'] as const,
   completion: (classId: number) => ['class-completion', classId] as const,
   assignmentDetail: (classId: number, assignmentId: number) =>
     ['class-assignments', classId, assignmentId] as const,
@@ -72,6 +73,26 @@ export function useSeats(orgId: number | null) {
     queryKey: schoolKeys.seats(orgId ?? 0),
     queryFn: () => schoolApi.seats(orgId as number),
     enabled: !!orgId,
+  })
+}
+
+export function useInactiveSeats(orgId: number | null) {
+  return useQuery({
+    queryKey: ['school-seats', orgId ?? 0, 'inactive'],
+    queryFn: () => schoolApi.inactiveSeats(orgId as number),
+    enabled: !!orgId,
+  })
+}
+
+export function useReleaseInactiveSeat(orgId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (learnerId: number) => schoolApi.releaseInactiveSeat(orgId, learnerId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: schoolKeys.seats(orgId) })
+      void qc.invalidateQueries({ queryKey: ['school-dashboard'] })
+      void qc.invalidateQueries({ queryKey: ['school-students'] })
+    },
   })
 }
 
@@ -185,6 +206,11 @@ export function useClassCourses(classId: number | null) {
     queryFn: () => schoolApi.classCourses(classId as number),
     enabled: !!classId,
   })
+}
+
+export function useClassAssignmentLessons(classId: number | null) {
+  return useQuery({ queryKey: schoolKeys.assignmentLessons(classId ?? 0),
+    queryFn: () => schoolApi.classAssignmentLessons(classId as number), enabled: !!classId })
 }
 
 export function useAssignClassCourse(classId: number) {

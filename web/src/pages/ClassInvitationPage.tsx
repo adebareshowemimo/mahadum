@@ -33,6 +33,7 @@ export function ClassInvitationPage() {
                 <p className="text-sm font-semibold text-primary">Class invitation</p>
                 <h1 className="mt-1 font-display text-2xl font-bold text-foreground">Join {invitation.data.class_name}</h1>
                 <p className="mt-2 text-muted">{invitation.data.name}, you’ve been invited to learn with {invitation.data.organization_name}.</p>
+                {invitation.data.existing_user && <p className="mt-2 text-sm text-muted">This invitation will be linked to your existing account{invitation.data.existing_account_name ? ` (${invitation.data.existing_account_name})` : ''}. Sign in with {invitation.data.email} to continue.</p>}
               </div>
               {(accepted || invitation.data.status === 'accepted') ? (
                 <Alert variant="success">You have joined this class. Assigned courses are now available in Learn.</Alert>

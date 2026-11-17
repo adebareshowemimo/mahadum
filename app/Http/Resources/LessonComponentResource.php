@@ -34,9 +34,11 @@ class LessonComponentResource extends JsonResource
     {
         return match ($this->type) {
             'video' => $this->whenLoaded('video', fn () => $this->video ? [
+                'video_id' => $this->video->id,
                 'title' => $this->video->title,
                 'presenter_name' => $this->video->presenter_name,
                 'duration_seconds' => $this->video->duration_seconds,
+                'is_cultural' => (bool) $this->video->is_cultural,
                 'default_quality' => $this->video->default_quality,
                 'status' => $this->video->status,
                 'source_type' => $this->video->source_type,
@@ -45,10 +47,20 @@ class LessonComponentResource extends JsonResource
                 'src' => $this->video->relationLoaded('sourceAsset') && $this->video->sourceAsset
                     ? Storage::disk('public')->url($this->video->sourceAsset->url)
                     : null,
+                'captions' => $this->video->relationLoaded('captions')
+                    ? $this->video->captions->map(fn ($caption) => [
+                        'language_code' => $caption->language_code, 'url' => $caption->url,
+                    ])->values() : [],
+                'renditions' => $this->video->relationLoaded('renditions')
+                    ? $this->video->renditions->where('ready', true)->pluck('quality')->values() : [],
             ] : null),
             'quiz' => $this->whenLoaded('quiz', fn () => $this->quiz ? [
                 'pass_threshold' => (float) $this->quiz->pass_threshold,
                 'hearts_enabled' => (bool) $this->quiz->hearts_enabled,
+                'shuffle_questions' => (bool) $this->quiz->shuffle_questions,
+                'max_attempts' => $this->quiz->max_attempts,
+                'time_limit_seconds' => $this->quiz->time_limit_seconds,
+                'xp_per_correct' => $this->quiz->xp_per_correct,
                 'questions' => $this->quiz->relationLoaded('questions')
                     ? $this->quiz->questions->map(fn ($q) => [
                         'id' => $q->id,

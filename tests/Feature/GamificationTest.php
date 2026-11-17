@@ -7,12 +7,20 @@ use App\Models\Family;
 use App\Models\FamilyHeroAward;
 use App\Models\LearnerBadge;
 use App\Models\LearnerProfile;
+use App\Models\Plan;
+use App\Models\Streak;
+use App\Models\Subscription;
+use App\Models\TelcoSubscription;
 use App\Models\XpLedger;
 use App\Notifications\LearningLevelUp;
+use App\Services\Family\WalletService;
 use App\Services\Gamification\BadgeService;
 use App\Services\Gamification\LearningLevelService;
+use App\Services\Gamification\StreakService;
+use App\Services\Settings;
 use Database\Seeders\BadgeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Tests\Concerns\MakesContent;
 use Tests\TestCase;
@@ -20,6 +28,67 @@ use Tests\TestCase;
 class GamificationTest extends TestCase
 {
     use MakesContent, RefreshDatabase;
+
+    public function test_streak_shield_requires_a_configured_price_and_debits_parent_coins_once(): void
+    {
+        $this->seedRbac();
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $learner = $this->parentWithChild($parent);
+        $wallets = app(WalletService::class);
+        $wallet = $wallets->walletFor($learner->family);
+        $wallets->credit($wallet, 10, 'test_funding');
+
+        app(Settings::class)->set(['streak.shield_price_coins' => 0]);
+        $this->postJson('/api/v1/streak/shield', ['learner_id' => $learner->id])->assertUnprocessable();
+        app(Settings::class)->set(['streak.shield_price_coins' => 10]);
+        $this->postJson('/api/v1/streak/shield', ['learner_id' => $learner->id])
+            ->assertCreated()->assertJsonPath('data.coins_spent', 10);
+        $this->assertSame(0, $wallet->fresh()->coin_balance);
+        $this->assertDatabaseHas('coin_transactions', ['wallet_id' => $wallet->id, 'type' => 'debit', 'source' => 'streak_shield', 'amount' => 10]);
+        $this->postJson('/api/v1/streak/shield', ['learner_id' => $learner->id])->assertUnprocessable();
+        $this->assertSame(1, $wallet->transactions()->where('source', 'streak_shield')->count());
+    }
+
+    public function test_child_voice_recording_is_blocked_while_invite_practice_remains_available(): void
+    {
+        $this->seedRbac();
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $learner = $this->parentWithChild($parent);
+        $lesson = $this->publishedLesson();
+        $speaking = $lesson->components->firstWhere('type', 'speaking');
+
+        $this->postJson('/api/v1/speaking-submissions', [
+            'learner_id' => $learner->id,
+            'component_id' => $speaking->id,
+            'audio' => UploadedFile::fake()->create('voice.wav', 2, 'audio/wav'),
+        ])->assertForbidden();
+        $this->assertDatabaseCount('speaking_submissions', 0);
+    }
+
+    public function test_telco_grace_protects_a_missed_streak_day_only_within_the_forty_eight_hour_window(): void
+    {
+        $this->seedRbac();
+        $parent = $this->userWithRole('parent');
+        $learner = $this->parentWithChild($parent);
+        $plan = Plan::create(['code' => 'streak-airtime', 'name' => 'Airtime', 'price_minor' => 30000,
+            'currency' => 'NGN', 'interval' => 'month', 'max_profiles' => 1]);
+        $subscription = new Subscription(['plan_id' => $plan->id, 'method' => 'airtime',
+            'status' => 'grace', 'started_at' => now()->subWeek()]);
+        $subscription->subscriber()->associate($parent);
+        $subscription->save();
+        $telco = TelcoSubscription::create(['subscription_id' => $subscription->id, 'msisdn' => '08031234567',
+            'operator' => 'mtn', 'daily_amount_minor' => 1000, 'state' => 'grace',
+            'grace_until' => now()->addDay()]);
+        Streak::create(['learner_profile_id' => $learner->id, 'current_count' => 4,
+            'longest_count' => 4, 'last_active_date' => today()->subDays(2), 'state' => 'active']);
+
+        $this->assertSame(5, app(StreakService::class)->recordActivity($learner)->current_count);
+        $this->assertSame(5, app(StreakService::class)->recordActivity($learner)->current_count);
+        $telco->update(['grace_until' => now()->subMinute()]);
+        $streak = Streak::where('learner_profile_id', $learner->id)->firstOrFail();
+        $streak->update(['current_count' => 4, 'last_active_date' => today()->subDays(2)]);
+        $this->assertSame(1, app(StreakService::class)->recordActivity($learner)->current_count);
+    }
 
     public function test_completing_a_lesson_bumps_streak_and_awards_badges(): void
     {

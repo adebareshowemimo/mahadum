@@ -58,9 +58,9 @@ describe('managed rewarded video', () => {
     await watch(video!)
     fireEvent.ended(video!)
     await waitFor(() => expect(rewarded).toHaveBeenCalledWith(12))
-    expect(screen.queryByText('All five hearts are refilled!')).not.toBeInTheDocument()
+    expect(screen.queryByText('One heart added!')).not.toBeInTheDocument()
     await act(async () => resolveReward())
-    expect(screen.getByText('All five hearts are refilled!')).toBeInTheDocument()
+    expect(screen.getByText('One heart added!')).toBeInTheDocument()
     expect(fixture.complete).toHaveBeenCalledTimes(1)
   })
 
@@ -111,7 +111,7 @@ describe('managed rewarded video', () => {
     fireEvent.ended(video!)
     await screen.findByText(/couldn’t verify playback/)
     expect(rewarded).not.toHaveBeenCalled()
-    expect(screen.queryByText('All five hearts are refilled!')).not.toBeInTheDocument()
+    expect(screen.queryByText('One heart added!')).not.toBeInTheDocument()
   })
 
   it('reports a failed refill without claiming hearts were awarded', async () => {
@@ -119,7 +119,7 @@ describe('managed rewarded video', () => {
     await watch(video!)
     fireEvent.ended(video!)
     await screen.findByText(/couldn’t verify playback/)
-    expect(screen.queryByText('All five hearts are refilled!')).not.toBeInTheDocument()
+    expect(screen.queryByText('One heart added!')).not.toBeInTheDocument()
   })
 
   it('rejects a configured duration that does not match the actual video', () => {

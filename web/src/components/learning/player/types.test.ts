@@ -40,10 +40,27 @@ describe('playToSlides — video gate & resume', () => {
   })
 })
 
+it('plays lesson stages in authored order', () => {
+  const play: LessonPlay = {
+    lesson: { id: 1, title: 'Ordered lesson', est_minutes: 5 },
+    components: [
+      { id: 6, type: 'assignment', position: 1, xp: 1, assignment: { prompt: 'Try it', expected_media: 'video', max_duration_seconds: null, coin_reward: 0 } },
+      { id: 5, type: 'game', position: 2, xp: 1, game: { game_type: 'memory', pairs: [] } },
+      { id: 4, type: 'exercise', position: 3, xp: 1, exercise: { mode: 'flashcards', cards: [] } },
+      { id: 3, type: 'speaking', position: 4, xp: 1, speaking: { prompt: 'Say hello', target_text: null } },
+      { id: 2, type: 'quiz', position: 5, xp: 1, quiz: { pass_threshold: 0.6, hearts_enabled: true, questions: [{ id: 21, type: 'mcq_single', prompt: 'Choose', options: [] }] } },
+      { id: 1, type: 'video', position: 6, xp: 1, video: null },
+    ],
+  }
+  expect(playToSlides(play).map((slide) => slide.kind))
+    .toEqual(['assignment', 'game', 'exercise', 'speaking', 'quiz', 'video'])
+})
+
 describe('authorToSlides — preview has no resume context', () => {
   const lesson: AuthorLesson = {
     id: 1,
     title: 'L',
+    kind: 'lesson',
     position: 1,
     est_minutes: 5,
     is_locked_by_default: false,
@@ -68,6 +85,30 @@ describe('authorToSlides — preview has no resume context', () => {
     expect(v.requireWatch).toBe(true)
     expect(v.resumeAt).toBe(0)
     expect(v.alreadyCompleted).toBe(false)
+  })
+
+  it('preserves video, quiz, quiz, video order and quiz answer keys in admin previews', () => {
+    const video = lesson.components![0]
+    const quiz = (id: number, position: number) => ({
+      ...video, id, position, type: 'quiz' as const,
+      detail: {
+        questions: [{
+          id, type: 'mcq_single', prompt: 'Choose',
+          options: [{ id: id * 10, label: 'Answer', is_correct: true }],
+        }],
+      },
+    })
+    const previewLesson = {
+      ...lesson,
+      components: [video, quiz(21, 2), quiz(22, 3), { ...video, id: 23, position: 4 }],
+    }
+    const { slides, key } = authorToSlides(previewLesson)
+
+    expect(slides.map((slide) => [slide.componentId, slide.kind]))
+      .toEqual([[20, 'video'], [21, 'quiz'], [22, 'quiz'], [23, 'video']])
+    expect(key.get(21)?.correctOptionIds).toEqual([210])
+    expect(key.get(22)?.correctOptionIds).toEqual([220])
+    expect(previewLesson.components.map((component) => component.id)).toEqual([20, 21, 22, 23])
   })
 })
 
@@ -154,6 +195,7 @@ describe('createPreviewService — local grading by type', () => {
   const lesson: AuthorLesson = {
     id: 1,
     title: 'L',
+    kind: 'lesson',
     position: 1,
     est_minutes: 5,
     is_locked_by_default: false,

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\CoinTransaction;
+use App\Models\WalletFundingTransaction;
 use App\Services\Billing\PaymentGatewayManager;
 use App\Services\Family\WalletService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,6 +28,10 @@ class WalletTest extends TestCase
         $this->postJson('/api/v1/wallet/transfer', ['to_learner_id' => $learner->id, 'coins' => 30], [
             'Idempotency-Key' => 'tr-1',
         ])->assertOk()->assertJsonPath('data.family_balance', 70)->assertJsonPath('data.learner_balance', 30);
+        $this->getJson('/api/v1/wallet')->assertOk()
+            ->assertJsonPath('data.report.total_coins', 100)
+            ->assertJsonPath('data.report.coins_spent', 0)
+            ->assertJsonPath('data.report.coin_reconciled', true);
 
         // overdraft rejected
         $this->postJson('/api/v1/wallet/transfer', ['to_learner_id' => $learner->id, 'coins' => 1000], [
@@ -46,6 +51,41 @@ class WalletTest extends TestCase
             ->assertJsonPath('data.coin_transactions.0.source', 'transfer')
             ->assertJsonPath('data.coin_transactions.0.amount', 30)
             ->assertJsonPath('data.coin_transactions.0.balance_after', 30);
+    }
+
+    public function test_parent_can_allocate_cash_to_child_without_changing_household_total(): void
+    {
+        $this->seedRbac();
+        $parent = $this->actingAsUser($this->userWithRole('parent'));
+        $learner = $this->parentWithChild($parent);
+        $wallets = app(WalletService::class);
+        $familyWallet = $wallets->walletFor($learner->family);
+        $wallets->creditCurrency($familyWallet, 50000);
+        $funding = WalletFundingTransaction::create([
+            'wallet_id' => $familyWallet->id, 'gateway' => 'paystack', 'amount_minor' => 50000,
+            'currency' => 'NGN', 'status' => 'success', 'gateway_ref' => 'test-allowance',
+        ]);
+
+        $this->postJson('/api/v1/wallet/transfer', ['to_learner_id' => $learner->id, 'amount_minor' => 12000], [
+            'Idempotency-Key' => 'allowance-1',
+        ])->assertOk()->assertJsonPath('data.family_balance_minor', 38000)->assertJsonPath('data.learner_balance_minor', 12000);
+        $this->getJson('/api/v1/wallet')->assertOk()
+            ->assertJsonPath('data.report.cash.balance_minor', 50000)
+            ->assertJsonPath('data.report.cash.reconciled', true)
+            ->assertJsonPath('data.report.cash_activity.0.account', $learner->display_name);
+        $this->assertDatabaseCount('wallet_currency_transactions', 2);
+
+        $this->postJson('/api/v1/wallet/transfer', ['to_learner_id' => $learner->id, 'amount_minor' => 40000], [
+            'Idempotency-Key' => 'allowance-2',
+        ])->assertUnprocessable();
+        $this->assertSame(38000, $familyWallet->fresh()->currency_balance_minor);
+        $this->assertSame(12000, $wallets->walletFor($learner)->fresh()->currency_balance_minor);
+
+        $wallets->debitCurrency($familyWallet, $funding->amount_minor, $funding->id);
+        $funding->update(['status' => 'refunded']);
+        $this->assertSame(0, $familyWallet->fresh()->currency_balance_minor);
+        $this->assertSame(0, $wallets->walletFor($learner)->fresh()->currency_balance_minor);
+        $this->getJson('/api/v1/wallet')->assertOk()->assertJsonPath('data.report.cash.reconciled', true);
     }
 
     public function test_parent_cannot_open_a_child_from_another_family(): void

@@ -14,7 +14,7 @@ function Location() {
 }
 
 const lesson = (id: number, title: string, position: number): AuthorLesson => ({
-  id, title, position, est_minutes: 5, is_locked_by_default: false, is_published: false, published_at: null,
+  id, title, kind: 'lesson', position, est_minutes: 5, is_locked_by_default: false, is_published: false, published_at: null,
 })
 
 function setup() {

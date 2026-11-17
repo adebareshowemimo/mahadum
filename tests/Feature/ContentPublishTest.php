@@ -224,7 +224,7 @@ class ContentPublishTest extends TestCase
         $this->assertFalse((bool) $lesson->fresh()->is_locked_by_default);
     }
 
-    public function test_course_publish_ships_incomplete_lessons_and_names_them(): void
+    public function test_course_publish_blocks_incomplete_lessons_and_names_them(): void
     {
         $this->seedRbac();
         $good = $this->publishedLesson();
@@ -232,27 +232,24 @@ class ContentPublishTest extends TestCase
         $good->update(['published_at' => null]);
         $course->update(['is_published' => false, 'status' => 'draft']);
 
-        // An empty lesson — no video, no quiz. Publishing at course level is the
-        // author's call, so it ships anyway, but is reported back to them.
+        // An empty lesson has no video or quiz and must block the whole course.
         $thin = $good->courseLevel->lessons()->create(['title' => 'Unfinished draft', 'position' => 2]);
 
         $this->actingAsUser($this->userWithRole('content_owner'));
         $this->postJson("/api/v1/courses/{$course->id}/publish")
-            ->assertOk()
-            ->assertJsonPath('data.is_published', true)
-            ->assertJsonCount(2, 'meta.lessons_published')
-            ->assertJsonCount(1, 'meta.lessons_incomplete')
-            ->assertJsonPath('meta.lessons_incomplete.0.lesson_id', $thin->id)
-            ->assertJsonPath('meta.lessons_incomplete.0.title', 'Unfinished draft');
+            ->assertStatus(422)
+            ->assertJsonPath('error.code', 'publish_checks_failed')
+            ->assertJsonPath('error.details.0.lesson_id', $thin->id)
+            ->assertJsonPath('error.details.0.title', 'Unfinished draft');
 
-        $this->assertNotNull($good->fresh()->published_at);
-        $this->assertNotNull($thin->fresh()->published_at);
+        $this->assertNull($good->fresh()->published_at);
+        $this->assertNull($thin->fresh()->published_at);
+        $this->assertFalse((bool) $course->fresh()->is_published);
     }
 
     public function test_lesson_level_publish_still_enforces_the_readiness_checks(): void
     {
-        // Course-level publish is unconditional, but the per-lesson button is
-        // where an author asks "is this lesson ready?" — that must still answer.
+        // The same readiness rule applies to course-level and lesson-level publishing.
         $this->seedRbac();
         $lesson = $this->publishedLesson();
         $lesson->update(['published_at' => null]);

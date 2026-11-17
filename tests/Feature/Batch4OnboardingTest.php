@@ -84,7 +84,7 @@ class Batch4OnboardingTest extends TestCase
     public function test_acceptance_preserves_parent_family_and_is_replay_safe_without_reactivating_suspended_membership(): void
     {
         [$org, $admin] = $this->school();
-        $parent = $this->userWithRole('parent')->fresh();
+        $parent = $this->userWithRole('parent', ['signup_account_type' => 'family'])->fresh();
         $family = Family::create(['owner_user_id' => $parent->id, 'name' => 'Existing family']);
         $child = LearnerProfile::create(['family_id' => $family->id, 'display_name' => 'Child']);
         $token = $this->invitation($org, $admin, $parent);
@@ -92,11 +92,39 @@ class Batch4OnboardingTest extends TestCase
         $this->postJson("/api/v1/teacher-invitations/$token/accept")->assertOk()->assertJsonPath('data.organization_id', $org->id);
         $this->postJson("/api/v1/teacher-invitations/$token/accept")->assertOk();
         $this->assertTrue($parent->fresh()->hasAllRoles(['parent', 'teacher']));
+        $this->assertSame('family', $parent->fresh()->signup_account_type);
         $this->assertSame($family->id, $child->fresh()->family_id);
+        $this->getJson('/api/v1/me')->assertOk()->assertJsonPath('data.user.account_type', 'family')
+            ->assertJsonCount(1, 'data.families')->assertJsonCount(1, 'data.families.0.learners');
+        $this->getJson('/api/v1/family')->assertOk()->assertJsonPath('data.id', $family->id)
+            ->assertJsonCount(1, 'data.learners');
         $this->assertDatabaseCount('organization_user', 2);
         OrganizationUser::where('user_id', $parent->id)->update(['status' => 'suspended']);
         $this->postJson("/api/v1/teacher-invitations/$token/accept")->assertOk();
         $this->assertSame('suspended', OrganizationUser::where('user_id', $parent->id)->sole()->status);
+    }
+
+    public function test_repair_restores_family_identity_after_a_legacy_invitation_changed_it(): void
+    {
+        [$org, $admin] = $this->school();
+        $parent = $this->userWithRole('parent', ['signup_account_type' => 'family'])->fresh();
+        $family = Family::create(['owner_user_id' => $parent->id, 'name' => 'Existing family']);
+        $token = $this->invitation($org, $admin, $parent);
+        $this->actingAsUser($parent);
+        $this->postJson("/api/v1/teacher-invitations/$token/accept")->assertOk();
+        $parent->update(['signup_account_type' => 'teacher']);
+        $parent->removeRole('parent');
+        $this->getJson('/api/v1/family')->assertForbidden();
+
+        $this->artisan('accounts:repair-invited-families', ['--user' => $parent->id])->assertSuccessful();
+        $this->assertSame('teacher', $parent->fresh()->signup_account_type);
+        $this->artisan('accounts:repair-invited-families', ['--user' => $parent->id, '--execute' => true])->assertSuccessful();
+        $this->assertSame('family', $parent->fresh()->signup_account_type);
+        $this->assertTrue($parent->fresh()->hasAllRoles(['parent', 'teacher']));
+        $this->actingAsUser($parent->fresh());
+        $this->getJson('/api/v1/me')->assertOk()->assertJsonPath('data.user.account_type', 'family');
+        $this->getJson('/api/v1/family')->assertOk()->assertJsonPath('data.id', $family->id);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'account.invited_family_repaired']);
     }
 
     public function test_invite_rejects_wrong_email_unverified_user_expiry_and_revocation(): void
@@ -178,5 +206,19 @@ class Batch4OnboardingTest extends TestCase
         $this->actingAsUser($this->userWithRole('super_admin'));
         $this->getJson("/api/v1/admin/users/{$parent->id}")->assertOk()->assertJsonPath('data.account_type', 'family');
         $this->assertSame('school', UserAccountType::forUser($admin));
+    }
+
+    public function test_teaching_role_does_not_replace_an_individual_signup_type(): void
+    {
+        [$org] = $this->school();
+        $adult = $this->userWithRole('student', ['signup_account_type' => 'individual']);
+        $adult->assignRole('teacher');
+        $org->members()->attach($adult->id, ['role' => 'teacher', 'status' => 'active']);
+
+        $this->assertSame('single', UserAccountType::forUser($adult));
+        $this->assertTrue(UserAccountType::filter(User::query(), 'single')->whereKey($adult->id)->exists());
+        $this->assertFalse(UserAccountType::filter(User::query(), 'teacher')->whereKey($adult->id)->exists());
+        $this->actingAsUser($adult);
+        $this->getJson('/api/v1/me')->assertOk()->assertJsonPath('data.user.account_type', 'single');
     }
 }

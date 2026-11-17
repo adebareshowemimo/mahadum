@@ -17,14 +17,14 @@ class ProfileSwitchTest extends TestCase
         $this->seedRbac();
     }
 
-    public function test_parent_can_switch_into_an_unprotected_child_with_no_pin(): void
+    public function test_child_profile_requires_a_parent_pin_before_entry(): void
     {
         $parent = $this->actingAsUser($this->userWithRole('parent'));
         $child = $this->parentWithChild($parent);
 
         $this->postJson("/api/v1/profiles/{$child->id}/switch")
-            ->assertOk()
-            ->assertJsonPath('data.active_learner_id', $child->id);
+            ->assertStatus(422)
+            ->assertJsonPath('error.code', 'pin_not_set');
     }
 
     public function test_entering_a_pin_protected_child_requires_its_own_pin(): void
@@ -69,13 +69,12 @@ class ProfileSwitchTest extends TestCase
             ->assertJsonPath('error.code', 'pin_not_set');
     }
 
-    public function test_switching_from_a_child_to_the_parents_own_learner_profile_needs_no_pin(): void
+    public function test_parent_can_select_own_learner_profile_when_no_child_is_active(): void
     {
         $parent = $this->actingAsUser($this->userWithRole('parent'));
-        $child = $this->parentWithChild($parent);
         $self = LearnerProfile::create(['user_id' => $parent->id, 'display_name' => $parent->name, 'age_band' => 'adult']);
 
-        $this->postJson("/api/v1/profiles/{$self->id}/switch", ['from_learner_id' => $child->id])
+        $this->postJson("/api/v1/profiles/{$self->id}/switch")
             ->assertOk()
             ->assertJsonPath('data.active_learner_id', $self->id);
     }

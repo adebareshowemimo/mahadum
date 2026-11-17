@@ -102,7 +102,7 @@ function Dashboard({ orgId }: { orgId: number }) {
                   </div>
                   <p className="text-sm text-muted">{c.teacher ?? 'No teacher'} · {c.students} students</p>
                   <AssignTeacher classId={c.id} teachers={teachers.data} />
-                  <LinkButton to={`/classes/${c.id}`} variant="outline" size="sm" className="mt-1 self-start">Open class</LinkButton>
+                  <div className="mt-1 flex flex-wrap gap-2"><LinkButton to={`/classes/${c.id}`} variant="outline" size="sm">Open class</LinkButton><LinkButton to={`/classes/${c.id}?tab=courses`} variant="outline" size="sm">Courses & quizzes</LinkButton></div>
                 </CardBody>
               </Card>
             ))}

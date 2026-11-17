@@ -70,6 +70,17 @@ export function useWallet() {
   return useQuery({ queryKey: familyKeys.wallet, queryFn: familyApi.wallet })
 }
 
+export function useBuyCoins() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (coins: number) => familyApi.buyCoins(coins),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: familyKeys.wallet })
+      void qc.invalidateQueries({ queryKey: familyKeys.family })
+    },
+  })
+}
+
 export function useChores() {
   return useQuery({ queryKey: familyKeys.chores, queryFn: familyApi.chores })
 }
@@ -121,7 +132,7 @@ export function useUpdateLearnerAvatar() {
 export function useTransfer() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: { to_learner_id: number; coins: number }) => familyApi.transfer(input),
+    mutationFn: (input: { to_learner_id: number } & ({ coins: number } | { amount_minor: number })) => familyApi.transfer(input),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: familyKeys.wallet })
       void qc.invalidateQueries({ queryKey: familyKeys.family })
@@ -158,6 +169,14 @@ export function useFundWallet() {
       // key so the API can replay a previously recorded successful checkout.
       if (error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 409) clear(input)
     },
+  })
+}
+
+export function useConfirmWalletFunding() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: familyApi.confirmWalletFunding,
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: familyKeys.wallet }) },
   })
 }
 

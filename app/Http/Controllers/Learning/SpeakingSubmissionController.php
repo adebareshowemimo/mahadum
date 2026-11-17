@@ -11,7 +11,9 @@ use App\Models\MediaAsset;
 use App\Models\SpeakingSubmission;
 use App\Services\Learning\LessonAccess;
 use App\Services\Learning\XapiRecorder;
+use App\Services\Settings;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class SpeakingSubmissionController extends Controller
@@ -26,6 +28,10 @@ class SpeakingSubmissionController extends Controller
     public function store(StoreSpeakingSubmissionRequest $request, XapiRecorder $xapi): JsonResponse
     {
         $learner = $this->learner($request->integer('learner_id'));
+        $recordingAge = (int) app(Settings::class)->get('compliance.minor_age', 18);
+        abort_if($request->hasFile('audio') && (! $learner->date_of_birth
+            || Carbon::parse($learner->date_of_birth)->age < $recordingAge), 403,
+            'Ask a grown-up to use Invite someone. Voice recording is not available for children yet.');
         $component = LessonComponent::findOrFail($request->integer('component_id'));
 
         abort_unless($component->type === 'speaking', 422, 'This component is not a speaking challenge.');

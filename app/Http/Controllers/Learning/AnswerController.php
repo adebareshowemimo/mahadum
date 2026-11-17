@@ -99,7 +99,7 @@ class AnswerController extends Controller
                 : $practice->applyMistake($learner, $countAnswer);
             $heartsLost = $unlimitedHearts ? 0 : max(0, $beforeHearts - $heartState['current']);
 
-            // Each permitted attempt earns one XP per correct question, including
+            // Each permitted attempt earns the configured XP per correct question, including
             // retries. Corrections/repeated answers inside that attempt earn once.
             $alreadyEarned = ($existingResponse->xp_awarded ?? 0) > 0;
 
@@ -116,7 +116,7 @@ class AnswerController extends Controller
 
             $xpAwarded = 0;
             if ($verdict['is_correct'] && ! $alreadyEarned) {
-                $xpAwarded = 1;
+                $xpAwarded = max(0, (int) $quiz->xp_per_correct);
                 XpLedger::create([
                     'learner_profile_id' => $learner->id,
                     'amount' => $xpAwarded,

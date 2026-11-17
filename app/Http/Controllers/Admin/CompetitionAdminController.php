@@ -65,8 +65,14 @@ class CompetitionAdminController extends Controller
             'title' => ['required', 'string', 'max:160'],
             'season' => ['required', 'integer', 'min:2020', 'max:2100'],
             'description' => ['nullable', 'string', 'max:5000'],
+            'rules' => ['nullable', 'string', 'max:10000'],
+            'prizes' => ['nullable', 'string', 'max:5000'],
+            'eligibility' => ['nullable', 'string', 'max:5000'],
+            'entries_open_at' => ['nullable', 'date'],
             'submissions_close_at' => ['nullable', 'date'],
             'voting_closes_at' => ['nullable', 'date'],
+            'judging_starts_at' => ['nullable', 'date'],
+            'judging_closes_at' => ['nullable', 'date'],
             'min_activity_days' => ['nullable', 'integer', 'min:0', 'max:365'],
         ]);
 
@@ -87,10 +93,22 @@ class CompetitionAdminController extends Controller
         $validated = $request->validate([
             'title' => ['sometimes', 'required', 'string', 'max:160'],
             'description' => ['sometimes', 'nullable', 'string', 'max:5000'],
+            'rules' => ['sometimes', 'nullable', 'string', 'max:10000'],
+            'prizes' => ['sometimes', 'nullable', 'string', 'max:5000'],
+            'eligibility' => ['sometimes', 'nullable', 'string', 'max:5000'],
+            'entries_open_at' => ['sometimes', 'nullable', 'date'],
             'submissions_close_at' => ['sometimes', 'nullable', 'date'],
             'voting_closes_at' => ['sometimes', 'nullable', 'date'],
+            'judging_starts_at' => ['sometimes', 'nullable', 'date'],
+            'judging_closes_at' => ['sometimes', 'nullable', 'date'],
             'min_activity_days' => ['sometimes', 'integer', 'min:0', 'max:365'],
         ]);
+
+        if ($competition->status !== 'draft') {
+            $candidate = clone $competition;
+            $candidate->fill($validated);
+            $this->ensurePublishReady($candidate);
+        }
 
         $before = $this->present($competition);
         $competition->fill($validated)->save();
@@ -104,6 +122,10 @@ class CompetitionAdminController extends Controller
         $validated = $request->validate([
             'status' => ['required', Rule::in(self::STATUSES)],
         ]);
+
+        if ($competition->status === 'draft' && $validated['status'] === 'open') {
+            $this->ensurePublishReady($competition);
+        }
 
         $before = $this->present($competition);
         $competition->update(['status' => $validated['status']]);
@@ -120,6 +142,9 @@ class CompetitionAdminController extends Controller
         $validated = $request->validate([
             'status' => ['required', Rule::in(['approved', 'rejected', 'disqualified'])],
         ]);
+
+        abort_if($validated['status'] === 'approved' && $entry->category === 'diaspora_folklore'
+            && $entry->guardian_approved_at === null, 422, 'Parent approval is required before this entry can be approved.');
 
         $before = ['status' => $entry->status];
         $entry->update(['status' => $validated['status']]);
@@ -167,6 +192,18 @@ class CompetitionAdminController extends Controller
         return $slug;
     }
 
+    private function ensurePublishReady(Competition $competition): void
+    {
+        foreach (['description', 'rules', 'prizes', 'eligibility', 'entries_open_at', 'submissions_close_at', 'voting_closes_at', 'judging_starts_at', 'judging_closes_at'] as $field) {
+            abort_if(blank($competition->{$field}), 422, "Complete {$field} before publishing this competition.");
+        }
+        abort_unless($competition->entries_open_at->lt($competition->submissions_close_at)
+            && $competition->submissions_close_at->lte($competition->voting_closes_at)
+            && $competition->voting_closes_at->lte($competition->judging_starts_at)
+            && $competition->judging_starts_at->lt($competition->judging_closes_at),
+            422, 'Competition dates must follow entries, voting, then judging in order.');
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -178,9 +215,15 @@ class CompetitionAdminController extends Controller
             'slug' => $c->slug,
             'season' => $c->season,
             'description' => $c->description,
+            'rules' => $c->rules,
+            'prizes' => $c->prizes,
+            'eligibility' => $c->eligibility,
             'status' => $c->status,
             'statuses' => self::STATUSES,
             'submissions_close_at' => $c->submissions_close_at?->toIso8601String(),
+            'entries_open_at' => $c->entries_open_at?->toIso8601String(),
+            'judging_starts_at' => $c->judging_starts_at?->toIso8601String(),
+            'judging_closes_at' => $c->judging_closes_at?->toIso8601String(),
             'voting_closes_at' => $c->voting_closes_at?->toIso8601String(),
             'min_activity_days' => $c->min_activity_days,
             'entries_count' => $c->entries_count ?? $c->entries()->count(),

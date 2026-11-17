@@ -77,8 +77,9 @@ class HeartController extends Controller
             }
 
             $heart = Heart::firstOrCreate(['learner_profile_id' => $learner->id], ['current' => PracticeModeService::MAX_HEARTS]);
+            $nextHeartCount = min(PracticeModeService::MAX_HEARTS, (int) $heart->current + 1);
             $heart->update([
-                'current' => PracticeModeService::MAX_HEARTS,
+                'current' => $nextHeartCount,
                 'questions_since_loss' => 0,
                 'refills_at' => null,
                 'competitive_paused_until' => null,

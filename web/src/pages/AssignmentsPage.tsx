@@ -7,6 +7,7 @@ import { useBadges } from '@/lib/gamification/queries'
 import {
   useAwardBadge,
   useClassAssignmentDetail,
+  useClassAssignmentLessons,
   useClassAssignments,
   useClassCompletion,
   useCreateClassAssignment,
@@ -139,7 +140,8 @@ function CompletionPanel({ classId }: { classId: number | null }) {
 
 function CreateAssignmentModal({ classId, open, onClose }: { classId: number; open: boolean; onClose: () => void }) {
   const createAssignment = useCreateClassAssignment(classId)
-  const [values, setValues] = useState({ title: '', instructions: '', due_at: '', coin_reward: '' })
+  const lessons = useClassAssignmentLessons(classId)
+  const [values, setValues] = useState({ title: '', instructions: '', due_at: '', coin_reward: '', linked_lesson_id: '' })
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [step, setStep] = useState(1)
@@ -164,8 +166,9 @@ function CreateAssignmentModal({ classId, open, onClose }: { classId: number; op
         instructions: values.instructions.trim() || undefined,
         due_at: values.due_at || undefined,
         coin_reward: values.coin_reward ? Number(values.coin_reward) : undefined,
+        linked_lesson_id: values.linked_lesson_id ? Number(values.linked_lesson_id) : undefined,
       })
-      setValues({ title: '', instructions: '', due_at: '', coin_reward: '' })
+      setValues({ title: '', instructions: '', due_at: '', coin_reward: '', linked_lesson_id: '' })
       setStep(1)
       onClose()
     } catch (err) {
@@ -199,6 +202,14 @@ function CreateAssignmentModal({ classId, open, onClose }: { classId: number; op
           error={fieldErrors.instructions}
           maxLength={5000}
         />
+        <label className="flex flex-col gap-1 text-sm font-semibold">Course quiz or lesson (optional)
+          <select className="min-h-11 rounded-xl border border-border bg-surface px-3" value={values.linked_lesson_id} onChange={(event) => update('linked_lesson_id', event.target.value)}>
+            <option value="">Written assignment with teacher grading</option>
+            {lessons.data?.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.course_title} · {lesson.title}</option>)}
+          </select>
+        </label>
+        {lessons.isError && <p className="text-sm text-danger">Could not load assigned course lessons.</p>}
+        {values.linked_lesson_id && <p className="text-sm text-muted">Learners open the existing lesson quiz. Their completed result is scored and recorded automatically.</p>}
         </> : <><p className="font-semibold text-foreground">{values.title}</p><div className="grid gap-3 sm:grid-cols-2">
           <Input
             label="Due date (optional)"
@@ -217,7 +228,7 @@ function CreateAssignmentModal({ classId, open, onClose }: { classId: number; op
             error={fieldErrors.coin_reward}
           />
         </div>
-        <p className="text-sm text-muted">Coins wait for parent approval after the teacher marks the work as passed.</p></>}
+        <p className="text-sm text-muted">{values.linked_lesson_id ? 'A passing quiz result is recorded automatically. Coin rewards still wait for parent approval.' : 'Coins wait for parent approval after the teacher marks the work as passed.'}</p></>}
         <div className="flex gap-2">
         {step === 2 && <Button type="button" variant="outline" onClick={() => setStep(1)}>Back</Button>}
         <Button type="submit" loading={createAssignment.isPending}>

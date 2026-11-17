@@ -5,6 +5,8 @@ namespace App\Services\Gamification;
 use App\Models\LearnerProfile;
 use App\Models\Streak;
 use App\Models\StreakProtection;
+use App\Models\TelcoSubscription;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 
 /**
@@ -33,7 +35,7 @@ class StreakService
             $streak->current_count = 1;
         } elseif ($last->copy()->addDay()->isSameDay($today)) {
             $streak->current_count++;
-        } elseif ($this->consumeProtection($learner)) {
+        } elseif ($this->telcoGraceCovers($learner, $last, $today) || $this->consumeProtection($learner)) {
             $streak->current_count++; // miss covered by grace/shield
         } else {
             $streak->current_count = 1; // streak reset
@@ -80,5 +82,22 @@ class StreakService
         $protection->update(['consumed' => true]);
 
         return true;
+    }
+
+    private function telcoGraceCovers(LearnerProfile $learner, Carbon $last, Carbon $today): bool
+    {
+        if ($last->diffInDays($today) > 3) {
+            return false;
+        }
+
+        $learner->loadMissing('family');
+        $subscriberIds = array_values(array_filter([$learner->user_id, $learner->family?->owner_user_id]));
+        if ($subscriberIds === []) {
+            return false;
+        }
+
+        return TelcoSubscription::where('state', 'grace')->where('grace_until', '>=', now())
+            ->whereHas('subscription', fn ($query) => $query->where('subscriber_type', User::class)
+                ->whereIn('subscriber_id', $subscriberIds))->exists();
     }
 }

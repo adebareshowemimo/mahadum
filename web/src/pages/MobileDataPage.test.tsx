@@ -28,6 +28,15 @@ beforeEach(() => {
 afterEach(() => { cleanup(); clients.splice(0).forEach((c) => c.clear()) })
 
 describe('Monnify mobile data store', () => {
+  it('keeps existing orders available while new purchases are paused', async () => {
+    vi.mocked(billingApi.dataProviders).mockResolvedValue([])
+    vi.mocked(billingApi.dataBundlePurchases).mockResolvedValue([{ purchase_id: 9, status: 'processing', product_name: 'MTN 100MB', phone_number: '08012345678', amount_minor: 10000, payment_reference: 'data_test', payment_provider: 'monnify', fulfillment_provider: 'monnify', checkout_url: null, bill_tx_ref: null, payment_confirmed: true, delivery_started: true }])
+    show()
+    expect(await screen.findByText(/New data purchases are paused/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Continue to payment' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Data Top-Up Terms' })).toHaveAttribute('href', '/data-top-up-terms')
+    expect(await screen.findByText(/MTN 100MB/)).toBeInTheDocument()
+  })
   it('offers Flutterwave alongside Monnify when enabled and sends the selected provider', async () => {
     vi.mocked(billingApi.dataProviders).mockResolvedValue(['monnify', 'flutterwave'])
     vi.mocked(billingApi.purchaseDataBundle).mockRejectedValue(new ApiError('Try again', 'provider', 503))

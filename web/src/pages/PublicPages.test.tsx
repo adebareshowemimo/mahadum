@@ -11,6 +11,7 @@ import {
   ContactPage,
   PrivacyPage,
   RefundPolicyPage,
+  DataTopUpTermsPage,
   TermsPage,
 } from './PublicTrustPages'
 
@@ -47,6 +48,7 @@ describe('public information pages', () => {
     [<PrivacyPage />, /Privacy notice/i],
     [<TermsPage />, /Terms and conditions/i],
     [<RefundPolicyPage />, /No refund policy for lessons and subscriptions/i],
+    [<DataTopUpTermsPage />, /Data Top-Up Terms/i],
     [<ChildrenPrivacyPage />, /Children’s privacy and parental consent notice/i],
     [<ChildSafetyPage />, /Child safety is part of the learning design/i],
     [<AccessibilityPage />, /Learning should work for more people/i],
@@ -83,6 +85,12 @@ describe('public information pages', () => {
     expect(screen.getByText(/This policy does not cover data top-ups/)).toBeInTheDocument()
     expect(screen.getByText(/Nothing in this policy takes away rights/)).toBeInTheDocument()
     expect(screen.getByText(/within 30 days of the charge/)).toBeInTheDocument()
+  })
+
+  it('publishes a route to failed-delivery help and refund information', () => {
+    renderPage(<DataTopUpTermsPage />, '/data-top-up-terms')
+    expect(screen.getByText(/If payment is confirmed and delivery failed/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Data Top-Up Terms' })).toHaveAttribute('href', '/data-top-up-terms')
   })
 
   it('publishes the supplied child privacy periods without editorial placeholders', () => {

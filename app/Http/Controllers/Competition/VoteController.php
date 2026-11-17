@@ -20,7 +20,8 @@ class VoteController extends Controller
     {
         abort_unless($competition->acceptingVotes(), 422, 'Voting is not open for this competition.');
         abort_unless($entry->competition_id === $competition->id, 404);
-        abort_if(in_array($entry->status, ['rejected', 'disqualified'], true), 422, 'This entry is not eligible for votes.');
+        abort_unless($entry->status === 'approved', 422, 'This entry is not eligible for votes.');
+        abort_if($entry->category === 'diaspora_folklore' && $entry->guardian_approved_at === null, 422, 'This entry needs parent approval before voting.');
 
         try {
             CompetitionVote::create([

@@ -1,5 +1,6 @@
 import TERMS_SECTIONS from '@/lib/legal/terms.json'
 import REFUND_SECTIONS from '@/lib/legal/refunds.json'
+import DATA_TOP_UP_SECTIONS from '@/lib/legal/data-top-up.json'
 import CHILDREN_SECTIONS from '@/lib/legal/children.json'
 import { websiteCopy } from '@/lib/seo/copy'
 import { useMemo, useState, type FormEvent } from 'react'
@@ -132,6 +133,17 @@ export function RefundPolicyPage() {
       summary="Try Level 0 free in every language before paying. Learning purchases are final, subject to billing corrections and rights under applicable law. Data top-ups are separate."
       updated={UPDATED}
       sections={REFUND_SECTIONS}
+    />
+  )
+}
+
+export function DataTopUpTermsPage() {
+  return (
+    <PolicyPage
+      title="Data Top-Up Terms"
+      summary="How mobile data purchases, delivery checks and failed top-ups are handled."
+      updated="3 November 2026"
+      sections={DATA_TOP_UP_SECTIONS}
     />
   )
 }

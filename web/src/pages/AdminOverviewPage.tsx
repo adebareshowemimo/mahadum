@@ -45,7 +45,7 @@ export function AdminOverviewPage() {
 
       {m.revenue_channels && <Card><CardBody className="flex flex-col gap-3">
         <h2 className="font-semibold text-foreground">Recorded receipts · NGN</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{Object.entries(m.revenue_channels).map(([key, amount]) => <div key={key}><p className="text-xs text-muted">{{wallet_funding_minor: 'Wallet funding', school_invoices_minor: 'Paid school invoices', telco_minor: 'Telco billing', subscription_payments_minor: 'Subscription payments, less refunds'}[key] ?? key}</p><p className="font-semibold text-foreground">{formatMoney(amount, 'NGN')}</p></div>)}</div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{Object.entries(m.revenue_channels).map(([key, amount]) => <div key={key}><p className="text-xs text-muted">{{wallet_funding_minor: 'Confirmed wallet funding', school_invoices_minor: 'Paid school invoices', telco_minor: 'Telco billing', subscription_payments_minor: 'Subscription payments, less refunds'}[key] ?? key}</p><p className="font-semibold text-foreground">{formatMoney(amount, 'NGN')}</p></div>)}</div>
         <p className="text-xs text-muted">Subscription receipts are recorded from this release onward; earlier subscription charges are unavailable. Data sales are excluded. These receipts are not profit or provider settlement totals.</p>
       </CardBody></Card>}
 

@@ -4,7 +4,7 @@ import { ApiError, type RosterImportResult } from '@/lib/api'
 import { SchoolGate } from '@/components/school/SchoolGate'
 import { useClasses, useImportRoster } from '@/lib/school/queries'
 
-const ROSTER_TEMPLATE = ['Firstname,Lastname,Email,Level,StudentId', 'Amara,Okafor,,L0,S-001', 'Bello,Musa,,L1,S-002', 'Chinwe,Eze,,,S-003'].join('\n')
+const ROSTER_TEMPLATE = ['Firstname,Lastname,Email,Level,StudentId', 'Amara,Okafor,,L0,S-001', 'Bello,Musa,,L1,S-002', 'Chinwe,Eze,,L2,S-003', 'Tunde,Adeyemi,,L3,S-004', 'Zara,Ibrahim,,L4,S-005', 'Kelechi,Nwosu,,L5,S-006'].join('\n')
 
 function downloadRosterTemplate() {
   const blob = new Blob([ROSTER_TEMPLATE], { type: 'text/csv;charset=utf-8' })

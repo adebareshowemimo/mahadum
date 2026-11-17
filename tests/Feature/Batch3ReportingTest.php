@@ -134,7 +134,7 @@ class Batch3ReportingTest extends TestCase
         $payments = app(PaymentService::class);
         $this->assertSame('subscription_active', $payments->process('paystack', 'first', "sub_$sub->id", 'success', 12345, []));
         $this->assertSame('duplicate', $payments->process('paystack', 'first', "sub_$sub->id", 'success', 12345, []));
-        $payments->process('paystack', 'renewal', "sub_$sub->id", 'success', 4567, []);
+        $payments->process('paystack', 'renewal', "sub_$sub->id", 'success', $plan->price_minor, []);
         $payments->process('paystack', 'partial-refund', "sub_$sub->id", 'refund', 1000, []);
         $payments->process('paystack', 'partial-refund', "sub_$sub->id", 'refund', 1000, []);
         $payments->process('paystack', 'unknown-amount', "sub_$sub->id", 'success', null, []);
@@ -145,7 +145,7 @@ class Batch3ReportingTest extends TestCase
         Invoice::create(['organization_id' => $org->id, 'amount_minor' => 2000, 'status' => 'paid']);
         Invoice::create(['organization_id' => $org->id, 'amount_minor' => 5000, 'status' => 'unpaid']);
         $this->actingAsUser($this->userWithRole('super_admin'));
-        $this->getJson('/api/v1/admin/metrics')->assertJsonPath('data.revenue_channels.subscription_payments_minor', 15912)->assertJsonPath('data.revenue_minor', 17912);
+        $this->getJson('/api/v1/admin/metrics')->assertJsonPath('data.revenue_channels.subscription_payments_minor', 311345)->assertJsonPath('data.revenue_minor', 313345);
         $this->assertSame(3, SubscriptionPaymentReceipt::count());
     }
 

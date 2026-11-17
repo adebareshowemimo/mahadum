@@ -70,7 +70,9 @@ class PublicSeo
         foreach ($schema as $item) {
             $head .= '<script type="application/ld+json">'.json_encode($item, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_THROW_ON_ERROR).'</script>';
         }
-        $head .= '<script id="public-page-metadata" type="application/json">'.json_encode($this->pages(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_THROW_ON_ERROR).'</script>';
+        $pages = $this->pages();
+        $pages[$path] = $meta;
+        $head .= '<script id="public-page-metadata" type="application/json">'.json_encode($pages, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_THROW_ON_ERROR).'</script>';
         $copies = $this->documents()->where('kind', 'page')->mapWithKeys(fn ($page) => [$page->path => ['heading' => $page->heading, 'intro' => $page->intro]])->all();
         $head .= '<script id="public-page-copy" type="application/json">'.json_encode($copies, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_THROW_ON_ERROR).'</script>';
 

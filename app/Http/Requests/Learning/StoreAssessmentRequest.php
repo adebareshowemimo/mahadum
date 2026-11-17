@@ -16,8 +16,10 @@ class StoreAssessmentRequest extends FormRequest
         return [
             'learner_id' => ['required', 'integer', 'exists:learner_profiles,id'],
             'language_id' => ['required', 'integer', 'exists:languages,id'],
-            'answers' => ['nullable', 'array'],
-            'score' => ['nullable', 'numeric', 'between:0,1'], // optional pre-computed proficiency
+            'answers' => ['required', 'array', 'size:4'],
+            'answers.*.question_id' => ['required', 'integer', 'distinct'],
+            'answers.*.option_id' => ['required', 'integer'],
+            'score' => ['prohibited'],
         ];
     }
 }

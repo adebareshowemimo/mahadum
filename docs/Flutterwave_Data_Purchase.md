@@ -1,5 +1,9 @@
 # Flutterwave Buy data integration
 
+## Launch hold — 3 November 2026
+
+New data purchases are disabled by default (`DATA_BUNDLE_PURCHASES_ENABLED=false`) because live carrier delivery has not been demonstrated across the supported networks. Existing orders remain visible to customers. The scheduled `data-bundles:reconcile` command rechecks every paid order still marked `processing`; it never submits a second vend. Its unresolved order IDs and references require an operator to inspect the payment and bill status at the recorded provider, then confirm delivery or refund the charge. In particular, the four paid ₦100 orders reported from 14 October must be reconciled in production; local tests and a local database cannot settle them. Do not enable new checkouts until a controlled live purchase reaches the recipient on each network and the corresponding order reaches `success`.
+
 Flutterwave is an additional provider. Monnify remains available, and existing data orders default to Monnify through the provider migration. Each new order stores its payment and fulfillment providers so status checks always return to the provider used to create it.
 
 ## Configuration

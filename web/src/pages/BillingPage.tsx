@@ -1,5 +1,6 @@
 import { PurchasePolicyNotice } from '@/components/billing/PurchasePolicyNotice'
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
@@ -26,7 +27,6 @@ import {
   useChangeSubscription,
   useCreateSubscription,
   usePlans,
-  useRetrySubscription,
   useSubscriptionGateways,
   useSubscriptions,
   useTelcoStatus,
@@ -49,6 +49,7 @@ function friendlyBillingError(err: unknown, fallback: string): string {
 }
 
 export function BillingPage() {
+  const navigate = useNavigate()
   const { user, hasRole } = useAuth()
   const queryClient = useQueryClient()
   const entitlements = useEntitlements()
@@ -64,18 +65,20 @@ export function BillingPage() {
   const createSub = useCreateSubscription()
   const cancelSub = useCancelSubscription()
   const changeSub = useChangeSubscription()
-  const retrySub = useRetrySubscription()
 
   const telco = useTelcoStatus(hasRole('parent', 'super_admin'))
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busyPlan, setBusyPlan] = useState<number | null>(null)
-  const [retryingId, setRetryingId] = useState<number | null>(null)
   const [telcoPlan, setTelcoPlan] = useState<Plan | null>(null)
   const [promoInput, setPromoInput] = useState(() => new URLSearchParams(window.location.search).get('promo') ?? '')
   const [promo, setPromo] = useState<{ code: string; byPlan: Record<number, PromoPreview> } | null>(null)
   const [promoError, setPromoError] = useState<string | null>(null)
   const [promoBusy, setPromoBusy] = useState(false)
+  useEffect(() => {
+    const returnedId = Number(new URLSearchParams(window.location.search).get('subscription_id')?.match(/^([1-9]\d*)(?:\?.*)?$/)?.[1])
+    if (Number.isSafeInteger(returnedId) && returnedId > 0) navigate(`/payment/subscription/${returnedId}`, { replace: true })
+  }, [navigate])
 
   const sub = user?.subscription ?? null
   const telcoState = telco.data?.state
@@ -90,6 +93,10 @@ export function BillingPage() {
   async function applyPromo() {
     const code = promoInput.trim()
     if (!code) return
+    if (promo) {
+      setPromoError(`Code “${promo.code}” is already applied. Only one promo code can be used at a time.`)
+      return
+    }
     setPromoBusy(true)
     setPromoError(null)
     const paid = (personalPlans ?? []).filter((p) => p.price_minor > 0)
@@ -128,7 +135,7 @@ export function BillingPage() {
       if (res.checkout_url) {
         window.location.href = res.checkout_url
       } else {
-        setNotice(res.status === 'active' ? 'Your subscription is active. No payment is due for this billing period.' : 'Subscription created. Complete payment at checkout to activate — your plan unlocks once payment is confirmed.')
+        navigate(`/payment/subscription/${res.subscription_id}`)
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not start the subscription.')
@@ -161,7 +168,7 @@ export function BillingPage() {
       if (res.checkout_url) {
         window.location.href = res.checkout_url
       } else {
-        setNotice(res.status === 'active' ? 'Your new plan is active. No payment is due for this billing period.' : 'Plan changed. Complete payment at checkout to activate — your new plan unlocks once payment is confirmed.')
+        navigate(`/payment/subscription/${res.subscription_id}`)
       }
     } catch (err) {
       setError(friendlyBillingError(err, 'Could not change your plan.'))
@@ -171,36 +178,13 @@ export function BillingPage() {
     }
   }
 
-  /**
-   * Resume a still-pending card subscription. The server checks the gateway
-   * directly first — covers a completed payment whose webhook hasn't arrived
-   * (e.g. it can't reach this environment) — and activates right away, or
-   * opens a fresh checkout so the subscriber can pay again.
-   */
-  async function retryPayment(subscriptionId: number) {
-    setRetryingId(subscriptionId)
-    setError(null)
-    setNotice(null)
-    try {
-      const res = await retrySub.mutateAsync(subscriptionId)
-      if (res.checkout_url) {
-        window.location.href = res.checkout_url
-      } else if (res.status === 'active') {
-        setNotice('Payment confirmed — your plan is now active.')
-      } else {
-        setNotice('Still waiting on payment confirmation. Please try again shortly.')
-      }
-    } catch (err) {
-      setError(friendlyBillingError(err, 'Could not retry the payment.'))
-      if (err instanceof ApiError && err.status === 404) void queryClient.invalidateQueries({ queryKey: ['me'] })
-    } finally {
-      setRetryingId(null)
-    }
-  }
-
   // Personal plans only (school tiers are sold per-seat in the school console).
+  const learnerCount = (user?.learner_profiles.length ?? 0)
+    + (user?.families.reduce((count, family) => count + (family.learners?.length ?? 0), 0) ?? 0)
   const personalPlans = (plans.data ?? []).filter(
-    (p) => p.audience !== 'school' && p.audience !== 'teacher' && !p.code.startsWith('school'),
+    (p) => p.audience !== 'school' && p.audience !== 'teacher' && !p.code.startsWith('school')
+      && (p.audience !== 'family' || user?.user.account_type === 'family')
+      && (p.max_profiles == null || learnerCount <= p.max_profiles || p.code === entitlements.tier),
   )
 
   /** Months saved vs. the equivalent monthly plan, for an annual plan's "N months free" badge. */
@@ -245,11 +229,15 @@ export function BillingPage() {
           <Input
             label="Have a promo code?"
             value={promoInput}
-            onChange={(e) => { setPromoInput(e.target.value); setPromoError(null) }}
+            onChange={(e) => {
+              setPromoInput(e.target.value)
+              setPromoError(promo && e.target.value.trim() !== promo.code
+                ? `Code “${promo.code}” is already applied. Only one promo code can be used at a time.` : null)
+            }}
             placeholder="e.g. WELCOME20"
           />
         </div>
-        <Button variant="secondary" loading={promoBusy} disabled={!promoInput.trim()} onClick={applyPromo}>
+        <Button variant="secondary" loading={promoBusy} disabled={!promoInput.trim() || !!promo} onClick={applyPromo}>
           Apply
         </Button>
         {promo && (
@@ -356,7 +344,7 @@ export function BillingPage() {
         </div>
       )}
 
-      <Card>
+      {config.data?.feature_flags.data_bundle_purchases === true && <Card>
         <CardBody className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="font-display text-lg font-bold text-foreground">Mobile data</p>
@@ -366,7 +354,7 @@ export function BillingPage() {
             Buy data
           </LinkButton>
         </CardBody>
-      </Card>
+      </Card>}
 
       {isPremiumPlan && hasRole('parent') && family.data && (
         <Card>
@@ -418,16 +406,6 @@ export function BillingPage() {
                     <Badge variant={s.status === 'active' ? 'success' : s.status === 'cancelled' ? 'neutral' : 'gold'}>
                       {s.status}
                     </Badge>
-                    {s.status === 'pending' && s.method === 'card' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        loading={retryingId === s.id}
-                        onClick={() => retryPayment(s.id)}
-                      >
-                        Retry payment
-                      </Button>
-                    )}
                   </div>
                 </CardBody>
               </Card>

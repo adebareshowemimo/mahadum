@@ -8,6 +8,7 @@ use App\Models\PromoCode;
 use App\Services\Billing\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -106,5 +107,58 @@ class InvoiceCheckoutReadinessTest extends TestCase
         $this->assertSame('paid', $invoice->fresh()->status);
         $this->postJson($url.'/promo', ['code' => 'SCHOOL20'])->assertUnprocessable();
         Http::assertSentCount(1);
+    }
+
+    public function test_invoice_return_verifies_the_provider_before_showing_paid(): void
+    {
+        config([
+            'services.payments.live' => true,
+            'services.payments.default' => 'paystack',
+            'services.paystack.secret' => 'sk_test',
+            'services.paystack.base_url' => 'https://api.paystack.co',
+            'app.frontend_url' => 'https://learn.example.test',
+        ]);
+        Notification::fake();
+        $invoice = $this->invoice();
+        $reference = 'invoice_'.$invoice->id;
+        Http::fake([
+            'api.paystack.co/transaction/initialize' => Http::response(['status' => true, 'data' => ['authorization_url' => 'https://checkout.paystack.com/invoice']]),
+            'api.paystack.co/transaction/verify/*' => Http::response(['status' => true, 'data' => [
+                'status' => 'success', 'reference' => $reference, 'amount' => 500000, 'currency' => 'NGN',
+            ]]),
+        ]);
+        $url = "/api/v1/schools/{$invoice->organization_id}/invoices/{$invoice->id}";
+        $this->postJson($url.'/pay')->assertOk();
+        Http::assertSent(fn ($request) => $request['callback_url'] === "https://learn.example.test/payment/invoice/{$invoice->organization_id}/{$invoice->id}");
+        $this->postJson($url.'/confirm')->assertOk()
+            ->assertJsonPath('data.status', 'paid')
+            ->assertJsonPath('data.verification', 'success')
+            ->assertJsonPath('data.payment_reference', $reference);
+        $this->postJson($url.'/confirm')->assertOk()->assertJsonPath('data.status', 'paid');
+        $this->assertSame('paid', $invoice->fresh()->status);
+    }
+
+    public function test_invoice_return_rejects_a_provider_amount_mismatch(): void
+    {
+        config([
+            'services.payments.live' => true,
+            'services.payments.default' => 'paystack',
+            'services.paystack.secret' => 'sk_test',
+            'services.paystack.base_url' => 'https://api.paystack.co',
+        ]);
+        $invoice = $this->invoice();
+        Http::fake([
+            'api.paystack.co/transaction/initialize' => Http::response(['status' => true, 'data' => ['authorization_url' => 'https://checkout.paystack.com/invoice']]),
+            'api.paystack.co/transaction/verify/*' => Http::response(['status' => true, 'data' => [
+                'status' => 'success', 'reference' => 'invoice_'.$invoice->id,
+                'amount' => 499900, 'currency' => 'NGN',
+            ]]),
+        ]);
+        $url = "/api/v1/schools/{$invoice->organization_id}/invoices/{$invoice->id}";
+        $this->postJson($url.'/pay')->assertOk();
+        $this->postJson($url.'/confirm')->assertOk()
+            ->assertJsonPath('data.status', 'unpaid')
+            ->assertJsonPath('data.verification', 'needs_review');
+        $this->assertNull($invoice->fresh()->paid_at);
     }
 }

@@ -50,13 +50,12 @@ export function useInvitePractice() {
   })
 }
 
-/** Parent/adult learner: establish their own profile and enroll in one action. */
+/** Parent/adult learner: establish their own profile before placement. */
 export function useStartCourseAsSelf() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (courseId: number) => {
+    mutationFn: async (_courseId: number) => {
       const learner = await profileApi.ensureSelfLearner()
-      await learningApi.enroll(learner.id, courseId)
       return learner
     },
     onSuccess: (learner) => {
