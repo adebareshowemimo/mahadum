@@ -95,7 +95,7 @@ export function FamilyPage() {
 
       <section>
         <h2 className="mb-3 font-display text-lg font-bold text-foreground">Family members</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid items-start gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,18rem),1fr))]">
           <Card>
             <CardBody className="flex items-center gap-3">
               <Avatar name={family.parent.name} />
@@ -109,36 +109,50 @@ export function FamilyPage() {
 
           {family.learners.map((l) => (
             <Card key={l.id}>
-              <CardBody className="flex items-center gap-3">
+              <CardBody className="flex flex-col gap-4">
                 <Link
                   to={`/family/children/${l.id}`}
-                  className="flex min-w-0 flex-1 items-center gap-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="group flex items-center gap-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
                   aria-label={`View ${l.display_name}'s profile`}
                 >
                   <Avatar name={l.display_name} src={l.avatar_url ?? undefined} avatarId={l.avatar_id ?? learnerAvatarPresetId(l.id)} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-foreground hover:text-primary">{l.display_name}</p>
-                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                      {l.is_child && <Badge variant="info">Child</Badge>}
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-muted">
-                        <Icon name="coin" className="size-3.5 text-gold-600" />
-                        {l.coin_balance.toLocaleString()}
-                      </span>
-                      <span className="text-xs font-medium text-muted">Allowance {formatMoney(l.currency_minor, family.wallet.currency)}</span>
-                    </div>
-                    <p className="mt-2 text-xs text-muted">{l.lessons_completed ?? 0} lessons · {l.streak_days ?? 0}-day streak · Speaking {l.speaking_score ?? '—'} · Rank {l.rank ? `#${l.rank}` : '—'}</p>
+                    <p className="break-words font-semibold text-foreground group-hover:text-primary">{l.display_name}</p>
+                    {l.is_child && <Badge variant="info" className="mt-1">Child</Badge>}
                   </div>
-                  <Icon name="chevron" className="size-4 -rotate-90 text-subtle" />
+                  <Icon name="chevron" className="size-4 shrink-0 -rotate-90 text-subtle group-hover:text-primary" />
                 </Link>
+                <dl className="grid grid-cols-2 gap-x-3 gap-y-3 rounded-xl bg-foreground/5 p-3">
+                  {[
+                    ['Lessons completed', l.lessons_completed ?? 0],
+                    ['Streak', `${l.streak_days ?? 0} days`],
+                    ['Speaking', l.speaking_score ?? '—'],
+                    ['Rank', l.rank ? `#${l.rank}` : '—'],
+                    ['Coins', l.coin_balance.toLocaleString()],
+                    ['Allowance', formatMoney(l.currency_minor, family.wallet.currency)],
+                  ].map(([label, value]) => (
+                    <div key={label} className="min-w-0">
+                      <dt className="text-xs text-muted">{label}</dt>
+                      <dd className="mt-0.5 break-words text-sm font-semibold tabular-nums text-foreground">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
                 {l.is_child && (
-                  <div className="flex flex-col gap-2"><Button type="button" size="sm" variant="secondary" onClick={() => setPartnersLearner(l)}>Practice partners</Button><Button
-                    variant={l.pin_protected ? 'outline' : 'secondary'}
-                    size="sm"
-                    leftIcon={l.pin_protected ? <Icon name="shield" className="size-4" /> : undefined}
-                    onClick={() => setPinLearner(l)}
-                  >
-                    {l.pin_protected ? 'Change PIN' : 'Set PIN'}
-                  </Button></div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" size="sm" variant="secondary" className="grow" onClick={() => setPartnersLearner(l)}>
+                      Practice partners
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="grow"
+                      leftIcon={<Icon name="shield" className="size-4" />}
+                      onClick={() => setPinLearner(l)}
+                    >
+                      {l.pin_protected ? 'Change PIN' : 'Set PIN'}
+                    </Button>
+                  </div>
                 )}
               </CardBody>
             </Card>
